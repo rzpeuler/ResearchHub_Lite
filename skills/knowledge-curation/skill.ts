@@ -1,5 +1,6 @@
 import type { ReasoningExecutor, ReasoningRequest } from '../../plugins/reasoning/contracts.ts'
 import { ReasoningExecutorError } from '../../plugins/reasoning/errors.ts'
+import { validateReasoningCapabilities } from '../../plugins/reasoning/capabilities.ts'
 import { KnowledgeCurationError } from './errors.ts'
 import { buildCurationSchemaContext } from './schema-context.ts'
 import { projectExtractKnowledgeModelInput, projectReconcileKnowledgeModelInput, projectUnderstandAndPlanModelInput } from './model-input.ts'
@@ -7,7 +8,7 @@ import { validateExtractKnowledge, validateReconcileKnowledge, validateUnderstan
 import { UNDERSTAND_AND_PLAN_PROMPT } from './prompts/understand-and-plan.ts'
 import { EXTRACT_KNOWLEDGE_PROMPT } from './prompts/extract-knowledge.ts'
 import { RECONCILE_KNOWLEDGE_PROMPT } from './prompts/reconcile-knowledge.ts'
-import { UNDERSTAND_AND_PLAN_OUTPUT_CONTRACT, EXTRACT_KNOWLEDGE_OUTPUT_CONTRACT, RECONCILE_KNOWLEDGE_OUTPUT_CONTRACT } from './output-contracts.ts'
+import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildReconcileKnowledgeOutputContract } from './output-contracts.ts'
 import type { ExtractKnowledgeInput, ReconcileKnowledgeInput, ReconcileKnowledgeOutput, UnderstandAndPlanInput, UnderstandAndPlanOutput, ValidatedExtractKnowledgeResult } from './contracts.ts'
 
 export interface KnowledgeCurationSkillOptions { readonly executor: ReasoningExecutor }
@@ -18,20 +19,21 @@ export class KnowledgeCurationSkill {
   }
 
   async understandAndPlan(input: UnderstandAndPlanInput): Promise<UnderstandAndPlanOutput> {
-    const schemaContext = input.schemaContext.slice === 'understand_and_plan' ? input.schemaContext : buildCurationSchemaContext('understand_and_plan')
-    const result = await this.invoke({ operation: 'understandAndPlan', instruction: UNDERSTAND_AND_PLAN_PROMPT, input: projectUnderstandAndPlanModelInput({ ...input, schemaContext }), outputContract: UNDERSTAND_AND_PLAN_OUTPUT_CONTRACT })
+    const schemaContext = buildCurationSchemaContext('understand_and_plan')
+    const capabilities = validateReasoningCapabilities(this.options.executor.capabilities())
+    const result = await this.invoke({ operation: 'understandAndPlan', instruction: UNDERSTAND_AND_PLAN_PROMPT, input: projectUnderstandAndPlanModelInput({ ...input, capabilities, schemaContext }), outputContract: buildUnderstandAndPlanOutputContract(schemaContext) })
     return validateUnderstandAndPlanOutput(result, { document: input.document, schemaContext })
   }
 
   async extractKnowledge(input: ExtractKnowledgeInput): Promise<ValidatedExtractKnowledgeResult> {
-    const schemaContext = input.schemaContext.slice === 'knowledge_extraction' ? input.schemaContext : buildCurationSchemaContext('knowledge_extraction')
-    const result = await this.invoke({ operation: 'extractKnowledge', instruction: EXTRACT_KNOWLEDGE_PROMPT + feedback(input.validationFeedback), input: projectExtractKnowledgeModelInput({ ...input, schemaContext }), outputContract: EXTRACT_KNOWLEDGE_OUTPUT_CONTRACT })
+    const schemaContext = buildCurationSchemaContext('knowledge_extraction')
+    const result = await this.invoke({ operation: 'extractKnowledge', instruction: EXTRACT_KNOWLEDGE_PROMPT + feedback(input.validationFeedback), input: projectExtractKnowledgeModelInput({ ...input, schemaContext }), outputContract: buildExtractKnowledgeOutputContract(schemaContext) })
     return validateExtractKnowledge(result, { ...input, schemaContext })
   }
 
   async reconcileKnowledge(input: ReconcileKnowledgeInput): Promise<ReconcileKnowledgeOutput> {
-    const schemaContext = input.schemaContext.slice === 'reconciliation' ? input.schemaContext : buildCurationSchemaContext('reconciliation')
-    const result = await this.invoke({ operation: 'reconcileKnowledge', instruction: RECONCILE_KNOWLEDGE_PROMPT, input: projectReconcileKnowledgeModelInput({ ...input, schemaContext }), outputContract: RECONCILE_KNOWLEDGE_OUTPUT_CONTRACT })
+    const schemaContext = buildCurationSchemaContext('reconciliation')
+    const result = await this.invoke({ operation: 'reconcileKnowledge', instruction: RECONCILE_KNOWLEDGE_PROMPT, input: projectReconcileKnowledgeModelInput({ ...input, schemaContext }), outputContract: buildReconcileKnowledgeOutputContract() })
     return validateReconcileKnowledge(result, { ...input, schemaContext })
   }
 

@@ -1,5 +1,5 @@
 import { KNOWLEDGE_SCHEMA_V03 } from '../../knowledge/schema/executable-schema.ts'
-import type { ClaimComparatorV03, ClaimTemporalScopeTypeV03, ClaimTypeV03, EntityTypeV03, RelationTypeV03, SourceTypeV03 } from '../../knowledge/schema/domain.ts'
+import type { ClaimComparatorV03, ClaimTemporalScopeTypeV03, ClaimTypeV03, EntityTypeV03, RelationTypeV03, SourceReliabilityV03, SourceTypeV03 } from '../../knowledge/schema/domain.ts'
 import type { CurationSchemaContext, CurationSchemaContextSlice, RelationSchemaContract } from './schema-context-types.ts'
 
 export function buildCurationSchemaContext(slice: CurationSchemaContextSlice): CurationSchemaContext {
@@ -26,6 +26,7 @@ export function buildCurationSchemaContext(slice: CurationSchemaContextSlice): C
     claimTemporalScopeTypes: [...schema.claim.temporalScopeTypes] as ClaimTemporalScopeTypeV03[],
     claimComparators: [...schema.claim.comparators] as ClaimComparatorV03[],
     sourceTypes: [...schema.source.types] as SourceTypeV03[],
+    sourceReliabilities: [...schema.source.reliabilities] as SourceReliabilityV03[],
     relationContracts: Object.freeze(relationContracts),
     numericConstraints: structuredClone(schema.numericConstraints),
   })

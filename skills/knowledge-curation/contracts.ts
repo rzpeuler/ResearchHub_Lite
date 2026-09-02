@@ -1,8 +1,5 @@
-import type { ReasoningCapabilities } from '../../plugins/reasoning/contracts.ts'
 import type { DocumentBlock, DocumentSection, StructuredDocument } from '../../plugins/document/contracts.ts'
 import type { ClaimTypeV03, EntityTypeV03, RelationTypeV03 } from '../../knowledge/schema/domain.ts'
-import type { CurationSchemaContext } from './schema-context-types.ts'
-
 export type { CurationSchemaContext, CurationSchemaContextSlice, RelationSchemaContract } from './schema-context-types.ts'
 export type { DocumentBlock, DocumentSection, StructuredDocument }
 
@@ -46,8 +43,6 @@ export interface ExtractionPlanProposal {
 
 export interface UnderstandAndPlanInput {
   readonly document: StructuredDocument
-  readonly capabilities: ReasoningCapabilities
-  readonly schemaContext: CurationSchemaContext
   readonly instructions?: string
 }
 
@@ -101,7 +96,6 @@ export interface ExtractKnowledgeInput {
   readonly document: StructuredDocument
   readonly reportMap: ReportMap
   readonly unit: ProposedExtractionUnit
-  readonly schemaContext: CurationSchemaContext
   readonly instructions?: string
   readonly validationFeedback?: { readonly code: string; readonly message: string }
 }
@@ -133,7 +127,6 @@ export interface ReconcileKnowledgeInput {
   readonly existingKnowledge: readonly unknown[]
   readonly reportMap: ReportMap
   readonly sourceAssessment: SourceAssessment
-  readonly schemaContext: CurationSchemaContext
   readonly instructions?: string
 }
 export interface ReconciliationDecision { readonly candidateId: string; readonly action: ReconciliationAction; readonly rationale: string; readonly targetCandidateId?: string; readonly conflictingFields?: readonly string[] }

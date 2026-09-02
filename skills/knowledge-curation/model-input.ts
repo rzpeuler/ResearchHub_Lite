@@ -1,6 +1,19 @@
+import type { ReasoningCapabilities } from '../../plugins/reasoning/contracts.ts'
 import type { ExtractKnowledgeInput, ReconcileKnowledgeInput, UnderstandAndPlanInput, DocumentContentRef } from './contracts.ts'
+import type { CurationSchemaContext } from './schema-context-types.ts'
 
-export function projectUnderstandAndPlanModelInput(input: UnderstandAndPlanInput): unknown {
+export interface PreparedUnderstandAndPlanInput extends UnderstandAndPlanInput {
+  readonly capabilities: ReasoningCapabilities
+  readonly schemaContext: CurationSchemaContext
+}
+export interface PreparedExtractKnowledgeInput extends ExtractKnowledgeInput {
+  readonly schemaContext: CurationSchemaContext
+}
+export interface PreparedReconcileKnowledgeInput extends ReconcileKnowledgeInput {
+  readonly schemaContext: CurationSchemaContext
+}
+
+export function projectUnderstandAndPlanModelInput(input: PreparedUnderstandAndPlanInput): unknown {
   return {
     document: structuredClone(input.document),
     capabilities: structuredClone(input.capabilities),
@@ -9,7 +22,7 @@ export function projectUnderstandAndPlanModelInput(input: UnderstandAndPlanInput
   }
 }
 
-export function projectExtractKnowledgeModelInput(input: ExtractKnowledgeInput): unknown {
+export function projectExtractKnowledgeModelInput(input: PreparedExtractKnowledgeInput): unknown {
   const primary = new Set(input.unit.primaryRefs.flatMap((ref) => blockIdsForRef(input.document, ref)))
   const context = new Set(input.unit.contextRefs.flatMap((ref) => blockIdsForRef(input.document, ref)))
   const allowed = new Set([...primary, ...context])
@@ -26,7 +39,7 @@ export function projectExtractKnowledgeModelInput(input: ExtractKnowledgeInput):
   }
 }
 
-export function projectReconcileKnowledgeModelInput(input: ReconcileKnowledgeInput): unknown {
+export function projectReconcileKnowledgeModelInput(input: PreparedReconcileKnowledgeInput): unknown {
   return {
     candidateGroups: structuredClone(input.candidateGroups),
     existingKnowledge: structuredClone(input.existingKnowledge),

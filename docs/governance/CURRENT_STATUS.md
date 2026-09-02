@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Knowledge Core + Document + Reasoning/Curation Contracts Implemented — Workflow Next**
+**Knowledge Core + Document + Reasoning/Curation Contracts Implemented — CTO Review Pending**
 
 ## Completed
 
@@ -28,7 +28,7 @@
 - `RHL-MIGRATION-002` independently reviewed and accepted at commit:
   `c85a222a178280a0b11b4a5a049554c485ea0cc8`.
 - StructuredDocument and Document Plugin / Docling adaptation implemented in `RHL-MIGRATION-003`.
-- Runtime-neutral ReasoningExecutor, isolated Codex adapter, Mock executor, and Knowledge Curation Skill implemented in `RHL-MIGRATION-004`.
+- Runtime-neutral ReasoningExecutor, isolated Codex adapter, Mock executor, and Knowledge Curation Skill implemented in `RHL-MIGRATION-004`; CTO acceptance pending.
 
 ## Current Limitations
 
@@ -49,7 +49,7 @@
 - Historical 157-review result does not authorize canonical Schema expansion.
 - Review-reduction direction remains Candidate/Resolution-first rather than ontology-first.
 
-## Next Authorized Engineering Task
+## Next Pending After CTO Acceptance
 
 **RHL-MIGRATION-005 — Knowledge Validation + Deterministic Ingestion Workflow**
 
