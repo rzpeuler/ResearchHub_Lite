@@ -12,6 +12,7 @@ const text = { type: 'string' } as const
 const confidence = { type: 'number', minimum: 0, maximum: 1 } as const
 
 function enumSchema(values: readonly string[]): Record<string, unknown> { return { type: 'string', enum: [...values] } }
+function nullableEnumSchema(values: readonly string[]): Record<string, unknown> { return { oneOf: [enumSchema(values), { type: 'null' }] } }
 function arraySchema(items: unknown): Record<string, unknown> { return { type: 'array', items } }
 function objectSchema(required: readonly string[], properties: Readonly<Record<string, unknown>>): Record<string, unknown> { return { type: 'object', ...noExtra, required: [...required], properties } }
 function contentRefSchema(): Record<string, unknown> {
@@ -50,7 +51,7 @@ export function buildExtractKnowledgeOutputContract(schema: CurationSchemaContex
   const entity = candidateCommon({ entityType: enumSchema(schema.entityTypes), name: text, aliases: arraySchema(text), description: { type: ['string', 'null'] }, semanticFields: { type: 'object' } }, ['entityType', 'name'])
   const relation = candidateCommon({ relationType: enumSchema(schema.relationTypes), source: candidateEntityRefSchema(schema), target: candidateEntityRefSchema(schema), attributes: { type: 'object' } }, ['relationType', 'source', 'target'])
   const temporal = objectSchema(['asOf', 'scope'], { asOf: { type: ['string', 'null'] }, scope: objectSchema(['type', 'start', 'end', 'label'], { type: enumSchema(schema.claimTemporalScopeTypes), start: { type: ['string', 'null'] }, end: { type: ['string', 'null'] }, label: { type: ['string', 'null'] } }) })
-  const structuredValue = objectSchema(['metric', 'value', 'unit', 'comparator'], { metric: text, value: { type: ['string', 'number', 'boolean', 'null'] }, unit: { type: ['string', 'null'] }, comparator: { ...enumSchema(schema.claimComparators), type: ['string', 'null'] } })
+  const structuredValue = objectSchema(['metric', 'value', 'unit', 'comparator'], { metric: text, value: { type: ['string', 'number', 'boolean', 'null'] }, unit: { type: ['string', 'null'] }, comparator: nullableEnumSchema(schema.claimComparators) })
   const claim = candidateCommon({ claimType: enumSchema(schema.claimTypes), statement: text, subjectRefs: { ...arraySchema(candidateEntityRefSchema(schema)), minItems: 1 }, temporal: { oneOf: [temporal, { type: 'null' }] }, structuredValue: { oneOf: [structuredValue, { type: 'null' }] } }, ['claimType', 'statement', 'subjectRefs'])
   return { format: 'json', root: 'object', additionalProperties: false, schema: objectSchema(['entities', 'relations', 'claims'], { entities: arraySchema(entity), relations: arraySchema(relation), claims: arraySchema(claim) }) }
 }

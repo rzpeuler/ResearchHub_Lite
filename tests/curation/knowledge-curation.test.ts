@@ -124,6 +124,11 @@ test('structured output contracts fully describe nested objects and Schema 0.3 v
   const entityProperties = extractRoot.entities.items?.properties
   assert.equal(entityProperties?.confidence?.minimum, 0)
   assert.equal(entityProperties?.confidence?.maximum, 1)
+  const structuredValue = extractRoot.claims.items?.properties?.structuredValue as { oneOf: readonly [{ properties: Record<string, { oneOf?: readonly { enum?: readonly string[]; type?: string }[] }> }, { type: string }] }
+  const comparator = structuredValue.oneOf[0].properties.comparator.oneOf!
+  assert.deepEqual(comparator[0]?.enum, context.claimComparators)
+  assert.deepEqual(comparator[1], { type: 'null' })
+  assert.equal((comparator[0]?.enum as readonly string[] | undefined)?.includes('greater_than'), false)
   const reconcile = buildReconcileKnowledgeOutputContract()
   const decision = (reconcile.schema.properties as Record<string, { items?: { additionalProperties?: boolean; properties?: Record<string, { enum?: readonly string[] }> } }>).decisions.items!
   assert.equal(decision.additionalProperties, false)
