@@ -11,5 +11,5 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["knowledge/**/*.ts", "tests/**/*.ts"]
+  "include": ["knowledge/**/*.ts", "plugins/**/*.ts", "skills/**/*.ts", "tests/**/*.ts"]
 }

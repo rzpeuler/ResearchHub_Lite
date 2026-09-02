@@ -356,3 +356,19 @@ ResearchHub_Lite/
 ```
 
 This layout is conceptual during Bootstrap. Implementation tasks may refine file placement while preserving the frozen responsibility boundaries.
+
+---
+
+# 7. IMPLEMENTED LITE MIGRATION STATUS
+
+The following adaptations are implemented in the Lite checkout and were reviewed against the source family above:
+
+| Classification | Source asset family | Lite result |
+|---|---|---|
+| `ADAPT` | `packages/plugins/document/` | `plugins/document/` with stable `StructuredDocument`, Section, Block, parser, resolver, and Docling bridge contracts |
+| `ADAPT` | `packages/skills/knowledge-curation/` | `skills/knowledge-curation/` with `ReportMap`, `ExtractionPlanProposal`, Block/Section evidence refs, local symbolic candidates, deterministic validation, and reconciliation coverage |
+| `ADAPT` | `KnowledgeCurationModel` conceptual boundary | `plugins/reasoning/contracts.ts` `ReasoningExecutor`, plus Mock and isolated CLI adapters under `plugins/reasoning/` |
+| `REFERENCE` | `packages/skills/knowledge-curation/prompts/analyze-schema-gaps.ts` | Not an active Lite operation; no `analyzeSchemaGaps` migration |
+| `EXCLUDE` | Legacy batch/chunk and model-context runtime assumptions | No batch/chunk extraction contract, broad existing-Knowledge extraction context, Writer call, or Workflow routing in the migrated Skill |
+
+The Knowledge Core under `knowledge/` remains the authoritative Schema 0.3 / Storage Format 1 implementation. Full Knowledge validation and deterministic ingestion Workflow remain pending for RHL-MIGRATION-005.

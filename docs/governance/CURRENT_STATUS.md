@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Architecture Frozen / Migration Ready**
+**Knowledge Core + Document + Reasoning/Curation Contracts Implemented — Workflow Next**
 
 ## Completed
 
@@ -17,21 +17,26 @@
 - LLM semantic decomposition vs deterministic admissibility boundary frozen.
 - Bounded parallel ExtractionUnit model frozen.
 - One ChangeSet / one atomic Writer commit invariant frozen.
-- Initial migration classification defined.
-- Original ResearchHub source baseline identified as:
-  `4c141172d6ba4123e909f0d8b9481072912e3ef2`.
+- Knowledge Schema 0.3 migrated into Lite.
+- Storage Format 1 deterministic Knowledge Core migrated.
+- Raw SHA-256 identity and immutable/idempotent Raw archive migrated.
+- v0.3-only Knowledge Base loading and Registry handling migrated.
+- canonical hashing and deterministic ID allocation migrated.
+- mutation lock and atomic root transaction migrated.
+- Writer v0.3 safety semantics migrated, including revision/stale-target/idempotency/staging boundaries.
+- Legacy v0.2 loaders, compatibility, migration framework, DSH/Harness/runtime dependencies remain excluded.
+- `RHL-MIGRATION-002` independently reviewed and accepted at commit:
+  `c85a222a178280a0b11b4a5a049554c485ea0cc8`.
+- StructuredDocument and Document Plugin / Docling adaptation implemented in `RHL-MIGRATION-003`.
+- Runtime-neutral ReasoningExecutor, isolated Codex adapter, Mock executor, and Knowledge Curation Skill implemented in `RHL-MIGRATION-004`.
 
-## Not Started
+## Current Limitations
 
-- Knowledge Schema migration.
-- Knowledge Storage Core migration.
-- StructuredDocument implementation.
-- Docling adaptation.
-- ReasoningExecutor implementation.
-- Codex reasoning plugin.
-- Knowledge Curation adaptation.
-- new deterministic ingestion Workflow implementation.
-- Lite real Raw → Knowledge Base E2E validation.
+- Full Knowledge validation, ChangeSet validation, and staged-state validation have not yet been migrated.
+- A production Docling environment has not been exercised in this checkout.
+- A real Codex invocation remains opt-in; deterministic fake-host coverage is present.
+- New deterministic ingestion Workflow is not implemented.
+- Lite real Raw → Knowledge Base E2E validation has not yet been run.
 
 ## Current Architecture Baseline
 
@@ -39,10 +44,13 @@
 - Storage Format: 1
 - Current reasoning host: Codex
 - Custom Agent Runtime: none
-- DSH/Harness dependency: none planned
+- DSH/Harness dependency: none
+- Knowledge Core runtime dependency on LLM/Agent/PDF/network: none
+- Historical 157-review result does not authorize canonical Schema expansion.
+- Review-reduction direction remains Candidate/Resolution-first rather than ontology-first.
 
 ## Next Authorized Engineering Task
 
-**RHL-MIGRATION-002 — Knowledge Schema + Storage Core Migration**
+**RHL-MIGRATION-005 — Knowledge Validation + Deterministic Ingestion Workflow**
 
-No Workflow implementation should begin before the Knowledge Schema + Storage Core migration is reviewed and accepted.
+The next task must add deterministic Knowledge validation and Workflow control without moving routing, retries, acceptance, or persistence into the ReasoningExecutor or Skill.

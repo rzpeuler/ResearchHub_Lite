@@ -5,7 +5,7 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/knowledge/core.test.ts tests/knowledge/schema.test.ts tests/knowledge/schema/domain.test.ts tests/knowledge/schema/executable-schema.test.ts tests/knowledge/writer.test.ts tests/knowledge/transaction.test.ts tests/document/structured-document.test.ts tests/document/parser-registry.test.ts tests/document/input-resolver.test.ts tests/document/docling-contract.test.ts"
+    "test": "tsx --test tests/knowledge/core.test.ts tests/knowledge/schema.test.ts tests/knowledge/schema/domain.test.ts tests/knowledge/schema/executable-schema.test.ts tests/knowledge/writer.test.ts tests/knowledge/transaction.test.ts tests/document/structured-document.test.ts tests/document/parser-registry.test.ts tests/document/input-resolver.test.ts tests/document/docling-contract.test.ts tests/reasoning/reasoning.test.ts tests/curation/knowledge-curation.test.ts"
   },
   "devDependencies": {
     "@types/node": "22.15.21",
