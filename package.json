@@ -1,0 +1,15 @@
+{
+  "name": "researchhub-lite",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/knowledge/core.test.ts tests/knowledge/schema.test.ts tests/knowledge/schema/domain.test.ts tests/knowledge/schema/executable-schema.test.ts tests/knowledge/writer.test.ts tests/knowledge/transaction.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.21",
+    "tsx": "4.19.2",
+    "typescript": "5.8.3"
+  }
+}
