@@ -49,6 +49,9 @@ export interface EntityResolution {
   readonly canonicalId?: string
 }
 export interface ReviewItem { readonly candidateId: string; readonly kind: string; readonly rationale: string; readonly dependentCandidateIds: readonly string[] }
+export type ReviewCategory = 'invalid_reference' | 'invalid_semantics' | 'relation_cardinality' | 'schema_gap' | 'theme_creation' | 'theme_ambiguity' | 'reconciliation_review' | 'other'
+export interface ReviewSample { readonly candidateId?: string; readonly kind: 'entity' | 'relation' | 'claim' | 'workflow_level'; readonly stage: string; readonly category: ReviewCategory; readonly rationale: string; readonly dependentCandidateIds: readonly string[] }
+export interface ReviewSummary { readonly total: number; readonly rootCount: number; readonly dependencyCount: number; readonly byCategory: Readonly<Record<ReviewCategory, number>>; readonly byCandidateKind: Readonly<Record<'entity' | 'relation' | 'claim' | 'workflow_level', number>>; readonly samplesByCategory: Readonly<Record<ReviewCategory, readonly ReviewSample[]>> }
 export interface IngestionWorkflowResult {
   readonly workflowRunId: string
   readonly knowledgeBaseId: string
@@ -60,6 +63,7 @@ export interface IngestionWorkflowResult {
   readonly candidateCounts: Readonly<Record<string, number>>
   readonly rejectedCandidates: readonly unknown[]
   readonly reviewItems: readonly ReviewItem[]
+  readonly reviewSummary: ReviewSummary
   readonly reconciliationSummary?: Readonly<Record<string, number>>
   readonly changeSetId?: string
   readonly writeStatus?: KnowledgeWriteResult['status']

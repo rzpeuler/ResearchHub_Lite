@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../plugins/reasoning/contracts.ts'
 import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
 import { runRawDocumentKnowledgeIngestion, validateIngestionConfig } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
@@ -24,7 +26,7 @@ class FixtureExecutor implements ReasoningExecutor {
       return { operation: request.operation, output: this.extract(input.unit.proposedUnitId, input.blocks.map((block) => block.blockId)) }
     }
     const input = request.input as { candidateGroups: readonly { candidateId: string }[] }
-    return { operation: request.operation, output: { decisions: input.candidateGroups.map((group) => { const review = group.candidateId === this.reviewCandidate || this.reviewCandidate === 'all'; const reject = this.reviewCandidate === 'reject-all'; return { candidateId: group.candidateId, action: reject ? 'reject' : review ? 'user_review' : 'create', rationale: reject ? 'Rejected fixture candidate' : review ? 'Ambiguous fixture candidate' : 'Fixture candidate is grounded' } }) } }
+    return { operation: request.operation, output: { decisions: input.candidateGroups.map((group) => { const review = group.candidateId === this.reviewCandidate || this.reviewCandidate === 'all'; const reject = this.reviewCandidate === 'reject-all' || (this.reviewCandidate === 'reject-beta' && group.candidateId.startsWith('merged-entity-') && group.candidateId.includes('beta')); return { candidateId: group.candidateId, action: reject ? 'reject' : review ? 'user_review' : 'create', rationale: reject ? 'Rejected fixture candidate' : review ? 'Ambiguous fixture candidate' : 'Fixture candidate is grounded' } }) } }
   }
 }
 
@@ -47,6 +49,11 @@ test('offline ingestion archives Raw before parsing, writes canonical objects on
     assert.equal(first.writeStatus, 'committed')
     assert.equal(first.committedRevision, 1)
     assert.equal(first.validationSummary?.status, 'passed')
+    assert.equal(first.reviewSummary.total, 0)
+    const executionLog = JSON.parse(await readFile(join(root, 'logs', 'ingestion', 'run-e2e.yaml'), 'utf8')) as Record<string, unknown>
+    assert.equal(typeof (executionLog.ingestionContext as Record<string, unknown>).workflowInputFingerprint, 'string')
+    assert.equal(executionLog.status, 'completed')
+    assert.deepEqual((executionLog.ingestionContext as Record<string, unknown>).reviewSummary, first.reviewSummary)
     const mounted = await new KnowledgeBaseRegistry().mount(root)
     const assets = await new KnowledgeBaseLoaderV03().load(mounted)
     assert.equal(assets.entities.length, 2)
@@ -59,6 +66,7 @@ test('offline ingestion archives Raw before parsing, writes canonical objects on
     assert.equal(replay.status, 'completed')
     assert.equal(replay.writeStatus, 'already_committed')
     assert.equal(replay.changeSetId, first.changeSetId)
+    assert.equal(replay.reviewSummary.total, 0)
     assert.equal((await readManifest(root)).revision, 1)
   } finally { await removeKnowledgeBase(root) }
 })
@@ -91,11 +99,33 @@ test('review isolation commits safe independent candidates and excludes dependen
     const replay = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { type: 'text', text: 'Alpha makes Beta.\n\nBeta is a product.', originalFilename: 'review.txt', mediaType: 'text/plain' }, skill: new KnowledgeCurationSkill({ executor }), workflowRunId: 'run-review' })
     assert.equal(replay.status, 'completed_with_review')
     assert.equal(replay.writeStatus, 'already_committed')
+    assert.ok(replay.reviewSummary.total > 0)
     assert.equal(replay.committedRevision, result.committedRevision)
     const changedInstructions = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { type: 'text', text: 'Alpha makes Beta.\n\nBeta is a product.', originalFilename: 'review.txt', mediaType: 'text/plain' }, skill: new KnowledgeCurationSkill({ executor }), workflowRunId: 'run-review', instructions: 'changed' })
     assert.equal(changedInstructions.status, 'blocked')
     const changedBytes = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { type: 'text', text: 'Different document bytes.', originalFilename: 'review.txt', mediaType: 'text/plain' }, skill: new KnowledgeCurationSkill({ executor }), workflowRunId: 'run-review' })
     assert.equal(changedBytes.status, 'blocked')
+  } finally { await removeKnowledgeBase(root) }
+})
+
+test('reconciliation reject is one audited root review and survives committed replay', async () => {
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-reconcile-reject' })
+  try {
+    const executor = new FixtureExecutor(plan([unit('unit-1', [{ kind: 'section', sectionId: 'section-0001' }])]), (_unitId, blocks) => extraction(blocks, [{ id: 'alpha', type: 'company', name: 'Alpha' }, { id: 'beta', type: 'product', name: 'Beta' }]), 'reject-beta')
+    const skill = new KnowledgeCurationSkill({ executor })
+    const input = { handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { type: 'text' as const, text: 'Alpha makes Beta.\n\nBeta is a product.', originalFilename: 'reject-beta.txt', mediaType: 'text/plain' }, skill, workflowRunId: 'run-reconcile-reject' }
+    const first = await runRawDocumentKnowledgeIngestion(input)
+    assert.equal(first.status, 'completed_with_review')
+    assert.equal(first.writeStatus, 'committed')
+    assert.equal(first.reviewSummary.byCategory.reconciliation_review, 1)
+    assert.equal(first.reviewSummary.samplesByCategory.reconciliation_review.length, 1)
+    assert.equal((await readManifest(root)).revision, 1)
+    const calls = executor.calls.length
+    const replay = await runRawDocumentKnowledgeIngestion({ ...input, handle: await new KnowledgeBaseRegistry().mount(root) })
+    assert.equal(replay.status, 'completed_with_review')
+    assert.equal(replay.writeStatus, 'already_committed')
+    assert.deepEqual(replay.reviewSummary, first.reviewSummary)
+    assert.equal(executor.calls.length, calls)
   } finally { await removeKnowledgeBase(root) }
 })
 
@@ -118,11 +148,28 @@ test('user_review-only and reject-only workflows are no-op completions without r
     assert.equal(review.status, 'completed_with_review')
     assert.equal(review.writeStatus, 'no_changes')
     assert.equal(review.committedRevision, 0)
+    assert.ok(review.reviewSummary.total > 0)
+    const reviewCalls = reviewExecutor.calls.length
+    const reviewReplay = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput, skill: new KnowledgeCurationSkill({ executor: reviewExecutor }), workflowRunId: 'run-noop-review' })
+    assert.equal(reviewReplay.status, 'completed_with_review')
+    assert.equal(reviewReplay.writeStatus, 'already_committed')
+    assert.deepEqual(reviewReplay.reviewSummary, review.reviewSummary)
+    assert.equal(reviewExecutor.calls.length, reviewCalls)
+    const noOpLog = JSON.parse(await readFile(join(root, 'logs', 'ingestion', 'run-noop-review.yaml'), 'utf8')) as Record<string, unknown>
+    assert.equal(noOpLog.writeStatus, 'no_changes')
+    assert.deepEqual(noOpLog.reviewSummary, review.reviewSummary)
     const noOpAssets = await new KnowledgeBaseLoaderV03().load(await new KnowledgeBaseRegistry().mount(root))
     assert.equal(noOpAssets.sources.length, 0)
     const rejectExecutor = new FixtureExecutor(plan([unit('unit-1', [{ kind: 'section', sectionId: 'section-0001' }])]), (_unitId, blocks) => extraction(blocks, [{ id: 'alpha', type: 'company', name: 'Alpha' }], false), 'reject-all')
     const rejected = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { ...documentInput, originalFilename: 'reject.txt' }, skill: new KnowledgeCurationSkill({ executor: rejectExecutor }), workflowRunId: 'run-noop-reject' })
     assert.equal(rejected.writeStatus, 'no_changes')
     assert.equal(rejected.committedRevision, 0)
+    const rejectCalls = rejectExecutor.calls.length
+    const rejectReplay = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { ...documentInput, originalFilename: 'reject.txt' }, skill: new KnowledgeCurationSkill({ executor: rejectExecutor }), workflowRunId: 'run-noop-reject' })
+    assert.equal(rejectReplay.status, 'completed_with_review')
+    assert.equal(rejectReplay.writeStatus, 'already_committed')
+    assert.equal(rejectExecutor.calls.length, rejectCalls)
+    const changed = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { ...documentInput, text: 'Changed bytes.', originalFilename: 'reject.txt' }, skill: new KnowledgeCurationSkill({ executor: rejectExecutor }), workflowRunId: 'run-noop-reject' })
+    assert.equal(changed.status, 'blocked')
   } finally { await removeKnowledgeBase(root) }
 })

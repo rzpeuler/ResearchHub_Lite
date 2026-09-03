@@ -1,11 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { consolidateExtractions } from '../../workflows/raw-document-knowledge-ingestion/consolidation.ts'
 import { planKnowledgeChangeSet } from '../../workflows/raw-document-knowledge-ingestion/changeset-planner.ts'
 import { allocateSourceId } from '../../workflows/raw-document-knowledge-ingestion/id-helpers.ts'
 import { boundedExtract } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
 import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
 import { retrieveFocusedKnowledge } from '../../workflows/raw-document-knowledge-ingestion/retrieval.ts'
+import { emptyReviewSummary, normalizeReviewSummary, writeNoOpExecutionRecord } from '../../workflows/raw-document-knowledge-ingestion/review-telemetry.ts'
+import { createKnowledgeBase, removeKnowledgeBase } from '../knowledge/helpers.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
 import type { ClaimCandidate, EntityCandidate, RelationCandidate, ResolvedCandidateGroup, ReconciliationDecision, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
 import type { EntityTypeV03 } from '../../knowledge/schema/domain.ts'
@@ -162,4 +166,105 @@ test('focused retrieval finds reverse-oriented symmetric Relations', () => {
   const groups = [{ candidateId: 'a', kind: 'entity' as const, candidate: a }, { candidateId: 'b', kind: 'entity' as const, candidate: b }, { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'competes_with', 'a', 'b') }]
   const result = retrieveFocusedKnowledge(assets, { groups, reviewConstraints: [], rejected: [], candidateCounts: {}, candidateAliases: new Map(), entityCandidates: new Map([['a', a], ['b', b]]) })
   assert.equal(result.groups.find((group) => group.candidateId === 'r')?.existingKnowledge?.length, 1)
+})
+
+test('ReviewSummary has the frozen zero shape', () => {
+  const summary = emptyReviewSummary()
+  assert.deepEqual(Object.keys(summary.byCategory).sort(), ['invalid_reference', 'invalid_semantics', 'other', 'reconciliation_review', 'relation_cardinality', 'schema_gap', 'theme_ambiguity', 'theme_creation'])
+  assert.deepEqual(Object.keys(summary.byCandidateKind).sort(), ['claim', 'entity', 'relation', 'workflow_level'])
+  assert.equal(summary.total, 0)
+  assert.equal(summary.rootCount, 0)
+  assert.equal(summary.dependencyCount, 0)
+})
+
+test('ReviewSummary normalizes extraction rejection codes and candidate kinds', () => {
+  const summary = normalizeReviewSummary({ extractionRejected: [
+    { candidateId: 'e', kind: 'entity', code: 'invalid_reference', message: 'bad ref' },
+    { candidateId: 'r', kind: 'relation', code: 'invalid_semantics', message: 'bad relation' },
+    { candidateId: 'w', code: 'unexpected', message: 'workflow issue' },
+  ] })
+  assert.equal(summary.total, 3)
+  assert.equal(summary.byCategory.invalid_reference, 1)
+  assert.equal(summary.byCategory.invalid_semantics, 1)
+  assert.equal(summary.byCategory.other, 1)
+  assert.deepEqual(summary.byCandidateKind, { entity: 1, relation: 1, claim: 0, workflow_level: 1 })
+})
+
+test('ReviewSummary deduplicates a consolidation conflict across planner signals', () => {
+  const summary = normalizeReviewSummary({
+    consolidationReviews: [{ candidateId: 'e', reason: 'Entity description conflict', conflictingFields: ['description'] }],
+    plannerReviewItems: [{ candidateId: 'e', kind: 'entity', rationale: 'Consolidation conflict requires review', dependentCandidateIds: [] }],
+    candidateGroups: [{ candidateId: 'e', kind: 'entity', candidate: entity('e', 'Entity') }],
+  })
+  assert.equal(summary.total, 1)
+  assert.equal(summary.rootCount, 1)
+  assert.equal(summary.dependencyCount, 0)
+  assert.equal(summary.byCategory.other, 1)
+})
+
+test('ReviewSummary records one reconciliation user-review root event', () => {
+  const summary = normalizeReviewSummary({
+    reconciliationDecisions: [{ candidateId: 'c', action: 'user_review', rationale: 'Ambiguous existing target' }],
+    plannerReviewItems: [{ candidateId: 'c', kind: 'claim', rationale: 'Ambiguous existing target', dependentCandidateIds: [] }],
+    candidateGroups: [{ candidateId: 'c', kind: 'claim', candidate: claim('c', 'A grows', 'e') }],
+  })
+  assert.equal(summary.total, 1)
+  assert.equal(summary.rootCount, 1)
+  assert.equal(summary.byCategory.reconciliation_review, 1)
+  assert.equal(summary.byCandidateKind.claim, 1)
+})
+
+test('ReviewSummary keeps reconciliation root and dependency telemetry distinct', () => {
+  const summary = normalizeReviewSummary({
+    reconciliationDecisions: [{ candidateId: 'e', action: 'reject', rationale: 'Rejected by reviewer' }],
+    plannerReviewItems: [{ candidateId: 'r', kind: 'relation', rationale: 'Blocked by rejected Entity candidate e', dependentCandidateIds: ['e'] }],
+    candidateGroups: [{ candidateId: 'e', kind: 'entity', candidate: entity('e', 'Entity') }, { candidateId: 'r', kind: 'relation', candidate: relation('r', 'offers_product', 'e', 'e') }],
+  })
+  assert.equal(summary.total, 2)
+  assert.equal(summary.rootCount, 1)
+  assert.equal(summary.dependencyCount, 1)
+  assert.equal(summary.byCategory.reconciliation_review, 1)
+  assert.equal(summary.byCategory.invalid_reference, 1)
+  assert.equal(summary.byCandidateKind.entity, 1)
+  assert.equal(summary.byCandidateKind.relation, 1)
+})
+
+test('ReviewSummary maps theme, schema, cardinality, and semantic planner reviews', () => {
+  const summary = normalizeReviewSummary({ plannerReviewItems: [
+    { candidateId: 'a', kind: 'entity', rationale: 'Theme group creation requires review', dependentCandidateIds: [] },
+    { candidateId: 'b', kind: 'entity', rationale: 'Theme is ambiguous across multiple groups', dependentCandidateIds: [] },
+    { candidateId: 'c', kind: 'relation', rationale: 'Relation cardinality conflict', dependentCandidateIds: [] },
+    { candidateId: 'd', kind: 'claim', rationale: 'Schema gap in durable field', dependentCandidateIds: [] },
+    { candidateId: 'f', kind: 'claim', rationale: 'Unsupported semantic value', dependentCandidateIds: [] },
+  ] })
+  assert.equal(summary.byCategory.theme_creation, 1)
+  assert.equal(summary.byCategory.theme_ambiguity, 1)
+  assert.equal(summary.byCategory.relation_cardinality, 1)
+  assert.equal(summary.byCategory.schema_gap, 1)
+  assert.equal(summary.byCategory.invalid_semantics, 1)
+})
+
+test('no-op execution records replay, reject input conflicts, and preserve committed logs', async () => {
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-telemetry-log' })
+  try {
+    const record = { workflowRunId: 'run-log', knowledgeBaseId: 'kb-telemetry-log', rawRef: 'raw-ref', documentId: 'doc', workflowInputFingerprint: 'fingerprint', status: 'completed' as const, writeStatus: 'no_changes' as const, baseRevision: 0, committedRevision: 0, reviewSummary: emptyReviewSummary(), completedAt: '2026-09-03T00:00:00.000Z', errors: [] }
+    const first = await writeNoOpExecutionRecord(root, record)
+    assert.equal(first.kind, 'written')
+    assert.equal((await writeNoOpExecutionRecord(root, record)).kind, 'replay')
+    const conflict = await writeNoOpExecutionRecord(root, { ...record, workflowInputFingerprint: 'different' })
+    assert.equal(conflict.kind, 'conflict')
+    const path = join(root, 'logs', 'ingestion', 'run-log.yaml')
+    const committed = { ...(JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>), writeStatus: 'committed' }
+    await writeFile(path, JSON.stringify(committed), 'utf8')
+    const protectedLog = await writeNoOpExecutionRecord(root, record)
+    assert.equal(protectedLog.kind, 'conflict')
+    assert.equal((JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>).writeStatus, 'committed')
+  } finally { await removeKnowledgeBase(root) }
+})
+
+test('no-op execution records reject unsafe workflow identifiers', async () => {
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-unsafe-log' })
+  try {
+    await assert.rejects(() => writeNoOpExecutionRecord(root, { workflowRunId: '../escape', knowledgeBaseId: 'kb-unsafe-log', rawRef: 'raw', documentId: 'doc', workflowInputFingerprint: 'fp', status: 'completed', writeStatus: 'no_changes', baseRevision: 0, committedRevision: 0, reviewSummary: emptyReviewSummary(), completedAt: 'now', errors: [] }))
+  } finally { await removeKnowledgeBase(root) }
 })

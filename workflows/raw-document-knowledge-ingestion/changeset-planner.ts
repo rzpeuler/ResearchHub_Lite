@@ -26,10 +26,6 @@ export interface ChangeSetPlanningInput {
   readonly decisions: readonly ReconciliationDecision[]
   readonly assets: KnowledgeAssetCollectionV03
   readonly consolidationReviews?: readonly { readonly candidateId: string; readonly reason: string; readonly conflictingFields: readonly string[] }[]
-  readonly workflowInputFingerprint?: string
-  readonly reviewItemCount?: number
-  readonly rejectedCandidateCount?: number
-  readonly workflowStatusHint?: 'completed' | 'completed_with_review'
 }
 
 export interface ChangeSetPlanningResult { readonly changeSet?: KnowledgeChangeSetV03; readonly reviewItems: readonly ReviewItem[]; readonly safeOperationCount: number; readonly summary: Readonly<Record<string, number>>; readonly entityResolutions: readonly EntityResolution[] }
@@ -273,15 +269,13 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
     } else addReview(group.candidateId, decision.action + ' is unsupported for Claim targets')
   }
 
-  const reviewCount = reviews.size + (input.reviewItemCount ?? 0)
-  const hasReview = reviewCount > 0 || (input.rejectedCandidateCount ?? 0) > 0 || rejected.size > 0 || (input.consolidationReviews?.length ?? 0) > 0
-  const statusHint = hasReview || input.workflowStatusHint === 'completed_with_review' ? 'completed_with_review' : 'completed'
+  const reviewCount = reviews.size
   if (knowledgeOperations.length === 0) return { reviewItems: [...reviews.values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)), safeOperationCount: 0, summary: { sourceOperations: 0, knowledgeCreates: 0, reviewItems: reviewCount, blockedDependencies: rejected.size, noChanges: 1 }, entityResolutions: resolutions }
   const sourceOperations: KnowledgeSourceOperationV03[] = []
   const existingSource = index.sources.get(sourceId)
   if (existingSource) sourceOperations.push({ operationId: 'source-merge-001', type: 'source_merge', sourceId, expectedBeforeHash: hashKnowledgeObject(existingSource), addRawRefs: [input.rawRef] })
   else sourceOperations.push({ operationId: 'source-create-001', type: 'source_create', source })
   const changeSetId = 'changeset-' + hashKnowledgeObject({ workflowRunId: input.workflowRunId, knowledgeBaseId: input.knowledgeBaseId, rawRef: input.rawRef, documentId: input.documentId, groups: input.groups, decisions: input.decisions }).slice(7, 23)
-  const changeSet: KnowledgeChangeSetV03 = { changeSetId, workflowRunId: input.workflowRunId, knowledgeBaseId: input.knowledgeBaseId, schemaVersion: '0.3', storageFormatVersion: '1', expectedBaseRevision: input.baseRevision, requiresRawProvenance: true, sourceOperations, knowledgeOperations, ingestionContext: { documentId: input.documentId, rawRef: input.rawRef, extractionUnitCount: input.plan.units.length, ...(input.workflowInputFingerprint === undefined ? {} : { workflowInputFingerprint: input.workflowInputFingerprint }), workflowStatusHint: statusHint, reviewItemCount: reviewCount, rejectedCandidateCount: input.rejectedCandidateCount ?? rejected.size } }
+  const changeSet: KnowledgeChangeSetV03 = { changeSetId, workflowRunId: input.workflowRunId, knowledgeBaseId: input.knowledgeBaseId, schemaVersion: '0.3', storageFormatVersion: '1', expectedBaseRevision: input.baseRevision, requiresRawProvenance: true, sourceOperations, knowledgeOperations, ingestionContext: { documentId: input.documentId, rawRef: input.rawRef, extractionUnitCount: input.plan.units.length } }
   return { changeSet, reviewItems: [...reviews.values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)), safeOperationCount: sourceOperations.length + knowledgeOperations.length, summary: { sourceOperations: sourceOperations.length, knowledgeCreates: knowledgeOperations.filter((operation) => operation.type === 'create').length, reviewItems: reviewCount, blockedDependencies: rejected.size }, entityResolutions: resolutions }
 }
