@@ -1,0 +1,352 @@
+{
+  "taskId": "RHL-VALIDATION-001-R2",
+  "validationTask": "RHL-VALIDATION-001-R2",
+  "validationProductBaseline": "f52a255f44d1df2dd9c5b5b211d877e586e5541e",
+  "startedAt": "2026-09-03T10:03:01.891Z",
+  "phase": "blocked",
+  "phaseTimestamps": {
+    "baseline_verified": {
+      "startedAt": "2026-09-03T10:03:01.958Z",
+      "completedAt": "2026-09-03T10:03:01.958Z",
+      "durationMs": 0,
+      "status": "passed"
+    },
+    "pdf_verified": {
+      "startedAt": "2026-09-03T10:03:01.958Z",
+      "completedAt": "2026-09-03T10:03:01.989Z",
+      "durationMs": 31,
+      "status": "passed"
+    },
+    "codex_preflight": {
+      "startedAt": "2026-09-03T10:03:01.989Z",
+      "completedAt": "2026-09-03T10:03:10.703Z",
+      "durationMs": 8714,
+      "status": "passed"
+    },
+    "docling_preflight": {
+      "startedAt": "2026-09-03T10:03:10.703Z",
+      "completedAt": "2026-09-03T10:03:10.704Z",
+      "durationMs": 1,
+      "status": "passed"
+    },
+    "docling_parse": {
+      "startedAt": "2026-09-03T10:03:10.704Z",
+      "completedAt": "2026-09-03T10:04:50.795Z",
+      "durationMs": 100091,
+      "status": "passed"
+    },
+    "fresh_kb_ready": {
+      "startedAt": "2026-09-03T10:04:50.795Z",
+      "completedAt": "2026-09-03T10:04:50.800Z",
+      "durationMs": 5,
+      "status": "passed"
+    },
+    "primary_workflow": {
+      "startedAt": "2026-09-03T10:04:50.801Z",
+      "completedAt": "2026-09-03T10:42:35.760Z",
+      "durationMs": 2264959,
+      "status": "passed"
+    }
+  },
+  "architectureDocumentsModified": false,
+  "mockReasoningCalls": 0,
+  "baseline": {
+    "productBaseline": "f52a255f44d1df2dd9c5b5b211d877e586e5541e",
+    "currentHead": "f52a255f44d1df2dd9c5b5b211d877e586e5541e",
+    "originMain": "f52a255f44d1df2dd9c5b5b211d877e586e5541e",
+    "governanceOnlySinceBaseline": true
+  },
+  "pdf": {
+    "path": "C:\\Users\\Administrator\\Desktop\\ResearchHub_Lite\\20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf",
+    "filename": "20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf",
+    "bytes": 3209114,
+    "sha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "expectedBytes": 3209114,
+    "expectedSha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "exactMatch": true
+  },
+  "codex": {
+    "executable": "codex",
+    "version": "codex-cli 0.152.1",
+    "helpOutputBytes": 3957,
+    "configuredCapabilities": {
+      "maxContextTokens": 100000,
+      "maxOutputTokens": 20000,
+      "structuredOutputSupport": true,
+      "maxConcurrency": 1
+    },
+    "timeoutMs": 900000,
+    "maxOutputChars": 400000,
+    "smoke": {
+      "operation": "understandAndPlan",
+      "operationId": "rhl-validation-001-codex-smoke",
+      "durationMs": 8673,
+      "outputBytes": 14
+    }
+  },
+  "docling": {
+    "pythonExecutable": "C:\\Users\\Administrator\\Desktop\\ResearchHub\\.researchhub-document-parser\\venv\\Scripts\\python.exe",
+    "artifactsPath": "C:\\Users\\Administrator\\Desktop\\ResearchHub\\.researchhub-document-parser\\models",
+    "bridgePath": "C:\\Users\\Administrator\\Desktop\\ResearchHub_Lite\\plugins\\document\\docling\\bridge\\docling_bridge.py",
+    "offline": true,
+    "preferredVersion": "2.116.0",
+    "parser": {
+      "id": "docling-local",
+      "version": "2.116.0"
+    },
+    "stats": {
+      "pageCount": 103,
+      "sectionCount": 159,
+      "blockCount": 1523,
+      "normalizedCharacters": 97784,
+      "tableCount": 44,
+      "headingCount": 158,
+      "listCount": 27,
+      "captionCount": 63
+    },
+    "warningCount": 0
+  },
+  "freshKnowledgeBase": {
+    "knowledgeBaseId": "kb-rhl-validation-001-r2",
+    "root": "C:\\Users\\Administrator\\Desktop\\ResearchHub_Lite\\runtime-data\\knowledge-bases\\kb-rhl-validation-001-r2",
+    "schemaVersion": "0.3",
+    "storageFormatVersion": "1",
+    "revision": 0,
+    "seedObjects": 0,
+    "initialFullValidation": "passed"
+  },
+  "primary": {
+    "status": "blocked",
+    "workflowRunId": "rhl-validation-001-r2-primary",
+    "knowledgeBaseId": "kb-rhl-validation-001-r2",
+    "rawRef": "raw-sha256-998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "documentId": "document-998703cef1023005",
+    "candidateCounts": {},
+    "rejectedCandidateCount": 0,
+    "reviewItemCount": 0,
+    "reviewSummary": {
+      "total": 0,
+      "rootCount": 0,
+      "dependencyCount": 0,
+      "byCategory": {
+        "invalid_reference": 0,
+        "invalid_semantics": 0,
+        "relation_cardinality": 0,
+        "schema_gap": 0,
+        "theme_creation": 0,
+        "theme_ambiguity": 0,
+        "reconciliation_review": 0,
+        "other": 0
+      },
+      "byCandidateKind": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0,
+        "workflow_level": 0
+      },
+      "samplesByCategory": {
+        "invalid_reference": [],
+        "invalid_semantics": [],
+        "relation_cardinality": [],
+        "schema_gap": [],
+        "theme_creation": [],
+        "theme_ambiguity": [],
+        "reconciliation_review": [],
+        "other": []
+      }
+    },
+    "errors": [
+      "candidate merged-entity-company has more than one decision"
+    ],
+    "planAttempts": [
+      {
+        "attempt": 1,
+        "status": "accepted"
+      }
+    ],
+    "acceptedExtractionPlanMetrics": {
+      "unitCount": 11,
+      "documentBlockCount": 1523,
+      "primaryCoveredBlockCount": 1435,
+      "excludedBlockCount": 88,
+      "primaryCoveragePercentage": 94.22,
+      "excludedPercentage": 5.78,
+      "coverageInvariant": true,
+      "primaryExcludedConflict": false,
+      "capacity": true,
+      "contextRefCount": null,
+      "estimatedContextTokens": null,
+      "telemetryNote": "The accepted plan was held in memory by the primary run; the workflow reached the reconciliation defect before the harness persisted per-unit context telemetry."
+    },
+    "exclusionQuality": {
+      "excludedBlockCount": 88,
+      "excludedPercentage": 5.78,
+      "distribution": null,
+      "samples": [],
+      "sampleLimit": 30,
+      "telemetryNote": "Exclusion distribution and bounded text samples were not persisted before the reconciliation defect; no semantic-quality conclusion is drawn from the count alone."
+    },
+    "reasoningCalls": {
+      "total": 13,
+      "byOperation": {
+        "understandAndPlan": 1,
+        "extractKnowledge": 11,
+        "reconcileKnowledge": 1
+      },
+      "derivedFromCompletedUnitAndPlanTelemetry": true
+    },
+    "candidates": {
+      "unitCandidateCounts": {
+        "entity": 287,
+        "relation": 255,
+        "claim": 146,
+        "rejected": 11
+      }
+    },
+    "unitCount": 11,
+    "excludedBlockCount": 88,
+    "unitSummaries": [
+      {
+        "unitId": "unit-001",
+        "proposedUnitId": "U1",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 23,
+          "relation": 17,
+          "claim": 8
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-002",
+        "proposedUnitId": "U2",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 28,
+          "relation": 23,
+          "claim": 16
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-003",
+        "proposedUnitId": "U3",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 16,
+          "relation": 15,
+          "claim": 9
+        },
+        "rejectedCount": 2
+      },
+      {
+        "unitId": "unit-004",
+        "proposedUnitId": "U4",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 37,
+          "relation": 28,
+          "claim": 14
+        },
+        "rejectedCount": 4
+      },
+      {
+        "unitId": "unit-005",
+        "proposedUnitId": "U5",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 28,
+          "relation": 23,
+          "claim": 15
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-006",
+        "proposedUnitId": "U6",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 41,
+          "relation": 23,
+          "claim": 23
+        },
+        "rejectedCount": 4
+      },
+      {
+        "unitId": "unit-007",
+        "proposedUnitId": "U7",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 30,
+          "relation": 64,
+          "claim": 14
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-008",
+        "proposedUnitId": "U8",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 21,
+          "relation": 15,
+          "claim": 11
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-009",
+        "proposedUnitId": "U9",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 21,
+          "relation": 23,
+          "claim": 15
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-010",
+        "proposedUnitId": "U10",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 37,
+          "relation": 23,
+          "claim": 16
+        },
+        "rejectedCount": 1
+      },
+      {
+        "unitId": "unit-011",
+        "proposedUnitId": "U11",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 5,
+          "relation": 1,
+          "claim": 5
+        },
+        "rejectedCount": 0
+      }
+    ]
+  },
+  "planAttempts": [
+    {
+      "attempt": 1,
+      "status": "accepted"
+    }
+  ],
+  "validationOutcome": "RECONCILIATION_PRODUCT_DEFECT",
+  "error": "RECONCILIATION_PRODUCT_DEFECT: candidate merged-entity-company has more than one decision",
+  "completedAt": "2026-09-03T10:42:35.760Z"
+}
