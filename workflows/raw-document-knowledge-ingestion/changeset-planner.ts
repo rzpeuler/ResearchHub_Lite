@@ -6,6 +6,7 @@ import { hashKnowledgeObject } from '../../knowledge/storage/canonical-hash.ts'
 import { KnowledgeIndexV03 } from '../../knowledge/query/index.ts'
 import type { ReportMap, ReconciliationDecision, ResolvedCandidateGroup, EntityCandidate, RelationCandidate, ClaimCandidate } from '../../skills/knowledge-curation/contracts.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
+import { consolidationReviewKey, reconciliationReviewKey } from './review-telemetry.ts'
 import type { AcceptedExtractionPlan, ReviewItem } from './contracts.ts'
 
 type Dict = Record<string, unknown>
@@ -164,8 +165,9 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
     if (group.kind === 'relation') for (const ref of [(group.candidate as RelationCandidate).source.candidateRef, (group.candidate as RelationCandidate).target.candidateRef]) dependents.set(ref, [...(dependents.get(ref) ?? []), group.candidateId])
     if (group.kind === 'claim') for (const ref of (group.candidate as ClaimCandidate).subjectRefs.map((subject) => subject.candidateRef)) dependents.set(ref, [...(dependents.get(ref) ?? []), group.candidateId])
   }
-  const addReview = (candidateId: string, rationale: string, dependentCandidateIds: readonly string[] = []): void => { const group = groups.get(candidateId); reviews.set(candidateId, { candidateId, kind: group?.kind ?? 'unknown', rationale, dependentCandidateIds: unique(dependentCandidateIds) }) }
-  for (const constraint of input.consolidationReviews ?? []) addReview(constraint.candidateId, constraint.reason)
+  const addReview = (candidateId: string, rationale: string, dependentCandidateIds: readonly string[] = [], metadata: Partial<Pick<ReviewItem, 'stage' | 'category' | 'dependency' | 'origin' | 'reviewKey'>> = {}): void => { const group = groups.get(candidateId); reviews.set(candidateId, { candidateId, kind: group?.kind ?? 'unknown', rationale, dependentCandidateIds: unique(dependentCandidateIds), stage: 'planner', origin: 'planner', dependency: false, ...metadata }) }
+  const reconciliationMirror = (decision: ReconciliationDecision): Partial<Pick<ReviewItem, 'category' | 'origin' | 'reviewKey'>> => ({ category: 'reconciliation_review', origin: 'reconciliation_mirror', reviewKey: reconciliationReviewKey(decision.candidateId, decision.action, decision.rationale) })
+  for (const constraint of input.consolidationReviews ?? []) addReview(constraint.candidateId, constraint.reason, [], { category: 'other', origin: 'consolidation_mirror', reviewKey: consolidationReviewKey(constraint.candidateId, constraint.reason, constraint.conflictingFields) })
   const entities = new Map<string, string>()
   const resolutions: EntityResolution[] = []
   const resolve = (candidateId: string, status: ResolutionStatus, canonicalId: string | undefined, rationale: string): void => { resolutions.push({ candidateId, status, ...(canonicalId === undefined ? {} : { canonicalId }), rationale }); if (canonicalId && status !== 'review' && status !== 'rejected') entities.set(candidateId, canonicalId) }
@@ -179,7 +181,7 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
     if (!decision) { resolve(group.candidateId, 'review', undefined, 'Missing reconciliation decision'); addReview(group.candidateId, 'Missing reconciliation decision'); continue }
     if ((input.consolidationReviews ?? []).some((constraint) => constraint.candidateId === group.candidateId)) { resolve(group.candidateId, 'review', undefined, 'Consolidation conflict requires review'); continue }
     if (decision.action === 'reject') { rejected.add(group.candidateId); resolve(group.candidateId, 'rejected', undefined, decision.rationale); continue }
-    if (decision.action === 'user_review') { resolve(group.candidateId, 'review', undefined, decision.rationale); addReview(group.candidateId, decision.rationale, dependents.get(group.candidateId)); continue }
+    if (decision.action === 'user_review') { resolve(group.candidateId, 'review', undefined, decision.rationale); addReview(group.candidateId, decision.rationale, dependents.get(group.candidateId), reconciliationMirror(decision)); continue }
     const matches = existingEntities(candidate, input, index)
     const baseId = allocateEntityId(candidate.entityType, candidate.name)
     const semanticError = semanticFieldsError(candidate, index.themeGroups, matches.length === 1 && (decision.action === 'duplicate' || decision.action === 'update_state'))
@@ -200,17 +202,18 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
     } else { resolve(group.candidateId, 'review', undefined, decision.action + ' is unsupported for Entity targets'); addReview(group.candidateId, decision.action + ' is unsupported for Entity targets') }
   }
   for (const group of input.groups.filter((item) => item.kind === 'entity')) {
-    if (reviews.has(group.candidateId)) for (const dependent of dependents.get(group.candidateId) ?? []) addReview(dependent, 'Blocked by Entity candidate ' + group.candidateId + ' requiring review', [group.candidateId])
-    if (rejected.has(group.candidateId)) for (const dependent of dependents.get(group.candidateId) ?? []) { rejected.add(dependent); addReview(dependent, 'Blocked by rejected Entity candidate ' + group.candidateId, [group.candidateId]) }
+    if (reviews.has(group.candidateId)) for (const dependent of dependents.get(group.candidateId) ?? []) addReview(dependent, 'Blocked by Entity candidate ' + group.candidateId + ' requiring review', [group.candidateId], { category: 'invalid_reference', dependency: true, origin: 'dependency_isolation', reviewKey: ['dependency', group.candidateId, dependent].join('|') })
+    if (rejected.has(group.candidateId)) for (const dependent of dependents.get(group.candidateId) ?? []) { rejected.add(dependent); addReview(dependent, 'Blocked by rejected Entity candidate ' + group.candidateId, [group.candidateId], { category: 'invalid_reference', dependency: true, origin: 'dependency_isolation', reviewKey: ['dependency', group.candidateId, dependent].join('|') }) }
   }
 
   for (const group of input.groups.filter((item) => item.kind === 'relation').sort((a, b) => a.candidateId.localeCompare(b.candidateId))) {
     const decision = decisions.get(group.candidateId)
     const candidate = group.candidate as RelationCandidate
     if (!decision) { addReview(group.candidateId, 'Missing reconciliation decision'); continue }
-    if ((input.consolidationReviews ?? []).some((constraint) => constraint.candidateId === group.candidateId)) { addReview(group.candidateId, 'Consolidation conflict requires review'); continue }
+    const consolidationConstraint = (input.consolidationReviews ?? []).find((constraint) => constraint.candidateId === group.candidateId)
+    if (consolidationConstraint) { addReview(group.candidateId, 'Consolidation conflict requires review', [], { category: 'other', origin: 'consolidation_mirror', reviewKey: consolidationReviewKey(consolidationConstraint.candidateId, consolidationConstraint.reason, consolidationConstraint.conflictingFields) }); continue }
     if (decision.action === 'reject') { rejected.add(group.candidateId); continue }
-    if (decision.action === 'user_review') { addReview(group.candidateId, decision.rationale); continue }
+    if (decision.action === 'user_review') { addReview(group.candidateId, decision.rationale, [], reconciliationMirror(decision)); continue }
     const sourceRef = entities.get(candidate.source.candidateRef)
     const targetRef = entities.get(candidate.target.candidateRef)
     if (!sourceRef || !targetRef) { if (!rejected.has(group.candidateId)) addReview(group.candidateId, 'Relation endpoint resolution is blocked or ambiguous'); continue }
@@ -225,7 +228,7 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
       if (matches.length > 0 || index.relations.has(deterministicId)) addReview(group.candidateId, 'Create target already exists; planner will not silently skip it')
       else create(deterministicId)
     } else if (decision.action === 'keep_both') {
-      if (candidate.relationType === 'business_exposure' && matches.some((value) => value.lifecycle.status === 'active')) addReview(group.candidateId, 'keep_both is illegal for an existing active business_exposure pair')
+      if (candidate.relationType === 'business_exposure' && matches.some((value) => value.lifecycle.status === 'active')) addReview(group.candidateId, 'keep_both is illegal for an existing active business_exposure pair', [], { category: 'relation_cardinality' })
       else create(allocateRelationId(candidate.relationType, sourceRef, targetRef, candidate.attributes ?? {}, { rawRef: input.rawRef, candidateId: group.candidateId }))
     } else if (decision.action === 'merge_source') {
       if (matches.length !== 1 || !sourceRefs(matches[0] as unknown as Dict)) addReview(group.candidateId, 'merge_source requires exactly one Relation target supporting sourceRefs')
@@ -240,9 +243,10 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
     const decision = decisions.get(group.candidateId)
     const candidate = group.candidate as ClaimCandidate
     if (!decision) { addReview(group.candidateId, 'Missing reconciliation decision'); continue }
-    if ((input.consolidationReviews ?? []).some((constraint) => constraint.candidateId === group.candidateId)) { addReview(group.candidateId, 'Consolidation conflict requires review'); continue }
+    const consolidationConstraint = (input.consolidationReviews ?? []).find((constraint) => constraint.candidateId === group.candidateId)
+    if (consolidationConstraint) { addReview(group.candidateId, 'Consolidation conflict requires review', [], { category: 'other', origin: 'consolidation_mirror', reviewKey: consolidationReviewKey(consolidationConstraint.candidateId, consolidationConstraint.reason, consolidationConstraint.conflictingFields) }); continue }
     if (decision.action === 'reject') { rejected.add(group.candidateId); continue }
-    if (decision.action === 'user_review') { addReview(group.candidateId, decision.rationale); continue }
+    if (decision.action === 'user_review') { addReview(group.candidateId, decision.rationale, [], reconciliationMirror(decision)); continue }
     const subjects = candidate.subjectRefs.map((subject) => entities.get(subject.candidateRef))
     if (subjects.some((value) => value === undefined)) { if (!rejected.has(group.candidateId)) addReview(group.candidateId, 'Claim subject resolution is blocked or ambiguous'); continue }
     const subjectRefs = subjects as string[]

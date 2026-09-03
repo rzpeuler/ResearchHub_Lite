@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { consolidateExtractions } from '../../workflows/raw-document-knowledge-ingestion/consolidation.ts'
 import { planKnowledgeChangeSet } from '../../workflows/raw-document-knowledge-ingestion/changeset-planner.ts'
@@ -9,7 +9,8 @@ import { boundedExtract } from '../../workflows/raw-document-knowledge-ingestion
 import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
 import { retrieveFocusedKnowledge } from '../../workflows/raw-document-knowledge-ingestion/retrieval.ts'
 import { emptyReviewSummary, normalizeReviewSummary, writeNoOpExecutionRecord } from '../../workflows/raw-document-knowledge-ingestion/review-telemetry.ts'
-import { createKnowledgeBase, removeKnowledgeBase } from '../knowledge/helpers.ts'
+import { withKnowledgeBaseMutationLock } from '../../knowledge/storage/mutation-lock.ts'
+import { createKnowledgeBase, readManifest, removeKnowledgeBase } from '../knowledge/helpers.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
 import type { ClaimCandidate, EntityCandidate, RelationCandidate, ResolvedCandidateGroup, ReconciliationDecision, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
 import type { EntityTypeV03 } from '../../knowledge/schema/domain.ts'
@@ -255,9 +256,10 @@ test('no-op execution records replay, reject input conflicts, and preserve commi
     assert.equal(conflict.kind, 'conflict')
     const path = join(root, 'logs', 'ingestion', 'run-log.yaml')
     const committed = { ...(JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>), writeStatus: 'committed' }
-    await writeFile(path, JSON.stringify(committed), 'utf8')
+    await withKnowledgeBaseMutationLock(root, async () => { await writeFile(path, JSON.stringify(committed), 'utf8') })
     const protectedLog = await writeNoOpExecutionRecord(root, record)
-    assert.equal(protectedLog.kind, 'conflict')
+    assert.equal(protectedLog.kind, 'replay')
+    assert.equal((await writeNoOpExecutionRecord(root, { ...record, workflowInputFingerprint: 'other' })).kind, 'conflict')
     assert.equal((JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>).writeStatus, 'committed')
   } finally { await removeKnowledgeBase(root) }
 })
@@ -266,5 +268,63 @@ test('no-op execution records reject unsafe workflow identifiers', async () => {
   const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-unsafe-log' })
   try {
     await assert.rejects(() => writeNoOpExecutionRecord(root, { workflowRunId: '../escape', knowledgeBaseId: 'kb-unsafe-log', rawRef: 'raw', documentId: 'doc', workflowInputFingerprint: 'fp', status: 'completed', writeStatus: 'no_changes', baseRevision: 0, committedRevision: 0, reviewSummary: emptyReviewSummary(), completedAt: 'now', errors: [] }))
+  } finally { await removeKnowledgeBase(root) }
+})
+
+test('ReviewSummary preserves two distinct root causes for one candidate', () => {
+  const summary = normalizeReviewSummary({
+    consolidationReviews: [{ candidateId: 'r', reason: 'Relation attributes conflict', conflictingFields: ['importance'] }],
+    plannerReviewItems: [{ candidateId: 'r', kind: 'relation', category: 'relation_cardinality', rationale: 'business_exposure cardinality conflict', dependentCandidateIds: [] }],
+  })
+  assert.equal(summary.total, 2)
+  assert.equal(summary.rootCount, 2)
+  assert.equal(summary.dependencyCount, 0)
+  assert.equal(summary.byCategory.other, 1)
+  assert.equal(summary.byCategory.relation_cardinality, 1)
+})
+
+test('ReviewSummary keeps a reconciliation review and a different planner issue', () => {
+  const summary = normalizeReviewSummary({
+    reconciliationDecisions: [{ candidateId: 'r', action: 'user_review', rationale: 'Need reviewer judgment' }],
+    plannerReviewItems: [{ candidateId: 'r', kind: 'relation', category: 'relation_cardinality', rationale: 'Illegal business_exposure cardinality', dependentCandidateIds: [] }],
+  })
+  assert.equal(summary.total, 2)
+  assert.equal(summary.byCategory.reconciliation_review, 1)
+  assert.equal(summary.byCategory.relation_cardinality, 1)
+})
+
+test('ReviewSummary invariants hold for same-candidate root and dependency events', () => {
+  const summary = normalizeReviewSummary({ plannerReviewItems: [
+    { candidateId: 'r', kind: 'relation', category: 'reconciliation_review', rationale: 'Root review', dependentCandidateIds: [], dependency: false, origin: 'planner', reviewKey: 'root-r' },
+    { candidateId: 'r', kind: 'relation', category: 'invalid_reference', rationale: 'Blocked by root review', dependentCandidateIds: [], dependency: true, origin: 'dependency_isolation', reviewKey: 'dependency-r' },
+  ] })
+  assert.equal(summary.rootCount + summary.dependencyCount, summary.total)
+  assert.equal(Object.values(summary.byCategory).reduce((sum, value) => sum + value, 0), summary.total)
+  assert.equal(Object.values(summary.byCandidateKind).reduce((sum, value) => sum + value, 0), summary.total)
+})
+
+test('simultaneous identical no-op writes serialize to one record and clean temp files', async () => {
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-noop-race-same' })
+  try {
+    const record = { workflowRunId: 'run-race-same', knowledgeBaseId: 'kb-noop-race-same', rawRef: 'raw', documentId: 'doc', workflowInputFingerprint: 'same', status: 'completed_with_review' as const, writeStatus: 'no_changes' as const, baseRevision: 0, committedRevision: 0, reviewSummary: emptyReviewSummary(), completedAt: 'now', errors: [] }
+    const results = await Promise.all([writeNoOpExecutionRecord(root, record), writeNoOpExecutionRecord(root, record)])
+    assert.deepEqual(results.map((item) => item.kind).sort(), ['replay', 'written'])
+    assert.equal((JSON.parse(await readFile(join(root, 'logs', 'ingestion', 'run-race-same.yaml'), 'utf8')) as Record<string, unknown>).workflowInputFingerprint, 'same')
+    assert.deepEqual((await readdir(join(root, 'logs', 'ingestion'))).filter((name) => name.includes('.tmp-')), [])
+    assert.equal((await readManifest(root)).revision, 0)
+  } finally { await removeKnowledgeBase(root) }
+})
+
+test('simultaneous different no-op fingerprints yield one record and one conflict', async () => {
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-noop-race-different' })
+  try {
+    const base = { workflowRunId: 'run-race-different', knowledgeBaseId: 'kb-noop-race-different', rawRef: 'raw', documentId: 'doc', status: 'completed' as const, writeStatus: 'no_changes' as const, baseRevision: 0, committedRevision: 0, reviewSummary: emptyReviewSummary(), completedAt: 'now', errors: [] }
+    const results = await Promise.all([writeNoOpExecutionRecord(root, { ...base, workflowInputFingerprint: 'one' }), writeNoOpExecutionRecord(root, { ...base, workflowInputFingerprint: 'two' })])
+    assert.deepEqual(results.map((item) => item.kind).sort(), ['conflict', 'written'])
+    const persisted = JSON.parse(await readFile(join(root, 'logs', 'ingestion', 'run-race-different.yaml'), 'utf8')) as Record<string, unknown>
+    assert.ok(persisted.workflowInputFingerprint === 'one' || persisted.workflowInputFingerprint === 'two')
+    assert.equal(typeof persisted.reviewSummary, 'object')
+    assert.deepEqual((await readdir(join(root, 'logs', 'ingestion'))).filter((name) => name.includes('.tmp-')), [])
+    assert.equal((await readManifest(root)).revision, 0)
   } finally { await removeKnowledgeBase(root) }
 })
