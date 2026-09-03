@@ -23,11 +23,14 @@ const validationEvidenceDir = resolve(repoRoot, 'tests/validation/evidence')
 const pdfFilename = '20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf'
 const expectedSha256 = '998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63'
 const expectedBytes = 3209114
-const productBaseline = 'f52a255f44d1df2dd9c5b5b211d877e586e5541e'
-const workflowRunId = 'rhl-validation-001-r2-primary'
-const knowledgeBaseId = 'kb-rhl-validation-001-r2'
+const productBaseline = '18d37ff19bf47a2ed650ddb040d818166f29fd36'
+const workflowRunId = 'rhl-validation-001-r3-primary'
+const knowledgeBaseId = 'kb-rhl-validation-001-r3'
 const historicalEvidencePath = 'C:\\Users\\Administrator\\Desktop\\ResearchHub\\tests\\knowledge\\product-validation\\evidence\\c004-r9-r6-r1-final-full-pipeline.json'
 const r1EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-real-e2e.json')
+const r2EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-r2-real-e2e.json')
+const r3EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-r3-real-e2e.json')
+const r3SummaryPath = resolve(validationEvidenceDir, 'RHL_VALIDATION_001_R3_SUMMARY.md')
 const configuredCapabilities: ReasoningCapabilities = { maxContextTokens: 100000, maxOutputTokens: 20000, structuredOutputSupport: true, maxConcurrency: 1 }
 const validationTimeoutMs = 900000
 const validationMaxOutputChars = 400000
@@ -54,7 +57,7 @@ class RecordingExecutor implements ReasoningExecutor {
   async execute(request: ReasoningRequest): Promise<ReasoningResult> {
     const sequence = ++this.sequence
     const startedAt = new Date().toISOString()
-    const executionId = `rhl-validation-001-r2-primary-${String(sequence).padStart(3, '0')}`
+    const executionId = `rhl-validation-001-r3-primary-${String(sequence).padStart(3, '0')}`
     const inputChars = JSON.stringify(request.input).length
     const contractChars = JSON.stringify(request.outputContract).length
     const entry: Dict = { sequence, executionId, operation: request.operation, startedAt, instructionChars: request.instruction.length, inputChars, contractChars, status: 'running' }
@@ -137,7 +140,7 @@ async function prepareFreshKnowledgeBase(root: string): Promise<void> {
   try { await access(root); throw new ValidationFailure(`Fresh Knowledge Base path already exists: ${root}`) } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
   for (const directory of ['raw', 'registry', 'theme-groups', 'entities', 'relations', 'claims', 'sources', 'modules', 'logs/ingestion']) await mkdir(join(root, directory), { recursive: true })
   const timestamp = '2026-09-03T00:00:00.000Z'
-  await writeFile(join(root, 'manifest.yaml'), JSON.stringify({ knowledgeBaseId, name: 'RHL-VALIDATION-001-R2 Real Ingestion', schemaVersion: '0.3', storageFormatVersion: '1', revision: 0, status: 'active', createdAt: timestamp, updatedAt: timestamp }) + '\n')
+  await writeFile(join(root, 'manifest.yaml'), JSON.stringify({ knowledgeBaseId, name: 'RHL-VALIDATION-001-R3 Real Ingestion', schemaVersion: '0.3', storageFormatVersion: '1', revision: 0, status: 'active', createdAt: timestamp, updatedAt: timestamp }) + '\n')
   await writeFile(join(root, 'registry', 'assets.yaml'), '{}\n')
   await writeFile(join(root, 'registry', 'raw.yaml'), '{}\n')
 }
@@ -284,7 +287,8 @@ function countByValues(values: readonly string[]): Dict { return Object.fromEntr
 
 async function main(): Promise<void> {
   const stages: Record<string, Stage> = {}
-  const evidence: Dict = { taskId: 'RHL-VALIDATION-001-R2', validationTask: 'RHL-VALIDATION-001-R2', validationProductBaseline: productBaseline, startedAt: now(), phase: 'executing', phaseTimestamps: stages, architectureDocumentsModified: false, mockReasoningCalls: 0 }
+  const evidence: Dict = { taskId: 'RHL-VALIDATION-001-R3', validationTask: 'RHL-VALIDATION-001-R3', validationProductBaseline: productBaseline, startedAt: now(), phase: 'executing', phaseTimestamps: stages, architectureDocumentsModified: false, mockReasoningCalls: 0 }
+  const checkpoint = async (): Promise<void> => { await writeEvidence(evidence, 'IN_PROGRESS') }
   let pdfPath: string | undefined
   let kbRoot: string | undefined
   let recorder: RecordingExecutor | undefined
@@ -296,6 +300,7 @@ async function main(): Promise<void> {
     assertCondition(gitHead === remoteHead, `Git parity failed: HEAD=${gitHead}, origin/main=${remoteHead}`)
     assertCondition(changedProduct === '', 'Product-code freeze failed: production paths differ from the accepted product baseline')
     stages.baseline_verified = { startedAt: now(), completedAt: now(), durationMs: 0, status: 'passed' }
+    await checkpoint()
 
     pdfPath = await runStage(stages, 'pdf_verified', async () => {
       const found = await findFrozenPdf()
@@ -304,6 +309,7 @@ async function main(): Promise<void> {
       const fileStat = await stat(found)
       assertCondition(fileStat.size === expectedBytes && digest === expectedSha256, `Frozen PDF identity mismatch: bytes=${fileStat.size}, sha256=${digest}`)
       evidence.pdf = { path: found, filename: pdfFilename, bytes: fileStat.size, sha256: digest, expectedBytes, expectedSha256, exactMatch: true }
+      await checkpoint()
       return found
     })
 
@@ -319,6 +325,7 @@ async function main(): Promise<void> {
       const smokeStarted = Date.now()
       const smoke = await inner.execute({ operation: 'understandAndPlan', instruction: 'Return a JSON object with one key named smoke and value ok. Return no other text.', input: { smoke: true }, outputContract: { type: 'object' }, metadata: { executionId: 'rhl-validation-001-codex-smoke' } })
       evidence.codex = { executable: 'codex', version, helpOutputBytes: helpBytes, configuredCapabilities, timeoutMs: validationTimeoutMs, maxOutputChars: validationMaxOutputChars, smoke: { operation: smoke.operation, operationId: smoke.operationId, durationMs: Date.now() - smokeStarted, outputBytes: Buffer.byteLength(String(smoke.rawOutput ?? smoke.output), 'utf8') } }
+      await checkpoint()
       return inner
     })
 
@@ -341,6 +348,7 @@ async function main(): Promise<void> {
       assertCondition(parsed.stats.pageCount === 103, `Expected 103 pages, received ${String(parsed.stats.pageCount)}`)
       assertCondition(parsed.stats.tableCount > 0, 'Docling table pipeline returned no tables')
       assertCondition(parsed.warnings.length === 0, `Docling returned warnings: ${parsed.warnings.join('; ').slice(0, 500)}`)
+      await checkpoint()
       return parsed
     })
 
@@ -350,6 +358,7 @@ async function main(): Promise<void> {
       const initial = await validateKnowledgeBaseV03(kbRoot!)
       assertCondition(initial.status === 'passed', 'Fresh Knowledge Base initial full validation failed')
       evidence.freshKnowledgeBase = { knowledgeBaseId, root: kbRoot, schemaVersion: '0.3', storageFormatVersion: '1', revision: 0, seedObjects: 0, initialFullValidation: initial.status }
+      await checkpoint()
     })
 
     recorder = new RecordingExecutor(codexPreflight)
@@ -369,7 +378,8 @@ async function main(): Promise<void> {
     evidence.candidates = { unitCandidateCounts }
     const reasoningRecorder = recorder!
     evidence.reasoningCalls = { total: reasoningRecorder.calls.length, byOperation: Object.fromEntries([...new Set(reasoningRecorder.calls.map((call) => call.operation as string))].sort().map((operation) => [operation, reasoningRecorder.calls.filter((call) => call.operation === operation).length])), maxOutputBytes: Math.max(0, ...reasoningRecorder.calls.map((call) => Number(call.outputBytes ?? 0))), calls: reasoningRecorder.calls }
-    if (primary.status === 'blocked' && primary.errors.some((error) => error.includes('more than one decision'))) throw new ValidationFailure(`RECONCILIATION_PRODUCT_DEFECT: ${primary.errors.join('; ').slice(0, 1000)}`)
+    await checkpoint()
+    if (primary.status === 'blocked' && primary.errors.some((error) => error.includes('more than one decision') || error.includes('exactly one decision'))) throw new ValidationFailure(`RECONCILIATION_PRODUCT_DEFECT: ${primary.errors.join('; ').slice(0, 1000)}`)
     assertCondition(primary.status !== 'blocked', `Primary workflow blocked: ${primary.errors.join('; ').slice(0, 1000)}`)
     assertCondition(primary.planAttempts?.length === 1 || primary.planAttempts?.length === 2, 'Plan attempts were not bounded to one or two attempts')
     assertCondition(primary.planAttempts?.at(-1)?.status === 'accepted', 'Final plan attempt was not accepted')
@@ -400,10 +410,12 @@ async function main(): Promise<void> {
     evidence.historicalComparison = await (async () => {
       const historical = JSON.parse(await readFile(historicalEvidencePath, 'utf8')) as Dict
       const r1 = JSON.parse(await readFile(r1EvidencePath, 'utf8')) as Dict
+      const r2 = JSON.parse(await readFile(r2EvidencePath, 'utf8')) as Dict
       const primaryHistorical = isDict(historical.primary) && isDict(historical.primary.workflow) ? historical.primary.workflow : {}
       const finalHistorical = isDict(historical.finalKnowledgeBase) ? historical.finalKnowledgeBase : {}
       const r1Primary = isDict(r1.primary) ? r1.primary : {}
-      return { historicalProductValidation: { evidencePath: historicalEvidencePath, taskId: historical.taskId, baseline: historical.baseline, reviewItemCount: primaryHistorical.reviewItemCount, schemaGapCount: primaryHistorical.schemaGapCount, knowledgeCreate: isDict(primaryHistorical.plannedChangeCounts) ? primaryHistorical.plannedChangeCounts.knowledgeCreate : undefined, finalKnowledgeBase: finalHistorical, comparisonOnly: true }, r1: { evidencePath: r1EvidencePath, taskId: r1.taskId, outcome: r1.validationOutcome, status: r1Primary.status, unitCount: r1Primary.unitCount, excludedBlockCount: r1Primary.excludedBlockCount, candidateCounts: r1Primary.candidateCounts, reviewSummary: r1Primary.reviewSummary }, r2: { status: primary.status, planAttempts: primary.planAttempts ?? [], unitCount: primary.acceptedPlan?.units.length ?? 0, excludedBlockCount: primary.acceptedPlan?.excludedBlockIds.length ?? 0, candidateCounts: primary.candidateCounts, reviewSummary: primary.reviewSummary }, comparisonOnly: true }
+      const r2Primary = isDict(r2.primary) ? r2.primary : {}
+      return { historicalProductValidation: { evidencePath: historicalEvidencePath, taskId: historical.taskId, baseline: historical.baseline, reviewItemCount: primaryHistorical.reviewItemCount, schemaGapCount: primaryHistorical.schemaGapCount, knowledgeCreate: isDict(primaryHistorical.plannedChangeCounts) ? primaryHistorical.plannedChangeCounts.knowledgeCreate : undefined, finalKnowledgeBase: finalHistorical, comparisonOnly: true }, r1: { evidencePath: r1EvidencePath, taskId: r1.taskId, outcome: r1.validationOutcome, status: r1Primary.status, unitCount: r1Primary.unitCount, excludedBlockCount: r1Primary.excludedBlockCount, candidateCounts: r1Primary.candidateCounts, reviewSummary: r1Primary.reviewSummary }, r2: { evidencePath: r2EvidencePath, taskId: r2.taskId, outcome: r2.validationOutcome, status: r2Primary.status, planAttempts: r2Primary.planAttempts, unitCount: r2Primary.unitCount, excludedBlockCount: r2Primary.excludedBlockCount, candidateCounts: r2Primary.candidateCounts, reviewSummary: r2Primary.reviewSummary }, r3: { status: primary.status, planAttempts: primary.planAttempts ?? [], unitCount: primary.acceptedPlan?.units.length ?? 0, excludedBlockCount: primary.acceptedPlan?.excludedBlockIds.length ?? 0, candidateCounts: primary.candidateCounts, reviewSummary: primary.reviewSummary }, comparisonOnly: true }
     })()
     const logPath = join(kbRoot, 'logs', 'ingestion', workflowRunId + '.yaml')
     const log = parseYaml(await readFile(logPath, 'utf8'), logPath)
@@ -420,30 +432,33 @@ async function main(): Promise<void> {
     evidence.phase = 'completed'
     evidence.completedAt = now()
     await writeEvidence(evidence, 'TECHNICAL PASS / CTO VALIDATION ACCEPTANCE PENDING')
-    console.log(JSON.stringify({ outcome: evidence.validationOutcome, pdf: evidence.pdf, docling: evidence.docling, primary: primarySummary(primary), finalKnowledgeBase: evidence.finalKnowledgeBase, replay: evidence.replay, evidence: resolve(validationEvidenceDir, 'rhl-validation-001-r2-real-e2e.json') }))
+    console.log(JSON.stringify({ outcome: evidence.validationOutcome, pdf: evidence.pdf, docling: evidence.docling, primary: primarySummary(primary), finalKnowledgeBase: evidence.finalKnowledgeBase, replay: evidence.replay, evidence: r3EvidencePath, summary: r3SummaryPath }))
     void document; void assets
   } catch (error) {
     evidence.phase = 'blocked'
     evidence.validationOutcome = error instanceof ValidationFailure ? error.message.split(':')[0] : 'VALIDATION_BLOCKED'
+    if (evidence.validationOutcome === 'RECONCILIATION_PRODUCT_DEFECT') evidence.failureClassification = evidence.validationOutcome
     evidence.error = errorText(error).slice(0, 2000)
     evidence.completedAt = now()
     await writeEvidence(evidence, String(evidence.validationOutcome))
-    console.error(JSON.stringify({ outcome: evidence.validationOutcome, error: evidence.error, evidence: resolve(validationEvidenceDir, 'rhl-validation-001-r2-real-e2e.json') }))
+    console.error(JSON.stringify({ outcome: evidence.validationOutcome, error: evidence.error, evidence: r3EvidencePath, summary: r3SummaryPath }))
     process.exitCode = 1
   }
 }
 
 async function writeEvidence(evidence: Dict, outcome: string): Promise<void> {
   await mkdir(validationEvidenceDir, { recursive: true })
-  await writeFile(resolve(validationEvidenceDir, 'rhl-validation-001-r2-real-e2e.json'), JSON.stringify(evidence, null, 2) + '\n')
+  await writeFile(r3EvidencePath, JSON.stringify(evidence, null, 2) + '\n')
   const primary = isDict(evidence.primary) ? evidence.primary : {}
   const finalKb = isDict(evidence.finalKnowledgeBase) ? evidence.finalKnowledgeBase : {}
   const replay = isDict(evidence.replay) ? evidence.replay : {}
   const planAttempts = Array.isArray(evidence.planAttempts) ? evidence.planAttempts : []
   const plan = isDict(evidence.extractionPlan) ? evidence.extractionPlan : {}
   const exclusion = isDict(evidence.extractionPlanDetails) && isDict(evidence.extractionPlanDetails.exclusionQuality) ? evidence.extractionPlanDetails.exclusionQuality : {}
-  const summary = ['# RHL-VALIDATION-001-R2 Real E2E Validation', '', `- Outcome: ${outcome}`, `- Product baseline: ${String(evidence.validationProductBaseline)}`, `- PDF: ${String((evidence.pdf as Dict | undefined)?.filename ?? 'not verified')}`, `- Docling: ${String((evidence.docling as Dict | undefined)?.parser ? JSON.stringify((evidence.docling as Dict).parser) : 'not executed')}`, `- Primary status: ${String(primary.status ?? 'not executed')}`, `- Primary Writer: ${String(primary.writeStatus ?? 'not executed')}`, `- Plan attempts: ${JSON.stringify(planAttempts)}`, `- Accepted plan: ${JSON.stringify({ unitCount: plan.unitCount, primaryCoveredBlockCount: plan.primaryCoveredBlockCount, excludedBlockCount: plan.excludedBlockCount, primaryCoveragePercentage: plan.primaryCoveragePercentage, excludedPercentage: plan.excludedPercentage })}`, `- Exclusion quality: ${JSON.stringify({ excludedPercentage: exclusion.excludedPercentage, semanticQualityWarning: exclusion.semanticQualityWarning })}`, `- Final KB counts: ${JSON.stringify(finalKb.counts ?? {})}`, `- ReviewSummary total: ${String((primary.reviewSummary as Dict | undefined)?.total ?? 'not available')}`, `- Replay: ${JSON.stringify(replay)}`, '', 'The JSON evidence contains bounded telemetry only; prompts, model output bodies, chain-of-thought, credentials, and runtime artifacts are excluded.']
-  await writeFile(resolve(validationEvidenceDir, 'RHL_VALIDATION_001_R2_SUMMARY.md'), summary.join('\n') + '\n')
+  const doclingStats = isDict(evidence.docling) && isDict(evidence.docling.stats) ? evidence.docling.stats : {}
+  const candidateTotals = isDict(evidence.candidates) && isDict(evidence.candidates.unitCandidateCounts) ? evidence.candidates.unitCandidateCounts : {}
+  const summary = ['# RHL-VALIDATION-001-R3 Real E2E Validation', '', `- Outcome: ${outcome}`, `- Product baseline: ${String(evidence.validationProductBaseline)}`, `- PDF: ${String((evidence.pdf as Dict | undefined)?.filename ?? 'not verified')}`, `- Docling: ${String((evidence.docling as Dict | undefined)?.parser ? JSON.stringify((evidence.docling as Dict).parser) : 'not executed')}`, `- StructuredDocument: ${String(doclingStats.pageCount ?? 'n/a')} pages, ${String(doclingStats.sectionCount ?? 'n/a')} sections, ${String(doclingStats.blockCount ?? 'n/a')} blocks, ${String(doclingStats.tableCount ?? 'n/a')} tables, ${String(evidence.docling && isDict(evidence.docling) ? evidence.docling.warningCount ?? 'n/a' : 'n/a')} warnings`, `- Primary status: ${String(primary.status ?? 'not executed')}`, `- Primary Writer: ${String(primary.writeStatus ?? 'not executed')}`, `- Plan attempts: ${JSON.stringify(planAttempts)}`, `- Accepted plan: ${JSON.stringify({ unitCount: plan.unitCount, primaryCoveredBlockCount: plan.primaryCoveredBlockCount, excludedBlockCount: plan.excludedBlockCount, primaryCoveragePercentage: plan.primaryCoveragePercentage, excludedPercentage: plan.excludedPercentage })}`, `- Exclusion quality: ${JSON.stringify({ excludedPercentage: exclusion.excludedPercentage, semanticQualityWarning: exclusion.semanticQualityWarning })}`, `- Extraction: ${String(primary.unitCount ?? 'n/a')} units; Entity ${String(candidateTotals.entity ?? 'n/a')}, Relation ${String(candidateTotals.relation ?? 'n/a')}, Claim ${String(candidateTotals.claim ?? 'n/a')}, rejected ${String(candidateTotals.rejected ?? 'n/a')}`, `- Final KB counts: ${JSON.stringify(finalKb.counts ?? {})}`, `- ReviewSummary total: ${String((primary.reviewSummary as Dict | undefined)?.total ?? 'not available')}`, `- Replay: ${JSON.stringify(replay)}`, '', 'The JSON evidence contains bounded telemetry only; prompts, model output bodies, chain-of-thought, credentials, and runtime artifacts are excluded.']
+  await writeFile(r3SummaryPath, summary.join('\n') + '\n')
 }
 
 await main()

@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion Implemented — Unicode Candidate Identity Hardening Implemented / CTO Acceptance Pending**
+**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion Implemented — RHL-VALIDATION-001-R3 Executed / Reconciliation Blocked**
 
 ## Completed
 
@@ -32,7 +32,7 @@
 - Deterministic Schema 0.3 Knowledge validation and ChangeSet validation implemented under `knowledge/validation/` in `RHL-MIGRATION-005`.
 - Raw Document → Canonical Knowledge deterministic Workflow implemented under `workflows/raw-document-knowledge-ingestion/`, including bounded extraction, consolidation, focused retrieval, review isolation, one ChangeSet, staged Writer validation, reload validation, and replay handling.
 - `RHL-MIGRATION-005` implementation plus `RHL-MIGRATION-005-FIX-002`, `RHL-MIGRATION-005-FIX-003`, `RHL-MIGRATION-005-FIX-004`, `RHL-MIGRATION-005-FIX-005`, and `RHL-MIGRATION-005-FIX-006` are complete; `RHL-MIGRATION-005` is independently CTO accepted / closed.
-- `RHL-FIX-IDENTITY-001` implementation is complete and `RHL-FIX-IDENTITY-001-FIX-001` is applied: Unicode-safe semantic identity, deterministic mixed-script canonical IDs, collision-safe consolidation, exact Unicode retrieval, and pre-reconciliation candidate uniqueness checks are covered by offline tests; CTO acceptance is pending.
+- `RHL-FIX-IDENTITY-001` and `RHL-FIX-IDENTITY-001-FIX-001` are independently CTO accepted / closed: Unicode-safe semantic identity, deterministic mixed-script canonical IDs, collision-safe consolidation, exact Unicode retrieval, and pre-reconciliation candidate uniqueness checks are covered by offline tests.
 
 ## Current Limitations
 
@@ -41,6 +41,7 @@
 - `RHL-VALIDATION-001` was executed with the exact frozen PDF; it was blocked at deterministic ExtractionPlan coverage validation and remains historical evidence.
 - `RHL-FIX-PLAN-001` was independently CTO accepted / closed.
 - `RHL-VALIDATION-001-R2` was executed against the accepted product baseline and blocked at reconciliation because candidate `merged-entity-company` received more than one decision; this remains historical evidence and is not marked successful.
+- `RHL-VALIDATION-001-R3` was executed against a fresh Knowledge Base with the exact frozen PDF, real Docling, and real Codex; it was blocked at reconciliation because the real output did not provide exactly one decision for every supplied candidate. CTO acceptance remains pending.
 
 ## Current Architecture Baseline
 
@@ -55,4 +56,4 @@
 
 ## Next Pending After CTO Acceptance
 
-No real R3 validation is authorized until CTO acceptance of `RHL-FIX-IDENTITY-001`.
+R3 remains unaccepted; a separate reconciliation correction and a fresh validation run are required before any successful R3 acceptance.
