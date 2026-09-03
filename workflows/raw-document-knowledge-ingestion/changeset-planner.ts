@@ -71,9 +71,10 @@ function relationAttributeError(type: string, attributes: unknown): string | und
   }
   return undefined
 }
-function semanticFieldsError(candidate: EntityCandidate, themeGroups: Map<string, unknown>): string | undefined {
+function semanticFieldsError(candidate: EntityCandidate, themeGroups: Map<string, unknown>, existingInvestmentTheme: boolean): string | undefined {
   const fields = candidate.semanticFields
   if (candidate.entityType === 'investment_theme') {
+    if (!fields && existingInvestmentTheme) return undefined
     if (!fields || typeof fields.themeGroupRef !== 'string' || !themeGroups.has(fields.themeGroupRef)) return 'New InvestmentTheme requires an existing deterministic ThemeGroup'
     if (Object.keys(fields).some((key) => key !== 'themeGroupRef')) return 'Unsupported InvestmentTheme semanticFields require review'
     return undefined
@@ -94,6 +95,41 @@ function makeRelation(candidate: RelationCandidate, id: string, sourceRef: strin
   if (candidate.attributes !== undefined && Object.keys(candidate.attributes).length > 0) value.attributes = structuredClone(candidate.attributes)
   if (candidate.confidence !== undefined) value.confidence = candidate.confidence
   return value as unknown as KnowledgeRelationV03
+}
+function patchEntity(existing: KnowledgeEntityV03, candidate: EntityCandidate): KnowledgeEntityV03 {
+  const value = structuredClone(existing) as unknown as Dict
+  value.name = candidate.name
+  value.aliases = unique([...(Array.isArray(value.aliases) ? value.aliases.filter((item): item is string => typeof item === 'string') : []), ...(candidate.aliases ?? [])])
+  if (candidate.description !== undefined) value.description = candidate.description
+  if (candidate.entityType === 'company') for (const key of ['ticker', 'exchange', 'legalName']) if (candidate.semanticFields?.[key] !== undefined) value[key] = candidate.semanticFields[key]
+  if (candidate.confidence !== undefined) value.metadata = { ...(record(value.metadata) ? value.metadata : {}), extractionConfidence: candidate.confidence }
+  return value as unknown as KnowledgeEntityV03
+}
+function patchRelation(existing: KnowledgeRelationV03, candidate: RelationCandidate, sourceRef: string, targetRef: string, sourceId: string): KnowledgeRelationV03 {
+  const value = structuredClone(existing) as unknown as Dict
+  value.sourceRef = sourceRef
+  value.targetRef = targetRef
+  value.sourceRefs = unique([...(Array.isArray(value.sourceRefs) ? value.sourceRefs.filter((item): item is string => typeof item === 'string') : []), sourceId])
+  if (candidate.attributes !== undefined) value.attributes = structuredClone(candidate.attributes)
+  if (candidate.confidence !== undefined) value.confidence = candidate.confidence
+  return value as unknown as KnowledgeRelationV03
+}
+function patchClaim(input: ChangeSetPlanningInput, existing: KnowledgeClaimV03, candidate: ClaimCandidate, subjects: readonly string[], sourceId: string): KnowledgeClaimV03 {
+  const value = structuredClone(existing) as unknown as Dict
+  value.statement = candidate.statement
+  value.claimType = candidate.claimType
+  value.subjectRefs = unique(subjects)
+  value.primarySubjectRef = subjects[0]
+  value.sourceRefs = unique([...(Array.isArray(value.sourceRefs) ? value.sourceRefs.filter((item): item is string => typeof item === 'string') : []), sourceId])
+  const anchors = candidate.evidenceBlockRefs.map((ref) => ({ sourceRef: sourceId, rawRef: input.rawRef, locator: blockLocator(input.plan, [ref]), chunkRef: null }))
+  const provenance = Array.isArray(value.provenance) ? value.provenance.filter(record) : []
+  const seen = new Set(provenance.map((item) => hashKnowledgeObject(item)))
+  for (const anchor of anchors) { const key = hashKnowledgeObject(anchor); if (!seen.has(key)) { provenance.push(anchor); seen.add(key) } }
+  value.provenance = provenance
+  if (candidate.temporal !== undefined && candidate.temporal !== null) value.temporal = structuredClone(candidate.temporal)
+  if (candidate.structuredValue !== undefined && candidate.structuredValue !== null) value.structuredValue = structuredClone(candidate.structuredValue)
+  if (candidate.confidence !== undefined) value.confidence = candidate.confidence
+  return value as unknown as KnowledgeClaimV03
 }
 function makeClaim(input: ChangeSetPlanningInput, candidate: ClaimCandidate, id: string, subjects: readonly string[], sourceId: string, supersedes?: string): KnowledgeClaimV03 {
   const value: Dict = { id, claimType: candidate.claimType, statement: candidate.statement, subjectRefs: unique(subjects), primarySubjectRef: subjects[0], sourceRefs: [sourceId], provenance: candidate.evidenceBlockRefs.map((ref) => ({ sourceRef: sourceId, rawRef: input.rawRef, locator: blockLocator(input.plan, [ref]), chunkRef: null })), lifecycle: { status: 'active' } }
@@ -150,7 +186,7 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
     if (decision.action === 'user_review') { resolve(group.candidateId, 'review', undefined, decision.rationale); addReview(group.candidateId, decision.rationale, dependents.get(group.candidateId)); continue }
     const matches = existingEntities(candidate, input, index)
     const baseId = allocateEntityId(candidate.entityType, candidate.name)
-    const semanticError = semanticFieldsError(candidate, index.themeGroups)
+    const semanticError = semanticFieldsError(candidate, index.themeGroups, matches.length === 1 && (decision.action === 'duplicate' || decision.action === 'update_state'))
     if (semanticError) { resolve(group.candidateId, 'review', undefined, semanticError); addReview(group.candidateId, semanticError); continue }
     if (decision.action === 'duplicate') {
       if (matches.length === 1) resolve(group.candidateId, 'resolved_existing', matches[0].id, 'Reused exactly one deterministic existing Entity')
@@ -164,7 +200,7 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
       else { resolve(group.candidateId, 'allocated_new', id, 'Allocated distinct keep_both Entity ID'); knowledgeOperations.push({ operationId: opId('entity-create'), type: 'create', object: makeEntity(candidate, id, index.themeGroups) }) }
     } else if (decision.action === 'update_state') {
       if (matches.length !== 1) { resolve(group.candidateId, 'review', undefined, 'update_state requires exactly one deterministic existing Entity'); addReview(group.candidateId, 'update_state requires exactly one deterministic existing Entity') }
-      else { resolve(group.candidateId, 'resolved_existing', matches[0].id, 'Updated exactly one deterministic existing Entity'); knowledgeOperations.push({ operationId: opId('entity-update'), type: 'update', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), object: makeEntity(candidate, matches[0].id, index.themeGroups) }) }
+      else { resolve(group.candidateId, 'resolved_existing', matches[0].id, 'Updated exactly one deterministic existing Entity'); knowledgeOperations.push({ operationId: opId('entity-update'), type: 'update', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), object: patchEntity(matches[0], candidate) }) }
     } else { resolve(group.candidateId, 'review', undefined, decision.action + ' is unsupported for Entity targets'); addReview(group.candidateId, decision.action + ' is unsupported for Entity targets') }
   }
   for (const group of input.groups.filter((item) => item.kind === 'entity')) {
@@ -200,7 +236,7 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
       else knowledgeOperations.push({ operationId: opId('relation-source-merge'), type: 'merge_source', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), addSourceRefs: [sourceId] })
     } else if (decision.action === 'update_state') {
       if (matches.length !== 1) addReview(group.candidateId, 'update_state requires exactly one deterministic Relation target')
-      else knowledgeOperations.push({ operationId: opId('relation-update'), type: 'update', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), object: makeRelation(candidate, matches[0].id, sourceRef, targetRef, sourceId) })
+      else knowledgeOperations.push({ operationId: opId('relation-update'), type: 'update', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), object: patchRelation(matches[0], candidate, sourceRef, targetRef, sourceId) })
     } else addReview(group.candidateId, decision.action + ' is unsupported for Relation targets')
   }
 
@@ -230,7 +266,7 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
       else knowledgeOperations.push({ operationId: opId('claim-source-merge'), type: 'merge_source', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), addSourceRefs: [sourceId] })
     } else if (decision.action === 'update_state') {
       if (matches.length !== 1) addReview(group.candidateId, 'update_state requires exactly one deterministic Claim target')
-      else knowledgeOperations.push({ operationId: opId('claim-update'), type: 'update', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), object: makeClaim(input, candidate, matches[0].id, subjectRefs, sourceId) })
+      else knowledgeOperations.push({ operationId: opId('claim-update'), type: 'update', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), object: patchClaim(input, matches[0], candidate, subjectRefs, sourceId) })
     } else if (decision.action === 'supersede') {
       if (matches.length !== 1) addReview(group.candidateId, 'supersede requires exactly one Claim target')
       else { const id = allocateClaimId({ claimType: candidate.claimType, statement: candidate.statement, subjectRefs: unique(subjectRefs), temporal: candidate.temporal ?? null, structuredValue: candidate.structuredValue ?? null, discriminator: { supersedes: matches[0].id } }); knowledgeOperations.push({ operationId: opId('claim-supersede'), type: 'supersede', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), replacement: makeClaim(input, candidate, id, subjectRefs, sourceId, matches[0].id) }) }
@@ -239,7 +275,7 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
 
   const reviewCount = reviews.size + (input.reviewItemCount ?? 0)
   const hasReview = reviewCount > 0 || (input.rejectedCandidateCount ?? 0) > 0 || rejected.size > 0 || (input.consolidationReviews?.length ?? 0) > 0
-  const statusHint = input.workflowStatusHint ?? (hasReview ? 'completed_with_review' : 'completed')
+  const statusHint = hasReview || input.workflowStatusHint === 'completed_with_review' ? 'completed_with_review' : 'completed'
   if (knowledgeOperations.length === 0) return { reviewItems: [...reviews.values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)), safeOperationCount: 0, summary: { sourceOperations: 0, knowledgeCreates: 0, reviewItems: reviewCount, blockedDependencies: rejected.size, noChanges: 1 }, entityResolutions: resolutions }
   const sourceOperations: KnowledgeSourceOperationV03[] = []
   const existingSource = index.sources.get(sourceId)

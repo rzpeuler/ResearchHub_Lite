@@ -31,7 +31,8 @@ export function retrieveFocusedKnowledge(assets: KnowledgeAssetCollectionV03, ex
     } else if (group.kind === 'relation') {
       const candidate = group.candidate as RelationCandidate
       const matches = endpointMatches(index, extraction, candidate)
-      existingKnowledge = [...index.relations.values()].filter((relation) => relation.type === candidate.relationType && matches.sourceIds.has(relation.sourceRef) && matches.targetIds.has(relation.targetRef)).sort((a, b) => a.id.localeCompare(b.id)).slice(0, 8)
+      const symmetric = candidate.relationType === 'competes_with' || candidate.relationType === 'substitutes_for'
+      existingKnowledge = [...index.relations.values()].filter((relation) => relation.type === candidate.relationType && ((matches.sourceIds.has(relation.sourceRef) && matches.targetIds.has(relation.targetRef)) || (symmetric && matches.sourceIds.has(relation.targetRef) && matches.targetIds.has(relation.sourceRef)))).sort((a, b) => a.id.localeCompare(b.id)).slice(0, 8)
     } else {
       const candidate = group.candidate as ClaimCandidate
       const subjects = new Set<string>(candidate.subjectRefs.flatMap((subject) => { const entity = extraction.entityCandidates.get(subject.candidateRef); return entity === undefined ? [] : exactEntity(index, entity).map((item) => item.id) }))

@@ -1,5 +1,5 @@
 import { normalizeKnowledgeSlug } from '../../knowledge/registry/id-allocation.ts'
-import { canonicalSerialize } from '../../knowledge/storage/canonical-hash.ts'
+import { canonicalSerialize, hashKnowledgeObject } from '../../knowledge/storage/canonical-hash.ts'
 import type { CandidateEntityRef, ClaimCandidate, EntityCandidate, RelationCandidate, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
 import type { AcceptedExtractionUnit } from './contracts.ts'
 
@@ -82,7 +82,8 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
     if (subjects.length !== candidate.subjectRefs.length) { rejected.push({ candidateId: candidate.candidateId, kind: 'claim', code: 'invalid_reference', message: 'Claim subject was not retained during consolidation' }); continue }
     const orderedSubjects = [...new Set(subjects)].sort()
     const key = `${candidate.claimType}:${normalize(candidate.statement)}:${orderedSubjects.join(',')}:${canonicalSerialize(candidate.temporal ?? null)}:${canonicalSerialize(candidate.structuredValue ?? null)}`
-    const normalizedCandidate: ClaimCandidate = { ...structuredClone(candidate), candidateId: `merged-claim-${normalize(`${candidate.claimType}-${candidate.statement}-${orderedSubjects.join('-')}`)}`, subjectRefs: orderedSubjects.map((ref, index) => candidateRef(ref, candidate.subjectRefs[index]?.mention ?? ref, candidate.subjectRefs[index]?.entityType)) }
+    const semanticIdentity = { claimType: candidate.claimType, statement: normalize(candidate.statement), subjectRefs: orderedSubjects, temporal: candidate.temporal ?? null, structuredValue: candidate.structuredValue ?? null }
+    const normalizedCandidate: ClaimCandidate = { ...structuredClone(candidate), candidateId: `merged-claim-${hashKnowledgeObject(semanticIdentity).slice(7, 23)}`, subjectRefs: orderedSubjects.map((ref, index) => candidateRef(ref, candidate.subjectRefs[index]?.mention ?? ref, candidate.subjectRefs[index]?.entityType)) }
     const current = claims.get(key)
     if (!current) claims.set(key, normalizedCandidate)
     else claims.set(key, { ...current, evidenceBlockRefs: addUnique(current.evidenceBlockRefs, normalizedCandidate.evidenceBlockRefs), confidence: mergeConfidence(current.confidence, normalizedCandidate.confidence) })

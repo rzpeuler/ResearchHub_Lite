@@ -1,0 +1,165 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { consolidateExtractions } from '../../workflows/raw-document-knowledge-ingestion/consolidation.ts'
+import { planKnowledgeChangeSet } from '../../workflows/raw-document-knowledge-ingestion/changeset-planner.ts'
+import { allocateSourceId } from '../../workflows/raw-document-knowledge-ingestion/id-helpers.ts'
+import { boundedExtract } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
+import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
+import { retrieveFocusedKnowledge } from '../../workflows/raw-document-knowledge-ingestion/retrieval.ts'
+import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
+import type { ClaimCandidate, EntityCandidate, RelationCandidate, ResolvedCandidateGroup, ReconciliationDecision, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
+import type { EntityTypeV03 } from '../../knowledge/schema/domain.ts'
+
+const rawRef = 'raw-sha256-' + '0'.repeat(64)
+const emptyAssets = (): KnowledgeAssetCollectionV03 => ({ rootDir: '', themeGroups: [], entities: [], relations: [], claims: [], modules: [], sources: [], registry: [] })
+const reportMap = { sourceAssessment: { summary: 'test', sourceType: 'unknown' as const, reliability: 'unknown' as const }, researchScope: 'test', majorTopics: [], majorEntityMentions: [], majorConclusions: [], sectionSemantics: [], semanticDependencies: [], themeHypotheses: [], uncertainty: [] }
+const acceptedPlan = { units: [], excludedBlockIds: [], estimatedContextTokens: {} }
+function loaded(kind: 'entity' | 'relation' | 'claim', value: Record<string, unknown>): { kind: typeof kind; value: Record<string, unknown>; filePath: string; storageRef: string } { return { kind, value, filePath: '', storageRef: '' } }
+function entity(id: string, name: string, type: EntityTypeV03 = 'company', extra: Record<string, unknown> = {}): EntityCandidate { return { candidateId: id, entityType: type, name, evidenceBlockRefs: [], reason: 'test', ...extra } }
+function relation(id: string, type: RelationCandidate['relationType'], source: string, target: string, attributes?: Record<string, unknown>): RelationCandidate { return { candidateId: id, relationType: type, source: { candidateRef: source, mention: source }, target: { candidateRef: target, mention: target }, ...(attributes === undefined ? {} : { attributes }), evidenceBlockRefs: [], reason: 'test' } }
+function claim(id: string, statement: string, subject: string, extra: Record<string, unknown> = {}): ClaimCandidate { return { candidateId: id, claimType: 'fact', statement, subjectRefs: [{ candidateRef: subject, mention: subject }], evidenceBlockRefs: [], reason: 'test', ...extra } }
+function input(groups: readonly ResolvedCandidateGroup[], decisions: readonly ReconciliationDecision[], assets = emptyAssets()): Parameters<typeof planKnowledgeChangeSet>[0] { return { knowledgeBaseId: 'kb-test', baseRevision: 0, workflowRunId: 'run-test', rawRef, rawManifest: { originalFilename: 'test.txt', suppliedMetadata: { title: 'Test', institution: null, author: null, publishedAt: null, sourceUrl: null } }, documentId: 'doc-test', document: { metadata: { originalFilename: 'test.txt', title: 'Test' } }, reportMap, plan: acceptedPlan, groups, decisions, assets } }
+function decisionsFor(groups: readonly ResolvedCandidateGroup[], action: ReconciliationDecision['action']): ReconciliationDecision[] { return groups.map((group) => ({ candidateId: group.candidateId, action, rationale: 'test' })) }
+function assetsWithEntities(values: Record<string, unknown>[], relations: Record<string, unknown>[] = [], claims: Record<string, unknown>[] = []): KnowledgeAssetCollectionV03 { return { ...emptyAssets(), entities: values.map((value) => loaded('entity', value) as never), relations: relations.map((value) => loaded('relation', value) as never), claims: claims.map((value) => loaded('claim', value) as never) } }
+function extraction(unitId: string, candidate: ClaimCandidate, description = 'same'): { unit: { unitId: string; proposedUnitId: string; topic: string; semanticPurpose: string; primaryRefs: []; contextRefs: []; primaryBlockIds: string[]; contextBlockIds: string[] }; result: ValidatedExtractKnowledgeResult } { return { unit: { unitId, proposedUnitId: unitId, topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }, result: { entities: [entity('e', 'Entity', 'company', { description, evidenceBlockRefs: [] })], relations: [], claims: [candidate], rejected: [], summary: { inputCounts: { entity: 1, relation: 0, claim: 1 }, acceptedCounts: { entity: 1, relation: 0, claim: 1 }, rejectedCounts: { entity: 0, relation: 0, claim: 0 }, rejectionCodes: [] } } } }
+
+test('planner duplicate Entity requires one exact target and never creates', () => {
+  const group = { candidateId: 'e', kind: 'entity' as const, candidate: entity('e', 'Acme'), existingKnowledge: [{ id: 'entity:acme', type: 'company', name: 'Acme', lifecycle: { status: 'active' } }] }
+  const result = planKnowledgeChangeSet(input([group], decisionsFor([group], 'duplicate')))
+  assert.equal(result.entityResolutions[0]?.status, 'resolved_existing')
+  assert.equal(result.changeSet, undefined)
+})
+
+test('planner duplicate Entity with zero or ambiguous targets becomes review', () => {
+  const zero = { candidateId: 'e', kind: 'entity' as const, candidate: entity('e', 'Acme') }
+  assert.equal(planKnowledgeChangeSet(input([zero], decisionsFor([zero], 'duplicate'))).reviewItems.length, 1)
+  const ambiguous = { ...zero, existingKnowledge: [{ id: 'entity:a', type: 'company', name: 'Acme', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'company', name: 'Acme', lifecycle: { status: 'active' } }] }
+  assert.equal(planKnowledgeChangeSet(input([ambiguous], decisionsFor([ambiguous], 'duplicate'))).reviewItems.length, 1)
+})
+
+test('planner Relation merge_source and update_state preserve sourceRefs', () => {
+  const a = { id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }
+  const b = { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }
+  const old = { id: 'relation:old', type: 'offers_product', sourceRef: 'entity:a', targetRef: 'entity:b', sourceRefs: ['source:old'], supportingClaimRefs: ['claim:keep'], lifecycle: { status: 'active' } }
+  const entities = [{ candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A'), existingKnowledge: [a] }, { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product'), existingKnowledge: [b] }]
+  const rg = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b'), existingKnowledge: [old] }
+  const merge = planKnowledgeChangeSet(input([...entities, rg], [...decisionsFor(entities, 'duplicate'), { candidateId: 'r', action: 'merge_source', rationale: 'test' }]))
+  assert.equal(merge.changeSet?.knowledgeOperations[0]?.type, 'merge_source')
+  const update = planKnowledgeChangeSet(input([...entities, rg], [...decisionsFor(entities, 'duplicate'), { candidateId: 'r', action: 'update_state', rationale: 'test' }]))
+  const updated = update.changeSet?.knowledgeOperations.find((operation) => operation.type === 'update')
+  const sourceId = allocateSourceId({ sourceUrl: null, publishedAt: null, title: 'Test', rawRef })
+  assert.deepEqual(updated && updated.type === 'update' && 'sourceRefs' in updated.object ? updated.object.sourceRefs : [], [sourceId, 'source:old'].sort())
+})
+
+test('planner Relation keep_both is distinct and business_exposure active pair is review', () => {
+  const a = { id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }
+  const b = { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }
+  const entities = [{ candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A'), existingKnowledge: [a] }, { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product'), existingKnowledge: [b] }]
+  const rg = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b') }
+  const result = planKnowledgeChangeSet(input([...entities, rg], [...decisionsFor(entities, 'duplicate'), { candidateId: 'r', action: 'keep_both', rationale: 'test' }]))
+  assert.equal(result.changeSet?.knowledgeOperations.some((operation) => operation.type === 'create'), true)
+  const industry = { id: 'entity:i', type: 'industry', name: 'Industry', lifecycle: { status: 'active' } }
+  const business = { id: 'relation:business', type: 'business_exposure', sourceRef: 'entity:a', targetRef: 'entity:i', lifecycle: { status: 'active' } }
+  const ig = { candidateId: 'i', kind: 'entity' as const, candidate: entity('i', 'Industry', 'industry'), existingKnowledge: [industry] }
+  const bg = { candidateId: 'b', kind: 'relation' as const, candidate: relation('b', 'business_exposure', 'a', 'i'), existingKnowledge: [business] }
+  const blocked = planKnowledgeChangeSet(input([{ ...entities[0]! }, ig, bg], [...decisionsFor([{ ...entities[0]! }, ig], 'duplicate'), { candidateId: 'b', action: 'keep_both', rationale: 'test' }], assetsWithEntities([a, industry], [business])))
+  assert.ok(blocked.reviewItems.some((item) => item.candidateId === 'b'))
+})
+
+test('planner Claim duplicate, update, supersede, and keep_both are deterministic', () => {
+  const a = { id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }
+  const old = { id: 'claim:old', claimType: 'fact', statement: 'A grows', subjectRefs: ['entity:a'], sourceRefs: ['source:old'], provenance: [{ sourceRef: 'source:old', rawRef, locator: null, chunkRef: null }], lifecycle: { status: 'active' } }
+  const eg = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A'), existingKnowledge: [a] }
+  const cg = { candidateId: 'c', kind: 'claim' as const, candidate: claim('c', 'A grows', 'a'), existingKnowledge: [old] }
+  const base = [eg, cg]
+  const duplicate = planKnowledgeChangeSet(input(base, [...decisionsFor([eg], 'duplicate'), { candidateId: 'c', action: 'duplicate', rationale: 'test' }], assetsWithEntities([a], [], [old])))
+  assert.equal(duplicate.changeSet, undefined)
+  const update = planKnowledgeChangeSet(input(base, [...decisionsFor([eg], 'duplicate'), { candidateId: 'c', action: 'update_state', rationale: 'test' }], assetsWithEntities([a], [], [old])))
+  const updateOp = update.changeSet?.knowledgeOperations.find((operation) => operation.type === 'update')
+  assert.equal(updateOp?.type, 'update')
+  const sourceId = allocateSourceId({ sourceUrl: null, publishedAt: null, title: 'Test', rawRef })
+  if (updateOp?.type === 'update' && 'sourceRefs' in updateOp.object) assert.deepEqual(updateOp.object.sourceRefs, [sourceId, 'source:old'].sort())
+  const supersede = planKnowledgeChangeSet(input(base, [...decisionsFor([eg], 'duplicate'), { candidateId: 'c', action: 'supersede', rationale: 'test' }], assetsWithEntities([a], [], [old])))
+  assert.equal(supersede.changeSet?.knowledgeOperations.some((operation) => operation.type === 'supersede'), true)
+  const keep = planKnowledgeChangeSet(input([eg, { ...cg, existingKnowledge: [] }], [...decisionsFor([eg], 'duplicate'), { candidateId: 'c', action: 'keep_both', rationale: 'test' }]))
+  assert.equal(keep.changeSet?.knowledgeOperations.some((operation) => operation.type === 'create'), true)
+})
+
+test('planner isolates rejected and review Entity dependencies', () => {
+  const eg = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A') }
+  const rg = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'a') }
+  const cg = { candidateId: 'c', kind: 'claim' as const, candidate: claim('c', 'A grows', 'a') }
+  const result = planKnowledgeChangeSet(input([eg, rg, cg], [{ candidateId: 'a', action: 'reject', rationale: 'bad' }, { candidateId: 'r', action: 'create', rationale: 'test' }, { candidateId: 'c', action: 'create', rationale: 'test' }]))
+  assert.equal(result.changeSet, undefined)
+  assert.ok(result.reviewItems.some((item) => item.candidateId === 'r'))
+  assert.ok(result.reviewItems.some((item) => item.candidateId === 'c'))
+})
+
+test('existing InvestmentTheme duplicate and update preserve ThemeGroup identity without model refs', () => {
+  const existing = { id: 'entity:theme', type: 'investment_theme', name: 'Energy Transition', themeGroupRef: 'theme-group:energy', taxonomyRefs: ['taxonomy:one'], lifecycle: { status: 'active' } }
+  const group = { candidateId: 'theme', kind: 'entity' as const, candidate: entity('theme', 'Energy Transition', 'investment_theme'), existingKnowledge: [existing] }
+  const assets = { ...emptyAssets(), entities: [loaded('entity', existing) as never] }
+  const duplicate = planKnowledgeChangeSet(input([group], decisionsFor([group], 'duplicate'), assets))
+  assert.equal(duplicate.changeSet, undefined)
+  const update = planKnowledgeChangeSet(input([group], decisionsFor([group], 'update_state'), assets))
+  const operation = update.changeSet?.knowledgeOperations.find((item) => item.type === 'update')
+  assert.equal(operation?.type, 'update')
+  if (operation?.type === 'update' && 'themeGroupRef' in operation.object) assert.equal(operation.object.themeGroupRef, 'theme-group:energy')
+})
+
+test('consolidation preserves entity conflicts and separates Claim temporal/value identity', () => {
+  const first = extraction('u1', claim('c1', 'Revenue grows', 'e', { temporal: { asOf: null, scope: { type: 'fiscal_year', start: '2026-01-01', end: '2026-12-31', label: null } } }), 'one')
+  const second = extraction('u2', claim('c2', 'Revenue grows', 'e', { temporal: { asOf: null, scope: { type: 'fiscal_year', start: '2027-01-01', end: '2027-12-31', label: null } } }), 'two')
+  const result = consolidateExtractions([first, second])
+  assert.equal(result.groups.filter((group) => group.kind === 'claim').length, 2)
+  assert.equal(new Set(result.groups.filter((group) => group.kind === 'claim').map((group) => group.candidateId)).size, 2)
+  assert.equal(result.reviewConstraints.length, 1)
+  const identical = consolidateExtractions([first, extraction('u3', first.result.claims[0]!)])
+  assert.equal(identical.groups.filter((group) => group.kind === 'claim').length, 1)
+})
+
+test('consolidation Claim IDs differ for structuredValue identity', () => {
+  const one = extraction('u1', claim('c1', 'Revenue is measured', 'e', { structuredValue: { metric: 'revenue', value: 1, unit: 'USD', comparator: null } }))
+  const two = extraction('u2', claim('c2', 'Revenue is measured', 'e', { structuredValue: { metric: 'revenue', value: 2, unit: 'USD', comparator: null } }))
+  const result = consolidateExtractions([one, two])
+  assert.equal(new Set(result.groups.filter((group) => group.kind === 'claim').map((group) => group.candidateId)).size, 2)
+})
+
+test('consolidation emits a review constraint for conflicting Relation attributes', () => {
+  const one = extraction('u1', claim('unused', 'x', 'e'))
+  const two = extraction('u2', claim('unused-2', 'y', 'e'))
+  const relationOne = relation('r1', 'competes_with', 'e', 'e', { importance: 'core' })
+  const relationTwo = relation('r2', 'competes_with', 'e', 'e', { importance: 'material' })
+  const result = consolidateExtractions([{ ...one, result: { ...one.result, relations: [relationOne], claims: [] } }, { ...two, result: { ...two.result, relations: [relationTwo], claims: [] } }])
+  assert.equal(result.reviewConstraints.some((item) => item.reason.includes('Relation attributes conflict')), true)
+})
+
+function emptyExtraction(): ValidatedExtractKnowledgeResult { return { entities: [], relations: [], claims: [], rejected: [], summary: { inputCounts: { entity: 0, relation: 0, claim: 0 }, acceptedCounts: { entity: 0, relation: 0, claim: 0 }, rejectedCounts: { entity: 0, relation: 0, claim: 0 }, rejectionCodes: [] } } }
+const extractionUnits = [{ unitId: 'unit-001', proposedUnitId: 'one', topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }, { unitId: 'unit-002', proposedUnitId: 'two', topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }]
+const extractionConfig = { maxExtractionUnits: 64, maxExtractionAttempts: 3, maxConcurrency: 1 }
+
+test('bounded extraction retries invalid model output and does not rerun completed units', async () => {
+  const calls: string[] = []
+  const input = { config: extractionConfig, skill: { extractKnowledge: async ({ unit }: { unit: { unitId: string } }) => { calls.push(unit.unitId); if (unit.unitId === 'unit-002' && calls.filter((id) => id === unit.unitId).length === 1) throw new KnowledgeCurationError('invalid_model_output', 'bad JSON'); return emptyExtraction() } } } as never
+  const result = await boundedExtract(input, {} as never, {} as never, extractionUnits, 1, extractionConfig)
+  assert.deepEqual(calls, ['unit-001', 'unit-002', 'unit-002'])
+  assert.deepEqual(result.summaries.map((item) => item.attempts), [1, 2])
+})
+
+test('bounded extraction does not retry reasoning configuration failures', async () => {
+  let calls = 0
+  const input = { config: extractionConfig, skill: { extractKnowledge: async () => { calls += 1; throw new KnowledgeCurationError('reasoning_failed', 'invalid executor configuration', undefined, { cause: { code: 'reasoning_configuration_invalid' } }) } } } as never
+  const result = await boundedExtract(input, {} as never, {} as never, [extractionUnits[0]!], 1, extractionConfig)
+  assert.equal(calls, 1)
+  assert.equal(result.summaries[0]?.attempts, 1)
+  assert.equal(result.errors.length, 1)
+})
+
+test('focused retrieval finds reverse-oriented symmetric Relations', () => {
+  const a = entity('a', 'A')
+  const b = entity('b', 'B')
+  const assets = assetsWithEntities([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'company', name: 'B', lifecycle: { status: 'active' } }], [{ id: 'relation:reverse', type: 'competes_with', sourceRef: 'entity:b', targetRef: 'entity:a', lifecycle: { status: 'active' } }])
+  const groups = [{ candidateId: 'a', kind: 'entity' as const, candidate: a }, { candidateId: 'b', kind: 'entity' as const, candidate: b }, { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'competes_with', 'a', 'b') }]
+  const result = retrieveFocusedKnowledge(assets, { groups, reviewConstraints: [], rejected: [], candidateCounts: {}, candidateAliases: new Map(), entityCandidates: new Map([['a', a], ['b', b]]) })
+  assert.equal(result.groups.find((group) => group.candidateId === 'r')?.existingKnowledge?.length, 1)
+})

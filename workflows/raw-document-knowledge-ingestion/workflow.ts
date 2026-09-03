@@ -21,7 +21,7 @@ import { retrieveFocusedKnowledge } from './retrieval.ts'
 
 const safeWorkflowId = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 const defaults = { maxExtractionUnits: 64, maxExtractionAttempts: 2, maxConcurrency: 4 }
-type EffectiveConfig = { maxExtractionUnits: number; maxExtractionAttempts: number; maxConcurrency: number; maxContextTokens?: number }
+export type EffectiveConfig = { maxExtractionUnits: number; maxExtractionAttempts: number; maxConcurrency: number; maxContextTokens?: number }
 
 function emptyResult(input: RawDocumentKnowledgeIngestionInput, errors: readonly string[] = []): IngestionWorkflowResult { return { workflowRunId: input.workflowRunId, knowledgeBaseId: input.handle.knowledgeBaseId, status: 'blocked', unitSummaries: [], candidateCounts: {}, rejectedCandidates: [], reviewItems: [], errors } }
 function counts(results: readonly ValidatedExtractKnowledgeResult[]): Record<string, number> { return { entity: results.reduce((sum, result) => sum + result.entities.length, 0), relation: results.reduce((sum, result) => sum + result.relations.length, 0), claim: results.reduce((sum, result) => sum + result.claims.length, 0), rejected: results.reduce((sum, result) => sum + result.rejected.length, 0) } }
@@ -49,7 +49,7 @@ function retryable(error: unknown): boolean {
   return false
 }
 
-async function boundedExtract(input: RawDocumentKnowledgeIngestionInput, document: StructuredDocument, reportMap: Parameters<RawDocumentKnowledgeIngestionInput['skill']['extractKnowledge']>[0]['reportMap'], units: readonly AcceptedExtractionUnit[], concurrency: number, config: EffectiveConfig): Promise<{ results: Array<{ unit: AcceptedExtractionUnit; result: ValidatedExtractKnowledgeResult }>; summaries: ExtractionUnitSummary[]; errors: string[]; peak: number }> {
+export async function boundedExtract(input: RawDocumentKnowledgeIngestionInput, document: StructuredDocument, reportMap: Parameters<RawDocumentKnowledgeIngestionInput['skill']['extractKnowledge']>[0]['reportMap'], units: readonly AcceptedExtractionUnit[], concurrency: number, config: EffectiveConfig): Promise<{ results: Array<{ unit: AcceptedExtractionUnit; result: ValidatedExtractKnowledgeResult }>; summaries: ExtractionUnitSummary[]; errors: string[]; peak: number }> {
   const results: Array<{ unit: AcceptedExtractionUnit; result: ValidatedExtractKnowledgeResult }> = []
   const summaries: ExtractionUnitSummary[] = []
   const errors: string[] = []
@@ -134,8 +134,7 @@ export async function runRawDocumentKnowledgeIngestion(input: RawDocumentKnowled
     const assets = await new KnowledgeBaseLoaderV03(registry).load(handle)
     const focused = retrieveFocusedKnowledge(assets, consolidated)
     const reconciliation = await input.skill.reconcileKnowledge({ candidateGroups: focused.groups as readonly ResolvedCandidateGroup[], existingKnowledge: focused.groups.flatMap((group) => group.existingKnowledge ?? []), reportMap: planned.reportMap, sourceAssessment: planned.reportMap.sourceAssessment, instructions: input.instructions })
-    const reviewHint = consolidated.reviewConstraints.length > 0 || consolidated.rejected.length > 0 ? 'completed_with_review' : 'completed'
-    const planning = planKnowledgeChangeSet({ knowledgeBaseId: handle.knowledgeBaseId, baseRevision: handle.revision, workflowRunId: input.workflowRunId, rawRef, rawManifest: archived.manifest, documentId: document.documentId, document: { metadata: document.metadata }, reportMap: planned.reportMap, plan: acceptedPlan, groups: focused.groups as readonly ResolvedCandidateGroup[], decisions: reconciliation.decisions, assets, consolidationReviews: consolidated.reviewConstraints, workflowInputFingerprint: fingerprint, reviewItemCount: consolidated.reviewConstraints.length, rejectedCandidateCount: consolidated.rejected.length, workflowStatusHint: reviewHint })
+    const planning = planKnowledgeChangeSet({ knowledgeBaseId: handle.knowledgeBaseId, baseRevision: handle.revision, workflowRunId: input.workflowRunId, rawRef, rawManifest: archived.manifest, documentId: document.documentId, document: { metadata: document.metadata }, reportMap: planned.reportMap, plan: acceptedPlan, groups: focused.groups as readonly ResolvedCandidateGroup[], decisions: reconciliation.decisions, assets, consolidationReviews: consolidated.reviewConstraints, workflowInputFingerprint: fingerprint, reviewItemCount: consolidated.reviewConstraints.length, rejectedCandidateCount: consolidated.rejected.length })
     const reviewStatus = planning.reviewItems.length > 0 || consolidated.rejected.length > 0 || consolidated.reviewConstraints.length > 0
     if (!planning.changeSet) {
       const finalValidation = await validateKnowledgeBaseV03(handle.rootRef)

@@ -28,9 +28,10 @@
 - `RHL-MIGRATION-002` independently reviewed and accepted at commit:
   `c85a222a178280a0b11b4a5a049554c485ea0cc8`.
 - StructuredDocument and Document Plugin / Docling adaptation implemented in `RHL-MIGRATION-003`.
-- Runtime-neutral ReasoningExecutor, isolated Codex adapter, Mock executor, and Knowledge Curation Skill implemented in `RHL-MIGRATION-004`; CTO acceptance pending.
+- Runtime-neutral ReasoningExecutor, isolated Codex adapter, Mock executor, and Knowledge Curation Skill implemented in `RHL-MIGRATION-004`; independently accepted / closed.
 - Deterministic Schema 0.3 Knowledge validation and ChangeSet validation implemented under `knowledge/validation/` in `RHL-MIGRATION-005`.
 - Raw Document → Canonical Knowledge deterministic Workflow implemented under `workflows/raw-document-knowledge-ingestion/`, including bounded extraction, consolidation, focused retrieval, review isolation, one ChangeSet, staged Writer validation, reload validation, and replay handling.
+- `RHL-MIGRATION-005` implementation plus `RHL-MIGRATION-005-FIX-002` and `RHL-MIGRATION-005-FIX-003` are complete; CTO acceptance remains pending.
 
 ## Current Limitations
 
