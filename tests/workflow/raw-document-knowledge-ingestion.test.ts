@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../plugins/reasoning/contracts.ts'
 import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
-import { runRawDocumentKnowledgeIngestion } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
+import { runRawDocumentKnowledgeIngestion, validateIngestionConfig } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
 import { validateExtractionPlan } from '../../workflows/raw-document-knowledge-ingestion/plan-validation.ts'
 import { createKnowledgeBase, readManifest, removeKnowledgeBase } from '../knowledge/helpers.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
@@ -94,4 +94,9 @@ test('review isolation commits safe independent candidates and excludes dependen
 test('capacity guard blocks an oversized unit without resplitting it', () => {
   const document = { documentId: 'doc', parser: { id: 'test' }, metadata: { originalFilename: 'x.txt', mediaType: 'text/plain' }, normalizedText: 'x', sections: [{ sectionId: 'section-0001', title: null, level: null, parentSectionRef: null, blockRefs: ['block-000001'], pageStart: null, pageEnd: null }], blocks: [{ blockId: 'block-000001', type: 'paragraph' as const, text: 'x', sectionRef: 'section-0001', page: null, locator: { page: null }, order: 1 }], stats: { pageCount: null, sectionCount: 1, blockCount: 1, normalizedCharacters: 1, tableCount: 0, headingCount: 0, listCount: 0, captionCount: 0 }, warnings: [] }
   assert.throws(() => validateExtractionPlan(plan([unit('one', [{ kind: 'section', sectionId: 'section-0001' }])] ) as never, document, { ...capabilities, maxContextTokens: 10 }))
+})
+
+test('workflow config rejects zero concurrency without fallback execution', () => {
+  assert.deepEqual(validateIngestionConfig({ maxConcurrency: 0 }), ['maxConcurrency must be a positive safe integer'])
+  assert.deepEqual(validateIngestionConfig({ maxExtractionAttempts: Number.MAX_SAFE_INTEGER + 1 }), ['maxExtractionAttempts must be a positive safe integer'])
 })

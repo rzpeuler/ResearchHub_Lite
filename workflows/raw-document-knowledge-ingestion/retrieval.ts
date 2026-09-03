@@ -5,10 +5,12 @@ import type { EntityCandidate, RelationCandidate, ClaimCandidate } from '../../s
 import type { ConsolidatedExtraction } from './consolidation.ts'
 
 function norm(value: string): string { return normalizeKnowledgeSlug(value) }
-function exactEntity(index: KnowledgeIndexV03, candidate: EntityCandidate) { return [...index.entities.values()].filter((entity) => entity.type === candidate.entityType && [entity.name, ...(entity.aliases ?? [])].some((name) => norm(name) === norm(candidate.name))).sort((a, b) => a.id.localeCompare(b.id)) }
-function endpointMatches(index: KnowledgeIndexV03, candidate: RelationCandidate): { sourceIds: Set<string>; targetIds: Set<string> } {
-  const sourceIds = new Set(exactEntity(index, { candidateId: 'source', entityType: candidate.source.entityType ?? 'company', name: candidate.source.mention, evidenceBlockRefs: [], reason: '' }).map((entity) => entity.id))
-  const targetIds = new Set(exactEntity(index, { candidateId: 'target', entityType: candidate.target.entityType ?? 'company', name: candidate.target.mention, evidenceBlockRefs: [], reason: '' }).map((entity) => entity.id))
+function exactEntity(index: KnowledgeIndexV03, candidate: EntityCandidate) { const candidateNames = new Set([candidate.name, ...(candidate.aliases ?? [])].map(norm)); return [...index.entities.values()].filter((entity) => entity.type === candidate.entityType && [entity.name, ...(entity.aliases ?? [])].some((name) => candidateNames.has(norm(name)))).sort((a, b) => a.id.localeCompare(b.id)) }
+function endpointMatches(index: KnowledgeIndexV03, extraction: ConsolidatedExtraction, candidate: RelationCandidate): { sourceIds: Set<string>; targetIds: Set<string> } {
+  const source = extraction.entityCandidates.get(candidate.source.candidateRef)
+  const target = extraction.entityCandidates.get(candidate.target.candidateRef)
+  const sourceIds = new Set(source === undefined ? [] : exactEntity(index, source).map((entity) => entity.id))
+  const targetIds = new Set(target === undefined ? [] : exactEntity(index, target).map((entity) => entity.id))
   return { sourceIds, targetIds }
 }
 
@@ -28,11 +30,11 @@ export function retrieveFocusedKnowledge(assets: KnowledgeAssetCollectionV03, ex
       existingKnowledge = [...existingKnowledge, ...[...related].sort((a, b) => String((a as { id?: string }).id ?? '').localeCompare(String((b as { id?: string }).id ?? '')))]
     } else if (group.kind === 'relation') {
       const candidate = group.candidate as RelationCandidate
-      const matches = endpointMatches(index, candidate)
+      const matches = endpointMatches(index, extraction, candidate)
       existingKnowledge = [...index.relations.values()].filter((relation) => relation.type === candidate.relationType && matches.sourceIds.has(relation.sourceRef) && matches.targetIds.has(relation.targetRef)).sort((a, b) => a.id.localeCompare(b.id)).slice(0, 8)
     } else {
       const candidate = group.candidate as ClaimCandidate
-      const subjects = new Set<string>(candidate.subjectRefs.flatMap((subject) => exactEntity(index, { candidateId: subject.candidateRef, entityType: subject.entityType ?? 'company', name: subject.mention, evidenceBlockRefs: [], reason: '' }).map((entity) => entity.id)))
+      const subjects = new Set<string>(candidate.subjectRefs.flatMap((subject) => { const entity = extraction.entityCandidates.get(subject.candidateRef); return entity === undefined ? [] : exactEntity(index, entity).map((item) => item.id) }))
       existingKnowledge = [...index.claims.values()].filter((claim) => claim.claimType === candidate.claimType && claim.subjectRefs.some((subject) => subjects.has(subject))).sort((a, b) => a.id.localeCompare(b.id)).slice(0, 8)
     }
     return { ...group, existingKnowledge }

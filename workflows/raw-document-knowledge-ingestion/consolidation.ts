@@ -1,12 +1,15 @@
 import { normalizeKnowledgeSlug } from '../../knowledge/registry/id-allocation.ts'
+import { canonicalSerialize } from '../../knowledge/storage/canonical-hash.ts'
 import type { CandidateEntityRef, ClaimCandidate, EntityCandidate, RelationCandidate, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
 import type { AcceptedExtractionUnit } from './contracts.ts'
 
 export interface ConsolidatedExtraction {
   readonly groups: readonly { candidateId: string; kind: 'entity' | 'relation' | 'claim'; candidate: EntityCandidate | RelationCandidate | ClaimCandidate; existingKnowledge?: readonly unknown[] }[]
+  readonly reviewConstraints: readonly { candidateId: string; reason: string; conflictingFields: readonly string[] }[]
   readonly rejected: readonly unknown[]
   readonly candidateCounts: Readonly<Record<string, number>>
   readonly candidateAliases: ReadonlyMap<string, string>
+  readonly entityCandidates: ReadonlyMap<string, EntityCandidate>
 }
 
 function normalize(value: string): string { return normalizeKnowledgeSlug(value) }
@@ -23,6 +26,7 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
   const relationInputs: Array<{ unitId: string; candidate: RelationCandidate }> = []
   const claimInputs: Array<{ unitId: string; candidate: ClaimCandidate }> = []
   const rejected: unknown[] = []
+  const reviewConstraints: Array<{ candidateId: string; reason: string; conflictingFields: readonly string[] }> = []
   let entityInput = 0
   let relationInput = 0
   let claimInput = 0
@@ -39,7 +43,9 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
         entityGroups.set(key, value)
         entityAliases.set(originalId, mergedId)
       } else {
-        const merged = { ...current, aliases: addUnique(current.aliases ?? [], candidate.aliases ?? []), evidenceBlockRefs: addUnique(current.evidenceBlockRefs, candidate.evidenceBlockRefs), confidence: mergeConfidence(current.confidence, candidate.confidence), description: mergeDescription(current.description, candidate.description) }
+        const descriptionConflict = current.description !== undefined && current.description !== null && candidate.description !== undefined && candidate.description !== null && current.description !== candidate.description
+        const merged = { ...current, aliases: addUnique(current.aliases ?? [], candidate.aliases ?? []), evidenceBlockRefs: addUnique(current.evidenceBlockRefs, candidate.evidenceBlockRefs), confidence: mergeConfidence(current.confidence, candidate.confidence), description: descriptionConflict ? current.description : mergeDescription(current.description, candidate.description) }
+        if (descriptionConflict) reviewConstraints.push({ candidateId: current.candidateId, reason: 'Entity descriptions conflict across extraction units', conflictingFields: ['description'] })
         entityGroups.set(key, merged)
         entityAliases.set(originalId, current.candidateId)
       }
@@ -57,16 +63,25 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
     const endpoints = symmetric ? [source, target].sort() : [source, target]
     const key = `${candidate.relationType}:${endpoints.join(':')}`
     const current = relations.get(key)
-    const normalizedCandidate: RelationCandidate = { ...structuredClone(candidate), candidateId: `merged-relation-${normalize(`${candidate.relationType}-${endpoints.join('-')}`)}`, source: candidateRef(endpoints[0]!, candidate.source.mention, candidate.source.entityType), target: candidateRef(endpoints[1]!, candidate.target.mention, candidate.target.entityType) }
+    const sourceEntity = [...entityGroups.values()].find((item) => `merged-entity-${normalize(`${item.entityType}-${item.name}`)}` === endpoints[0])
+    const targetEntity = [...entityGroups.values()].find((item) => `merged-entity-${normalize(`${item.entityType}-${item.name}`)}` === endpoints[1])
+    const normalizedCandidate: RelationCandidate = { ...structuredClone(candidate), candidateId: `merged-relation-${normalize(`${candidate.relationType}-${endpoints.join('-')}`)}`, source: candidateRef(endpoints[0]!, sourceEntity?.name ?? candidate.source.mention, sourceEntity?.entityType ?? candidate.source.entityType), target: candidateRef(endpoints[1]!, targetEntity?.name ?? candidate.target.mention, targetEntity?.entityType ?? candidate.target.entityType) }
     if (!current) relations.set(key, normalizedCandidate)
-    else relations.set(key, { ...current, evidenceBlockRefs: addUnique(current.evidenceBlockRefs, normalizedCandidate.evidenceBlockRefs), confidence: mergeConfidence(current.confidence, normalizedCandidate.confidence), attributes: JSON.stringify(current.attributes ?? null) === JSON.stringify(normalizedCandidate.attributes ?? null) ? current.attributes : undefined })
+    else {
+      const left = current.attributes ?? null
+      const right = normalizedCandidate.attributes ?? null
+      const conflict = canonicalSerialize(left) !== canonicalSerialize(right)
+      const mergedAttributes = !conflict && current.attributes !== undefined ? current.attributes : current.attributes ?? normalizedCandidate.attributes
+      if (conflict) reviewConstraints.push({ candidateId: current.candidateId, reason: 'Relation attributes conflict across extraction units', conflictingFields: [...new Set([...Object.keys((left && typeof left === 'object' ? left : {}) as object), ...Object.keys((right && typeof right === 'object' ? right : {}) as object)])].sort() })
+      relations.set(key, { ...current, evidenceBlockRefs: addUnique(current.evidenceBlockRefs, normalizedCandidate.evidenceBlockRefs), confidence: mergeConfidence(current.confidence, normalizedCandidate.confidence), ...(mergedAttributes === undefined ? {} : { attributes: mergedAttributes }) })
+    }
   }
   const claims = new Map<string, ClaimCandidate>()
   for (const { unitId, candidate } of claimInputs) {
     const subjects = candidate.subjectRefs.map((subject) => entityAliases.get(namespaced(unitId, subject.candidateRef))).filter((ref): ref is string => ref !== undefined)
     if (subjects.length !== candidate.subjectRefs.length) { rejected.push({ candidateId: candidate.candidateId, kind: 'claim', code: 'invalid_reference', message: 'Claim subject was not retained during consolidation' }); continue }
     const orderedSubjects = [...new Set(subjects)].sort()
-    const key = `${candidate.claimType}:${normalize(candidate.statement)}:${orderedSubjects.join(',')}`
+    const key = `${candidate.claimType}:${normalize(candidate.statement)}:${orderedSubjects.join(',')}:${canonicalSerialize(candidate.temporal ?? null)}:${canonicalSerialize(candidate.structuredValue ?? null)}`
     const normalizedCandidate: ClaimCandidate = { ...structuredClone(candidate), candidateId: `merged-claim-${normalize(`${candidate.claimType}-${candidate.statement}-${orderedSubjects.join('-')}`)}`, subjectRefs: orderedSubjects.map((ref, index) => candidateRef(ref, candidate.subjectRefs[index]?.mention ?? ref, candidate.subjectRefs[index]?.entityType)) }
     const current = claims.get(key)
     if (!current) claims.set(key, normalizedCandidate)
@@ -77,5 +92,6 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
     ...[...relations.values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)).map((candidate) => ({ candidateId: candidate.candidateId, kind: 'relation' as const, candidate })),
     ...[...claims.values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)).map((candidate) => ({ candidateId: candidate.candidateId, kind: 'claim' as const, candidate })),
   ]
-  return { groups, rejected, candidateCounts: { entity: entityInput, relation: relationInput, claim: claimInput, consolidated: groups.length, rejected: rejected.length }, candidateAliases: entityAliases }
+  const entityCandidates = new Map([...entityGroups.values()].map((candidate) => [candidate.candidateId, candidate]))
+  return { groups, reviewConstraints: [...new Map(reviewConstraints.map((item) => [item.candidateId, item])).values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)), rejected, candidateCounts: { entity: entityInput, relation: relationInput, claim: claimInput, consolidated: groups.length, rejected: rejected.length }, candidateAliases: entityAliases, entityCandidates }
 }

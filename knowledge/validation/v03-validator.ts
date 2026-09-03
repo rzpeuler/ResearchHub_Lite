@@ -72,7 +72,7 @@ async function canonicalFiles(rootRef: string, directory: string): Promise<strin
     for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
       const path = join(current, entry.name)
       if (entry.isDirectory()) await visit(path)
-      else if (entry.isFile() && entry.name.endsWith('.yaml') && !entry.name.includes('.tmp-')) result.push(path)
+      else if (entry.isFile() && /\.(?:yaml|yml|json)$/i.test(entry.name) && !entry.name.includes('.tmp-')) result.push(path)
     }
   }
   await visit(root)

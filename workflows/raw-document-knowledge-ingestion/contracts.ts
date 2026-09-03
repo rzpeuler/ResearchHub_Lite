@@ -43,6 +43,11 @@ export interface ExtractionUnitSummary {
   readonly rejectedCount: number
   readonly error?: string
 }
+export interface EntityResolution {
+  readonly candidateId: string
+  readonly status: 'existing' | 'created' | 'review' | 'rejected'
+  readonly canonicalId?: string
+}
 export interface ReviewItem { readonly candidateId: string; readonly kind: string; readonly rationale: string; readonly dependentCandidateIds: readonly string[] }
 export interface IngestionWorkflowResult {
   readonly workflowRunId: string

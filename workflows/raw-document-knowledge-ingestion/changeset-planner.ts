@@ -8,6 +8,10 @@ import type { ReportMap, ReconciliationDecision, ResolvedCandidateGroup, EntityC
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
 import type { AcceptedExtractionPlan, ReviewItem } from './contracts.ts'
 
+type Dict = Record<string, unknown>
+type ResolutionStatus = 'resolved_existing' | 'allocated_new' | 'no_operation' | 'review' | 'rejected'
+export interface EntityResolution { readonly candidateId: string; readonly status: ResolutionStatus; readonly canonicalId?: string; readonly rationale: string }
+
 export interface ChangeSetPlanningInput {
   readonly knowledgeBaseId: string
   readonly baseRevision: number
@@ -21,114 +25,227 @@ export interface ChangeSetPlanningInput {
   readonly groups: readonly ResolvedCandidateGroup[]
   readonly decisions: readonly ReconciliationDecision[]
   readonly assets: KnowledgeAssetCollectionV03
+  readonly consolidationReviews?: readonly { readonly candidateId: string; readonly reason: string; readonly conflictingFields: readonly string[] }[]
+  readonly workflowInputFingerprint?: string
+  readonly reviewItemCount?: number
+  readonly rejectedCandidateCount?: number
+  readonly workflowStatusHint?: 'completed' | 'completed_with_review'
 }
 
-export interface ChangeSetPlanningResult {
-  readonly changeSet?: KnowledgeChangeSetV03
-  readonly reviewItems: readonly ReviewItem[]
-  readonly safeOperationCount: number
-  readonly summary: Readonly<Record<string, number>>
-}
+export interface ChangeSetPlanningResult { readonly changeSet?: KnowledgeChangeSetV03; readonly reviewItems: readonly ReviewItem[]; readonly safeOperationCount: number; readonly summary: Readonly<Record<string, number>>; readonly entityResolutions: readonly EntityResolution[] }
 
 function sourceType(value: string | undefined): KnowledgeSourceV03['sourceType'] { return KNOWLEDGE_SCHEMA_V03.source.types.includes(value as never) ? value as KnowledgeSourceV03['sourceType'] : 'unknown' }
 function reliability(value: string | undefined): KnowledgeSourceV03['sourceReliability'] { return KNOWLEDGE_SCHEMA_V03.source.reliabilities.includes(value as never) ? value as KnowledgeSourceV03['sourceReliability'] : 'unknown' }
-function blockLocator(plan: AcceptedExtractionPlan, candidateBlocks: readonly string[]): string | null { const known = new Set(plan.units.flatMap((unit) => unit.primaryBlockIds)); return [...candidateBlocks].sort().find((id) => known.has(id)) ?? [...candidateBlocks].sort()[0] ?? null }
-function allowedAttributes(type: string): Set<string> { const definition = KNOWLEDGE_SCHEMA_V03.relation.definitions[type as keyof typeof KNOWLEDGE_SCHEMA_V03.relation.definitions] as Record<string, unknown> | undefined; const attrs = definition?.attributes; return attrs && typeof attrs === 'object' ? new Set(Object.keys(attrs as object)) : new Set() }
-function existingOfKind(group: ResolvedCandidateGroup, kind: 'entity' | 'relation' | 'claim'): Record<string, unknown> | undefined { return group.existingKnowledge?.find((value) => { const id = value && typeof value === 'object' ? (value as { id?: unknown }).id : undefined; return typeof id === 'string' && id.startsWith(`${kind}:`) }) as Record<string, unknown> | undefined }
-function makeClaim(input: ChangeSetPlanningInput, candidate: ClaimCandidate, id: string, subjectRefs: readonly string[], sourceId: string, supersedes?: string): KnowledgeClaimV03 {
-  return { id: id as KnowledgeClaimV03['id'], claimType: candidate.claimType, statement: candidate.statement, subjectRefs: [...new Set(subjectRefs)] as KnowledgeClaimV03['subjectRefs'], primarySubjectRef: subjectRefs[0] as KnowledgeClaimV03['primarySubjectRef'], sourceRefs: [sourceId as KnowledgeClaimV03['sourceRefs'][number]], provenance: candidate.evidenceBlockRefs.map((blockId) => ({ sourceRef: sourceId as KnowledgeClaimV03['sourceRefs'][number], rawRef: input.rawRef as KnowledgeClaimV03['provenance'] extends (infer T)[] ? T extends { rawRef: infer R } ? R : never : never, locator: blockLocator(input.plan, [blockId]), chunkRef: null })), lifecycle: { status: 'active' }, ...(supersedes === undefined ? {} : { supersedes: [supersedes as KnowledgeClaimV03['supersedes'] extends (infer T)[] ? T : never] }), ...(candidate.temporal === undefined || candidate.temporal === null ? {} : { temporal: structuredClone(candidate.temporal) }), ...(candidate.structuredValue === undefined || candidate.structuredValue === null ? {} : { structuredValue: structuredClone(candidate.structuredValue) }), ...(candidate.confidence === undefined ? {} : { confidence: candidate.confidence }) } as KnowledgeClaimV03
+function normalized(value: unknown): string { return typeof value === 'string' ? value.trim().toLocaleLowerCase() : '' }
+function record(value: unknown): value is Dict { return typeof value === 'object' && value !== null && !Array.isArray(value) }
+function unique(values: readonly string[]): string[] { return [...new Set(values)].sort() }
+function names(value: Dict): string[] { return [value.name, ...(Array.isArray(value.aliases) ? value.aliases.filter((item): item is string => typeof item === 'string') : [])].map(normalized).filter(Boolean) }
+function blockLocator(plan: AcceptedExtractionPlan, refs: readonly string[]): string | null { const known = new Set(plan.units.flatMap((unit) => unit.primaryBlockIds)); return [...refs].sort().find((ref) => known.has(ref)) ?? [...refs].sort()[0] ?? null }
+function sameEntity(candidate: EntityCandidate, value: Dict): boolean { if (value.type !== candidate.entityType) return false; const wanted = new Set([candidate.name, ...(candidate.aliases ?? [])].map(normalized).filter(Boolean)); return names(value).some((name) => wanted.has(name)) }
+function sourceRefs(value: Dict): boolean { return Array.isArray(value.sourceRefs) }
+function allowedAttributes(type: string): Dict | undefined { const definition = KNOWLEDGE_SCHEMA_V03.relation.definitions[type as keyof typeof KNOWLEDGE_SCHEMA_V03.relation.definitions] as { attributes?: Dict } | undefined; return definition?.attributes }
+function validFinancialContribution(value: unknown): boolean {
+  if (value === null) return true
+  if (!record(value)) return false
+  const allowed = new Set(['period', 'currency', 'revenueAmount', 'revenueShare', 'profitAmount', 'profitShare', 'separatelyReported'])
+  for (const [key, child] of Object.entries(value)) {
+    if (!allowed.has(key)) return false
+    if (['period', 'currency'].includes(key) && child !== null && typeof child !== 'string') return false
+    if (['revenueAmount', 'profitAmount'].includes(key) && child !== null && (typeof child !== 'number' || !Number.isFinite(child))) return false
+    if (['revenueShare', 'profitShare'].includes(key) && child !== null && (typeof child !== 'number' || !Number.isFinite(child) || child < 0 || child > 1)) return false
+    if (key === 'separatelyReported' && child !== null && typeof child !== 'boolean') return false
+  }
+  return true
+}
+function relationAttributeError(type: string, attributes: unknown): string | undefined {
+  if (attributes === undefined) return undefined
+  if (!record(attributes)) return 'Relation attributes must be an object'
+  const rules = allowedAttributes(type)
+  if (!rules && Object.keys(attributes).length > 0) return 'Relation type ' + type + ' does not support attributes'
+  for (const [key, value] of Object.entries(attributes)) {
+    const rule = rules?.[key]
+    if (rule === undefined) return 'Unsupported relation attribute ' + key
+    if (Array.isArray(rule) && !rule.includes(value as never)) return 'Relation attribute ' + key + ' is outside the Schema 0.3 vocabulary'
+    if (rule === 'number_0_to_1_or_null' && value !== null && (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1)) return 'Relation attribute ' + key + ' must be between 0 and 1'
+    if (key === 'financialContribution' && !validFinancialContribution(value)) return 'financialContribution is not schema-valid'
+  }
+  return undefined
+}
+function semanticFieldsError(candidate: EntityCandidate, themeGroups: Map<string, unknown>): string | undefined {
+  const fields = candidate.semanticFields
+  if (candidate.entityType === 'investment_theme') {
+    if (!fields || typeof fields.themeGroupRef !== 'string' || !themeGroups.has(fields.themeGroupRef)) return 'New InvestmentTheme requires an existing deterministic ThemeGroup'
+    if (Object.keys(fields).some((key) => key !== 'themeGroupRef')) return 'Unsupported InvestmentTheme semanticFields require review'
+    return undefined
+  }
+  if (candidate.entityType === 'company') return fields && Object.keys(fields).some((key) => !['ticker', 'exchange', 'legalName'].includes(key)) ? 'Unsupported company semanticFields require review' : undefined
+  return fields && Object.keys(fields).length > 0 ? 'Unsupported semanticFields require review' : undefined
+}
+function makeEntity(candidate: EntityCandidate, id: string, themeGroups: Map<string, unknown>): KnowledgeEntityV03 {
+  const value: Dict = { id, type: candidate.entityType, name: candidate.name, aliases: unique(candidate.aliases ?? []), description: candidate.description ?? null, lifecycle: { status: 'active' } }
+  const fields = candidate.semanticFields ?? {}
+  if (candidate.entityType === 'company') for (const key of ['ticker', 'exchange', 'legalName']) if (fields[key] !== undefined) value[key] = fields[key]
+  if (candidate.entityType === 'investment_theme' && typeof fields.themeGroupRef === 'string' && themeGroups.has(fields.themeGroupRef)) value.themeGroupRef = fields.themeGroupRef
+  if (candidate.confidence !== undefined) value.metadata = { extractionConfidence: candidate.confidence }
+  return value as unknown as KnowledgeEntityV03
+}
+function makeRelation(candidate: RelationCandidate, id: string, sourceRef: string, targetRef: string, sourceId: string): KnowledgeRelationV03 {
+  const value: Dict = { id, type: candidate.relationType, sourceRef, targetRef, sourceRefs: [sourceId], lifecycle: { status: 'active' } }
+  if (candidate.attributes !== undefined && Object.keys(candidate.attributes).length > 0) value.attributes = structuredClone(candidate.attributes)
+  if (candidate.confidence !== undefined) value.confidence = candidate.confidence
+  return value as unknown as KnowledgeRelationV03
+}
+function makeClaim(input: ChangeSetPlanningInput, candidate: ClaimCandidate, id: string, subjects: readonly string[], sourceId: string, supersedes?: string): KnowledgeClaimV03 {
+  const value: Dict = { id, claimType: candidate.claimType, statement: candidate.statement, subjectRefs: unique(subjects), primarySubjectRef: subjects[0], sourceRefs: [sourceId], provenance: candidate.evidenceBlockRefs.map((ref) => ({ sourceRef: sourceId, rawRef: input.rawRef, locator: blockLocator(input.plan, [ref]), chunkRef: null })), lifecycle: { status: 'active' } }
+  if (supersedes !== undefined) value.supersedes = [supersedes]
+  if (candidate.temporal !== undefined && candidate.temporal !== null) value.temporal = structuredClone(candidate.temporal)
+  if (candidate.structuredValue !== undefined && candidate.structuredValue !== null) value.structuredValue = structuredClone(candidate.structuredValue)
+  if (candidate.confidence !== undefined) value.confidence = candidate.confidence
+  return value as unknown as KnowledgeClaimV03
+}
+function existingEntities(candidate: EntityCandidate, input: ChangeSetPlanningInput, index: KnowledgeIndexV03): KnowledgeEntityV03[] {
+  const supplied = input.groups.filter((group) => group.kind === 'entity').flatMap((group) => group.existingKnowledge ?? []).filter(record) as unknown as KnowledgeEntityV03[]
+  return [...new Map([...index.entities.values(), ...supplied].filter((value) => typeof value.id === 'string').map((value) => [value.id, value] as const)).values()].filter((value) => sameEntity(candidate, value as unknown as Dict)).sort((a, b) => a.id.localeCompare(b.id))
+}
+function existingRelations(candidate: RelationCandidate, sourceRef: string, targetRef: string, input: ChangeSetPlanningInput, index: KnowledgeIndexV03): KnowledgeRelationV03[] {
+  const supplied = input.groups.filter((group) => group.kind === 'relation').flatMap((group) => group.existingKnowledge ?? []).filter(record) as unknown as KnowledgeRelationV03[]
+  const symmetric = candidate.relationType === 'competes_with' || candidate.relationType === 'substitutes_for'
+  return [...new Map([...index.relations.values(), ...supplied].filter((value) => typeof value.id === 'string').map((value) => [value.id, value] as const)).values()].filter((value) => value.type === candidate.relationType && (value.sourceRef === sourceRef && value.targetRef === targetRef || symmetric && value.sourceRef === targetRef && value.targetRef === sourceRef)).sort((a, b) => a.id.localeCompare(b.id))
+}
+function claimIdentity(value: KnowledgeClaimV03): string { return hashKnowledgeObject({ claimType: value.claimType, statement: normalized(value.statement), subjectRefs: unique(value.subjectRefs), temporal: value.temporal ?? null, structuredValue: value.structuredValue ?? null }) }
+function existingClaims(candidate: ClaimCandidate, subjects: readonly string[], input: ChangeSetPlanningInput, index: KnowledgeIndexV03): KnowledgeClaimV03[] {
+  const wanted = hashKnowledgeObject({ claimType: candidate.claimType, statement: normalized(candidate.statement), subjectRefs: unique(subjects), temporal: candidate.temporal ?? null, structuredValue: candidate.structuredValue ?? null })
+  const supplied = input.groups.filter((group) => group.kind === 'claim').flatMap((group) => group.existingKnowledge ?? []).filter(record) as unknown as KnowledgeClaimV03[]
+  return [...new Map([...index.claims.values(), ...supplied].filter((value) => typeof value.id === 'string').map((value) => [value.id, value] as const)).values()].filter((value) => claimIdentity(value) === wanted).sort((a, b) => a.id.localeCompare(b.id))
 }
 
 export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSetPlanningResult {
   const index = KnowledgeIndexV03.fromAssets(input.assets)
   const sourceId = allocateSourceId({ sourceUrl: input.rawManifest.suppliedMetadata.sourceUrl, publishedAt: input.rawManifest.suppliedMetadata.publishedAt, title: input.rawManifest.suppliedMetadata.title ?? input.document.metadata.title ?? input.rawManifest.originalFilename, rawRef: input.rawRef })
-  const source: KnowledgeSourceV03 = {
-    id: sourceId as KnowledgeSourceV03['id'],
-    title: input.rawManifest.suppliedMetadata.title ?? input.document.metadata.title ?? input.rawManifest.originalFilename ?? input.documentId,
-    sourceType: sourceType(input.reportMap.sourceAssessment.sourceType),
-    institution: input.rawManifest.suppliedMetadata.institution,
-    author: input.rawManifest.suppliedMetadata.author,
-    publishedAt: input.rawManifest.suppliedMetadata.publishedAt,
-    url: input.rawManifest.suppliedMetadata.sourceUrl,
-    sourceReliability: reliability(input.reportMap.sourceAssessment.reliability),
-    rawRefs: [input.rawRef as KnowledgeSourceV03['rawRefs'] extends (infer T)[] ? T : never],
-    metadata: { workflowRunId: input.workflowRunId, documentId: input.documentId },
-    lifecycle: { status: 'active' },
+  const source: KnowledgeSourceV03 = { id: sourceId as KnowledgeSourceV03['id'], title: input.rawManifest.suppliedMetadata.title ?? input.document.metadata.title ?? input.rawManifest.originalFilename ?? input.documentId, sourceType: sourceType(input.reportMap.sourceAssessment.sourceType), institution: input.rawManifest.suppliedMetadata.institution, author: input.rawManifest.suppliedMetadata.author, publishedAt: input.rawManifest.suppliedMetadata.publishedAt, url: input.rawManifest.suppliedMetadata.sourceUrl, sourceReliability: reliability(input.reportMap.sourceAssessment.reliability), rawRefs: [input.rawRef as KnowledgeSourceV03['rawRefs'] extends (infer T)[] ? T : never], metadata: { workflowRunId: input.workflowRunId, documentId: input.documentId }, lifecycle: { status: 'active' } }
+  const decisions = new Map(input.decisions.map((decision) => [decision.candidateId, decision]))
+  const groups = new Map(input.groups.map((group) => [group.candidateId, group]))
+  const reviews = new Map<string, ReviewItem>()
+  const rejected = new Set<string>()
+  const dependents = new Map<string, string[]>()
+  for (const group of input.groups) {
+    if (group.kind === 'relation') for (const ref of [(group.candidate as RelationCandidate).source.candidateRef, (group.candidate as RelationCandidate).target.candidateRef]) dependents.set(ref, [...(dependents.get(ref) ?? []), group.candidateId])
+    if (group.kind === 'claim') for (const ref of (group.candidate as ClaimCandidate).subjectRefs.map((subject) => subject.candidateRef)) dependents.set(ref, [...(dependents.get(ref) ?? []), group.candidateId])
   }
+  const addReview = (candidateId: string, rationale: string, dependentCandidateIds: readonly string[] = []): void => { const group = groups.get(candidateId); reviews.set(candidateId, { candidateId, kind: group?.kind ?? 'unknown', rationale, dependentCandidateIds: unique(dependentCandidateIds) }) }
+  for (const constraint of input.consolidationReviews ?? []) addReview(constraint.candidateId, constraint.reason)
+  const entities = new Map<string, string>()
+  const resolutions: EntityResolution[] = []
+  const resolve = (candidateId: string, status: ResolutionStatus, canonicalId: string | undefined, rationale: string): void => { resolutions.push({ candidateId, status, ...(canonicalId === undefined ? {} : { canonicalId }), rationale }); if (canonicalId && status !== 'review' && status !== 'rejected') entities.set(candidateId, canonicalId) }
+  const knowledgeOperations: KnowledgeOperationV03[] = []
+  let sequence = 1
+  const opId = (prefix: string): string => prefix + '-' + String(sequence++).padStart(3, '0')
+
+  for (const group of input.groups.filter((item) => item.kind === 'entity').sort((a, b) => a.candidateId.localeCompare(b.candidateId))) {
+    const decision = decisions.get(group.candidateId)
+    const candidate = group.candidate as EntityCandidate
+    if (!decision) { resolve(group.candidateId, 'review', undefined, 'Missing reconciliation decision'); addReview(group.candidateId, 'Missing reconciliation decision'); continue }
+    if ((input.consolidationReviews ?? []).some((constraint) => constraint.candidateId === group.candidateId)) { resolve(group.candidateId, 'review', undefined, 'Consolidation conflict requires review'); continue }
+    if (decision.action === 'reject') { rejected.add(group.candidateId); resolve(group.candidateId, 'rejected', undefined, decision.rationale); continue }
+    if (decision.action === 'user_review') { resolve(group.candidateId, 'review', undefined, decision.rationale); addReview(group.candidateId, decision.rationale, dependents.get(group.candidateId)); continue }
+    const matches = existingEntities(candidate, input, index)
+    const baseId = allocateEntityId(candidate.entityType, candidate.name)
+    const semanticError = semanticFieldsError(candidate, index.themeGroups)
+    if (semanticError) { resolve(group.candidateId, 'review', undefined, semanticError); addReview(group.candidateId, semanticError); continue }
+    if (decision.action === 'duplicate') {
+      if (matches.length === 1) resolve(group.candidateId, 'resolved_existing', matches[0].id, 'Reused exactly one deterministic existing Entity')
+      else { resolve(group.candidateId, 'review', undefined, 'Duplicate requires exactly one deterministic existing Entity'); addReview(group.candidateId, 'Duplicate requires exactly one deterministic existing Entity') }
+    } else if (decision.action === 'create') {
+      if (matches.length > 0 || index.entities.has(baseId)) { resolve(group.candidateId, 'review', undefined, 'Create target already exists; explicit reuse or review is required'); addReview(group.candidateId, 'Create target already exists; no silent overwrite or skip') }
+      else { resolve(group.candidateId, 'allocated_new', baseId, 'Allocated deterministic Entity ID'); knowledgeOperations.push({ operationId: opId('entity-create'), type: 'create', object: makeEntity(candidate, baseId, index.themeGroups) }) }
+    } else if (decision.action === 'keep_both') {
+      const id = allocateEntityId(candidate.entityType, candidate.name, { rawRef: input.rawRef, candidateId: group.candidateId })
+      if (index.entities.has(id)) { resolve(group.candidateId, 'review', undefined, 'keep_both discriminator collides with an existing Entity'); addReview(group.candidateId, 'keep_both discriminator collides with an existing Entity') }
+      else { resolve(group.candidateId, 'allocated_new', id, 'Allocated distinct keep_both Entity ID'); knowledgeOperations.push({ operationId: opId('entity-create'), type: 'create', object: makeEntity(candidate, id, index.themeGroups) }) }
+    } else if (decision.action === 'update_state') {
+      if (matches.length !== 1) { resolve(group.candidateId, 'review', undefined, 'update_state requires exactly one deterministic existing Entity'); addReview(group.candidateId, 'update_state requires exactly one deterministic existing Entity') }
+      else { resolve(group.candidateId, 'resolved_existing', matches[0].id, 'Updated exactly one deterministic existing Entity'); knowledgeOperations.push({ operationId: opId('entity-update'), type: 'update', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), object: makeEntity(candidate, matches[0].id, index.themeGroups) }) }
+    } else { resolve(group.candidateId, 'review', undefined, decision.action + ' is unsupported for Entity targets'); addReview(group.candidateId, decision.action + ' is unsupported for Entity targets') }
+  }
+  for (const group of input.groups.filter((item) => item.kind === 'entity')) {
+    if (reviews.has(group.candidateId)) for (const dependent of dependents.get(group.candidateId) ?? []) addReview(dependent, 'Blocked by Entity candidate ' + group.candidateId + ' requiring review', [group.candidateId])
+    if (rejected.has(group.candidateId)) for (const dependent of dependents.get(group.candidateId) ?? []) { rejected.add(dependent); addReview(dependent, 'Blocked by rejected Entity candidate ' + group.candidateId, [group.candidateId]) }
+  }
+
+  for (const group of input.groups.filter((item) => item.kind === 'relation').sort((a, b) => a.candidateId.localeCompare(b.candidateId))) {
+    const decision = decisions.get(group.candidateId)
+    const candidate = group.candidate as RelationCandidate
+    if (!decision) { addReview(group.candidateId, 'Missing reconciliation decision'); continue }
+    if ((input.consolidationReviews ?? []).some((constraint) => constraint.candidateId === group.candidateId)) { addReview(group.candidateId, 'Consolidation conflict requires review'); continue }
+    if (decision.action === 'reject') { rejected.add(group.candidateId); continue }
+    if (decision.action === 'user_review') { addReview(group.candidateId, decision.rationale); continue }
+    const sourceRef = entities.get(candidate.source.candidateRef)
+    const targetRef = entities.get(candidate.target.candidateRef)
+    if (!sourceRef || !targetRef) { if (!rejected.has(group.candidateId)) addReview(group.candidateId, 'Relation endpoint resolution is blocked or ambiguous'); continue }
+    const attrError = relationAttributeError(candidate.relationType, candidate.attributes)
+    if (attrError) { addReview(group.candidateId, attrError); continue }
+    const matches = existingRelations(candidate, sourceRef, targetRef, input, index)
+    const deterministicId = allocateRelationId(candidate.relationType, sourceRef, targetRef, candidate.attributes ?? {})
+    const create = (id: string): void => { if (index.relations.has(id)) addReview(group.candidateId, 'Deterministic Relation ID already exists; no silent overwrite'); else knowledgeOperations.push({ operationId: opId('relation-create'), type: 'create', object: makeRelation(candidate, id, sourceRef, targetRef, sourceId) }) }
+    if (decision.action === 'duplicate') {
+      if (matches.length !== 1) addReview(group.candidateId, 'Duplicate requires exactly one deterministic existing Relation')
+    } else if (decision.action === 'create') {
+      if (matches.length > 0 || index.relations.has(deterministicId)) addReview(group.candidateId, 'Create target already exists; planner will not silently skip it')
+      else create(deterministicId)
+    } else if (decision.action === 'keep_both') {
+      if (candidate.relationType === 'business_exposure' && matches.some((value) => value.lifecycle.status === 'active')) addReview(group.candidateId, 'keep_both is illegal for an existing active business_exposure pair')
+      else create(allocateRelationId(candidate.relationType, sourceRef, targetRef, candidate.attributes ?? {}, { rawRef: input.rawRef, candidateId: group.candidateId }))
+    } else if (decision.action === 'merge_source') {
+      if (matches.length !== 1 || !sourceRefs(matches[0] as unknown as Dict)) addReview(group.candidateId, 'merge_source requires exactly one Relation target supporting sourceRefs')
+      else knowledgeOperations.push({ operationId: opId('relation-source-merge'), type: 'merge_source', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), addSourceRefs: [sourceId] })
+    } else if (decision.action === 'update_state') {
+      if (matches.length !== 1) addReview(group.candidateId, 'update_state requires exactly one deterministic Relation target')
+      else knowledgeOperations.push({ operationId: opId('relation-update'), type: 'update', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), object: makeRelation(candidate, matches[0].id, sourceRef, targetRef, sourceId) })
+    } else addReview(group.candidateId, decision.action + ' is unsupported for Relation targets')
+  }
+
+  for (const group of input.groups.filter((item) => item.kind === 'claim').sort((a, b) => a.candidateId.localeCompare(b.candidateId))) {
+    const decision = decisions.get(group.candidateId)
+    const candidate = group.candidate as ClaimCandidate
+    if (!decision) { addReview(group.candidateId, 'Missing reconciliation decision'); continue }
+    if ((input.consolidationReviews ?? []).some((constraint) => constraint.candidateId === group.candidateId)) { addReview(group.candidateId, 'Consolidation conflict requires review'); continue }
+    if (decision.action === 'reject') { rejected.add(group.candidateId); continue }
+    if (decision.action === 'user_review') { addReview(group.candidateId, decision.rationale); continue }
+    const subjects = candidate.subjectRefs.map((subject) => entities.get(subject.candidateRef))
+    if (subjects.some((value) => value === undefined)) { if (!rejected.has(group.candidateId)) addReview(group.candidateId, 'Claim subject resolution is blocked or ambiguous'); continue }
+    const subjectRefs = subjects as string[]
+    const matches = existingClaims(candidate, subjectRefs, input, index)
+    const deterministicId = allocateClaimId({ claimType: candidate.claimType, statement: normalized(candidate.statement), subjectRefs: unique(subjectRefs), temporal: candidate.temporal ?? null, structuredValue: candidate.structuredValue ?? null })
+    if (decision.action === 'duplicate') {
+      if (matches.length !== 1) addReview(group.candidateId, 'Duplicate requires exactly one deterministic existing Claim')
+    } else if (decision.action === 'create') {
+      if (matches.length > 0 || index.claims.has(deterministicId)) addReview(group.candidateId, 'Create target already exists; planner will not silently skip it')
+      else knowledgeOperations.push({ operationId: opId('claim-create'), type: 'create', object: makeClaim(input, candidate, deterministicId, subjectRefs, sourceId) })
+    } else if (decision.action === 'keep_both') {
+      const id = allocateClaimId({ claimType: candidate.claimType, statement: candidate.statement, subjectRefs: unique(subjectRefs), temporal: candidate.temporal ?? null, structuredValue: candidate.structuredValue ?? null, discriminator: { rawRef: input.rawRef, candidateId: group.candidateId } })
+      if (index.claims.has(id)) addReview(group.candidateId, 'keep_both discriminator collides with an existing Claim')
+      else knowledgeOperations.push({ operationId: opId('claim-create'), type: 'create', object: makeClaim(input, candidate, id, subjectRefs, sourceId) })
+    } else if (decision.action === 'merge_source') {
+      if (matches.length !== 1 || !sourceRefs(matches[0] as unknown as Dict)) addReview(group.candidateId, 'merge_source requires exactly one Claim target supporting sourceRefs')
+      else knowledgeOperations.push({ operationId: opId('claim-source-merge'), type: 'merge_source', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), addSourceRefs: [sourceId] })
+    } else if (decision.action === 'update_state') {
+      if (matches.length !== 1) addReview(group.candidateId, 'update_state requires exactly one deterministic Claim target')
+      else knowledgeOperations.push({ operationId: opId('claim-update'), type: 'update', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), object: makeClaim(input, candidate, matches[0].id, subjectRefs, sourceId) })
+    } else if (decision.action === 'supersede') {
+      if (matches.length !== 1) addReview(group.candidateId, 'supersede requires exactly one Claim target')
+      else { const id = allocateClaimId({ claimType: candidate.claimType, statement: candidate.statement, subjectRefs: unique(subjectRefs), temporal: candidate.temporal ?? null, structuredValue: candidate.structuredValue ?? null, discriminator: { supersedes: matches[0].id } }); knowledgeOperations.push({ operationId: opId('claim-supersede'), type: 'supersede', knowledgeId: matches[0].id, expectedBeforeHash: hashKnowledgeObject(matches[0]), replacement: makeClaim(input, candidate, id, subjectRefs, sourceId, matches[0].id) }) }
+    } else addReview(group.candidateId, decision.action + ' is unsupported for Claim targets')
+  }
+
+  const reviewCount = reviews.size + (input.reviewItemCount ?? 0)
+  const hasReview = reviewCount > 0 || (input.rejectedCandidateCount ?? 0) > 0 || rejected.size > 0 || (input.consolidationReviews?.length ?? 0) > 0
+  const statusHint = input.workflowStatusHint ?? (hasReview ? 'completed_with_review' : 'completed')
+  if (knowledgeOperations.length === 0) return { reviewItems: [...reviews.values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)), safeOperationCount: 0, summary: { sourceOperations: 0, knowledgeCreates: 0, reviewItems: reviewCount, blockedDependencies: rejected.size, noChanges: 1 }, entityResolutions: resolutions }
   const sourceOperations: KnowledgeSourceOperationV03[] = []
   const existingSource = index.sources.get(sourceId)
   if (existingSource) sourceOperations.push({ operationId: 'source-merge-001', type: 'source_merge', sourceId, expectedBeforeHash: hashKnowledgeObject(existingSource), addRawRefs: [input.rawRef] })
   else sourceOperations.push({ operationId: 'source-create-001', type: 'source_create', source })
-
-  const decisions = new Map(input.decisions.map((decision) => [decision.candidateId, decision]))
-  const groups = new Map(input.groups.map((group) => [group.candidateId, group]))
-  const reviewIds = new Set([...input.decisions].filter((decision) => decision.action === 'user_review').map((decision) => decision.candidateId))
-  const dependentIds = new Map<string, string[]>()
-  for (const group of input.groups) {
-    if (group.kind === 'relation') for (const ref of [(group.candidate as RelationCandidate).source.candidateRef, (group.candidate as RelationCandidate).target.candidateRef]) dependentIds.set(ref, [...(dependentIds.get(ref) ?? []), group.candidateId])
-    if (group.kind === 'claim') for (const ref of (group.candidate as ClaimCandidate).subjectRefs.map((subject) => subject.candidateRef)) dependentIds.set(ref, [...(dependentIds.get(ref) ?? []), group.candidateId])
-  }
-  const reviewItems: ReviewItem[] = []
-  for (const id of [...reviewIds].sort()) { const decision = decisions.get(id)!; reviewItems.push({ candidateId: id, kind: groups.get(id)?.kind ?? 'unknown', rationale: decision.rationale, dependentCandidateIds: [...new Set(dependentIds.get(id) ?? [])].sort() }) }
-  const blocked = new Set<string>([...reviewIds])
-  for (const id of reviewIds) for (const dependent of dependentIds.get(id) ?? []) blocked.add(dependent)
-  const entityIds = new Map<string, string>()
-  const knowledgeOperations: KnowledgeOperationV03[] = []
-  let operationNumber = 1
-  const operationId = (prefix: string) => `${prefix}-${String(operationNumber++).padStart(3, '0')}`
-  const shouldCreate = (group: ResolvedCandidateGroup, decision: ReconciliationDecision | undefined): boolean => Boolean(decision && (decision.action === 'create' || decision.action === 'keep_both' || (decision.action === 'duplicate' && !group.existingKnowledge?.length)))
-  for (const group of input.groups.filter((item) => item.kind === 'entity').sort((a, b) => a.candidateId.localeCompare(b.candidateId))) {
-    const decision = decisions.get(group.candidateId)
-    if (!decision || blocked.has(group.candidateId)) continue
-    const candidate = group.candidate as EntityCandidate
-    const id = decision.action === 'keep_both' ? allocateEntityId(candidate.entityType, candidate.name, { rawRef: input.rawRef }) : allocateEntityId(candidate.entityType, candidate.name)
-    entityIds.set(group.candidateId, id)
-    if (!shouldCreate(group, decision)) continue
-    const object: KnowledgeEntityV03 = { id: id as KnowledgeEntityV03['id'], type: candidate.entityType, name: candidate.name, aliases: candidate.aliases === undefined ? [] : [...new Set(candidate.aliases)].sort(), description: candidate.description ?? null, lifecycle: { status: 'active' }, ...(candidate.confidence === undefined ? {} : { metadata: { extractionConfidence: candidate.confidence } }) } as KnowledgeEntityV03
-    if (!index.entities.has(id)) knowledgeOperations.push({ operationId: operationId('entity-create'), type: 'create', object })
-  }
-  for (const group of input.groups.filter((item) => item.kind === 'relation').sort((a, b) => a.candidateId.localeCompare(b.candidateId))) {
-    const decision = decisions.get(group.candidateId); const candidate = group.candidate as RelationCandidate
-    if (!decision || blocked.has(group.candidateId)) continue
-    if (decision.action === 'merge_source') {
-      const current = existingOfKind(group, 'relation')
-      if (current && typeof current.id === 'string' && Array.isArray(current.sourceRefs)) knowledgeOperations.push({ operationId: operationId('relation-source-merge'), type: 'merge_source', knowledgeId: current.id, expectedBeforeHash: hashKnowledgeObject(current), addSourceRefs: [sourceId] })
-      continue
-    }
-    const sourceRef = entityIds.get(candidate.source.candidateRef); const targetRef = entityIds.get(candidate.target.candidateRef)
-    if (!sourceRef || !targetRef) continue
-    const attrs = candidate.attributes ?? {}
-    const allowed = allowedAttributes(candidate.relationType)
-    if (Object.keys(attrs).some((key) => !allowed.has(key))) { reviewItems.push({ candidateId: group.candidateId, kind: group.kind, rationale: 'Unsupported semantic relation attributes require user review', dependentCandidateIds: [] }); continue }
-    const id = allocateRelationId(candidate.relationType, sourceRef, targetRef, attrs)
-    if (shouldCreate(group, decision) && !index.relations.has(id)) {
-      const object: KnowledgeRelationV03 = { id: id as KnowledgeRelationV03['id'], type: candidate.relationType, sourceRef: sourceRef as KnowledgeRelationV03['sourceRef'], targetRef: targetRef as KnowledgeRelationV03['targetRef'], sourceRefs: [sourceId as KnowledgeRelationV03['sourceRefs'] extends (infer T)[] ? T : never], lifecycle: { status: 'active' }, ...(Object.keys(attrs).length === 0 ? {} : { attributes: structuredClone(attrs) }), ...(candidate.confidence === undefined ? {} : { confidence: candidate.confidence }) } as KnowledgeRelationV03
-      knowledgeOperations.push({ operationId: operationId('relation-create'), type: 'create', object })
-    }
-  }
-  for (const group of input.groups.filter((item) => item.kind === 'claim').sort((a, b) => a.candidateId.localeCompare(b.candidateId))) {
-    const decision = decisions.get(group.candidateId); const candidate = group.candidate as ClaimCandidate
-    if (!decision || blocked.has(group.candidateId)) continue
-    const subjects = candidate.subjectRefs.map((subject) => entityIds.get(subject.candidateRef)).filter((value): value is string => value !== undefined)
-    if (subjects.length !== candidate.subjectRefs.length) continue
-    const identity = { claimType: candidate.claimType, statement: candidate.statement, subjectRefs: [...subjects].sort() }
-    const id = allocateClaimId(identity)
-    if (decision.action === 'merge_source') {
-      const current = existingOfKind(group, 'claim')
-      if (current && typeof current.id === 'string' && Array.isArray(current.sourceRefs)) knowledgeOperations.push({ operationId: operationId('claim-source-merge'), type: 'merge_source', knowledgeId: current.id, expectedBeforeHash: hashKnowledgeObject(current), addSourceRefs: [sourceId] })
-      continue
-    }
-    if (decision.action === 'supersede') {
-      const current = existingOfKind(group, 'claim')
-      if (current && typeof current.id === 'string') knowledgeOperations.push({ operationId: operationId('claim-supersede'), type: 'supersede', knowledgeId: current.id, expectedBeforeHash: hashKnowledgeObject(current), replacement: makeClaim(input, candidate, id, subjects, sourceId, current.id) })
-      continue
-    }
-    if (shouldCreate(group, decision) && !index.claims.has(id)) {
-      const object = makeClaim(input, candidate, id, subjects, sourceId)
-      knowledgeOperations.push({ operationId: operationId('claim-create'), type: 'create', object })
-    }
-  }
-  const changeSetId = `changeset-${hashKnowledgeObject({ workflowRunId: input.workflowRunId, knowledgeBaseId: input.knowledgeBaseId, rawRef: input.rawRef, documentId: input.documentId, groups: input.groups.map((group) => ({ candidateId: group.candidateId, kind: group.kind, candidate: group.candidate })) }).slice('sha256:'.length, 'sha256:'.length + 16)}`
-  const changeSet: KnowledgeChangeSetV03 = { changeSetId, workflowRunId: input.workflowRunId, knowledgeBaseId: input.knowledgeBaseId, schemaVersion: '0.3', storageFormatVersion: '1', expectedBaseRevision: input.baseRevision, requiresRawProvenance: true, sourceOperations, knowledgeOperations, ingestionContext: { documentId: input.documentId, rawRef: input.rawRef, extractionUnitCount: input.plan.units.length } }
-  return { changeSet, reviewItems, safeOperationCount: sourceOperations.length + knowledgeOperations.length, summary: { sourceOperations: sourceOperations.length, knowledgeCreates: knowledgeOperations.filter((operation) => operation.type === 'create').length, reviewItems: reviewItems.length, blockedDependencies: blocked.size - reviewIds.size } }
+  const changeSetId = 'changeset-' + hashKnowledgeObject({ workflowRunId: input.workflowRunId, knowledgeBaseId: input.knowledgeBaseId, rawRef: input.rawRef, documentId: input.documentId, groups: input.groups, decisions: input.decisions }).slice(7, 23)
+  const changeSet: KnowledgeChangeSetV03 = { changeSetId, workflowRunId: input.workflowRunId, knowledgeBaseId: input.knowledgeBaseId, schemaVersion: '0.3', storageFormatVersion: '1', expectedBaseRevision: input.baseRevision, requiresRawProvenance: true, sourceOperations, knowledgeOperations, ingestionContext: { documentId: input.documentId, rawRef: input.rawRef, extractionUnitCount: input.plan.units.length, ...(input.workflowInputFingerprint === undefined ? {} : { workflowInputFingerprint: input.workflowInputFingerprint }), workflowStatusHint: statusHint, reviewItemCount: reviewCount, rejectedCandidateCount: input.rejectedCandidateCount ?? rejected.size } }
+  return { changeSet, reviewItems: [...reviews.values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)), safeOperationCount: sourceOperations.length + knowledgeOperations.length, summary: { sourceOperations: sourceOperations.length, knowledgeCreates: knowledgeOperations.filter((operation) => operation.type === 'create').length, reviewItems: reviewCount, blockedDependencies: rejected.size }, entityResolutions: resolutions }
 }

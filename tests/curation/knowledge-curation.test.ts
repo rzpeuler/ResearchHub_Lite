@@ -65,6 +65,14 @@ test('extractKnowledge isolates invalid, ungrounded, and dependent candidates', 
   assert.ok(result.rejected.some((item) => item.code === 'invalid_reference'))
 })
 
+test('semanticFields recursively reject durable canonical namespace values', async () => {
+  const response = { entities: [{ candidateId: 'alpha', entityType: 'company', name: 'Alpha', semanticFields: { nested: { durable: 'entity:already-canonical' } }, evidenceBlockRefs: ['block-1'], reason: 'named' }], relations: [], claims: [] }
+  const executor = new MockReasoningExecutor({ capabilities, responses: { extractKnowledge: response } })
+  const result = await new KnowledgeCurationSkill({ executor }).extractKnowledge({ document, reportMap, unit })
+  assert.equal(result.entities.length, 0)
+  assert.equal(result.rejected[0]?.code, 'invalid_reference')
+})
+
 test('skill rejects invalid JSON from a non-native structured-output host without retrying', async () => {
   const executor = new MockReasoningExecutor({ capabilities: { ...capabilities, structuredOutputSupport: false }, responses: { extractKnowledge: 'not json' } })
   await assert.rejects(() => new KnowledgeCurationSkill({ executor }).extractKnowledge({ document, reportMap, unit }), (error: unknown) => error instanceof KnowledgeCurationError && error.code === 'invalid_model_output')
