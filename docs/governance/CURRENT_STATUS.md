@@ -34,6 +34,7 @@
 - `RHL-MIGRATION-005` implementation plus `RHL-MIGRATION-005-FIX-002`, `RHL-MIGRATION-005-FIX-003`, `RHL-MIGRATION-005-FIX-004`, `RHL-MIGRATION-005-FIX-005`, and `RHL-MIGRATION-005-FIX-006` are complete; `RHL-MIGRATION-005` is independently CTO accepted / closed.
 - `RHL-FIX-IDENTITY-001` and `RHL-FIX-IDENTITY-001-FIX-001` are independently CTO accepted / closed: Unicode-safe semantic identity, deterministic mixed-script canonical IDs, collision-safe consolidation, exact Unicode retrieval, and pre-reconciliation candidate uniqueness checks are covered by offline tests.
 - `RHL-REFACTOR-KNOWLEDGE-RESOLUTION-001` is implementation-complete pending CTO independent acceptance: full-set post-extraction Reconciliation was retired and replaced by deterministic Entity Binding, Entity/Relation/Claim Diff, bounded semantic cases, deterministic ResolutionIntent policy/barrier, and ResolutionIntent-driven ChangeSet planning.
+- `RHL-REFACTOR-KNOWLEDGE-RESOLUTION-001-FIX-001` is implemented pending CTO independent acceptance: semantic cases now carry bounded real document excerpts and source projections, Entity plausible retrieval overflows to Review without truncation, semantic case/retry accounting is separate, durable-ref token leakage is rejected recursively, and the mixed fresh-KB scale regression is covered offline.
 
 ## Current Limitations
 

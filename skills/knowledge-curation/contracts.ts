@@ -1,5 +1,5 @@
 import type { DocumentBlock, DocumentSection, StructuredDocument } from '../../plugins/document/contracts.ts'
-import type { ClaimTypeV03, EntityTypeV03, RelationTypeV03 } from '../../knowledge/schema/domain.ts'
+import type { ClaimTypeV03, EntityTypeV03, RelationTypeV03, SourceReliabilityV03, SourceTypeV03 } from '../../knowledge/schema/domain.ts'
 export type { CurationSchemaContext, CurationSchemaContextSlice, RelationSchemaContract } from './schema-context-types.ts'
 export type { DocumentBlock, DocumentSection, StructuredDocument }
 
@@ -147,13 +147,40 @@ export type ResolutionOutcome =
   | 'equivalent_to' | 'distinct_from_all'
   | 'equivalent' | 'state_changed' | 'supersedes' | 'coexists' | 'contradicts' | 'invalid' | 'uncertain'
 
+export interface SemanticCaseEvidence {
+  readonly blockId: string
+  readonly blockType: DocumentBlock['type']
+  readonly sectionRef: string | null
+  readonly page: number | null
+  readonly role: 'primary' | 'context'
+  readonly textExcerpt: string
+}
+
+export interface IncomingSourceContext {
+  readonly title?: string | null
+  readonly institution?: string | null
+  readonly author?: string | null
+  readonly publishedAt?: string | null
+  readonly sourceType?: SourceTypeV03 | null
+  readonly reliability?: SourceReliabilityV03 | null
+}
+
+export interface SemanticSourceProjection {
+  readonly title?: string | null
+  readonly institution?: string | null
+  readonly author?: string | null
+  readonly publishedAt?: string | null
+  readonly sourceType?: SourceTypeV03 | null
+  readonly reliability?: SourceReliabilityV03 | null
+}
+
 export interface ResolutionCase {
   readonly caseId: string
   readonly caseKind: ResolutionCaseKind
   readonly candidateProjection: unknown
   readonly existingProjections: readonly { alias: string; projection: unknown }[]
-  readonly evidence: readonly unknown[]
-  readonly sourceContext: unknown
+  readonly evidence: readonly SemanticCaseEvidence[]
+  readonly sourceContext: IncomingSourceContext
   readonly schemaContextSlice: unknown
   readonly allowedOutcomes: readonly ResolutionOutcome[]
 }

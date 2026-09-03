@@ -127,6 +127,16 @@ test('resolveSemanticCase rejects durable IDs and writer fields', async () => {
   await assert.rejects(() => new KnowledgeCurationSkill({ executor }).resolveSemanticCase({ resolutionCase: { caseId: 'case-1', caseKind: 'EntityBindingCase', candidateProjection: {}, existingProjections: [], evidence: [], sourceContext: {}, schemaContextSlice: {}, allowedOutcomes: ['equivalent_to', 'distinct_from_all', 'uncertain'] } }), (error: unknown) => error instanceof KnowledgeCurationError && error.code === 'invalid_reference')
 })
 
+test('resolveSemanticCase rejects embedded durable canonical and RawRef tokens but accepts ordinary words', async () => {
+  for (const rationale of ['This appears related to entity:company-test.', 'This mentions claim:test.', 'Evidence came from source:test.', `Evidence came from raw-sha256-${'a'.repeat(64)}.`]) {
+    const executor = new MockReasoningExecutor({ capabilities, responses: { resolveSemanticCase: { outcome: 'uncertain', rationale } } })
+    await assert.rejects(() => new KnowledgeCurationSkill({ executor }).resolveSemanticCase({ resolutionCase: { caseId: 'case-embedded', caseKind: 'EntityBindingCase', candidateProjection: {}, existingProjections: [], evidence: [], sourceContext: {}, schemaContextSlice: {}, allowedOutcomes: ['equivalent_to', 'distinct_from_all', 'uncertain'] } }), (error: unknown) => error instanceof KnowledgeCurationError && error.code === 'invalid_reference')
+  }
+  const executor = new MockReasoningExecutor({ capabilities, responses: { resolveSemanticCase: { outcome: 'uncertain', rationale: 'This ordinary entity source claim prose is safe.' } } })
+  const result = await new KnowledgeCurationSkill({ executor }).resolveSemanticCase({ resolutionCase: { caseId: 'case-words', caseKind: 'EntityBindingCase', candidateProjection: {}, existingProjections: [], evidence: [], sourceContext: {}, schemaContextSlice: {}, allowedOutcomes: ['equivalent_to', 'distinct_from_all', 'uncertain'] } })
+  assert.equal(result.outcome, 'uncertain')
+})
+
 test('every operation derives trusted Schema Context internally and ignores caller-shaped overrides', async () => {
   const executor = new MockReasoningExecutor({ capabilities, responses: { extractKnowledge: { entities: [], relations: [], claims: [] } } })
   const shapedOverride = { slice: 'knowledge_extraction', relationContracts: [{ relationType: 'offers_product', allowedSourceTypes: ['industry'], allowedTargetTypes: ['industry'] }] }

@@ -13,6 +13,7 @@ export interface IngestionWorkflowConfig {
   readonly maxContextTokens?: number
   readonly maxResolutionAttempts?: number
   readonly maxResolutionCases?: number
+  readonly maxEntityBindingCandidates?: number
 }
 
 export interface PlanAttemptSummary {

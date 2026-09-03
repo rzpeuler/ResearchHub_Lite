@@ -3,8 +3,9 @@ import { normalizeSemanticText } from '../../knowledge/registry/id-allocation.ts
 import { KnowledgeIndexV03 } from '../../knowledge/query/index.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
 import type { KnowledgeClaimV03, KnowledgeEntityV03, KnowledgeRelationV03 } from '../../knowledge/schema/domain.ts'
+import type { StructuredDocument } from '../../plugins/document/contracts.ts'
 import type { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
-import type { ClaimCandidate, EntityCandidate, RelationCandidate, ReportMap, ResolutionCase, ResolutionOutcome, ResolvedCandidateGroup, SemanticResolutionResult } from '../../skills/knowledge-curation/contracts.ts'
+import type { ClaimCandidate, EntityCandidate, IncomingSourceContext, RelationCandidate, ReportMap, ResolutionCase, ResolutionOutcome, ResolvedCandidateGroup, SemanticCaseEvidence, SemanticResolutionResult, SemanticSourceProjection } from '../../skills/knowledge-curation/contracts.ts'
 import { semanticOutcomeVocabulary } from '../../skills/knowledge-curation/validation.ts'
 import type { AcceptedExtractionPlan, ReviewItem } from './contracts.ts'
 
@@ -35,14 +36,17 @@ export interface ResolutionIntent {
 }
 export interface KnowledgeResolutionInput {
   readonly assets: KnowledgeAssetCollectionV03
+  readonly document: StructuredDocument
   readonly groups: readonly ResolvedCandidateGroup[]
   readonly reportMap: ReportMap
+  readonly incomingSourceContext?: IncomingSourceContext
   readonly plan: AcceptedExtractionPlan
   readonly rawRef: string
   readonly skill: KnowledgeCurationSkill
   readonly instructions?: string
   readonly maxResolutionAttempts?: number
   readonly maxResolutionCases?: number
+  readonly maxEntityBindingCandidates?: number
   readonly maxContextTokens?: number
   readonly consolidationReviews?: readonly { readonly candidateId: string; readonly reason: string; readonly conflictingFields?: readonly string[] }[]
 }
@@ -53,6 +57,7 @@ export interface KnowledgeResolutionResult {
   readonly blocked: boolean
   readonly errors: readonly string[]
   readonly semanticCaseCalls: number
+  readonly semanticCaseCount: number
   readonly summary: Readonly<Record<string, number>>
 }
 
@@ -79,7 +84,7 @@ function entityHardKey(entity: KnowledgeEntityV03): string | undefined {
   const ticker = norm(entity.ticker)
   return exchange && ticker ? `${exchange}|${ticker}` : undefined
 }
-function plausibleEntities(index: KnowledgeIndexV03, candidate: EntityCandidate, bound: number): KnowledgeEntityV03[] {
+function plausibleEntities(index: KnowledgeIndexV03, candidate: EntityCandidate): KnowledgeEntityV03[] {
   const namesWanted = candidateNames(candidate)
   const fields = dict(candidate.semanticFields)
   const ticker = norm(fields.ticker)
@@ -90,7 +95,7 @@ function plausibleEntities(index: KnowledgeIndexV03, candidate: EntityCandidate,
     const byTicker = ticker !== '' && entity.type === 'company' && norm(entity.ticker) === ticker
     const byExchange = exchange !== '' && entity.type === 'company' && norm(entity.exchange) === exchange
     return byName || byTicker || byExchange
-  }).filter(active).sort((a, b) => a.id.localeCompare(b.id)).slice(0, bound)
+  }).filter(active).sort((a, b) => a.id.localeCompare(b.id))
 }
 function entityProjection(entity: KnowledgeEntityV03): unknown { return { type: entity.type, name: entity.name, aliases: [...(entity.aliases ?? [])].sort(), ...(entity.description == null ? {} : { description: entity.description }), ...(entity.type === 'company' ? { ticker: entity.ticker ?? null, exchange: entity.exchange ?? null, legalName: entity.legalName ?? null } : {}) } }
 function candidateProjection(candidate: EntityCandidate | RelationCandidate | ClaimCandidate): unknown {
@@ -98,9 +103,36 @@ function candidateProjection(candidate: EntityCandidate | RelationCandidate | Cl
   if ('relationType' in candidate) return { kind: 'relation', type: candidate.relationType, source: candidate.source.mention, target: candidate.target.mention, attributes: candidate.attributes ?? null }
   return { kind: 'claim', type: candidate.claimType, statement: candidate.statement, subjects: candidate.subjectRefs.map((item) => item.mention).sort(), temporal: candidate.temporal ?? null, structuredValue: candidate.structuredValue ?? null }
 }
-function caseEvidence(candidate: EntityCandidate | RelationCandidate | ClaimCandidate, plan: AcceptedExtractionPlan): unknown[] { return evidence(candidate).map((blockId) => ({ blockId, locator: plan.units.some((unit) => unit.primaryBlockIds.includes(blockId)) ? 'primary' : 'context' })) }
-function caseInput(caseId: string, caseKind: ResolutionCase['caseKind'], candidate: EntityCandidate | RelationCandidate | ClaimCandidate, existing: readonly { alias: string; projection: unknown }[], plan: AcceptedExtractionPlan, reportMap: ReportMap, allowedOutcomes: readonly ResolutionOutcome[]): ResolutionCase {
-  return { caseId, caseKind, candidateProjection: candidateProjection(candidate), existingProjections: existing, evidence: caseEvidence(candidate, plan), sourceContext: { sourceAssessment: reportMap.sourceAssessment }, schemaContextSlice: { caseKind, allowedOutcomes }, allowedOutcomes }
+function sourceProjection(source: { title?: string | null; institution?: string | null; author?: string | null; publishedAt?: string | null; sourceType?: SemanticSourceProjection['sourceType']; sourceReliability?: SemanticSourceProjection['reliability'] }): SemanticSourceProjection {
+  return { title: source.title ?? null, institution: source.institution ?? null, author: source.author ?? null, publishedAt: source.publishedAt ?? null, sourceType: source.sourceType ?? null, reliability: source.sourceReliability ?? null }
+}
+function existingSourceProjections(index: KnowledgeIndexV03, sourceRefs: readonly string[] | undefined): SemanticSourceProjection[] {
+  const seen = new Set<string>()
+  const projections: SemanticSourceProjection[] = []
+  for (const ref of sourceRefs ?? []) {
+    const source = index.sources.get(ref)
+    if (!source) continue
+    const projection = sourceProjection(source)
+    const key = hashKnowledgeObject(projection)
+    if (!seen.has(key)) { seen.add(key); projections.push(projection) }
+  }
+  return projections.sort((a, b) => hashKnowledgeObject(a).localeCompare(hashKnowledgeObject(b)))
+}
+function caseEvidence(candidate: EntityCandidate | RelationCandidate | ClaimCandidate, plan: AcceptedExtractionPlan, document: StructuredDocument): { evidence: SemanticCaseEvidence[]; missingBlockIds: string[] } {
+  const primary = new Set(plan.units.flatMap((unit) => unit.primaryBlockIds))
+  const blocks = new Map(document.blocks.map((block) => [block.blockId, block]))
+  const missingBlockIds: string[] = []
+  const projected: SemanticCaseEvidence[] = []
+  for (const blockId of evidence(candidate)) {
+    const block = blocks.get(blockId)
+    if (!block) { missingBlockIds.push(blockId); continue }
+    projected.push({ blockId, blockType: block.type, sectionRef: block.sectionRef, page: block.page, role: primary.has(blockId) ? 'primary' : 'context', textExcerpt: block.text.slice(0, 800) })
+  }
+  return { evidence: projected, missingBlockIds }
+}
+function caseInput(caseId: string, caseKind: ResolutionCase['caseKind'], candidate: EntityCandidate | RelationCandidate | ClaimCandidate, existing: readonly { alias: string; projection: unknown }[], plan: AcceptedExtractionPlan, document: StructuredDocument, sourceContext: IncomingSourceContext, allowedOutcomes: readonly ResolutionOutcome[]): { resolutionCase: ResolutionCase; missingBlockIds: readonly string[] } {
+  const evidenceProjection = caseEvidence(candidate, plan, document)
+  return { resolutionCase: { caseId, caseKind, candidateProjection: candidateProjection(candidate), existingProjections: existing, evidence: evidenceProjection.evidence, sourceContext, schemaContextSlice: { caseKind, allowedOutcomes }, allowedOutcomes }, missingBlockIds: evidenceProjection.missingBlockIds }
 }
 function review(candidateId: string, kind: ReviewItem['kind'], rationale: string, dependency = false, refs: readonly string[] = [], origin: 'knowledge_resolution' | 'semantic_case' = 'knowledge_resolution'): ReviewItem {
   return { candidateId, kind, rationale, dependentCandidateIds: [...refs].sort(), stage: dependency ? 'knowledge_resolution_dependency' : origin === 'semantic_case' ? 'semantic_case' : 'knowledge_resolution', category: 'reconciliation_review', origin, dependency, reviewKey: ['knowledge-resolution', candidateId, dependency ? 'dependency' : 'root', rationale, ...refs].join('|') }
@@ -184,7 +216,10 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
   const maxAttempts = input.maxResolutionAttempts ?? 2
   const maxCases = input.maxResolutionCases ?? CASE_LIMIT
   let semanticCaseCalls = 0
+  let semanticCaseCount = 0
   const entityGroups = groups.filter((group) => group.kind === 'entity')
+  const maxEntityBindingCandidates = input.maxEntityBindingCandidates ?? 8
+  const sourceContext: IncomingSourceContext = input.incomingSourceContext ?? { sourceType: (input.reportMap.sourceAssessment.sourceType as IncomingSourceContext['sourceType']) ?? null, reliability: input.reportMap.sourceAssessment.reliability ?? null }
   const consolidationReviews = new Map(input.consolidationReviews?.map((item) => [item.candidateId, item.reason] as const) ?? [])
   const addEntityResult = (group: ResolvedCandidateGroup, binding: EntityBinding, disposition: ResolutionDisposition, rationale: string, targetRef?: string, basis: Partial<SemanticBasis> = {}): void => { bindings.set(group.candidateId, binding); intents.push(intent(group, disposition, rationale, targetRef ?? binding.ref ?? binding.plannedRef, basis)); if (disposition === 'review') reviews.push(review(group.candidateId, group.kind, rationale, false, [], basis.caseKind === 'EntityBindingCase' ? 'semantic_case' : 'knowledge_resolution')) }
   for (const group of entityGroups) {
@@ -195,13 +230,17 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
     const hardMatches = key === undefined ? [] : [...index.entities.values()].filter((entity) => entityHardKey(entity) === key && active(entity))
     if (hardMatches.length > 1) { const rationale = `Knowledge integrity defect: hard Company key ${key} matches multiple canonical Entities`; bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: hardMatches.map((item) => item.id) }); intents.push(intent(group, 'review', rationale, undefined)); reviews.push(review(group.candidateId, group.kind, rationale)); errors.push(rationale); continue }
     if (hardMatches.length === 1) { const existing = hardMatches[0]!; const conflict = fieldConflict(candidate, existing); const binding: EntityBinding = { candidateId: group.candidateId, state: 'BoundExisting', ref: existing.id, plausibleMatches: [existing.id] }; if (conflict) addEntityResult(group, binding, 'review', conflict); else addEntityResult(group, binding, hasEnrichment(candidate, existing) ? 'enrich_existing' : 'no_op', hasEnrichment(candidate, existing) ? 'Deterministic additive Entity enrichment' : 'Deterministic hard-key Entity match'); continue }
-    const plausible = plausibleEntities(index, candidate, Math.max(1, Math.min(8, maxCases)))
+    const plausible = plausibleEntities(index, candidate)
     if (plausible.length === 0) { const ref = plannedRef(candidate); addEntityResult(group, { candidateId: group.candidateId, state: 'PlannedNew', plannedRef: ref, plausibleMatches: [] }, 'create', 'No plausible canonical Entity match; planned new Entity', ref); continue }
+    if (plausible.length > maxEntityBindingCandidates) { const rationale = `entity_plausible_match_overflow: ${plausible.length} plausible canonical Entities exceed bound ${maxEntityBindingCandidates}`; bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: plausible.map((item) => item.id) }); intents.push(intent(group, 'review', rationale, undefined)); reviews.push(review(group.candidateId, group.kind, rationale)); continue }
     const aliases = plausible.map((item, number) => ({ alias: `existing-${String(number + 1).padStart(3, '0')}`, projection: entityProjection(item) }))
     const caseId = `semantic-case-${hashKnowledgeObject({ kind: 'EntityBindingCase', candidateId: group.candidateId, aliases: aliases.map((item) => item.alias) }).slice(7, 23)}`
-    const resolutionCase = caseInput(caseId, 'EntityBindingCase', candidate, aliases, input.plan, input.reportMap, semanticOutcomeVocabulary('EntityBindingCase'))
-    if (!isCapacitySafe(resolutionCase, input.maxContextTokens)) { const rationale = `Semantic case ${caseId} exceeds configured context capacity`; bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: plausible.map((item) => item.id) }); intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'EntityBindingCase' })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
-    if (semanticCaseCalls >= maxCases) { const rationale = `Semantic resolution case limit ${maxCases} exceeded`; bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: plausible.map((item) => item.id) }); intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'EntityBindingCase' })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
+    const preparedCase = caseInput(caseId, 'EntityBindingCase', candidate, aliases, input.plan, input.document, sourceContext, semanticOutcomeVocabulary('EntityBindingCase'))
+    const resolutionCase = preparedCase.resolutionCase
+    if (preparedCase.missingBlockIds.length > 0) { const rationale = `semantic_case_missing_evidence_block: ${preparedCase.missingBlockIds.join(', ')}`; bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: plausible.map((item) => item.id) }); intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'EntityBindingCase' })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
+    if (!isCapacitySafe(resolutionCase, input.maxContextTokens)) { const rationale = `semantic_case_capacity_exceeded: ${caseId} exceeds configured context capacity`; bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: plausible.map((item) => item.id) }); intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'EntityBindingCase' })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
+    if (semanticCaseCount >= maxCases) { const rationale = `Semantic resolution case limit ${maxCases} exceeded`; bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: plausible.map((item) => item.id) }); intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'EntityBindingCase' })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
+    semanticCaseCount += 1
     let result: SemanticResolutionResult | undefined
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) { semanticCaseCalls += 1; try { result = await input.skill.resolveSemanticCase({ resolutionCase, instructions: input.instructions }); break } catch { /* final failure is represented as an auditable Review, not a workflow-wide block */ } }
     if (!result || result.outcome === 'uncertain') { const rationale = result?.rationale ?? `Semantic case ${caseId} failed after bounded retries`; bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: plausible.map((item) => item.id) }); intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'EntityBindingCase', outcome: result?.outcome })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
@@ -228,8 +267,10 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
     if (diff === 'additive') { intents.push(intent(group, 'enrich_existing', 'Relation has only safely additive attributes', existing.id)); continue }
     if (diff === 'none') { intents.push(intent(group, 'merge_evidence', 'Relation identity is exact and evidence can be merged', existing.id)); continue }
     const alias = 'existing-001'; const caseId = `semantic-case-${hashKnowledgeObject({ kind: 'RelationConflictCase', candidateId: group.candidateId, existing: existing.id }).slice(7, 23)}`
-    const resolutionCase = caseInput(caseId, 'RelationConflictCase', candidate, [{ alias, projection: { type: existing.type, source: 'source', target: 'target', attributes: existing.attributes ?? null } }], input.plan, input.reportMap, semanticOutcomeVocabulary('RelationConflictCase'))
-    if (!isCapacitySafe(resolutionCase, input.maxContextTokens) || semanticCaseCalls >= maxCases) { const rationale = !isCapacitySafe(resolutionCase, input.maxContextTokens) ? `Semantic case ${caseId} exceeds configured context capacity` : `Semantic resolution case limit ${maxCases} exceeded`; intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'RelationConflictCase' })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
+    const preparedCase = caseInput(caseId, 'RelationConflictCase', candidate, [{ alias, projection: { type: existing.type, source: 'source', target: 'target', attributes: existing.attributes ?? null, sources: existingSourceProjections(index, existing.sourceRefs) } }], input.plan, input.document, sourceContext, semanticOutcomeVocabulary('RelationConflictCase'))
+    const resolutionCase = preparedCase.resolutionCase
+    if (preparedCase.missingBlockIds.length > 0 || !isCapacitySafe(resolutionCase, input.maxContextTokens) || semanticCaseCount >= maxCases) { const rationale = preparedCase.missingBlockIds.length > 0 ? `semantic_case_missing_evidence_block: ${preparedCase.missingBlockIds.join(', ')}` : !isCapacitySafe(resolutionCase, input.maxContextTokens) ? `semantic_case_capacity_exceeded: ${caseId} exceeds configured context capacity` : `Semantic resolution case limit ${maxCases} exceeded`; intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'RelationConflictCase' })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
+    semanticCaseCount += 1
     let result: SemanticResolutionResult | undefined
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) { semanticCaseCalls += 1; try { result = await input.skill.resolveSemanticCase({ resolutionCase, instructions: input.instructions }); break } catch { /* final failure is represented as an auditable Review, not a workflow-wide block */ } }
     const outcome = result?.outcome
@@ -249,10 +290,12 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
     if (matches.exact.length === 1) { intents.push(intent(group, 'merge_evidence', 'Claim exact identity matched deterministically; evidence will be merged', matches.exact[0]!.id)); continue }
     if (matches.plausible.length === 0) { intents.push(intent(group, 'create', 'No plausible Claim conflict was retrieved', `planned-claim-${hashKnowledgeObject({ candidateId: group.candidateId, identity: claimIdentity({ claimType: candidate.claimType, statement: candidate.statement, subjectRefs: subjects, temporal: candidate.temporal, structuredValue: candidate.structuredValue }) }).slice(7, 23)}`)); continue }
     if (matches.plausible.length > 8) { const rationale = `Claim conflict retrieval overflow: ${matches.plausible.length} compatible candidates exceed bound 8`; intents.push(intent(group, 'review', rationale, undefined)); reviews.push(review(group.candidateId, group.kind, rationale)); continue }
-    const existing = matches.plausible.map((value, number) => ({ alias: `existing-${String(number + 1).padStart(3, '0')}`, projection: { claimType: value.claimType, statement: value.statement, subjects: value.subjectRefs.map(() => 'existing-subject'), temporal: value.temporal ?? null, structuredValue: value.structuredValue ?? null } }))
+    const existing = matches.plausible.map((value, number) => ({ alias: `existing-${String(number + 1).padStart(3, '0')}`, projection: { claimType: value.claimType, statement: value.statement, subjects: value.subjectRefs.map(() => 'existing-subject'), temporal: value.temporal ?? null, structuredValue: value.structuredValue ?? null, sources: existingSourceProjections(index, value.sourceRefs) } }))
     const caseId = `semantic-case-${hashKnowledgeObject({ kind: 'ClaimConflictCase', candidateId: group.candidateId, existing: existing.map((item) => item.alias) }).slice(7, 23)}`
-    const resolutionCase = caseInput(caseId, 'ClaimConflictCase', candidate, existing, input.plan, input.reportMap, semanticOutcomeVocabulary('ClaimConflictCase'))
-    if (!isCapacitySafe(resolutionCase, input.maxContextTokens) || semanticCaseCalls >= maxCases) { const rationale = !isCapacitySafe(resolutionCase, input.maxContextTokens) ? `Semantic case ${caseId} exceeds configured context capacity` : `Semantic resolution case limit ${maxCases} exceeded`; intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'ClaimConflictCase' })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
+    const preparedCase = caseInput(caseId, 'ClaimConflictCase', candidate, existing, input.plan, input.document, sourceContext, semanticOutcomeVocabulary('ClaimConflictCase'))
+    const resolutionCase = preparedCase.resolutionCase
+    if (preparedCase.missingBlockIds.length > 0 || !isCapacitySafe(resolutionCase, input.maxContextTokens) || semanticCaseCount >= maxCases) { const rationale = preparedCase.missingBlockIds.length > 0 ? `semantic_case_missing_evidence_block: ${preparedCase.missingBlockIds.join(', ')}` : !isCapacitySafe(resolutionCase, input.maxContextTokens) ? `semantic_case_capacity_exceeded: ${caseId} exceeds configured context capacity` : `Semantic resolution case limit ${maxCases} exceeded`; intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'ClaimConflictCase' })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
+    semanticCaseCount += 1
     let result: SemanticResolutionResult | undefined
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) { semanticCaseCalls += 1; try { result = await input.skill.resolveSemanticCase({ resolutionCase, instructions: input.instructions }); break } catch { /* final failure is represented as an auditable Review, not a workflow-wide block */ } }
     const target = result?.targetAlias === undefined ? undefined : matches.plausible[existing.findIndex((item) => item.alias === result!.targetAlias)]?.id
@@ -265,5 +308,5 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
   }
   const barrier = resolveResolutionIntentBarrier(groups, intents, bindings)
   if (!barrier.valid) errors.push(...barrier.errors)
-  return { intents: intents.sort((a, b) => a.candidateRef.localeCompare(b.candidateRef)), bindings, reviewItems: [...new Map(reviews.map((item) => [item.reviewKey, item])).values()].sort((a, b) => (a.reviewKey ?? '').localeCompare(b.reviewKey ?? '')), blocked: errors.length > 0 || !barrier.valid, errors, semanticCaseCalls, summary: { entities: entityGroups.length, relations: groups.filter((group) => group.kind === 'relation').length, claims: groups.filter((group) => group.kind === 'claim').length, semanticCases: semanticCaseCalls, intents: intents.length, reviews: reviews.length } }
+  return { intents: intents.sort((a, b) => a.candidateRef.localeCompare(b.candidateRef)), bindings, reviewItems: [...new Map(reviews.map((item) => [item.reviewKey, item])).values()].sort((a, b) => (a.reviewKey ?? '').localeCompare(b.reviewKey ?? '')), blocked: errors.length > 0 || !barrier.valid, errors, semanticCaseCalls, semanticCaseCount, summary: { entities: entityGroups.length, relations: groups.filter((group) => group.kind === 'relation').length, claims: groups.filter((group) => group.kind === 'claim').length, semanticCases: semanticCaseCount, semanticCaseCalls, intents: intents.length, reviews: reviews.length } }
 }

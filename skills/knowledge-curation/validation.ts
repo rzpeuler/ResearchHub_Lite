@@ -6,7 +6,7 @@ import type { CurationSchemaContext } from './schema-context-types.ts'
 
 type RecordValue = Record<string, unknown>
 const TRUSTED_KEYS = new Set(['id', 'entityId', 'relationId', 'claimId', 'sourceRef', 'sourceRefs', 'rawRef', 'rawRefs', 'registryPath', 'revision', 'storageRef', 'workflowRunId', 'changeSetId', 'knowledgeBaseId'])
-const DURABLE_CANONICAL_REF = /^(?:theme-group|entity|relation|claim|source|module|raw-sha256):[A-Za-z0-9._-]+$/
+const DURABLE_CANONICAL_REF_TOKEN = /(?:theme-group|entity|relation|claim|source|module):[A-Za-z0-9._-]+|raw-sha256-[0-9a-f]{64}/
 
 function fail(code: KnowledgeCurationError['code'], message: string): never { throw new KnowledgeCurationError(code, message) }
 function record(value: unknown, label: string): RecordValue { if (!value || typeof value !== 'object' || Array.isArray(value)) fail('invalid_model_output', `${label} must be an object`); return value as RecordValue }
@@ -19,7 +19,7 @@ function confidence(value: unknown, label: string): number { if (typeof value !=
 function strings(value: unknown, label: string): string[] { return list(value, label).map((item, index) => text(item, `${label}[${index}]`)) }
 function jsonValue(value: unknown): boolean { if (value === null || typeof value === 'string' || typeof value === 'boolean') return true; if (typeof value === 'number') return Number.isFinite(value); if (Array.isArray(value)) return value.every(jsonValue); return typeof value === 'object' && value !== null && Object.values(value).every(jsonValue) }
 function rejectTrusted(value: unknown, path: string): void { if (!value || typeof value !== 'object') return; if (Array.isArray(value)) { value.forEach((item, index) => rejectTrusted(item, `${path}[${index}]`)); return } for (const [key, child] of Object.entries(value)) { if (TRUSTED_KEYS.has(key)) fail('invalid_reference', `${path}.${key} is trusted Workflow or storage data`); rejectTrusted(child, `${path}.${key}`) } }
-function rejectDurableSemanticRefs(value: unknown, path: string): void { if (typeof value === 'string' && DURABLE_CANONICAL_REF.test(value.trim())) fail('invalid_reference', `${path} contains a durable canonical reference`); if (!value || typeof value !== 'object') return; if (Array.isArray(value)) { value.forEach((item, index) => rejectDurableSemanticRefs(item, `${path}[${index}]`)); return } for (const [key, child] of Object.entries(value)) rejectDurableSemanticRefs(child, `${path}.${key}`) }
+function rejectDurableSemanticRefs(value: unknown, path: string): void { if (typeof value === 'string' && DURABLE_CANONICAL_REF_TOKEN.test(value)) fail('invalid_reference', `${path} contains a durable canonical reference token`); if (!value || typeof value !== 'object') return; if (Array.isArray(value)) { value.forEach((item, index) => rejectDurableSemanticRefs(item, `${path}[${index}]`)); return } for (const [key, child] of Object.entries(value)) rejectDurableSemanticRefs(child, `${path}.${key}`) }
 function unitBlockSets(input: PreparedExtractKnowledgeInput): { all: Set<string>; primary: Set<string> } {
   return { all: new Set([...input.unit.primaryRefs, ...input.unit.contextRefs].flatMap((ref) => blockIdsForRef(input.document, ref))), primary: new Set(input.unit.primaryRefs.flatMap((ref) => blockIdsForRef(input.document, ref))) }
 }
