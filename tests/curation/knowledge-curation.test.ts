@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { StructuredDocument } from '../../plugins/document/contracts.ts'
 import { buildCurationSchemaContext } from '../../skills/knowledge-curation/schema-context.ts'
-import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildReconcileKnowledgeOutputContract } from '../../skills/knowledge-curation/output-contracts.ts'
+import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildResolveSemanticCaseOutputContract } from '../../skills/knowledge-curation/output-contracts.ts'
 import { UNDERSTAND_AND_PLAN_PROMPT } from '../../skills/knowledge-curation/prompts/understand-and-plan.ts'
 import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
 import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
@@ -109,26 +109,22 @@ test('skill rejects invalid JSON from a non-native structured-output host withou
   assert.equal(executor.calls.length, 1)
 })
 
-test('reconcileKnowledge requires exactly one decision for every supplied candidate', async () => {
-  const candidate = { candidateId: 'alpha', entityType: 'company' as const, name: 'Alpha', evidenceBlockRefs: ['block-1'], reason: 'named' }
-  const input = { candidateGroups: [{ candidateId: 'alpha', kind: 'entity' as const, candidate }], existingKnowledge: [], reportMap, sourceAssessment: { summary: 'test' } }
-  const executor = new MockReasoningExecutor({ capabilities, responses: { reconcileKnowledge: { decisions: [{ candidateId: 'alpha', action: 'create', rationale: 'No matching focused knowledge.' }] } } })
-  const result = await new KnowledgeCurationSkill({ executor }).reconcileKnowledge(input)
-  assert.equal(result.decisions[0]?.action, 'create')
+test('resolveSemanticCase validates a bounded EntityBinding outcome', async () => {
+  const executor = new MockReasoningExecutor({ capabilities, responses: { resolveSemanticCase: { outcome: 'equivalent_to', targetAlias: 'existing-001', rationale: 'The bounded evidence identifies the same company.' } } })
+  const skill = new KnowledgeCurationSkill({ executor })
+  const result = await skill.resolveSemanticCase({ resolutionCase: { caseId: 'case-1', caseKind: 'EntityBindingCase', candidateProjection: { name: 'Alpha' }, existingProjections: [{ alias: 'existing-001', projection: { name: 'Alpha Corporation' } }], evidence: [], sourceContext: {}, schemaContextSlice: {}, allowedOutcomes: ['equivalent_to', 'distinct_from_all', 'uncertain'] } })
+  assert.equal(result.outcome, 'equivalent_to')
+  assert.equal(result.targetAlias, 'existing-001')
 })
 
-test('reconcileKnowledge rejects duplicate decisions for one candidate', async () => {
-  const candidate = { candidateId: 'alpha', entityType: 'company' as const, name: 'Alpha', evidenceBlockRefs: ['block-1'], reason: 'named' }
-  const input = { candidateGroups: [{ candidateId: 'alpha', kind: 'entity' as const, candidate }], existingKnowledge: [], reportMap, sourceAssessment: { summary: 'test' } }
-  const executor = new MockReasoningExecutor({ capabilities, responses: { reconcileKnowledge: { decisions: [{ candidateId: 'alpha', action: 'create', rationale: 'first' }, { candidateId: 'alpha', action: 'reject', rationale: 'duplicate' }] } } })
-  await assert.rejects(() => new KnowledgeCurationSkill({ executor }).reconcileKnowledge(input), (error: unknown) => error instanceof KnowledgeCurationError && error.code === 'reconciliation_invalid' && error.message.includes('more than one decision'))
+test('resolveSemanticCase rejects an unsupported mutation vocabulary', async () => {
+  const executor = new MockReasoningExecutor({ capabilities, responses: { resolveSemanticCase: { outcome: 'create', rationale: 'not a semantic outcome' } } })
+  await assert.rejects(() => new KnowledgeCurationSkill({ executor }).resolveSemanticCase({ resolutionCase: { caseId: 'case-1', caseKind: 'ClaimConflictCase', candidateProjection: {}, existingProjections: [{ alias: 'existing-001', projection: {} }], evidence: [], sourceContext: {}, schemaContextSlice: {}, allowedOutcomes: ['equivalent', 'supersedes', 'coexists', 'contradicts', 'invalid', 'uncertain'] } }), (error: unknown) => error instanceof KnowledgeCurationError && error.code === 'invalid_semantics')
 })
 
-test('reconcileKnowledge rejects missing candidate decisions', async () => {
-  const candidate = { candidateId: 'alpha', entityType: 'company' as const, name: 'Alpha', evidenceBlockRefs: ['block-1'], reason: 'named' }
-  const input = { candidateGroups: [{ candidateId: 'alpha', kind: 'entity' as const, candidate }], existingKnowledge: [], reportMap, sourceAssessment: { summary: 'test' } }
-  const executor = new MockReasoningExecutor({ capabilities, responses: { reconcileKnowledge: { decisions: [] } } })
-  await assert.rejects(() => new KnowledgeCurationSkill({ executor }).reconcileKnowledge(input), (error: unknown) => error instanceof KnowledgeCurationError && error.code === 'reconciliation_invalid' && error.message.includes('exactly one decision'))
+test('resolveSemanticCase rejects durable IDs and writer fields', async () => {
+  const executor = new MockReasoningExecutor({ capabilities, responses: { resolveSemanticCase: { outcome: 'distinct_from_all', rationale: 'new', caseId: 'entity:secret' } } })
+  await assert.rejects(() => new KnowledgeCurationSkill({ executor }).resolveSemanticCase({ resolutionCase: { caseId: 'case-1', caseKind: 'EntityBindingCase', candidateProjection: {}, existingProjections: [], evidence: [], sourceContext: {}, schemaContextSlice: {}, allowedOutcomes: ['equivalent_to', 'distinct_from_all', 'uncertain'] } }), (error: unknown) => error instanceof KnowledgeCurationError && error.code === 'invalid_reference')
 })
 
 test('every operation derives trusted Schema Context internally and ignores caller-shaped overrides', async () => {
@@ -181,8 +177,8 @@ test('structured output contracts fully describe nested objects and Schema 0.3 v
   assert.deepEqual(comparator[0]?.enum, context.claimComparators)
   assert.deepEqual(comparator[1], { type: 'null' })
   assert.equal((comparator[0]?.enum as readonly string[] | undefined)?.includes('greater_than'), false)
-  const reconcile = buildReconcileKnowledgeOutputContract()
-  const decision = (reconcile.schema.properties as Record<string, { items?: { additionalProperties?: boolean; properties?: Record<string, { enum?: readonly string[] }> } }>).decisions.items!
-  assert.equal(decision.additionalProperties, false)
-  assert.deepEqual(decision.properties?.action.enum, ['create', 'duplicate', 'merge_source', 'update_state', 'supersede', 'keep_both', 'reject', 'user_review'])
+  const semantic = buildResolveSemanticCaseOutputContract({ caseKind: 'ClaimConflictCase', allowedOutcomes: ['equivalent', 'supersedes', 'coexists', 'contradicts', 'invalid', 'uncertain'], existingAliases: ['existing-001'] })
+  const semanticSchema = semantic.schema.properties as Record<string, { enum?: readonly string[]; additionalProperties?: boolean }>
+  assert.deepEqual(semanticSchema.outcome.enum, ['equivalent', 'supersedes', 'coexists', 'contradicts', 'invalid', 'uncertain'])
+  assert.equal(semanticSchema.caseKind.additionalProperties, undefined)
 })

@@ -33,6 +33,8 @@ export class MockReasoningExecutor implements ReasoningExecutor {
       throw new ReasoningExecutorError('reasoning_execution_failed', failure, { operation: request.operation })
     }
     if (!(request.operation in this.responses)) throw new ReasoningExecutorError('reasoning_execution_failed', `No mock response configured for ${request.operation}`, { operation: request.operation })
-    return { operation: request.operation, operationId: request.metadata?.executionId, output: structuredClone(this.responses[request.operation]), durationMs: 0 }
+    const configured = this.responses[request.operation]
+    const output = typeof configured === 'function' ? (configured as (request: ReasoningRequest) => unknown)(request) : configured
+    return { operation: request.operation, operationId: request.metadata?.executionId, output: structuredClone(output), durationMs: 0 }
   }
 }

@@ -1,13 +1,12 @@
-import type { DocumentContentRef, StructuredDocument, EntityCandidate, CandidateEntityRef, RelationCandidate, ClaimCandidate, ValidatedExtractKnowledgeResult, CandidateKind, CandidateValidationCode, CandidateValidationRejection, UnderstandAndPlanOutput, ReconcileKnowledgeOutput, ReconciliationAction } from './contracts.ts'
-import type { PreparedExtractKnowledgeInput, PreparedReconcileKnowledgeInput } from './model-input.ts'
+import type { DocumentContentRef, StructuredDocument, EntityCandidate, CandidateEntityRef, RelationCandidate, ClaimCandidate, ValidatedExtractKnowledgeResult, CandidateKind, CandidateValidationCode, CandidateValidationRejection, UnderstandAndPlanOutput, ResolutionCaseKind, ResolutionOutcome, SemanticResolutionResult } from './contracts.ts'
+import type { PreparedExtractKnowledgeInput, PreparedResolveSemanticCaseInput } from './model-input.ts'
 import { KnowledgeCurationError } from './errors.ts'
 import { blockIdsForRef } from './model-input.ts'
 import type { CurationSchemaContext } from './schema-context-types.ts'
 
 type RecordValue = Record<string, unknown>
-const ACTIONS: readonly ReconciliationAction[] = ['create', 'duplicate', 'merge_source', 'update_state', 'supersede', 'keep_both', 'reject', 'user_review']
 const TRUSTED_KEYS = new Set(['id', 'entityId', 'relationId', 'claimId', 'sourceRef', 'sourceRefs', 'rawRef', 'rawRefs', 'registryPath', 'revision', 'storageRef', 'workflowRunId', 'changeSetId', 'knowledgeBaseId'])
-const DURABLE_CANONICAL_REF = /^(?:theme-group|entity|relation|claim|source|module):[A-Za-z0-9._-]+$/
+const DURABLE_CANONICAL_REF = /^(?:theme-group|entity|relation|claim|source|module|raw-sha256):[A-Za-z0-9._-]+$/
 
 function fail(code: KnowledgeCurationError['code'], message: string): never { throw new KnowledgeCurationError(code, message) }
 function record(value: unknown, label: string): RecordValue { if (!value || typeof value !== 'object' || Array.isArray(value)) fail('invalid_model_output', `${label} must be an object`); return value as RecordValue }
@@ -65,10 +64,35 @@ export function validateExtractKnowledge(value: unknown, input: PreparedExtractK
   return { entities: entityList, relations, claims, rejected, summary: { inputCounts: { entity: entityCounts.input, relation: relationCounts.input, claim: claimCounts.input }, acceptedCounts: { entity: entityCounts.accepted, relation: relationCounts.accepted, claim: claimCounts.accepted }, rejectedCounts: { entity: entityCounts.rejected, relation: relationCounts.rejected, claim: claimCounts.rejected }, rejectionCodes: [...new Set(rejected.map((item) => item.code))] } }
 }
 
-export function validateReconcileKnowledge(value: unknown, input: PreparedReconcileKnowledgeInput): ReconcileKnowledgeOutput {
-  const root = record(value, 'ReconcileKnowledge output'); exact(root, ['decisions'], 'ReconcileKnowledge output'); rejectTrusted(root, 'ReconcileKnowledge output'); const decisions = list(root.decisions, 'decisions'); const supplied = new Set(input.candidateGroups.map((group) => group.candidateId)); const seen = new Set<string>(); const normalized = decisions.map((raw, index) => { const item = record(raw, `decisions[${index}]`); exact(item, ['candidateId', 'action', 'rationale', 'targetCandidateId', 'conflictingFields'], `decisions[${index}]`); const id = candidateId(item.candidateId, `decisions[${index}].candidateId`); if (!supplied.has(id)) fail('invalid_reference', `decision references an unknown candidate ${id}`); if (seen.has(id)) fail('reconciliation_invalid', `candidate ${id} has more than one decision`); seen.add(id); const action = enumText(item.action, ACTIONS, `decisions[${index}].action`); const target = optionalText(item.targetCandidateId, `decisions[${index}].targetCandidateId`); if (target !== undefined && !supplied.has(target)) fail('invalid_reference', `targetCandidateId ${target} is unknown`); return { candidateId: id, action, rationale: text(item.rationale, `decisions[${index}].rationale`), ...(target === undefined ? {} : { targetCandidateId: target }), ...(item.conflictingFields === undefined ? {} : { conflictingFields: strings(item.conflictingFields, `decisions[${index}].conflictingFields`) }) } })
-  if (seen.size !== supplied.size) fail('reconciliation_invalid', 'exactly one decision is required for every supplied candidate')
-  return { decisions: normalized }
+const ENTITY_OUTCOMES: readonly ResolutionOutcome[] = ['equivalent_to', 'distinct_from_all', 'uncertain']
+const RELATION_OUTCOMES: readonly ResolutionOutcome[] = ['equivalent', 'state_changed', 'coexists', 'contradicts', 'invalid', 'uncertain']
+const CLAIM_OUTCOMES: readonly ResolutionOutcome[] = ['equivalent', 'supersedes', 'coexists', 'contradicts', 'invalid', 'uncertain']
+
+export function validateSemanticResolutionResult(value: unknown, input: PreparedResolveSemanticCaseInput): SemanticResolutionResult {
+  const root = record(value, 'resolveSemanticCase output')
+  exact(root, ['caseId', 'caseKind', 'outcome', 'targetAlias', 'rationale', 'confidence'], 'resolveSemanticCase output')
+  rejectTrusted(root, 'resolveSemanticCase output')
+  rejectDurableSemanticRefs(root, 'resolveSemanticCase output')
+  const resolutionCase = input.resolutionCase
+  const caseId = root.caseId === undefined ? resolutionCase.caseId : text(root.caseId, 'resolveSemanticCase.caseId')
+  if (caseId !== resolutionCase.caseId) fail('invalid_reference', 'resolveSemanticCase.caseId does not match the supplied case')
+  const caseKind = root.caseKind === undefined ? resolutionCase.caseKind : text(root.caseKind, 'resolveSemanticCase.caseKind') as ResolutionCaseKind
+  if (caseKind !== resolutionCase.caseKind) fail('invalid_semantics', 'resolveSemanticCase.caseKind does not match the supplied case')
+  const allowed = resolutionCase.allowedOutcomes as readonly ResolutionOutcome[]
+  const outcome = enumText(root.outcome, allowed, 'resolveSemanticCase.outcome')
+  const alias = optionalText(root.targetAlias, 'resolveSemanticCase.targetAlias')
+  const aliases = new Set(resolutionCase.existingProjections.map((item) => item.alias))
+  const requiresTarget = outcome === 'equivalent_to' || outcome === 'equivalent' || outcome === 'state_changed' || outcome === 'supersedes'
+  if (requiresTarget && alias === undefined) fail('invalid_reference', 'resolveSemanticCase outcome requires exactly one targetAlias')
+  if (!requiresTarget && alias !== undefined) fail('invalid_reference', 'resolveSemanticCase outcome forbids targetAlias')
+  if (alias !== undefined && !aliases.has(alias)) fail('invalid_reference', `Unknown case-local target alias ${alias}`)
+  const rationale = text(root.rationale, 'resolveSemanticCase.rationale')
+  const result: SemanticResolutionResult = { caseId, caseKind, outcome, ...(alias === undefined ? {} : { targetAlias: alias }), rationale, ...(root.confidence === undefined ? {} : { confidence: confidence(root.confidence, 'resolveSemanticCase.confidence') }) }
+  return result
+}
+
+export function semanticOutcomeVocabulary(caseKind: ResolutionCaseKind): readonly ResolutionOutcome[] {
+  return caseKind === 'EntityBindingCase' ? ENTITY_OUTCOMES : caseKind === 'RelationConflictCase' ? RELATION_OUTCOMES : CLAIM_OUTCOMES
 }
 
 function claimTemporal(value: unknown, schema: CurationSchemaContext, label: string): RecordValue {

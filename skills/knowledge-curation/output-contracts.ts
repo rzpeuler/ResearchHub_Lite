@@ -56,8 +56,15 @@ export function buildExtractKnowledgeOutputContract(schema: CurationSchemaContex
   return { format: 'json', root: 'object', additionalProperties: false, schema: objectSchema(['entities', 'relations', 'claims'], { entities: arraySchema(entity), relations: arraySchema(relation), claims: arraySchema(claim) }) }
 }
 
-export function buildReconcileKnowledgeOutputContract(): StructuredOutputContract {
-  const action = enumSchema(['create', 'duplicate', 'merge_source', 'update_state', 'supersede', 'keep_both', 'reject', 'user_review'])
-  const decision = objectSchema(['candidateId', 'action', 'rationale'], { candidateId: text, action, rationale: text, targetCandidateId: text, conflictingFields: arraySchema(text) })
-  return { format: 'json', root: 'object', additionalProperties: false, schema: objectSchema(['decisions'], { decisions: arraySchema(decision) }) }
+export function buildResolveSemanticCaseOutputContract(resolutionCase: { caseKind: string; allowedOutcomes: readonly string[]; existingAliases: readonly string[] }): StructuredOutputContract {
+  const targetAlias = resolutionCase.existingAliases.length === 0 ? text : enumSchema(resolutionCase.existingAliases)
+  const result = objectSchema(['outcome', 'rationale'], {
+    caseId: text,
+    caseKind: { const: resolutionCase.caseKind },
+    outcome: enumSchema(resolutionCase.allowedOutcomes),
+    targetAlias,
+    rationale: text,
+    confidence,
+  })
+  return { format: 'json', root: 'object', additionalProperties: false, schema: result }
 }

@@ -1,7 +1,7 @@
 export const REASONING_OPERATIONS = [
   'understandAndPlan',
   'extractKnowledge',
-  'reconcileKnowledge',
+  'resolveSemanticCase',
 ] as const
 
 export type ReasoningOperation = (typeof REASONING_OPERATIONS)[number]

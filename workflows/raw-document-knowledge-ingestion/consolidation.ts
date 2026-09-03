@@ -4,7 +4,7 @@ import type { CandidateEntityRef, ClaimCandidate, EntityCandidate, RelationCandi
 import type { AcceptedExtractionUnit } from './contracts.ts'
 
 export interface ConsolidatedExtraction {
-  readonly groups: readonly { candidateId: string; kind: 'entity' | 'relation' | 'claim'; candidate: EntityCandidate | RelationCandidate | ClaimCandidate; existingKnowledge?: readonly unknown[] }[]
+  readonly groups: readonly { candidateId: string; kind: 'entity' | 'relation' | 'claim'; candidate: EntityCandidate | RelationCandidate | ClaimCandidate }[]
   readonly reviewConstraints: readonly { candidateId: string; reason: string; conflictingFields: readonly string[] }[]
   readonly rejected: readonly unknown[]
   readonly candidateCounts: Readonly<Record<string, number>>

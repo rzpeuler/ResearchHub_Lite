@@ -3,7 +3,7 @@ import type { ClaimTypeV03, EntityTypeV03, RelationTypeV03 } from '../../knowled
 export type { CurationSchemaContext, CurationSchemaContextSlice, RelationSchemaContract } from './schema-context-types.ts'
 export type { DocumentBlock, DocumentSection, StructuredDocument }
 
-export type CurationOperation = 'understandAndPlan' | 'extractKnowledge' | 'reconcileKnowledge'
+export type CurationOperation = 'understandAndPlan' | 'extractKnowledge' | 'resolveSemanticCase'
 export type DocumentContentRef =
   | { readonly kind: 'block'; readonly blockId: string }
   | { readonly kind: 'section'; readonly sectionId: string }
@@ -140,16 +140,34 @@ export interface ValidatedExtractKnowledgeResult extends ExtractKnowledgeOutput 
   readonly summary: CandidateValidationSummary
 }
 
-export type ReconciliationAction = 'create' | 'duplicate' | 'merge_source' | 'update_state' | 'supersede' | 'keep_both' | 'reject' | 'user_review'
-export interface ResolvedCandidateGroup { readonly candidateId: string; readonly kind: CandidateKind; readonly candidate: EntityCandidate | RelationCandidate | ClaimCandidate; readonly existingKnowledge?: readonly unknown[] }
-export interface ReconcileKnowledgeInput {
-  readonly candidateGroups: readonly ResolvedCandidateGroup[]
-  readonly existingKnowledge: readonly unknown[]
-  readonly reportMap: ReportMap
-  readonly sourceAssessment: SourceAssessment
+export interface ResolvedCandidateGroup { readonly candidateId: string; readonly kind: CandidateKind; readonly candidate: EntityCandidate | RelationCandidate | ClaimCandidate }
+
+export type ResolutionCaseKind = 'EntityBindingCase' | 'RelationConflictCase' | 'ClaimConflictCase'
+export type ResolutionOutcome =
+  | 'equivalent_to' | 'distinct_from_all'
+  | 'equivalent' | 'state_changed' | 'supersedes' | 'coexists' | 'contradicts' | 'invalid' | 'uncertain'
+
+export interface ResolutionCase {
+  readonly caseId: string
+  readonly caseKind: ResolutionCaseKind
+  readonly candidateProjection: unknown
+  readonly existingProjections: readonly { alias: string; projection: unknown }[]
+  readonly evidence: readonly unknown[]
+  readonly sourceContext: unknown
+  readonly schemaContextSlice: unknown
+  readonly allowedOutcomes: readonly ResolutionOutcome[]
+}
+export interface ResolveSemanticCaseInput {
+  readonly resolutionCase: ResolutionCase
   readonly instructions?: string
 }
-export interface ReconciliationDecision { readonly candidateId: string; readonly action: ReconciliationAction; readonly rationale: string; readonly targetCandidateId?: string; readonly conflictingFields?: readonly string[] }
-export interface ReconcileKnowledgeOutput { readonly decisions: readonly ReconciliationDecision[] }
+export interface SemanticResolutionResult {
+  readonly caseId: string
+  readonly caseKind: ResolutionCaseKind
+  readonly outcome: ResolutionOutcome
+  readonly targetAlias?: string
+  readonly rationale: string
+  readonly confidence?: number
+}
 
 export function contentRefKey(ref: DocumentContentRef): string { return `${ref.kind}:${ref.kind === 'block' ? ref.blockId : ref.sectionId}` }

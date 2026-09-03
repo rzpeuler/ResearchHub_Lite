@@ -3,13 +3,13 @@ import { ReasoningExecutorError } from '../../plugins/reasoning/errors.ts'
 import { validateReasoningCapabilities } from '../../plugins/reasoning/capabilities.ts'
 import { KnowledgeCurationError } from './errors.ts'
 import { buildCurationSchemaContext } from './schema-context.ts'
-import { projectExtractKnowledgeModelInput, projectReconcileKnowledgeModelInput, projectUnderstandAndPlanModelInput } from './model-input.ts'
-import { validateExtractKnowledge, validateReconcileKnowledge, validateUnderstandAndPlanOutput } from './validation.ts'
+import { projectExtractKnowledgeModelInput, projectResolveSemanticCaseModelInput, projectUnderstandAndPlanModelInput } from './model-input.ts'
+import { validateExtractKnowledge, validateSemanticResolutionResult, validateUnderstandAndPlanOutput } from './validation.ts'
 import { UNDERSTAND_AND_PLAN_PROMPT, PLAN_REPAIR_PROMPT } from './prompts/understand-and-plan.ts'
 import { EXTRACT_KNOWLEDGE_PROMPT } from './prompts/extract-knowledge.ts'
-import { RECONCILE_KNOWLEDGE_PROMPT } from './prompts/reconcile-knowledge.ts'
-import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildReconcileKnowledgeOutputContract } from './output-contracts.ts'
-import type { ExtractKnowledgeInput, ReconcileKnowledgeInput, ReconcileKnowledgeOutput, UnderstandAndPlanInput, UnderstandAndPlanOutput, ValidatedExtractKnowledgeResult } from './contracts.ts'
+import { RESOLVE_SEMANTIC_CASE_PROMPT } from './prompts/resolve-semantic-case.ts'
+import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildResolveSemanticCaseOutputContract } from './output-contracts.ts'
+import type { ExtractKnowledgeInput, ResolveSemanticCaseInput, SemanticResolutionResult, UnderstandAndPlanInput, UnderstandAndPlanOutput, ValidatedExtractKnowledgeResult } from './contracts.ts'
 
 export interface KnowledgeCurationSkillOptions { readonly executor: ReasoningExecutor }
 
@@ -35,10 +35,10 @@ export class KnowledgeCurationSkill {
     return validateExtractKnowledge(result, { ...input, schemaContext })
   }
 
-  async reconcileKnowledge(input: ReconcileKnowledgeInput): Promise<ReconcileKnowledgeOutput> {
-    const schemaContext = buildCurationSchemaContext('reconciliation')
-    const result = await this.invoke({ operation: 'reconcileKnowledge', instruction: RECONCILE_KNOWLEDGE_PROMPT, input: projectReconcileKnowledgeModelInput({ ...input, schemaContext }), outputContract: buildReconcileKnowledgeOutputContract() })
-    return validateReconcileKnowledge(result, { ...input, schemaContext })
+  async resolveSemanticCase(input: ResolveSemanticCaseInput): Promise<SemanticResolutionResult> {
+    const schemaContext = buildCurationSchemaContext('knowledge_resolution')
+    const result = await this.invoke({ operation: 'resolveSemanticCase', instruction: RESOLVE_SEMANTIC_CASE_PROMPT, input: projectResolveSemanticCaseModelInput({ ...input, schemaContext }), outputContract: buildResolveSemanticCaseOutputContract({ caseKind: input.resolutionCase.caseKind, allowedOutcomes: input.resolutionCase.allowedOutcomes, existingAliases: input.resolutionCase.existingProjections.map((item) => item.alias) }) })
+    return validateSemanticResolutionResult(result, { ...input, schemaContext })
   }
 
   private async invoke(request: ReasoningRequest): Promise<unknown> {

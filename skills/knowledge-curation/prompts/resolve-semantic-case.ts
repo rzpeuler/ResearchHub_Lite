@@ -1,0 +1,3 @@
+export const RESOLVE_SEMANTIC_CASE_PROMPT = `Resolve exactly one bounded semantic case.
+
+Return only the semantic relationship described by the supplied case. Use only the allowed outcome vocabulary. Existing knowledge may be addressed only by the supplied case-local alias (such as existing-001); never return a durable canonical ID, Writer operation, ChangeSet field, or mutation action. Give a concise auditable rationale. Do not guess when the evidence is insufficient: return uncertain.`

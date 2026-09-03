@@ -3,7 +3,7 @@ import { access, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/prom
 import { dirname, join, resolve } from 'node:path'
 import { canonicalSerialize } from '../../knowledge/storage/canonical-hash.ts'
 import { withKnowledgeBaseMutationLock } from '../../knowledge/storage/mutation-lock.ts'
-import type { ReconciliationDecision, ResolvedCandidateGroup } from '../../skills/knowledge-curation/contracts.ts'
+import type { ResolvedCandidateGroup } from '../../skills/knowledge-curation/contracts.ts'
 import type { ReviewCategory, ReviewItem, ReviewOrigin, ReviewSample, ReviewSummary } from './contracts.ts'
 
 type Dict = Record<string, unknown>
@@ -26,7 +26,6 @@ export function categoryForRationale(value: string): ReviewCategory {
   return 'reconciliation_review'
 }
 export function consolidationReviewKey(candidateId: string, reason: string, conflictingFields: readonly string[] = []): string { return ['consolidation', candidateId, normalized(reason), [...conflictingFields].sort().map(normalized).join(',')].join('|') }
-export function reconciliationReviewKey(candidateId: string, action: string, rationale: string): string { return ['reconciliation', candidateId, action, normalized(rationale)].join('|') }
 export function plannerReviewKey(candidateId: string, stage: string, category: ReviewCategory, rationale: string, dependency: boolean): string { return ['planner', candidateId, stage, category, dependency ? 'dependency' : 'root', normalized(rationale)].join('|') }
 function addEvent(events: Map<string, Event>, sample: Omit<Event, 'reviewKey'> & { readonly reviewKey?: string }): void {
   const reviewKey = sample.reviewKey ?? plannerReviewKey(sample.candidateId ?? 'workflow', sample.stage, sample.category, sample.rationale, sample.dependency)
@@ -43,7 +42,7 @@ export function emptyReviewSummary(): ReviewSummary {
 export interface ReviewNormalizationInput {
   readonly extractionRejected?: readonly unknown[]
   readonly consolidationReviews?: readonly { readonly candidateId: string; readonly reason: string; readonly conflictingFields?: readonly string[] }[]
-  readonly reconciliationDecisions?: readonly ReconciliationDecision[]
+  readonly resolutionReviews?: readonly ReviewItem[]
   readonly plannerReviewItems?: readonly ReviewItem[]
   readonly candidateGroups?: readonly ResolvedCandidateGroup[]
 }
@@ -65,25 +64,20 @@ export function normalizeReviewSummary(input: ReviewNormalizationInput): ReviewS
     consolidationKeys.set(item.candidateId, [...(consolidationKeys.get(item.candidateId) ?? []), reviewKey])
     addEvent(events, { candidateId: item.candidateId, kind: kind(groupKinds.get(item.candidateId)), stage: 'consolidation', category: 'other', rationale: item.reason, dependentCandidateIds: [], dependency: false, origin: 'consolidation', reviewKey })
   }
-  const reconciliationKeys = new Map<string, string>()
-  for (const decision of input.reconciliationDecisions ?? []) {
-    if (decision.action !== 'user_review' && decision.action !== 'reject') continue
-    const reviewKey = reconciliationReviewKey(decision.candidateId, decision.action, decision.rationale)
-    reconciliationKeys.set(decision.candidateId + '|' + normalized(decision.rationale), reviewKey)
-    addEvent(events, { candidateId: decision.candidateId, kind: kind(groupKinds.get(decision.candidateId)), stage: 'reconciliation', category: 'reconciliation_review', rationale: decision.rationale, dependentCandidateIds: [], dependency: false, origin: 'reconciliation', reviewKey })
-  }
+  const resolutionKeys = new Map<string, string>()
+  for (const item of input.resolutionReviews ?? []) { const reviewKey = item.reviewKey ?? plannerReviewKey(item.candidateId, item.stage ?? 'knowledge_resolution', item.category ?? 'reconciliation_review', item.rationale, item.dependency ?? false); resolutionKeys.set(item.candidateId + '|' + normalized(item.rationale), reviewKey); addEvent(events, { candidateId: item.candidateId, kind: kind(groupKinds.get(item.candidateId)), stage: item.stage ?? 'knowledge_resolution', category: item.category ?? 'reconciliation_review', rationale: item.rationale, dependentCandidateIds: item.dependentCandidateIds, dependency: item.dependency ?? false, origin: item.origin ?? 'knowledge_resolution', reviewKey }) }
   const plannerCandidateIds = new Set((input.plannerReviewItems ?? []).map((item) => item.candidateId))
   for (const item of input.plannerReviewItems ?? []) {
     const rationale = normalized(item.rationale)
     const origin: ReviewOrigin = item.origin ?? 'planner'
-    const category = item.category ?? (origin === 'consolidation_mirror' ? 'other' : origin === 'reconciliation_mirror' ? 'reconciliation_review' : origin === 'dependency_isolation' ? 'invalid_reference' : categoryForRationale(item.rationale))
+    const category = item.category ?? (origin === 'consolidation_mirror' ? 'other' : origin === 'dependency_isolation' ? 'invalid_reference' : categoryForRationale(item.rationale))
     const dependency = item.dependency ?? (origin === 'dependency_isolation' || rationale.includes('blocked by') || rationale.includes('dependency isolated'))
     let reviewKey = item.reviewKey
     if (reviewKey === undefined && (origin === 'planner' || origin === 'consolidation_mirror') && rationale === 'consolidation conflict requires review') {
       const mirrors = consolidationKeys.get(item.candidateId) ?? []
       if (mirrors.length === 1) reviewKey = mirrors[0]
     }
-    if (reviewKey === undefined && (origin === 'planner' || origin === 'reconciliation_mirror')) reviewKey = reconciliationKeys.get(item.candidateId + '|' + rationale)
+    if (reviewKey === undefined && origin === 'knowledge_resolution') reviewKey = resolutionKeys.get(item.candidateId + '|' + rationale)
     addEvent(events, { candidateId: item.candidateId, kind: kind(item.kind), stage: item.stage ?? 'planner', category, rationale: item.rationale, dependentCandidateIds: item.dependentCandidateIds, dependency, origin, reviewKey: reviewKey ?? plannerReviewKey(item.candidateId, item.stage ?? 'planner', category, item.rationale, dependency) })
     if (!dependency) for (const dependent of item.dependentCandidateIds) if (!plannerCandidateIds.has(dependent)) addEvent(events, { candidateId: dependent, kind: kind(groupKinds.get(dependent)), stage: 'planner', category: 'invalid_reference', rationale: 'Dependency isolated by review of ' + item.candidateId, dependentCandidateIds: [item.candidateId], dependency: true, origin: 'dependency_isolation', reviewKey: ['dependency', item.candidateId, dependent].join('|') })
   }

@@ -1,5 +1,5 @@
 import type { ReasoningCapabilities } from '../../plugins/reasoning/contracts.ts'
-import type { ExtractKnowledgeInput, ReconcileKnowledgeInput, UnderstandAndPlanInput, DocumentContentRef } from './contracts.ts'
+import type { ExtractKnowledgeInput, ResolveSemanticCaseInput, UnderstandAndPlanInput, DocumentContentRef } from './contracts.ts'
 import type { CurationSchemaContext } from './schema-context-types.ts'
 
 export interface PreparedUnderstandAndPlanInput extends UnderstandAndPlanInput {
@@ -9,9 +9,7 @@ export interface PreparedUnderstandAndPlanInput extends UnderstandAndPlanInput {
 export interface PreparedExtractKnowledgeInput extends ExtractKnowledgeInput {
   readonly schemaContext: CurationSchemaContext
 }
-export interface PreparedReconcileKnowledgeInput extends ReconcileKnowledgeInput {
-  readonly schemaContext: CurationSchemaContext
-}
+export interface PreparedResolveSemanticCaseInput extends ResolveSemanticCaseInput { readonly schemaContext: CurationSchemaContext }
 
 export function projectUnderstandAndPlanModelInput(input: PreparedUnderstandAndPlanInput): unknown {
   return {
@@ -40,12 +38,9 @@ export function projectExtractKnowledgeModelInput(input: PreparedExtractKnowledg
   }
 }
 
-export function projectReconcileKnowledgeModelInput(input: PreparedReconcileKnowledgeInput): unknown {
+export function projectResolveSemanticCaseModelInput(input: PreparedResolveSemanticCaseInput): unknown {
   return {
-    candidateGroups: structuredClone(input.candidateGroups),
-    existingKnowledge: structuredClone(input.existingKnowledge),
-    reportMap: structuredClone(input.reportMap),
-    sourceAssessment: structuredClone(input.sourceAssessment),
+    resolutionCase: structuredClone(input.resolutionCase),
     schemaContext: structuredClone(input.schemaContext),
     ...(input.instructions === undefined ? {} : { instructions: input.instructions }),
   }

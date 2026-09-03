@@ -196,3 +196,13 @@ It remains a reference for previously validated invariants such as:
 ResearchHub_Lite selectively reuses proven assets.
 
 Legacy runtime, compatibility, migration, and unrelated product layers must not be copied merely to satisfy old imports.
+
+---
+
+## RHL-ADR-018 — Knowledge Resolution Replaces Full-Set Reconciliation
+
+**Status:** Implementation complete; CTO acceptance pending
+
+After Candidate consolidation, deterministic infrastructure owns canonical Entity Binding, Knowledge Diff, Candidate graph reference resolution, ResolutionIntent generation, and the ResolutionIntent barrier. Reasoning may be invoked only for a bounded `EntityBindingCase`, `RelationConflictCase`, or `ClaimConflictCase` through `resolveSemanticCase`.
+
+Reasoning receives case-local existing aliases rather than durable canonical IDs and never returns mutation actions. ChangeSet planning consumes only infrastructure-owned `ResolutionIntent` values. The historical R1/R2/R3 validation evidence remains immutable, and real R4 validation is deferred until independent CTO acceptance.

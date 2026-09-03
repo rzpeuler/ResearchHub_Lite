@@ -1,6 +1,6 @@
 import type { CurationOperation } from './contracts.ts'
 
-export type KnowledgeCurationErrorCode = 'invalid_model_output' | 'invalid_reference' | 'invalid_semantics' | 'invalid_confidence' | 'ungrounded_candidate' | 'reconciliation_invalid' | 'reasoning_failed'
+export type KnowledgeCurationErrorCode = 'invalid_model_output' | 'invalid_reference' | 'invalid_semantics' | 'invalid_confidence' | 'ungrounded_candidate' | 'reasoning_failed'
 export class KnowledgeCurationError extends Error {
   readonly code: KnowledgeCurationErrorCode
   readonly operation?: CurationOperation

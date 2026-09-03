@@ -15,7 +15,7 @@ export function buildCurationSchemaContext(slice: CurationSchemaContextSlice): C
     }
     return result
   })
-  if (!['understand_and_plan', 'knowledge_extraction', 'reconciliation'].includes(slice)) throw new Error(`Unsupported Knowledge Curation Schema Context slice: ${String(slice)}`)
+  if (!['understand_and_plan', 'knowledge_extraction', 'knowledge_resolution'].includes(slice)) throw new Error(`Unsupported Knowledge Curation Schema Context slice: ${String(slice)}`)
   return Object.freeze({
     schemaVersion: schema.identity.schemaVersion,
     storageFormatVersion: schema.identity.storageFormatVersion,

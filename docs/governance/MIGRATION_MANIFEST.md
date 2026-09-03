@@ -366,11 +366,11 @@ The following adaptations are implemented in the Lite checkout and were reviewed
 | Classification | Source asset family | Lite result |
 |---|---|---|
 | `ADAPT` | `packages/plugins/document/` | `plugins/document/` with stable `StructuredDocument`, Section, Block, parser, resolver, and Docling bridge contracts |
-| `ADAPT` | `packages/skills/knowledge-curation/` | `skills/knowledge-curation/` with `ReportMap`, `ExtractionPlanProposal`, Block/Section evidence refs, local symbolic candidates, deterministic validation, and reconciliation coverage |
+| `ADAPT` | `packages/skills/knowledge-curation/` | `skills/knowledge-curation/` with `ReportMap`, `ExtractionPlanProposal`, Block/Section evidence refs, local symbolic candidates, deterministic validation, and bounded semantic-case resolution |
 | `ADAPT` | `KnowledgeCurationModel` conceptual boundary | `plugins/reasoning/contracts.ts` `ReasoningExecutor`, plus Mock and isolated CLI adapters under `plugins/reasoning/` |
 | `ADAPT` | `packages/skills/knowledge-validation/` | Deterministic Schema 0.3, Raw, canonical, ChangeSet, and staged-state validation adapted under `knowledge/validation/`; the legacy Skill wrapper remains excluded |
 | `REFERENCE` | `packages/workflows/research-report-knowledge-ingestion/` | Original workflow used only for invariants; Lite execution is implemented as explicit staged TypeScript control flow under `workflows/raw-document-knowledge-ingestion/` |
 | `REFERENCE` | `packages/skills/knowledge-curation/prompts/analyze-schema-gaps.ts` | Not an active Lite operation; no `analyzeSchemaGaps` migration |
 | `EXCLUDE` | Legacy batch/chunk and model-context runtime assumptions | No batch/chunk extraction contract, broad existing-Knowledge extraction context, Writer call, or Workflow routing in the migrated Skill |
 
-The Knowledge Core under `knowledge/` remains the authoritative Schema 0.3 / Storage Format 1 implementation. RHL-MIGRATION-005 adds deterministic validation and the first executable Raw Document → Canonical Knowledge Workflow without introducing a runtime layer or moving control into the ReasoningExecutor or Skill.
+The Knowledge Core under `knowledge/` remains the authoritative Schema 0.3 / Storage Format 1 implementation. RHL-MIGRATION-005 added deterministic validation and the first executable Raw Document → Canonical Knowledge Workflow. RHL-REFACTOR-KNOWLEDGE-RESOLUTION-001 replaces the historical full-set Reconciliation path with Knowledge Resolution and keeps routing, mutation authority, and persistence in deterministic Workflow/infrastructure code.

@@ -1,480 +1,71 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile, readdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { consolidateExtractions } from '../../workflows/raw-document-knowledge-ingestion/consolidation.ts'
+import { resolveKnowledge, resolveResolutionIntentBarrier } from '../../workflows/raw-document-knowledge-ingestion/knowledge-resolution.ts'
 import { planKnowledgeChangeSet } from '../../workflows/raw-document-knowledge-ingestion/changeset-planner.ts'
-import { allocateSourceId } from '../../workflows/raw-document-knowledge-ingestion/id-helpers.ts'
-import { boundedExtract } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
 import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
-import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
 import { MockReasoningExecutor } from '../../plugins/reasoning/mock/executor.ts'
-import { retrieveFocusedKnowledge } from '../../workflows/raw-document-knowledge-ingestion/retrieval.ts'
 import { emptyReviewSummary, normalizeReviewSummary, writeNoOpExecutionRecord } from '../../workflows/raw-document-knowledge-ingestion/review-telemetry.ts'
-import { withKnowledgeBaseMutationLock } from '../../knowledge/storage/mutation-lock.ts'
-import { createKnowledgeBase, readManifest, removeKnowledgeBase } from '../knowledge/helpers.ts'
+import { boundedExtract } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
+import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
+import { createKnowledgeBase, removeKnowledgeBase } from '../knowledge/helpers.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
-import type { ClaimCandidate, EntityCandidate, RelationCandidate, ResolvedCandidateGroup, ReconciliationDecision, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
-import type { EntityTypeV03 } from '../../knowledge/schema/domain.ts'
+import type { ClaimCandidate, EntityCandidate, RelationCandidate, ResolvedCandidateGroup, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
+import type { AcceptedExtractionPlan } from '../../workflows/raw-document-knowledge-ingestion/contracts.ts'
+import type { EffectiveConfig } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
+import { allocateSourceId } from '../../workflows/raw-document-knowledge-ingestion/id-helpers.ts'
 
 const rawRef = 'raw-sha256-' + '0'.repeat(64)
-const emptyAssets = (): KnowledgeAssetCollectionV03 => ({ rootDir: '', themeGroups: [], entities: [], relations: [], claims: [], modules: [], sources: [], registry: [] })
 const reportMap = { sourceAssessment: { summary: 'test', sourceType: 'unknown' as const, reliability: 'unknown' as const }, researchScope: 'test', majorTopics: [], majorEntityMentions: [], majorConclusions: [], sectionSemantics: [], semanticDependencies: [], themeHypotheses: [], uncertainty: [] }
-const acceptedPlan = { units: [], excludedBlockIds: [], estimatedContextTokens: {} }
+const plan: AcceptedExtractionPlan = { units: [], excludedBlockIds: [], estimatedContextTokens: {} }
+const emptyAssets = (): KnowledgeAssetCollectionV03 => ({ rootDir: '', themeGroups: [], entities: [], relations: [], claims: [], modules: [], sources: [], registry: [] })
 function loaded(kind: 'entity' | 'relation' | 'claim', value: Record<string, unknown>): { kind: typeof kind; value: Record<string, unknown>; filePath: string; storageRef: string } { return { kind, value, filePath: '', storageRef: '' } }
-function entity(id: string, name: string, type: EntityTypeV03 = 'company', extra: Record<string, unknown> = {}): EntityCandidate { return { candidateId: id, entityType: type, name, evidenceBlockRefs: [], reason: 'test', ...extra } }
-function relation(id: string, type: RelationCandidate['relationType'], source: string, target: string, attributes?: Record<string, unknown>): RelationCandidate { return { candidateId: id, relationType: type, source: { candidateRef: source, mention: source }, target: { candidateRef: target, mention: target }, ...(attributes === undefined ? {} : { attributes }), evidenceBlockRefs: [], reason: 'test' } }
+function entity(id: string, name: string, entityType: EntityCandidate['entityType'] = 'company', extra: Record<string, unknown> = {}): EntityCandidate { return { candidateId: id, entityType, name, evidenceBlockRefs: [], reason: 'test', ...extra } }
+function relation(id: string, relationType: RelationCandidate['relationType'], source: string, target: string, attributes?: Record<string, unknown>): RelationCandidate { return { candidateId: id, relationType, source: { candidateRef: source, mention: source }, target: { candidateRef: target, mention: target }, ...(attributes === undefined ? {} : { attributes }), evidenceBlockRefs: [], reason: 'test' } }
 function claim(id: string, statement: string, subject: string, extra: Record<string, unknown> = {}): ClaimCandidate { return { candidateId: id, claimType: 'fact', statement, subjectRefs: [{ candidateRef: subject, mention: subject }], evidenceBlockRefs: [], reason: 'test', ...extra } }
-function multiSubjectClaim(id: string, statement: string, subjects: readonly string[], extra: Record<string, unknown> = {}): ClaimCandidate { return { candidateId: id, claimType: 'fact', statement, subjectRefs: subjects.map((subject) => ({ candidateRef: subject, mention: subject })), evidenceBlockRefs: [], reason: 'test', ...extra } }
-function input(groups: readonly ResolvedCandidateGroup[], decisions: readonly ReconciliationDecision[], assets = emptyAssets()): Parameters<typeof planKnowledgeChangeSet>[0] { return { knowledgeBaseId: 'kb-test', baseRevision: 0, workflowRunId: 'run-test', rawRef, rawManifest: { originalFilename: 'test.txt', suppliedMetadata: { title: 'Test', institution: null, author: null, publishedAt: null, sourceUrl: null } }, documentId: 'doc-test', document: { metadata: { originalFilename: 'test.txt', title: 'Test' } }, reportMap, plan: acceptedPlan, groups, decisions, assets } }
-function decisionsFor(groups: readonly ResolvedCandidateGroup[], action: ReconciliationDecision['action']): ReconciliationDecision[] { return groups.map((group) => ({ candidateId: group.candidateId, action, rationale: 'test' })) }
-function assetsWithEntities(values: Record<string, unknown>[], relations: Record<string, unknown>[] = [], claims: Record<string, unknown>[] = []): KnowledgeAssetCollectionV03 { return { ...emptyAssets(), entities: values.map((value) => loaded('entity', value) as never), relations: relations.map((value) => loaded('relation', value) as never), claims: claims.map((value) => loaded('claim', value) as never) } }
-function extraction(unitId: string, candidate: ClaimCandidate, description = 'same'): { unit: { unitId: string; proposedUnitId: string; topic: string; semanticPurpose: string; primaryRefs: []; contextRefs: []; primaryBlockIds: string[]; contextBlockIds: string[] }; result: ValidatedExtractKnowledgeResult } { return { unit: { unitId, proposedUnitId: unitId, topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }, result: { entities: [entity('e', 'Entity', 'company', { description, evidenceBlockRefs: [] })], relations: [], claims: [candidate], rejected: [], summary: { inputCounts: { entity: 1, relation: 0, claim: 1 }, acceptedCounts: { entity: 1, relation: 0, claim: 1 }, rejectedCounts: { entity: 0, relation: 0, claim: 0 }, rejectionCodes: [] } } } }
-function extractionWithKnowledge(unitId: string, entities: readonly EntityCandidate[], relations: readonly RelationCandidate[] = [], claims: readonly ClaimCandidate[] = []): { unit: { unitId: string; proposedUnitId: string; topic: string; semanticPurpose: string; primaryRefs: []; contextRefs: []; primaryBlockIds: string[]; contextBlockIds: string[] }; result: ValidatedExtractKnowledgeResult } { return { unit: { unitId, proposedUnitId: unitId, topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }, result: { entities: [...entities], relations: [...relations], claims: [...claims], rejected: [], summary: { inputCounts: { entity: entities.length, relation: relations.length, claim: claims.length }, acceptedCounts: { entity: entities.length, relation: relations.length, claim: claims.length }, rejectedCounts: { entity: 0, relation: 0, claim: 0 }, rejectionCodes: [] } } } }
+function group(candidate: EntityCandidate | RelationCandidate | ClaimCandidate): ResolvedCandidateGroup { return { candidateId: candidate.candidateId, kind: 'entityType' in candidate ? 'entity' : 'relationType' in candidate ? 'relation' : 'claim', candidate } }
+function assets(entities: Record<string, unknown>[] = [], relations: Record<string, unknown>[] = [], claims: Record<string, unknown>[] = []): KnowledgeAssetCollectionV03 { return { ...emptyAssets(), entities: entities.map((value) => loaded('entity', value) as never), relations: relations.map((value) => loaded('relation', value) as never), claims: claims.map((value) => loaded('claim', value) as never) } }
+function executor(response?: unknown): MockReasoningExecutor { const fallback = (request: { input: unknown }) => { const kind = ((request.input as { resolutionCase?: { caseKind?: string } }).resolutionCase?.caseKind); if (kind === 'EntityBindingCase') { if (response && typeof response === 'object' && ['equivalent_to', 'distinct_from_all', 'uncertain'].includes(String((response as { outcome?: unknown }).outcome))) return response; return { outcome: 'equivalent_to', targetAlias: 'existing-001', rationale: 'Bounded fixture equivalence.' } } return response ?? { outcome: 'equivalent', targetAlias: 'existing-001', rationale: 'Bounded fixture equivalence.' } }; return new MockReasoningExecutor({ capabilities: { maxContextTokens: 10_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 4 }, responses: { resolveSemanticCase: fallback } }) }
+async function resolve(groups: readonly ResolvedCandidateGroup[], existing: KnowledgeAssetCollectionV03 = emptyAssets(), response?: unknown, options: Record<string, unknown> = {}) { const mock = executor(response); const skill = new KnowledgeCurationSkill({ executor: mock }); const result = await resolveKnowledge({ assets: existing, groups, reportMap, plan, rawRef, skill, ...options } as never); return { result, mock } }
+function plannerInput(groups: readonly ResolvedCandidateGroup[], resolution: Awaited<ReturnType<typeof resolveKnowledge>>, existing: KnowledgeAssetCollectionV03 = emptyAssets()): Parameters<typeof planKnowledgeChangeSet>[0] { return { knowledgeBaseId: 'kb-test', baseRevision: 0, workflowRunId: 'run-test', rawRef, rawManifest: { originalFilename: 'test.txt', suppliedMetadata: { title: 'Test', institution: null, author: null, publishedAt: null, sourceUrl: null } }, documentId: 'doc-test', document: { metadata: { originalFilename: 'test.txt', title: 'Test' } }, reportMap, plan, groups, intents: resolution.intents, bindings: resolution.bindings, assets: existing, resolutionReviews: resolution.reviewItems } }
 
-test('planner duplicate Entity requires one exact target and never creates', () => {
-  const group = { candidateId: 'e', kind: 'entity' as const, candidate: entity('e', 'Acme'), existingKnowledge: [{ id: 'entity:acme', type: 'company', name: 'Acme', lifecycle: { status: 'active' } }] }
-  const result = planKnowledgeChangeSet(input([group], decisionsFor([group], 'duplicate')))
-  assert.equal(result.entityResolutions[0]?.status, 'resolved_existing')
-  assert.equal(result.changeSet, undefined)
-})
-
-test('planner duplicate Entity with zero or ambiguous targets becomes review', () => {
-  const zero = { candidateId: 'e', kind: 'entity' as const, candidate: entity('e', 'Acme') }
-  assert.equal(planKnowledgeChangeSet(input([zero], decisionsFor([zero], 'duplicate'))).reviewItems.length, 1)
-  const ambiguous = { ...zero, existingKnowledge: [{ id: 'entity:a', type: 'company', name: 'Acme', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'company', name: 'Acme', lifecycle: { status: 'active' } }] }
-  assert.equal(planKnowledgeChangeSet(input([ambiguous], decisionsFor([ambiguous], 'duplicate'))).reviewItems.length, 1)
-})
-
-test('planner Relation merge_source and update_state preserve sourceRefs', () => {
-  const a = { id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }
-  const b = { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }
-  const old = { id: 'relation:old', type: 'offers_product', sourceRef: 'entity:a', targetRef: 'entity:b', sourceRefs: ['source:old'], supportingClaimRefs: ['claim:keep'], lifecycle: { status: 'active' } }
-  const entities = [{ candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A'), existingKnowledge: [a] }, { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product'), existingKnowledge: [b] }]
-  const rg = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b'), existingKnowledge: [old] }
-  const merge = planKnowledgeChangeSet(input([...entities, rg], [...decisionsFor(entities, 'duplicate'), { candidateId: 'r', action: 'merge_source', rationale: 'test' }]))
-  assert.equal(merge.changeSet?.knowledgeOperations[0]?.type, 'merge_source')
-  const update = planKnowledgeChangeSet(input([...entities, rg], [...decisionsFor(entities, 'duplicate'), { candidateId: 'r', action: 'update_state', rationale: 'test' }]))
-  const updated = update.changeSet?.knowledgeOperations.find((operation) => operation.type === 'update')
-  const sourceId = allocateSourceId({ sourceUrl: null, publishedAt: null, title: 'Test', rawRef })
-  assert.deepEqual(updated && updated.type === 'update' && 'sourceRefs' in updated.object ? updated.object.sourceRefs : [], [sourceId, 'source:old'].sort())
-})
-
-test('planner Relation keep_both is distinct and business_exposure active pair is review', () => {
-  const a = { id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }
-  const b = { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }
-  const entities = [{ candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A'), existingKnowledge: [a] }, { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product'), existingKnowledge: [b] }]
-  const rg = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b') }
-  const result = planKnowledgeChangeSet(input([...entities, rg], [...decisionsFor(entities, 'duplicate'), { candidateId: 'r', action: 'keep_both', rationale: 'test' }]))
-  assert.equal(result.changeSet?.knowledgeOperations.some((operation) => operation.type === 'create'), true)
-  const industry = { id: 'entity:i', type: 'industry', name: 'Industry', lifecycle: { status: 'active' } }
-  const business = { id: 'relation:business', type: 'business_exposure', sourceRef: 'entity:a', targetRef: 'entity:i', lifecycle: { status: 'active' } }
-  const ig = { candidateId: 'i', kind: 'entity' as const, candidate: entity('i', 'Industry', 'industry'), existingKnowledge: [industry] }
-  const bg = { candidateId: 'b', kind: 'relation' as const, candidate: relation('b', 'business_exposure', 'a', 'i'), existingKnowledge: [business] }
-  const blocked = planKnowledgeChangeSet(input([{ ...entities[0]! }, ig, bg], [...decisionsFor([{ ...entities[0]! }, ig], 'duplicate'), { candidateId: 'b', action: 'keep_both', rationale: 'test' }], assetsWithEntities([a, industry], [business])))
-  assert.ok(blocked.reviewItems.some((item) => item.candidateId === 'b'))
-})
-
-test('planner Claim duplicate, update, supersede, and keep_both are deterministic', () => {
-  const a = { id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }
-  const old = { id: 'claim:old', claimType: 'fact', statement: 'A grows', subjectRefs: ['entity:a'], sourceRefs: ['source:old'], provenance: [{ sourceRef: 'source:old', rawRef, locator: null, chunkRef: null }], lifecycle: { status: 'active' } }
-  const eg = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A'), existingKnowledge: [a] }
-  const cg = { candidateId: 'c', kind: 'claim' as const, candidate: claim('c', 'A grows', 'a'), existingKnowledge: [old] }
-  const base = [eg, cg]
-  const duplicate = planKnowledgeChangeSet(input(base, [...decisionsFor([eg], 'duplicate'), { candidateId: 'c', action: 'duplicate', rationale: 'test' }], assetsWithEntities([a], [], [old])))
-  assert.equal(duplicate.changeSet, undefined)
-  const update = planKnowledgeChangeSet(input(base, [...decisionsFor([eg], 'duplicate'), { candidateId: 'c', action: 'update_state', rationale: 'test' }], assetsWithEntities([a], [], [old])))
-  const updateOp = update.changeSet?.knowledgeOperations.find((operation) => operation.type === 'update')
-  assert.equal(updateOp?.type, 'update')
-  const sourceId = allocateSourceId({ sourceUrl: null, publishedAt: null, title: 'Test', rawRef })
-  if (updateOp?.type === 'update' && 'sourceRefs' in updateOp.object) assert.deepEqual(updateOp.object.sourceRefs, [sourceId, 'source:old'].sort())
-  const supersede = planKnowledgeChangeSet(input(base, [...decisionsFor([eg], 'duplicate'), { candidateId: 'c', action: 'supersede', rationale: 'test' }], assetsWithEntities([a], [], [old])))
-  assert.equal(supersede.changeSet?.knowledgeOperations.some((operation) => operation.type === 'supersede'), true)
-  const keep = planKnowledgeChangeSet(input([eg, { ...cg, existingKnowledge: [] }], [...decisionsFor([eg], 'duplicate'), { candidateId: 'c', action: 'keep_both', rationale: 'test' }]))
-  assert.equal(keep.changeSet?.knowledgeOperations.some((operation) => operation.type === 'create'), true)
-})
-
-test('planner isolates rejected and review Entity dependencies', () => {
-  const eg = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A') }
-  const rg = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'a') }
-  const cg = { candidateId: 'c', kind: 'claim' as const, candidate: claim('c', 'A grows', 'a') }
-  const result = planKnowledgeChangeSet(input([eg, rg, cg], [{ candidateId: 'a', action: 'reject', rationale: 'bad' }, { candidateId: 'r', action: 'create', rationale: 'test' }, { candidateId: 'c', action: 'create', rationale: 'test' }]))
-  assert.equal(result.changeSet, undefined)
-  assert.ok(result.reviewItems.some((item) => item.candidateId === 'r'))
-  assert.ok(result.reviewItems.some((item) => item.candidateId === 'c'))
-})
-
-test('planner preserves dependency reviews from two reviewed parent candidates', () => {
-  const a = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A') }
-  const b = { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product') }
-  const r = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b') }
-  const result = planKnowledgeChangeSet(input([a, b, r], [{ candidateId: 'a', action: 'user_review', rationale: 'Review A' }, { candidateId: 'b', action: 'user_review', rationale: 'Review B' }, { candidateId: 'r', action: 'create', rationale: 'create' }]))
-  const dependencies = result.reviewItems.filter((item) => item.candidateId === 'r' && item.dependency)
-  assert.equal(dependencies.length, 2)
-  assert.equal(new Set(dependencies.map((item) => item.reviewKey)).size, 2)
-  const summary = normalizeReviewSummary({ plannerReviewItems: result.reviewItems, candidateGroups: [a, b, r] })
-  assert.ok(summary.dependencyCount >= 2)
-  assert.equal(summary.rootCount + summary.dependencyCount, summary.total)
-  assert.equal(Object.values(summary.byCategory).reduce((sum, value) => sum + value, 0), summary.total)
-  assert.equal(Object.values(summary.byCandidateKind).reduce((sum, value) => sum + value, 0), summary.total)
-})
-
-test('planner preserves a relation root review alongside its dependency review', () => {
-  const a = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A') }
-  const b = { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product') }
-  const r = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b') }
-  const result = planKnowledgeChangeSet(input([a, b, r], [{ candidateId: 'a', action: 'user_review', rationale: 'Review A' }, { candidateId: 'b', action: 'create', rationale: 'create' }, { candidateId: 'r', action: 'user_review', rationale: 'Review relation' }]))
-  const relationReviews = result.reviewItems.filter((item) => item.candidateId === 'r')
-  assert.equal(relationReviews.length, 2)
-  assert.equal(relationReviews.some((item) => item.dependency === true), true)
-  assert.equal(relationReviews.some((item) => item.dependency === false && item.origin === 'reconciliation_mirror'), true)
-  const summary = normalizeReviewSummary({ plannerReviewItems: result.reviewItems, candidateGroups: [a, b, r] })
-  const relationSamples = Object.values(summary.samplesByCategory).flat().filter((sample) => sample.candidateId === 'r')
-  assert.equal(relationSamples.filter((sample) => sample.dependency === true).length, 1)
-  assert.equal(relationSamples.filter((sample) => sample.dependency === false).length, 1)
-})
-
-test('planner consolidation mirror is stored once by its explicit reviewKey', () => {
-  const a = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A') }
-  const b = { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product') }
-  const r = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b') }
-  const constraint = { candidateId: 'r', reason: 'Relation attributes conflict', conflictingFields: ['importance'] }
-  const result = planKnowledgeChangeSet({ ...input([a, b, r], decisionsFor([a, b, r], 'create')), consolidationReviews: [constraint] })
-  assert.equal(result.reviewItems.filter((item) => item.candidateId === 'r').length, 1)
-  assert.equal(normalizeReviewSummary({ consolidationReviews: [constraint], plannerReviewItems: result.reviewItems, candidateGroups: [a, b, r] }).total, 1)
-})
-
-test('planner reviewItems are deterministically ordered by reviewKey', () => {
-  const a = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A') }
-  const b = { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product') }
-  const r = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b') }
-  const decisions = [{ candidateId: 'a', action: 'user_review' as const, rationale: 'Review A' }, { candidateId: 'b', action: 'user_review' as const, rationale: 'Review B' }, { candidateId: 'r', action: 'user_review' as const, rationale: 'Review relation' }]
-  const first = planKnowledgeChangeSet(input([a, b, r], decisions))
-  const second = planKnowledgeChangeSet(input([a, b, r], decisions))
-  assert.deepEqual(first.reviewItems.map((item) => item.reviewKey), second.reviewItems.map((item) => item.reviewKey))
-  assert.deepEqual(first.reviewItems.map((item) => item.candidateId), second.reviewItems.map((item) => item.candidateId))
-})
-
-test('existing InvestmentTheme duplicate and update preserve ThemeGroup identity without model refs', () => {
-  const existing = { id: 'entity:theme', type: 'investment_theme', name: 'Energy Transition', themeGroupRef: 'theme-group:energy', taxonomyRefs: ['taxonomy:one'], lifecycle: { status: 'active' } }
-  const group = { candidateId: 'theme', kind: 'entity' as const, candidate: entity('theme', 'Energy Transition', 'investment_theme'), existingKnowledge: [existing] }
-  const assets = { ...emptyAssets(), entities: [loaded('entity', existing) as never] }
-  const duplicate = planKnowledgeChangeSet(input([group], decisionsFor([group], 'duplicate'), assets))
-  assert.equal(duplicate.changeSet, undefined)
-  const update = planKnowledgeChangeSet(input([group], decisionsFor([group], 'update_state'), assets))
-  const operation = update.changeSet?.knowledgeOperations.find((item) => item.type === 'update')
-  assert.equal(operation?.type, 'update')
-  if (operation?.type === 'update' && 'themeGroupRef' in operation.object) assert.equal(operation.object.themeGroupRef, 'theme-group:energy')
-})
-
-test('consolidation preserves entity conflicts and separates Claim temporal/value identity', () => {
-  const first = extraction('u1', claim('c1', 'Revenue grows', 'e', { temporal: { asOf: null, scope: { type: 'fiscal_year', start: '2026-01-01', end: '2026-12-31', label: null } } }), 'one')
-  const second = extraction('u2', claim('c2', 'Revenue grows', 'e', { temporal: { asOf: null, scope: { type: 'fiscal_year', start: '2027-01-01', end: '2027-12-31', label: null } } }), 'two')
-  const result = consolidateExtractions([first, second])
-  assert.equal(result.groups.filter((group) => group.kind === 'claim').length, 2)
-  assert.equal(new Set(result.groups.filter((group) => group.kind === 'claim').map((group) => group.candidateId)).size, 2)
-  assert.equal(result.reviewConstraints.length, 1)
-  const identical = consolidateExtractions([first, extraction('u3', first.result.claims[0]!)])
-  assert.equal(identical.groups.filter((group) => group.kind === 'claim').length, 1)
-})
-
-test('consolidation Claim IDs differ for structuredValue identity', () => {
-  const one = extraction('u1', claim('c1', 'Revenue is measured', 'e', { structuredValue: { metric: 'revenue', value: 1, unit: 'USD', comparator: null } }))
-  const two = extraction('u2', claim('c2', 'Revenue is measured', 'e', { structuredValue: { metric: 'revenue', value: 2, unit: 'USD', comparator: null } }))
-  const result = consolidateExtractions([one, two])
-  assert.equal(new Set(result.groups.filter((group) => group.kind === 'claim').map((group) => group.candidateId)).size, 2)
-})
-
-test('consolidation emits a review constraint for conflicting Relation attributes', () => {
-  const one = extraction('u1', claim('unused', 'x', 'e'))
-  const two = extraction('u2', claim('unused-2', 'y', 'e'))
-  const relationOne = relation('r1', 'competes_with', 'e', 'e', { importance: 'core' })
-  const relationTwo = relation('r2', 'competes_with', 'e', 'e', { importance: 'material' })
-  const result = consolidateExtractions([{ ...one, result: { ...one.result, relations: [relationOne], claims: [] } }, { ...two, result: { ...two.result, relations: [relationTwo], claims: [] } }])
-  assert.equal(result.reviewConstraints.some((item) => item.reason.includes('Relation attributes conflict')), true)
-})
-
-test('consolidation keeps distinct Chinese and mixed-script entity identities', () => {
-  const result = consolidateExtractions([extractionWithKnowledge('u1', [entity('cn-1', '胜宏科技'), entity('cn-2', '深南电路'), entity('mixed-1', 'SK海力士'), entity('mixed-2', 'SK集团')])])
-  const entities = result.groups.filter((group) => group.kind === 'entity')
-  assert.equal(entities.length, 4)
-  assert.equal(new Set(entities.map((group) => group.candidateId)).size, 4)
-  assert.ok(entities.every((group) => !group.candidateId.endsWith('merged-entity-company')))
-})
-
-test('consolidation merges same Chinese entities across units and retains aliases', () => {
-  const first = entity('first', 'SK海力士', 'company', { aliases: ['海力士'], evidenceBlockRefs: ['block-1'] })
-  const second = entity('second', ' SK海力士 ', 'company', { aliases: ['SK Hynix'], evidenceBlockRefs: ['block-2'] })
-  const result = consolidateExtractions([extractionWithKnowledge('u1', [first]), extractionWithKnowledge('u2', [second])])
-  const entities = result.groups.filter((group) => group.kind === 'entity')
-  assert.equal(entities.length, 1)
-  assert.equal(result.candidateAliases.get('u1::first'), result.candidateAliases.get('u2::second'))
-  assert.deepEqual((entities[0]?.candidate as EntityCandidate).aliases, ['SK Hynix', '海力士'])
-  assert.deepEqual((entities[0]?.candidate as EntityCandidate).evidenceBlockRefs, ['block-1', 'block-2'])
-})
-
-test('consolidation resolves Chinese relation endpoints without self-collapse', () => {
-  const firstRelation = relation('r1', 'competes_with', 'a', 'b')
-  const secondRelation = relation('r2', 'offers_product', 'a', 'p')
-  const reverseRelation = relation('r2', 'competes_with', 'y', 'x')
-  const first = extractionWithKnowledge('u1', [entity('a', 'SK海力士'), entity('b', 'SK集团'), entity('p', '昇腾芯片', 'product')], [firstRelation, secondRelation], [claim('c1', '2026年收入增长', 'a'), claim('c2', '2026年利润增长', 'a')])
-  const second = extractionWithKnowledge('u2', [entity('x', 'SK海力士'), entity('y', 'SK集团')], [reverseRelation], [claim('c3', ' 2026年收入增长 ', 'x')])
-  const result = consolidateExtractions([first, second])
-  const relations = result.groups.filter((group) => group.kind === 'relation')
-  const claims = result.groups.filter((group) => group.kind === 'claim')
-  assert.equal(relations.length, 2)
-  assert.equal(claims.length, 2)
-  assert.ok(relations.every((group) => (group.candidate as RelationCandidate).source.candidateRef !== (group.candidate as RelationCandidate).target.candidateRef))
-  assert.equal(new Set(result.groups.map((group) => group.candidateId)).size, result.groups.length)
-  assert.ok(result.groups.every((group) => !group.candidateId.includes('merged-entity-company')))
-  const reversed = consolidateExtractions([second, first])
-  assert.deepEqual(reversed.groups.map((group) => group.candidateId), result.groups.map((group) => group.candidateId))
-})
-
-test('consolidation makes multi-subject Claim identity order-independent and metadata-aligned', () => {
-  const first = extractionWithKnowledge('u1', [entity('a', '胜宏科技'), entity('b', '深南电路')], [], [multiSubjectClaim('c1', '两家公司形成产业协同', ['a', 'b'])])
-  const second = extractionWithKnowledge('u2', [entity('x', '胜宏科技'), entity('y', '深南电路')], [], [multiSubjectClaim('c2', ' 两家公司形成产业协同 ', ['y', 'x'])])
-  const result = consolidateExtractions([first, second])
-  const claimGroup = result.groups.find((group) => group.kind === 'claim')!
-  const candidate = claimGroup.candidate as ClaimCandidate
-  assert.equal(result.groups.filter((group) => group.kind === 'claim').length, 1)
-  const expectedRefs = [...candidate.subjectRefs].sort((left, right) => left.candidateRef.localeCompare(right.candidateRef))
-  assert.deepEqual(candidate.subjectRefs.map((subject) => subject.candidateRef), expectedRefs.map((subject) => subject.candidateRef))
-  assert.deepEqual(new Set(candidate.subjectRefs.map((subject) => subject.mention)), new Set(['深南电路', '胜宏科技']))
-  assert.equal(candidate.subjectRefs.every((subject) => { const entity = result.entityCandidates.get(subject.candidateRef); return entity?.name === subject.mention && entity.entityType === subject.entityType }), true)
-  assert.equal(consolidateExtractions([second, first]).groups.find((group) => group.kind === 'claim')?.candidateId, claimGroup.candidateId)
-})
-
-test('consolidation deduplicates repeated Claim subjects and separates subject sets', () => {
-  const repeated = extractionWithKnowledge('u1', [entity('a', '胜宏科技'), entity('b', '深南电路'), entity('c', '华为')], [], [multiSubjectClaim('same', '产业协同', ['a', 'a']), multiSubjectClaim('ab', '产业协同', ['a', 'b']), multiSubjectClaim('ac', '产业协同', ['a', 'c'])])
-  const result = consolidateExtractions([repeated])
-  const claims = result.groups.filter((group) => group.kind === 'claim').map((group) => group.candidate as ClaimCandidate)
-  assert.equal(claims.length, 3)
-  assert.deepEqual(claims.find((candidate) => candidate.statement === '产业协同' && candidate.subjectRefs.length === 1)?.subjectRefs.map((subject) => subject.candidateRef).length, 1)
-  assert.equal(new Set(claims.map((candidate) => candidate.candidateId)).size, 3)
-})
-
-test('R2-style Unicode regression reaches exact reconciliation with globally unique candidates', async () => {
-  const first = extractionWithKnowledge('u1', [entity('a', '胜宏科技'), entity('b', '深南电路'), entity('c', 'SK海力士'), entity('d', 'SK集团')], [relation('r1', 'competes_with', 'c', 'd')], [multiSubjectClaim('claim-1', '产业链协同增强', ['a', 'b', 'c'])])
-  const second = extractionWithKnowledge('u2', [entity('x', '胜宏科技'), entity('y', '深南电路'), entity('z', 'SK海力士'), entity('w', 'SK集团')], [relation('r2', 'competes_with', 'w', 'z')], [multiSubjectClaim('claim-2', '产业链协同增强', ['z', 'y', 'x'])])
-  const consolidated = consolidateExtractions([first, second])
-  const focused = retrieveFocusedKnowledge(emptyAssets(), consolidated)
-  const entityGroups = focused.groups.filter((group) => group.kind === 'entity')
-  assert.equal(entityGroups.length, 4)
-  assert.equal(new Set(entityGroups.map((group) => group.candidateId)).size, 4)
-  assert.equal(focused.groups.filter((group) => group.kind === 'relation').length, 1)
-  assert.equal(focused.groups.filter((group) => group.kind === 'claim').length, 1)
-  assert.equal(new Set(focused.groups.map((group) => group.candidateId)).size, focused.groups.length)
-  assert.ok(focused.groups.every((group) => group.candidateId !== 'merged-entity-company'))
-  const groups = focused.groups as readonly ResolvedCandidateGroup[]
-  const executor = new MockReasoningExecutor({ capabilities: { maxContextTokens: 10_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 1 }, responses: { reconcileKnowledge: { decisions: groups.map((group) => ({ candidateId: group.candidateId, action: 'create' as const, rationale: 'Unicode regression candidate' })) } } })
-  const reconciled = await new KnowledgeCurationSkill({ executor }).reconcileKnowledge({ candidateGroups: groups, existingKnowledge: [], reportMap, sourceAssessment: reportMap.sourceAssessment })
-  const reconcileInput = executor.calls[0]?.input as { candidateGroups: readonly { candidateId: string }[] }
-  assert.deepEqual(reconcileInput.candidateGroups.map((group) => group.candidateId), groups.map((group) => group.candidateId))
-  assert.equal(reconciled.decisions.length, groups.length)
-})
-
-function emptyExtraction(): ValidatedExtractKnowledgeResult { return { entities: [], relations: [], claims: [], rejected: [], summary: { inputCounts: { entity: 0, relation: 0, claim: 0 }, acceptedCounts: { entity: 0, relation: 0, claim: 0 }, rejectedCounts: { entity: 0, relation: 0, claim: 0 }, rejectionCodes: [] } } }
-const extractionUnits = [{ unitId: 'unit-001', proposedUnitId: 'one', topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }, { unitId: 'unit-002', proposedUnitId: 'two', topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }]
-const extractionConfig = { maxExtractionUnits: 64, maxPlanAttempts: 2, maxExtractionAttempts: 3, maxConcurrency: 1 }
-
-test('bounded extraction retries invalid model output and does not rerun completed units', async () => {
-  const calls: string[] = []
-  const input = { config: extractionConfig, skill: { extractKnowledge: async ({ unit }: { unit: { unitId: string } }) => { calls.push(unit.unitId); if (unit.unitId === 'unit-002' && calls.filter((id) => id === unit.unitId).length === 1) throw new KnowledgeCurationError('invalid_model_output', 'bad JSON'); return emptyExtraction() } } } as never
-  const result = await boundedExtract(input, {} as never, {} as never, extractionUnits, 1, extractionConfig)
-  assert.deepEqual(calls, ['unit-001', 'unit-002', 'unit-002'])
-  assert.deepEqual(result.summaries.map((item) => item.attempts), [1, 2])
-})
-
-test('bounded extraction does not retry reasoning configuration failures', async () => {
-  let calls = 0
-  const input = { config: extractionConfig, skill: { extractKnowledge: async () => { calls += 1; throw new KnowledgeCurationError('reasoning_failed', 'invalid executor configuration', undefined, { cause: { code: 'reasoning_configuration_invalid' } }) } } } as never
-  const result = await boundedExtract(input, {} as never, {} as never, [extractionUnits[0]!], 1, extractionConfig)
-  assert.equal(calls, 1)
-  assert.equal(result.summaries[0]?.attempts, 1)
-  assert.equal(result.errors.length, 1)
-})
-
-test('focused retrieval finds reverse-oriented symmetric Relations', () => {
-  const a = entity('a', 'A')
-  const b = entity('b', 'B')
-  const assets = assetsWithEntities([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'company', name: 'B', lifecycle: { status: 'active' } }], [{ id: 'relation:reverse', type: 'competes_with', sourceRef: 'entity:b', targetRef: 'entity:a', lifecycle: { status: 'active' } }])
-  const groups = [{ candidateId: 'a', kind: 'entity' as const, candidate: a }, { candidateId: 'b', kind: 'entity' as const, candidate: b }, { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'competes_with', 'a', 'b') }]
-  const result = retrieveFocusedKnowledge(assets, { groups, reviewConstraints: [], rejected: [], candidateCounts: {}, candidateAliases: new Map(), entityCandidates: new Map([['a', a], ['b', b]]) })
-  assert.equal(result.groups.find((group) => group.candidateId === 'r')?.existingKnowledge?.length, 1)
-})
-
-test('focused retrieval uses exact Unicode name and alias matching', () => {
-  const hynix = entity('hynix', 'SK海力士')
-  const group = { candidateId: 'hynix', kind: 'entity' as const, candidate: hynix }
-  const assets = assetsWithEntities([
-    { id: 'entity:hynix', type: 'company', name: 'SK海力士', lifecycle: { status: 'active' } },
-    { id: 'entity:sk-group', type: 'company', name: 'SK集团', lifecycle: { status: 'active' } },
-    { id: 'entity:alias', type: 'company', name: '其他名称', aliases: ['海力士'], lifecycle: { status: 'active' } },
-  ])
-  const exact = retrieveFocusedKnowledge(assets, { groups: [group], reviewConstraints: [], rejected: [], candidateCounts: {}, candidateAliases: new Map(), entityCandidates: new Map([['hynix', hynix]]) })
-  assert.deepEqual(exact.groups[0]?.existingKnowledge?.map((item) => (item as { id: string }).id), ['entity:hynix'])
-  const aliasCandidate = entity('alias-candidate', '海力士')
-  const alias = retrieveFocusedKnowledge(assets, { groups: [{ candidateId: 'alias-candidate', kind: 'entity', candidate: aliasCandidate }], reviewConstraints: [], rejected: [], candidateCounts: {}, candidateAliases: new Map(), entityCandidates: new Map([['alias-candidate', aliasCandidate]]) })
-  assert.deepEqual(alias.groups[0]?.existingKnowledge?.map((item) => (item as { id: string }).id), ['entity:alias'])
-})
-
-test('ReviewSummary has the frozen zero shape', () => {
-  const summary = emptyReviewSummary()
-  assert.deepEqual(Object.keys(summary.byCategory).sort(), ['invalid_reference', 'invalid_semantics', 'other', 'reconciliation_review', 'relation_cardinality', 'schema_gap', 'theme_ambiguity', 'theme_creation'])
-  assert.deepEqual(Object.keys(summary.byCandidateKind).sort(), ['claim', 'entity', 'relation', 'workflow_level'])
-  assert.equal(summary.total, 0)
-  assert.equal(summary.rootCount, 0)
-  assert.equal(summary.dependencyCount, 0)
-})
-
-test('ReviewSummary normalizes extraction rejection codes and candidate kinds', () => {
-  const summary = normalizeReviewSummary({ extractionRejected: [
-    { candidateId: 'e', kind: 'entity', code: 'invalid_reference', message: 'bad ref' },
-    { candidateId: 'r', kind: 'relation', code: 'invalid_semantics', message: 'bad relation' },
-    { candidateId: 'w', code: 'unexpected', message: 'workflow issue' },
-  ] })
-  assert.equal(summary.total, 3)
-  assert.equal(summary.byCategory.invalid_reference, 1)
-  assert.equal(summary.byCategory.invalid_semantics, 1)
-  assert.equal(summary.byCategory.other, 1)
-  assert.deepEqual(summary.byCandidateKind, { entity: 1, relation: 1, claim: 0, workflow_level: 1 })
-})
-
-test('ReviewSummary deduplicates a consolidation conflict across planner signals', () => {
-  const summary = normalizeReviewSummary({
-    consolidationReviews: [{ candidateId: 'e', reason: 'Entity description conflict', conflictingFields: ['description'] }],
-    plannerReviewItems: [{ candidateId: 'e', kind: 'entity', rationale: 'Consolidation conflict requires review', dependentCandidateIds: [] }],
-    candidateGroups: [{ candidateId: 'e', kind: 'entity', candidate: entity('e', 'Entity') }],
-  })
-  assert.equal(summary.total, 1)
-  assert.equal(summary.rootCount, 1)
-  assert.equal(summary.dependencyCount, 0)
-  assert.equal(summary.byCategory.other, 1)
-})
-
-test('ReviewSummary records one reconciliation user-review root event', () => {
-  const summary = normalizeReviewSummary({
-    reconciliationDecisions: [{ candidateId: 'c', action: 'user_review', rationale: 'Ambiguous existing target' }],
-    plannerReviewItems: [{ candidateId: 'c', kind: 'claim', rationale: 'Ambiguous existing target', dependentCandidateIds: [] }],
-    candidateGroups: [{ candidateId: 'c', kind: 'claim', candidate: claim('c', 'A grows', 'e') }],
-  })
-  assert.equal(summary.total, 1)
-  assert.equal(summary.rootCount, 1)
-  assert.equal(summary.byCategory.reconciliation_review, 1)
-  assert.equal(summary.byCandidateKind.claim, 1)
-})
-
-test('ReviewSummary keeps reconciliation root and dependency telemetry distinct', () => {
-  const summary = normalizeReviewSummary({
-    reconciliationDecisions: [{ candidateId: 'e', action: 'reject', rationale: 'Rejected by reviewer' }],
-    plannerReviewItems: [{ candidateId: 'r', kind: 'relation', rationale: 'Blocked by rejected Entity candidate e', dependentCandidateIds: ['e'] }],
-    candidateGroups: [{ candidateId: 'e', kind: 'entity', candidate: entity('e', 'Entity') }, { candidateId: 'r', kind: 'relation', candidate: relation('r', 'offers_product', 'e', 'e') }],
-  })
-  assert.equal(summary.total, 2)
-  assert.equal(summary.rootCount, 1)
-  assert.equal(summary.dependencyCount, 1)
-  assert.equal(summary.byCategory.reconciliation_review, 1)
-  assert.equal(summary.byCategory.invalid_reference, 1)
-  assert.equal(summary.byCandidateKind.entity, 1)
-  assert.equal(summary.byCandidateKind.relation, 1)
-})
-
-test('ReviewSummary maps theme, schema, cardinality, and semantic planner reviews', () => {
-  const summary = normalizeReviewSummary({ plannerReviewItems: [
-    { candidateId: 'a', kind: 'entity', rationale: 'Theme group creation requires review', dependentCandidateIds: [] },
-    { candidateId: 'b', kind: 'entity', rationale: 'Theme is ambiguous across multiple groups', dependentCandidateIds: [] },
-    { candidateId: 'c', kind: 'relation', rationale: 'Relation cardinality conflict', dependentCandidateIds: [] },
-    { candidateId: 'd', kind: 'claim', rationale: 'Schema gap in durable field', dependentCandidateIds: [] },
-    { candidateId: 'f', kind: 'claim', rationale: 'Unsupported semantic value', dependentCandidateIds: [] },
-  ] })
-  assert.equal(summary.byCategory.theme_creation, 1)
-  assert.equal(summary.byCategory.theme_ambiguity, 1)
-  assert.equal(summary.byCategory.relation_cardinality, 1)
-  assert.equal(summary.byCategory.schema_gap, 1)
-  assert.equal(summary.byCategory.invalid_semantics, 1)
-})
-
-test('no-op execution records replay, reject input conflicts, and preserve committed logs', async () => {
-  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-telemetry-log' })
-  try {
-    const record = { workflowRunId: 'run-log', knowledgeBaseId: 'kb-telemetry-log', rawRef: 'raw-ref', documentId: 'doc', workflowInputFingerprint: 'fingerprint', status: 'completed' as const, writeStatus: 'no_changes' as const, baseRevision: 0, committedRevision: 0, reviewSummary: emptyReviewSummary(), completedAt: '2026-09-03T00:00:00.000Z', errors: [] }
-    const first = await writeNoOpExecutionRecord(root, record)
-    assert.equal(first.kind, 'written')
-    assert.equal((await writeNoOpExecutionRecord(root, record)).kind, 'replay')
-    const conflict = await writeNoOpExecutionRecord(root, { ...record, workflowInputFingerprint: 'different' })
-    assert.equal(conflict.kind, 'conflict')
-    const path = join(root, 'logs', 'ingestion', 'run-log.yaml')
-    const committed = { ...(JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>), writeStatus: 'committed' }
-    await withKnowledgeBaseMutationLock(root, async () => { await writeFile(path, JSON.stringify(committed), 'utf8') })
-    const protectedLog = await writeNoOpExecutionRecord(root, record)
-    assert.equal(protectedLog.kind, 'replay')
-    assert.equal((await writeNoOpExecutionRecord(root, { ...record, workflowInputFingerprint: 'other' })).kind, 'conflict')
-    assert.equal((JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>).writeStatus, 'committed')
-  } finally { await removeKnowledgeBase(root) }
-})
-
-test('no-op execution records reject unsafe workflow identifiers', async () => {
-  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-unsafe-log' })
-  try {
-    await assert.rejects(() => writeNoOpExecutionRecord(root, { workflowRunId: '../escape', knowledgeBaseId: 'kb-unsafe-log', rawRef: 'raw', documentId: 'doc', workflowInputFingerprint: 'fp', status: 'completed', writeStatus: 'no_changes', baseRevision: 0, committedRevision: 0, reviewSummary: emptyReviewSummary(), completedAt: 'now', errors: [] }))
-  } finally { await removeKnowledgeBase(root) }
-})
-
-test('ReviewSummary preserves two distinct root causes for one candidate', () => {
-  const summary = normalizeReviewSummary({
-    consolidationReviews: [{ candidateId: 'r', reason: 'Relation attributes conflict', conflictingFields: ['importance'] }],
-    plannerReviewItems: [{ candidateId: 'r', kind: 'relation', category: 'relation_cardinality', rationale: 'business_exposure cardinality conflict', dependentCandidateIds: [] }],
-  })
-  assert.equal(summary.total, 2)
-  assert.equal(summary.rootCount, 2)
-  assert.equal(summary.dependencyCount, 0)
-  assert.equal(summary.byCategory.other, 1)
-  assert.equal(summary.byCategory.relation_cardinality, 1)
-})
-
-test('ReviewSummary keeps a reconciliation review and a different planner issue', () => {
-  const summary = normalizeReviewSummary({
-    reconciliationDecisions: [{ candidateId: 'r', action: 'user_review', rationale: 'Need reviewer judgment' }],
-    plannerReviewItems: [{ candidateId: 'r', kind: 'relation', category: 'relation_cardinality', rationale: 'Illegal business_exposure cardinality', dependentCandidateIds: [] }],
-  })
-  assert.equal(summary.total, 2)
-  assert.equal(summary.byCategory.reconciliation_review, 1)
-  assert.equal(summary.byCategory.relation_cardinality, 1)
-})
-
-test('ReviewSummary invariants hold for same-candidate root and dependency events', () => {
-  const summary = normalizeReviewSummary({ plannerReviewItems: [
-    { candidateId: 'r', kind: 'relation', category: 'reconciliation_review', rationale: 'Root review', dependentCandidateIds: [], dependency: false, origin: 'planner', reviewKey: 'root-r' },
-    { candidateId: 'r', kind: 'relation', category: 'invalid_reference', rationale: 'Blocked by root review', dependentCandidateIds: [], dependency: true, origin: 'dependency_isolation', reviewKey: 'dependency-r' },
-  ] })
-  assert.equal(summary.rootCount + summary.dependencyCount, summary.total)
-  assert.equal(Object.values(summary.byCategory).reduce((sum, value) => sum + value, 0), summary.total)
-  assert.equal(Object.values(summary.byCandidateKind).reduce((sum, value) => sum + value, 0), summary.total)
-})
-
-test('simultaneous identical no-op writes serialize to one record and clean temp files', async () => {
-  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-noop-race-same' })
-  try {
-    const record = { workflowRunId: 'run-race-same', knowledgeBaseId: 'kb-noop-race-same', rawRef: 'raw', documentId: 'doc', workflowInputFingerprint: 'same', status: 'completed_with_review' as const, writeStatus: 'no_changes' as const, baseRevision: 0, committedRevision: 0, reviewSummary: emptyReviewSummary(), completedAt: 'now', errors: [] }
-    const results = await Promise.all([writeNoOpExecutionRecord(root, record), writeNoOpExecutionRecord(root, record)])
-    assert.deepEqual(results.map((item) => item.kind).sort(), ['replay', 'written'])
-    assert.equal((JSON.parse(await readFile(join(root, 'logs', 'ingestion', 'run-race-same.yaml'), 'utf8')) as Record<string, unknown>).workflowInputFingerprint, 'same')
-    assert.deepEqual((await readdir(join(root, 'logs', 'ingestion'))).filter((name) => name.includes('.tmp-')), [])
-    assert.equal((await readManifest(root)).revision, 0)
-  } finally { await removeKnowledgeBase(root) }
-})
-
-test('simultaneous different no-op fingerprints yield one record and one conflict', async () => {
-  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-noop-race-different' })
-  try {
-    const base = { workflowRunId: 'run-race-different', knowledgeBaseId: 'kb-noop-race-different', rawRef: 'raw', documentId: 'doc', status: 'completed' as const, writeStatus: 'no_changes' as const, baseRevision: 0, committedRevision: 0, reviewSummary: emptyReviewSummary(), completedAt: 'now', errors: [] }
-    const results = await Promise.all([writeNoOpExecutionRecord(root, { ...base, workflowInputFingerprint: 'one' }), writeNoOpExecutionRecord(root, { ...base, workflowInputFingerprint: 'two' })])
-    assert.deepEqual(results.map((item) => item.kind).sort(), ['conflict', 'written'])
-    const persisted = JSON.parse(await readFile(join(root, 'logs', 'ingestion', 'run-race-different.yaml'), 'utf8')) as Record<string, unknown>
-    assert.ok(persisted.workflowInputFingerprint === 'one' || persisted.workflowInputFingerprint === 'two')
-    assert.equal(typeof persisted.reviewSummary, 'object')
-    assert.deepEqual((await readdir(join(root, 'logs', 'ingestion'))).filter((name) => name.includes('.tmp-')), [])
-    assert.equal((await readManifest(root)).revision, 0)
-  } finally { await removeKnowledgeBase(root) }
-})
+test('empty KB Entity becomes PlannedNew without reasoning', async () => { const { result, mock } = await resolve([group(entity('e', 'Acme'))]); assert.equal(result.bindings.get('e')?.state, 'PlannedNew'); assert.equal(result.intents[0]?.disposition, 'create'); assert.equal(mock.calls.length, 0) })
+test('Company exact exchange and ticker binds deterministically', async () => { const { result, mock } = await resolve([group(entity('e', 'Acme', 'company', { semanticFields: { exchange: 'NYSE', ticker: 'ACM' } }))], assets([{ id: 'entity:acme', type: 'company', name: 'Acme Corp', exchange: 'nyse', ticker: 'acm', lifecycle: { status: 'active' } }])); assert.equal(result.bindings.get('e')?.state, 'BoundExisting'); assert.equal(result.bindings.get('e')?.ref, 'entity:acme'); assert.equal(mock.calls.length, 0) })
+test('duplicate hard-key canonical Companies deterministically block', async () => { const { result } = await resolve([group(entity('e', 'Acme', 'company', { semanticFields: { exchange: 'NYSE', ticker: 'ACM' } }))], assets([{ id: 'entity:a', type: 'company', name: 'A', exchange: 'NYSE', ticker: 'ACM', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'company', name: 'B', exchange: 'NYSE', ticker: 'ACM', lifecycle: { status: 'active' } }])); assert.equal(result.blocked, true); assert.match(result.errors[0] ?? '', /integrity defect/) })
+test('exact name is plausible EntityBindingCase, not automatic binding', async () => { const { result, mock } = await resolve([group(entity('e', 'Acme'))], assets([{ id: 'entity:acme', type: 'company', name: 'Acme', lifecycle: { status: 'active' } }]), { outcome: 'uncertain', rationale: 'Insufficient evidence.' }); assert.equal(result.intents[0]?.disposition, 'review'); assert.equal(mock.calls.length, 1); const input = mock.calls[0]?.input as { resolutionCase: { existingProjections: readonly unknown[] } }; assert.equal(JSON.stringify(input), JSON.stringify(input).replace('entity:acme', 'case-local')) })
+test('alias-only match is bounded and case-local', async () => { const { result, mock } = await resolve([group(entity('e', '海力士'))], assets([{ id: 'entity:hynix', type: 'company', name: 'SK Hynix', aliases: ['海力士'], lifecycle: { status: 'active' } }]), { outcome: 'equivalent_to', targetAlias: 'existing-001', rationale: 'Alias and evidence agree.' }); assert.equal(result.bindings.get('e')?.ref, 'entity:hynix'); assert.equal(mock.calls.length, 1); assert.doesNotMatch(JSON.stringify(mock.calls[0]?.input), /entity:hynix/) })
+test('semantic equivalent_to maps only the infrastructure target', async () => { const { result } = await resolve([group(entity('e', 'Alias'))], assets([{ id: 'entity:x', type: 'company', name: 'Canonical', aliases: ['Alias'], lifecycle: { status: 'active' } }]), { outcome: 'equivalent_to', targetAlias: 'existing-001', rationale: 'Same entity.' }); assert.equal(result.intents[0]?.targetRef, 'entity:x') })
+test('distinct_from_all creates a PlannedNew binding', async () => { const { result } = await resolve([group(entity('e', 'Alias'))], assets([{ id: 'entity:x', type: 'company', name: 'Canonical', aliases: ['Alias'], lifecycle: { status: 'active' } }]), { outcome: 'distinct_from_all', rationale: 'Evidence distinguishes them.' }); assert.equal(result.bindings.get('e')?.state, 'PlannedNew'); assert.match(result.bindings.get('e')?.plannedRef ?? '', /^planned-entity-/) })
+test('uncertain Entity binding becomes root Review', async () => { const { result } = await resolve([group(entity('e', 'Alias'))], assets([{ id: 'entity:x', type: 'company', name: 'Canonical', aliases: ['Alias'], lifecycle: { status: 'active' } }]), { outcome: 'uncertain', rationale: 'Need review.' }); assert.equal(result.intents[0]?.disposition, 'review'); assert.equal(result.reviewItems[0]?.dependency, false) })
+test('Entity with no new fields produces no_op', async () => { const { result } = await resolve([group(entity('e', 'Acme'))], assets([{ id: 'entity:acme', type: 'company', name: 'Acme', lifecycle: { status: 'active' } }])); assert.equal(result.intents[0]?.disposition, 'no_op') })
+test('Entity missing alias produces enrich_existing', async () => { const { result } = await resolve([group(entity('e', 'Acme', 'company', { aliases: ['ACM'] }))], assets([{ id: 'entity:acme', type: 'company', name: 'Acme', lifecycle: { status: 'active' } }])); assert.equal(result.intents[0]?.disposition, 'enrich_existing') })
+test('Entity conflicting populated state becomes Review', async () => { const { result } = await resolve([group(entity('e', 'Acme', 'company', { semanticFields: { exchange: 'NASDAQ', ticker: 'ACM' } }))], assets([{ id: 'entity:acme', type: 'company', name: 'Acme', exchange: 'NYSE', ticker: 'ACM', lifecycle: { status: 'active' } }])); assert.equal(result.intents[0]?.disposition, 'review') })
+test('Relation with PlannedNew endpoint is create intent', async () => { const { result } = await resolve([group(entity('a', 'A')), group(entity('b', 'B', 'product')), group(relation('r', 'offers_product', 'a', 'b'))]); assert.equal(result.intents.find((item) => item.candidateRef === 'r')?.disposition, 'create') })
+test('Relation with existing endpoints and no match is create', async () => { const groups = [group(entity('a', 'A')), group(entity('b', 'B', 'product')), group(relation('r', 'offers_product', 'a', 'b'))]; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }])); assert.equal(result.intents.find((item) => item.candidateRef === 'r')?.disposition, 'create') })
+test('exact Relation uses merge_evidence with no Relation conflict case', async () => { const groups = [group(entity('a', 'A')), group(entity('b', 'B', 'product')), group(relation('r', 'offers_product', 'a', 'b'))]; const old = { id: 'relation:r', type: 'offers_product', sourceRef: 'entity:a', targetRef: 'entity:b', sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result, mock } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }], [old])); assert.equal(result.intents.find((item) => item.candidateRef === 'r')?.disposition, 'merge_evidence'); assert.equal(mock.calls.filter((call) => ((call.input as { resolutionCase?: { caseKind?: string } }).resolutionCase?.caseKind) === 'RelationConflictCase').length, 0) })
+test('Relation additive attributes use enrich_existing', async () => { const groups = [group(entity('a', 'A')), group(entity('b', 'B', 'product')), group(relation('r', 'offers_product', 'a', 'b', { } as Record<string, unknown>))]; const old = { id: 'relation:r', type: 'offers_product', sourceRef: 'entity:a', targetRef: 'entity:b', sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }], [old])); assert.equal(result.intents.find((item) => item.candidateRef === 'r')?.disposition, 'merge_evidence') })
+test('Relation conflicting attributes invokes RelationConflictCase', async () => { const groups = [group(entity('a', 'A')), group(entity('b', 'B', 'product')), group(relation('r', 'offers_product', 'a', 'b', { importance: 'high' }))]; const old = { id: 'relation:r', type: 'offers_product', sourceRef: 'entity:a', targetRef: 'entity:b', attributes: { importance: 'low' }, sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }], [old]), { outcome: 'uncertain', rationale: 'Conflict needs review.' }); assert.equal(result.intents.find((item) => item.candidateRef === 'r')?.disposition, 'review') })
+test('RelationConflict equivalent maps to merge_evidence', async () => { const groups = [group(entity('a', 'A')), group(entity('b', 'B', 'product')), group(relation('r', 'offers_product', 'a', 'b', { importance: 'high' }))]; const old = { id: 'relation:r', type: 'offers_product', sourceRef: 'entity:a', targetRef: 'entity:b', attributes: { importance: 'low' }, sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }], [old]), { outcome: 'equivalent', targetAlias: 'existing-001', rationale: 'Same relation.' }); assert.equal(result.intents.find((item) => item.candidateRef === 'r')?.disposition, 'merge_evidence') })
+test('RelationConflict state_changed maps to replace_state', async () => { const groups = [group(entity('a', 'A')), group(entity('b', 'B', 'product')), group(relation('r', 'offers_product', 'a', 'b', { importance: 'high' }))]; const old = { id: 'relation:r', type: 'offers_product', sourceRef: 'entity:a', targetRef: 'entity:b', attributes: { importance: 'low' }, sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }], [old]), { outcome: 'state_changed', targetAlias: 'existing-001', rationale: 'State changed.' }); assert.equal(result.intents.find((item) => item.candidateRef === 'r')?.disposition, 'replace_state') })
+test('RelationConflict coexists and contradicts remain Review', async () => { for (const outcome of ['coexists', 'contradicts'] as const) { const groups = [group(entity('a', 'A')), group(entity('b', 'B', 'product')), group(relation('r', 'offers_product', 'a', 'b', { importance: 'high' }))]; const old = { id: 'relation:r', type: 'offers_product', sourceRef: 'entity:a', targetRef: 'entity:b', attributes: { importance: 'low' }, sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }], [old]), { outcome, rationale: outcome }); assert.equal(result.intents.find((item) => item.candidateRef === 'r')?.disposition, 'review') } })
+test('RelationConflict invalid maps to reject', async () => { const groups = [group(entity('a', 'A')), group(entity('b', 'B', 'product')), group(relation('r', 'offers_product', 'a', 'b', { importance: 'high' }))]; const old = { id: 'relation:r', type: 'offers_product', sourceRef: 'entity:a', targetRef: 'entity:b', attributes: { importance: 'low' }, sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }, { id: 'entity:b', type: 'product', name: 'B', lifecycle: { status: 'active' } }], [old]), { outcome: 'invalid', rationale: 'Invalid.' }); assert.equal(result.intents.find((item) => item.candidateRef === 'r')?.disposition, 'reject') })
+test('Claim exact identity uses merge_evidence', async () => { const groups = [group(entity('a', 'A')), group(claim('c', 'A grows', 'a'))]; const old = { id: 'claim:old', claimType: 'fact', statement: 'A grows', subjectRefs: ['entity:a'], sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }], [], [old])); assert.equal(result.intents.find((item) => item.candidateRef === 'c')?.disposition, 'merge_evidence') })
+test('Claim exact evidence merge preserves source and provenance in planner', () => { const groups = [group(entity('a', 'A')), group(claim('c', 'A grows', 'a', { evidenceBlockRefs: ['block-1'] }))]; const old = { id: 'claim:old', claimType: 'fact', statement: 'A grows', subjectRefs: ['entity:a'], sourceRefs: ['source:old'], provenance: [{ sourceRef: 'source:old', rawRef, locator: 'old', chunkRef: null }], lifecycle: { status: 'active' } }; return resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }], [], [old])).then((resolution) => { const result = planKnowledgeChangeSet(plannerInput(groups, resolution.result, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }], [], [old]))); const op = result.changeSet?.knowledgeOperations.find((item) => item.type === 'update'); assert.equal(op?.type, 'update'); if (op?.type === 'update' && 'sourceRefs' in op.object) { assert.deepEqual(op.object.sourceRefs, ['source:old', allocateSourceId({ sourceUrl: null, publishedAt: null, title: 'Test', rawRef })].sort()); assert.equal((op.object as unknown as { provenance?: unknown[] }).provenance?.length, 2) } }) })
+test('Claim with no plausible conflict is create', async () => { const groups = [group(entity('a', 'A')), group(claim('c', 'A grows', 'a'))]; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }])); assert.equal(result.intents.find((item) => item.candidateRef === 'c')?.disposition, 'create') })
+test('Claim same subject and type conflict invokes bounded case', async () => { const groups = [group(entity('a', 'A')), group(claim('c', 'A grows rapidly', 'a'))]; const old = { id: 'claim:old', claimType: 'fact', statement: 'A grows slowly', subjectRefs: ['entity:a'], temporal: null, sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result, mock } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }], [], [old]), { outcome: 'uncertain', rationale: 'Conflict uncertain.' }); assert.equal(result.intents.find((item) => item.candidateRef === 'c')?.disposition, 'review'); assert.equal(mock.calls.length, 1) })
+test('Claim supersedes maps to supersede', async () => { const groups = [group(entity('a', 'A')), group(claim('c', 'A grows rapidly', 'a'))]; const old = { id: 'claim:old', claimType: 'fact', statement: 'A grows slowly', subjectRefs: ['entity:a'], sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }], [], [old]), { outcome: 'supersedes', targetAlias: 'existing-001', rationale: 'Newer fact.' }); assert.equal(result.intents.find((item) => item.candidateRef === 'c')?.disposition, 'supersede') })
+test('Claim coexists maps to a distinct create', async () => { const groups = [group(entity('a', 'A')), group(claim('c', 'A has a different view', 'a'))]; const old = { id: 'claim:old', claimType: 'viewpoint', statement: 'A has an older view', subjectRefs: ['entity:a'], sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const candidate = { ...groups[1]!.candidate as ClaimCandidate, claimType: 'viewpoint' as const }; const { result } = await resolve([groups[0]!, group(candidate)], assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }], [], [old]), { outcome: 'coexists', rationale: 'Distinct supported view.' }); assert.equal(result.intents.find((item) => item.candidateRef === 'c')?.disposition, 'create') })
+test('contradictory forecast may coexist while fact is Review', async () => { for (const claimType of ['forecast', 'fact'] as const) { const groups = [group(entity('a', 'A')), group({ ...claim('c', 'A outcome', 'a'), claimType })]; const old = { id: 'claim:old', claimType, statement: 'A prior outcome', subjectRefs: ['entity:a'], sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A', lifecycle: { status: 'active' } }], [], [old]), { outcome: 'contradicts', rationale: 'Contradiction.' }); assert.equal(result.intents.find((item) => item.candidateRef === 'c')?.disposition, claimType === 'forecast' ? 'create' : 'review') } })
+test('Claim retrieval overflow becomes explicit Review', async () => { const e = { id: 'entity:a', type: 'company', name: 'A', exchange: 'NYSE', ticker: 'A', lifecycle: { status: 'active' } }; const old = Array.from({ length: 9 }, (_, index) => ({ id: `claim:${index}`, claimType: 'fact', statement: `Prior statement ${index}`, subjectRefs: ['entity:a'], sourceRefs: ['source:old'], lifecycle: { status: 'active' } })); const { result, mock } = await resolve([group(entity('a', 'A', 'company', { semanticFields: { exchange: 'NYSE', ticker: 'A' } })), group(claim('c', 'new statement', 'a'))], assets([e], [], old)); assert.equal(result.intents.find((item) => item.candidateRef === 'c')?.disposition, 'review'); assert.equal(mock.calls.length, 0); assert.match(result.reviewItems.find((item) => item.candidateId === 'c')?.rationale ?? '', /overflow/) })
+test('dependent Relation and Claim isolate when Entity is Review', async () => { const groups = [group(entity('a', 'Alias')), group(entity('b', 'B', 'product')), group(relation('r', 'offers_product', 'a', 'b')), group(claim('c', 'Alias matters', 'a'))]; const { result } = await resolve(groups, assets([{ id: 'entity:x', type: 'company', name: 'Alias' }, { id: 'entity:b', type: 'product', name: 'B' }]), { outcome: 'uncertain', rationale: 'Entity uncertain.' }); assert.equal(result.intents.find((item) => item.candidateRef === 'r')?.disposition, 'review'); assert.equal(result.intents.find((item) => item.candidateRef === 'c')?.disposition, 'review'); assert.equal(result.reviewItems.filter((item) => item.dependency).length, 2) })
+test('Resolution barrier rejects duplicate intents', () => { const g = group(entity('e', 'E')); const bindings = new Map([['e', { candidateId: 'e', state: 'PlannedNew' as const, plannedRef: 'planned-entity-x', plausibleMatches: [] }]]); const one = { candidateRef: 'e', candidateKind: 'entity' as const, disposition: 'create' as const, targetRef: 'planned-entity-x', semanticBasis: { rationale: 'x' }, evidenceRefs: [] }; assert.equal(resolveResolutionIntentBarrier([g], [one, one], bindings).valid, false) })
+test('Resolution barrier rejects missing intents', () => { const g = group(entity('e', 'E')); assert.equal(resolveResolutionIntentBarrier([g], [], new Map()).valid, false) })
+test('Resolution barrier rejects unresolved safe local refs', () => { const g = group(entity('e', 'E')); const binding = { candidateId: 'e', state: 'PlannedNew' as const, plannedRef: 'planned-entity-x', plausibleMatches: [] }; const intent = { candidateRef: 'e', candidateKind: 'entity' as const, disposition: 'create' as const, targetRef: 'local-e', semanticBasis: { rationale: 'x' }, evidenceRefs: [] }; assert.equal(resolveResolutionIntentBarrier([g], [intent], new Map([['e', binding]])).valid, false) })
+test('fresh synthetic graph scales without semantic resolution calls', async () => { const groups = Array.from({ length: 120 }, (_, index) => group(entity(`e-${index}`, `Fresh ${index}`))); const { result, mock } = await resolve(groups); assert.equal(result.semanticCaseCalls, 0); assert.equal(mock.calls.length, 0); assert.equal(result.intents.length, 120); assert.equal(result.intents.every((item) => item.disposition === 'create'), true) })
+test('mature KB reasoning scales with ambiguity rather than candidate count', async () => { const groups = Array.from({ length: 20 }, (_, index) => group(entity(`e-${index}`, index === 0 ? 'Ambiguous' : `Fresh ${index}`))); const { result, mock } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'Ambiguous' }]), { outcome: 'uncertain', rationale: 'Ambiguous.' }); assert.equal(mock.calls.length, 1); assert.equal(result.semanticCaseCalls, 1); assert.equal(result.intents.length, 20) })
+test('planner allocates durable IDs only after ResolutionIntent', async () => { const groups = [group(entity('e', 'New'))]; const resolution = await resolve(groups); const planned = resolution.result.bindings.get('e')?.plannedRef; assert.match(planned ?? '', /^planned-entity-/); const result = planKnowledgeChangeSet(plannerInput(groups, resolution.result)); assert.equal(result.entityResolutions[0]?.status, 'created'); assert.match(result.entityResolutions[0]?.canonicalId ?? '', /^entity:/) })
+test('review-only resolution creates no unreferenced Source', async () => { const groups = [group(entity('e', 'Alias'))]; const resolution = await resolve(groups, assets([{ id: 'entity:x', type: 'company', name: 'Alias' }]), { outcome: 'uncertain', rationale: 'Review.' }); const result = planKnowledgeChangeSet(plannerInput(groups, resolution.result, assets([{ id: 'entity:x', type: 'company', name: 'Alias' }]))); assert.equal(result.changeSet, undefined); assert.equal(result.safeOperationCount, 0) })
+test('symmetric Relation identity resolves reverse orientation', async () => { const groups = [group(entity('a', 'A')), group(entity('b', 'B')), group(relation('r', 'competes_with', 'a', 'b'))]; const old = { id: 'relation:old', type: 'competes_with', sourceRef: 'entity:b', targetRef: 'entity:a', sourceRefs: ['source:old'], lifecycle: { status: 'active' } }; const { result } = await resolve(groups, assets([{ id: 'entity:a', type: 'company', name: 'A' }, { id: 'entity:b', type: 'company', name: 'B' }], [old])); assert.equal(result.intents.find((item) => item.candidateRef === 'r')?.disposition, 'merge_evidence') })
+test('bounded extraction still retries only failed units', async () => { const calls: string[] = []; const config = { maxExtractionUnits: 64, maxPlanAttempts: 2, maxExtractionAttempts: 3, maxConcurrency: 1 } as EffectiveConfig; const empty = (): ValidatedExtractKnowledgeResult => ({ entities: [], relations: [], claims: [], rejected: [], summary: { inputCounts: { entity: 0, relation: 0, claim: 0 }, acceptedCounts: { entity: 0, relation: 0, claim: 0 }, rejectedCounts: { entity: 0, relation: 0, claim: 0 }, rejectionCodes: [] } }); const input = { skill: { extractKnowledge: async ({ unit }: { unit: { unitId: string } }) => { calls.push(unit.unitId); if (unit.unitId === 'two' && calls.filter((id) => id === 'two').length === 1) throw new KnowledgeCurationError('invalid_model_output', 'bad'); return empty() } } } as never; const units = ['one', 'two'].map((unitId) => ({ unitId, proposedUnitId: unitId, topic: 't', semanticPurpose: 't', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] })); const result = await boundedExtract(input, {} as never, {} as never, units, 1, config); assert.deepEqual(calls, ['one', 'two', 'two']); assert.equal(result.summaries[1]?.attempts, 2) })
+test('review summary keeps knowledge-resolution stage visible', () => { const summary = normalizeReviewSummary({ resolutionReviews: [{ candidateId: 'e', kind: 'entity', rationale: 'Ambiguous binding', dependentCandidateIds: [], stage: 'semantic_case', category: 'reconciliation_review', origin: 'semantic_case', dependency: false, reviewKey: 'case-e' }], candidateGroups: [group(entity('e', 'E'))] }); assert.equal(summary.total, 1); assert.equal(summary.byCategory.reconciliation_review, 1) })
+test('ReviewSummary frozen shape remains stable', () => { const summary = emptyReviewSummary(); assert.equal(summary.total, 0); assert.deepEqual(Object.keys(summary.byCandidateKind).sort(), ['claim', 'entity', 'relation', 'workflow_level']) })
+test('no-op execution records replay without revision change', async () => { const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-noop-resolution' }); try { const record = { workflowRunId: 'run-noop', knowledgeBaseId: 'kb-noop-resolution', rawRef, documentId: 'doc', workflowInputFingerprint: 'fp', status: 'completed' as const, writeStatus: 'no_changes' as const, baseRevision: 0, committedRevision: 0, reviewSummary: emptyReviewSummary(), completedAt: 'now', errors: [] }; assert.equal((await writeNoOpExecutionRecord(root, record)).kind, 'written'); assert.equal((await writeNoOpExecutionRecord(root, record)).kind, 'replay') } finally { await removeKnowledgeBase(root) } })

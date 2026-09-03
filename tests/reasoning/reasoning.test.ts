@@ -38,9 +38,9 @@ test('Codex executor isolates and cleans its invocation directory', async () => 
 
 test('Codex executor preserves bounded failure details and timeout errors', async () => {
   const failure = new CodexReasoningExecutor({ capabilities, executable: process.execPath, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--fail'] })
-  await assert.rejects(() => failure.execute({ operation: 'reconcileKnowledge', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_execution_failed' && error.exitCode === 7 && error.stderr === 'fixture failure\n')
+  await assert.rejects(() => failure.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_execution_failed' && error.exitCode === 7 && error.stderr === 'fixture failure\n')
   const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, timeoutMs: 20, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--sleep'] })
-  await assert.rejects(() => timeout.execute({ operation: 'reconcileKnowledge', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_timeout')
+  await assert.rejects(() => timeout.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_timeout')
 })
 
 test('Codex executor classifies unavailable hosts and oversized output', async () => {

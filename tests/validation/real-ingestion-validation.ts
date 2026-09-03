@@ -211,7 +211,7 @@ function primarySummary(result: IngestionWorkflowResult): Dict {
     rejectedCandidateCount: result.rejectedCandidates.length,
     reviewItemCount: result.reviewItems.length,
     reviewSummary: result.reviewSummary,
-    reconciliationSummary: result.reconciliationSummary,
+    reconciliationSummary: result.resolutionSummary ?? result.reconciliationSummary,
     extractionConcurrency: result.extractionConcurrency,
     peakExtractionConcurrency: result.peakExtractionConcurrency,
     errors: result.errors.slice(0, 4).map((error) => error.slice(0, 500)),
@@ -404,7 +404,7 @@ async function main(): Promise<void> {
       return loaded
     })
 
-    evidence.reconciliation = { actionCounts: primary.reconciliationSummary ?? {}, reviewSummary: primary.reviewSummary, reviewSamples: boundedReviewSamples(primary.reviewSummary) }
+    evidence.reconciliation = { actionCounts: primary.resolutionSummary ?? primary.reconciliationSummary ?? {}, reviewSummary: primary.reviewSummary, reviewSamples: boundedReviewSamples(primary.reviewSummary) }
     evidence.reviewSummary = { summary: primary.reviewSummary, invariants: reviewInvariants(primary.reviewSummary) }
     evidence.reasoningCalls = { total: reasoningRecorder.calls.length, byOperation: Object.fromEntries([...new Set(reasoningRecorder.calls.map((call) => call.operation as string))].sort().map((operation) => [operation, reasoningRecorder.calls.filter((call) => call.operation === operation).length])), maxOutputBytes: Math.max(0, ...reasoningRecorder.calls.map((call) => Number(call.outputBytes ?? 0))), calls: reasoningRecorder.calls }
     evidence.historicalComparison = await (async () => {
