@@ -19,6 +19,7 @@ export function projectUnderstandAndPlanModelInput(input: PreparedUnderstandAndP
     capabilities: structuredClone(input.capabilities),
     schemaContext: structuredClone(input.schemaContext),
     ...(input.instructions === undefined ? {} : { instructions: input.instructions }),
+    ...(input.planRepair === undefined ? {} : { planRepair: structuredClone(input.planRepair) }),
   }
 }
 

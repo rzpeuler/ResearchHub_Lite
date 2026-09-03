@@ -1,15 +1,29 @@
 import type { DocumentInputRef, StructuredDocument } from '../../plugins/document/contracts.ts'
 import type { KnowledgeBaseHandle } from '../../knowledge/storage/handle.ts'
 import type { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
-import type { ReconcileKnowledgeOutput, ReportMap, ProposedExtractionUnit, ValidatedExtractKnowledgeResult, ReconciliationDecision, DocumentContentRef } from '../../skills/knowledge-curation/contracts.ts'
+import type { ReconcileKnowledgeOutput, ReportMap, ProposedExtractionUnit, ValidatedExtractKnowledgeResult, ReconciliationDecision, DocumentContentRef, PlanValidationCode } from '../../skills/knowledge-curation/contracts.ts'
 import type { ValidationReport } from '../../knowledge/validation/types.ts'
 import type { KnowledgeWriteResult } from '../../knowledge/schema/mutation.ts'
 
 export interface IngestionWorkflowConfig {
   readonly maxExtractionUnits?: number
+  readonly maxPlanAttempts?: number
   readonly maxExtractionAttempts?: number
   readonly maxConcurrency?: number
   readonly maxContextTokens?: number
+}
+
+export interface PlanAttemptSummary {
+  readonly attempt: number
+  readonly status: 'proposed' | 'accepted' | 'repairable_invalid' | 'terminal_invalid'
+  readonly validationCode?: PlanValidationCode
+  readonly uncoveredCount?: number
+  readonly overlapCount?: number
+  readonly affectedUnitId?: string
+  readonly estimatedTokens?: number
+  readonly allowedTokens?: number
+  readonly unitCount?: number
+  readonly maxUnits?: number
 }
 
 export interface RawDocumentKnowledgeIngestionInput {
@@ -60,6 +74,7 @@ export interface IngestionWorkflowResult {
   readonly documentId?: string
   readonly status: IngestionWorkflowStatus
   readonly acceptedPlan?: AcceptedExtractionPlan
+  readonly planAttempts?: readonly PlanAttemptSummary[]
   readonly unitSummaries: readonly ExtractionUnitSummary[]
   readonly candidateCounts: Readonly<Record<string, number>>
   readonly rejectedCandidates: readonly unknown[]

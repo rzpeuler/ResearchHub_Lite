@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import type { StructuredDocument } from '../../plugins/document/contracts.ts'
 import { buildCurationSchemaContext } from '../../skills/knowledge-curation/schema-context.ts'
 import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildReconcileKnowledgeOutputContract } from '../../skills/knowledge-curation/output-contracts.ts'
+import { UNDERSTAND_AND_PLAN_PROMPT } from '../../skills/knowledge-curation/prompts/understand-and-plan.ts'
 import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
 import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
 import { MockReasoningExecutor } from '../../plugins/reasoning/mock/executor.ts'
@@ -30,7 +31,7 @@ test('Schema Context exposes only active slices and derives relation constraints
 })
 
 test('understandAndPlan validates typed document references and projects the full document only there', async () => {
-  const response = { reportMap, extractionPlanProposal: { units: [unit] } }
+  const response = { reportMap, extractionPlanProposal: { units: [unit], excludedRefs: [] } }
   const executor = new MockReasoningExecutor({ capabilities, responses: { understandAndPlan: response } })
   const skill = new KnowledgeCurationSkill({ executor })
   const result = await skill.understandAndPlan({ document })
@@ -39,6 +40,35 @@ test('understandAndPlan validates typed document references and projects the ful
   const prepared = executor.calls[0]?.input as { capabilities: typeof capabilities; schemaContext: { slice: string } }
   assert.deepEqual(prepared.capabilities, capabilities)
   assert.equal(prepared.schemaContext.slice, 'understand_and_plan')
+})
+
+test('understandAndPlan requires exhaustive excludedRefs and accepts an empty list', async () => {
+  const missing = { reportMap, extractionPlanProposal: { units: [unit] } }
+  const missingExecutor = new MockReasoningExecutor({ capabilities, responses: { understandAndPlan: missing } })
+  await assert.rejects(() => new KnowledgeCurationSkill({ executor: missingExecutor }).understandAndPlan({ document }), (error: unknown) => error instanceof KnowledgeCurationError && error.code === 'invalid_model_output' && error.message.includes('excludedRefs'))
+  const validExecutor = new MockReasoningExecutor({ capabilities, responses: { understandAndPlan: { reportMap, extractionPlanProposal: { units: [unit], excludedRefs: [] } } } })
+  const valid = await new KnowledgeCurationSkill({ executor: validExecutor }).understandAndPlan({ document })
+  assert.deepEqual(valid.extractionPlanProposal.excludedRefs, [])
+})
+
+test('understandAndPlan contract and prompt require exhaustive primary/excluded coverage', () => {
+  const contract = buildUnderstandAndPlanOutputContract(buildCurationSchemaContext('understand_and_plan'))
+  const root = contract.schema.properties as Record<string, { required?: readonly string[] }>
+  const plan = root.extractionPlanProposal
+  assert.deepEqual(plan.required, ['units', 'excludedRefs'])
+  assert.match(UNDERSTAND_AND_PLAN_PROMPT, /EXHAUSTIVE/)
+  assert.match(UNDERSTAND_AND_PLAN_PROMPT, /ContextRefs do not satisfy primary coverage/)
+  assert.match(UNDERSTAND_AND_PLAN_PROMPT, /excludedRefs even when it is empty/)
+})
+
+test('plan repair input preserves the previous output, feedback, and attempt', async () => {
+  const response = { reportMap, extractionPlanProposal: { units: [unit], excludedRefs: [] } }
+  const executor = new MockReasoningExecutor({ capabilities, responses: { understandAndPlan: response } })
+  const previousOutput = structuredClone(response) as never
+  const repair = { previousOutput, feedback: { code: 'uncovered_content' as const, message: 'Repair uncovered content', uncoveredRefs: [{ kind: 'block' as const, blockId: 'block-2' }] }, attempt: 2 }
+  await new KnowledgeCurationSkill({ executor }).understandAndPlan({ document, planRepair: repair })
+  const prepared = executor.calls[0]?.input as { planRepair: typeof repair }
+  assert.deepEqual(prepared.planRepair, repair)
 })
 
 test('extractKnowledge isolates invalid, ungrounded, and dependent candidates', async () => {

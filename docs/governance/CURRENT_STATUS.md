@@ -38,6 +38,7 @@
 - A production Docling environment has not been exercised in this checkout.
 - A real Codex invocation remains opt-in; deterministic fake-host coverage is present.
 - `RHL-VALIDATION-001` was executed with the exact frozen PDF; CTO validation acceptance remains pending because the primary Workflow was blocked by deterministic ExtractionPlan coverage validation.
+- `RHL-FIX-PLAN-001` is implemented with bounded semantic plan repair; CTO acceptance remains pending.
 
 ## Current Architecture Baseline
 

@@ -15,27 +15,27 @@ import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.t
 import type { ResolvedCandidateGroup, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
 import { consolidateExtractions } from './consolidation.ts'
 import { planKnowledgeChangeSet } from './changeset-planner.ts'
-import type { AcceptedExtractionUnit, IngestionWorkflowResult, RawDocumentKnowledgeIngestionInput, ExtractionUnitSummary } from './contracts.ts'
-import { validateExtractionPlan } from './plan-validation.ts'
+import type { AcceptedExtractionUnit, IngestionWorkflowResult, RawDocumentKnowledgeIngestionInput, ExtractionUnitSummary, PlanAttemptSummary } from './contracts.ts'
+import { ExtractionPlanValidationError, validateExtractionPlan } from './plan-validation.ts'
 import { retrieveFocusedKnowledge } from './retrieval.ts'
 import { emptyReviewSummary, normalizeReviewSummary, reviewSummaryFromRecord, writeNoOpExecutionRecord } from './review-telemetry.ts'
 
 const safeWorkflowId = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
-const defaults = { maxExtractionUnits: 64, maxExtractionAttempts: 2, maxConcurrency: 4 }
-export type EffectiveConfig = { maxExtractionUnits: number; maxExtractionAttempts: number; maxConcurrency: number; maxContextTokens?: number }
+const defaults = { maxExtractionUnits: 64, maxPlanAttempts: 2, maxExtractionAttempts: 2, maxConcurrency: 4 }
+export type EffectiveConfig = { maxExtractionUnits: number; maxPlanAttempts: number; maxExtractionAttempts: number; maxConcurrency: number; maxContextTokens?: number }
 
-function emptyResult(input: RawDocumentKnowledgeIngestionInput, errors: readonly string[] = []): IngestionWorkflowResult { return { workflowRunId: input.workflowRunId, knowledgeBaseId: input.handle.knowledgeBaseId, status: 'blocked', unitSummaries: [], candidateCounts: {}, rejectedCandidates: [], reviewItems: [], reviewSummary: emptyReviewSummary(), errors } }
+function emptyResult(input: RawDocumentKnowledgeIngestionInput, errors: readonly string[] = [], planAttempts: readonly PlanAttemptSummary[] = []): IngestionWorkflowResult { return { workflowRunId: input.workflowRunId, knowledgeBaseId: input.handle.knowledgeBaseId, status: 'blocked', unitSummaries: [], candidateCounts: {}, rejectedCandidates: [], reviewItems: [], reviewSummary: emptyReviewSummary(), planAttempts, errors } }
 function counts(results: readonly ValidatedExtractKnowledgeResult[]): Record<string, number> { return { entity: results.reduce((sum, result) => sum + result.entities.length, 0), relation: results.reduce((sum, result) => sum + result.relations.length, 0), claim: results.reduce((sum, result) => sum + result.claims.length, 0), rejected: results.reduce((sum, result) => sum + result.rejected.length, 0) } }
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : String(error) }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function positiveSafeInteger(value: unknown): boolean { return Number.isSafeInteger(value) && (value as number) > 0 }
 export function validateIngestionConfig(config: RawDocumentKnowledgeIngestionInput['config']): string[] {
   const errors: string[] = []
-  for (const [key, value] of Object.entries(config ?? {})) if (!['maxExtractionUnits', 'maxExtractionAttempts', 'maxConcurrency', 'maxContextTokens'].includes(key) || !positiveSafeInteger(value)) errors.push(key + ' must be a positive safe integer')
+  for (const [key, value] of Object.entries(config ?? {})) if (!['maxExtractionUnits', 'maxPlanAttempts', 'maxExtractionAttempts', 'maxConcurrency', 'maxContextTokens'].includes(key) || !positiveSafeInteger(value)) errors.push(key + ' must be a positive safe integer')
   return errors
 }
 function effectiveConfig(config: RawDocumentKnowledgeIngestionInput['config']): EffectiveConfig {
-  return { maxExtractionUnits: config?.maxExtractionUnits ?? defaults.maxExtractionUnits, maxExtractionAttempts: config?.maxExtractionAttempts ?? defaults.maxExtractionAttempts, maxConcurrency: config?.maxConcurrency ?? defaults.maxConcurrency, ...(config?.maxContextTokens === undefined ? {} : { maxContextTokens: config.maxContextTokens }) }
+  return { maxExtractionUnits: config?.maxExtractionUnits ?? defaults.maxExtractionUnits, maxPlanAttempts: config?.maxPlanAttempts ?? defaults.maxPlanAttempts, maxExtractionAttempts: config?.maxExtractionAttempts ?? defaults.maxExtractionAttempts, maxConcurrency: config?.maxConcurrency ?? defaults.maxConcurrency, ...(config?.maxContextTokens === undefined ? {} : { maxContextTokens: config.maxContextTokens }) }
 }
 function normalizedMetadata(metadata: RawSuppliedMetadata): RawSuppliedMetadata { return Object.fromEntries(Object.entries(metadata).map(([key, value]) => [key, typeof value === 'string' ? value.trim() || null : value])) as unknown as RawSuppliedMetadata }
 function inputFingerprint(rawRef: string, metadata: RawSuppliedMetadata, instructions: string | undefined, config: EffectiveConfig): string { return hashKnowledgeObject({ rawRef, sourceMetadata: normalizedMetadata(metadata), instructions: instructions?.trim() ?? null, config }) }
@@ -87,6 +87,10 @@ export async function boundedExtract(input: RawDocumentKnowledgeIngestionInput, 
 function actionSummary(decisions: readonly { action: string }[]): Record<string, number> { return Object.fromEntries([...new Set(decisions.map((decision) => decision.action))].sort().map((action) => [action, decisions.filter((decision) => decision.action === action).length])) }
 function replayStatus(value: unknown): 'completed' | 'completed_with_review' | 'blocked' | undefined { return value === 'completed_with_review' || value === 'completed' || value === 'blocked' ? value : undefined }
 function terminalStatus(validation: { readonly status: string }, reviewSummary: ReturnType<typeof normalizeReviewSummary>): IngestionWorkflowResult['status'] { return validation.status === 'failed' ? 'blocked' : reviewSummary.total > 0 ? 'completed_with_review' : 'completed' }
+function planAttemptFromError(attempt: number, error: ExtractionPlanValidationError, status: PlanAttemptSummary['status']): PlanAttemptSummary {
+  const feedback = error.feedback
+  return { attempt, status, validationCode: error.code, uncoveredCount: feedback.uncoveredRefs?.length, overlapCount: feedback.overlapRefs?.length, affectedUnitId: feedback.affectedUnitId, estimatedTokens: feedback.estimatedTokens, allowedTokens: feedback.allowedTokens, unitCount: feedback.unitCount, maxUnits: feedback.maxUnits }
+}
 
 export async function runRawDocumentKnowledgeIngestion(input: RawDocumentKnowledgeIngestionInput): Promise<IngestionWorkflowResult> {
   const configErrors = validateIngestionConfig(input.config)
@@ -99,8 +103,9 @@ export async function runRawDocumentKnowledgeIngestion(input: RawDocumentKnowled
   let handle = input.handle
   let rawRef: string | undefined
   let documentId: string | undefined
-  let acceptedPlan
+  let acceptedPlan: IngestionWorkflowResult['acceptedPlan']
   let unitSummaries: ExtractionUnitSummary[] = []
+  const planAttempts: PlanAttemptSummary[] = []
   try {
     handle = await registry.mount(input.handle.rootRef)
     const acquired = await resolver.acquire(input.documentInput)
@@ -120,21 +125,38 @@ export async function runRawDocumentKnowledgeIngestion(input: RawDocumentKnowled
         const finalValidation = await validateKnowledgeBaseV03(handle.rootRef)
         const reviewSummary = reviewSummaryFromRecord(isRecord(context.reviewSummary) ? context : replayLog)
         const status = finalValidation.status === 'failed' ? 'blocked' : replayStatus(replayLog.status)!
-        return { workflowRunId: input.workflowRunId, knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId: typeof context.documentId === 'string' ? context.documentId : undefined, status, unitSummaries: [], candidateCounts: {}, rejectedCandidates: [], reviewItems: [], reviewSummary, changeSetId: typeof replayLog.changeSetId === 'string' ? replayLog.changeSetId : undefined, writeStatus: 'already_committed', baseRevision: Number(replayLog.baseRevision ?? replayLog.committedRevision ?? handle.revision), committedRevision: Number(replayLog.committedRevision ?? handle.revision), validationSummary: finalValidation, errors: finalValidation.errors.map((item) => item.message) }
+        return { workflowRunId: input.workflowRunId, knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId: typeof context.documentId === 'string' ? context.documentId : undefined, status, unitSummaries: [], candidateCounts: {}, rejectedCandidates: [], reviewItems: [], reviewSummary, planAttempts: [], changeSetId: typeof replayLog.changeSetId === 'string' ? replayLog.changeSetId : undefined, writeStatus: 'already_committed', baseRevision: Number(replayLog.baseRevision ?? replayLog.committedRevision ?? handle.revision), committedRevision: Number(replayLog.committedRevision ?? handle.revision), validationSummary: finalValidation, errors: finalValidation.errors.map((item) => item.message) }
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     }
     const document = await resolver.parse(acquired)
     documentId = document.documentId
-    const planned = await input.skill.understandAndPlan({ document, instructions: input.instructions })
     const capabilities = input.skill.capabilities()
-    acceptedPlan = validateExtractionPlan(planned, document, capabilities, { ...input.config, maxExtractionUnits: config.maxExtractionUnits, ...(config.maxContextTokens === undefined ? {} : { maxContextTokens: config.maxContextTokens }) }, input.instructions)
+    let planned: Awaited<ReturnType<typeof input.skill.understandAndPlan>> | undefined
+    let planRepair: Parameters<typeof input.skill.understandAndPlan>[0]['planRepair'] | undefined
+    for (let attempt = 1; attempt <= config.maxPlanAttempts; attempt += 1) {
+      planAttempts.push({ attempt, status: 'proposed' })
+      const proposal = await input.skill.understandAndPlan({ document, instructions: input.instructions, ...(planRepair === undefined ? {} : { planRepair }) })
+      planned = proposal
+      try {
+        acceptedPlan = validateExtractionPlan(proposal, document, capabilities, { ...input.config, maxExtractionUnits: config.maxExtractionUnits, ...(config.maxContextTokens === undefined ? {} : { maxContextTokens: config.maxContextTokens }) }, input.instructions)
+        planAttempts[planAttempts.length - 1] = { attempt, status: 'accepted' }
+        break
+      } catch (error) {
+        if (!(error instanceof ExtractionPlanValidationError)) throw error
+        const terminal = !error.repairable || attempt >= config.maxPlanAttempts
+        planAttempts[planAttempts.length - 1] = planAttemptFromError(attempt, error, terminal ? 'terminal_invalid' : 'repairable_invalid')
+        if (terminal) return { ...emptyResult(input, [error.message], planAttempts), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, planAttempts }
+        planRepair = { previousOutput: proposal, feedback: error.feedback, attempt: attempt + 1 }
+      }
+    }
+    if (!planned || !acceptedPlan) return { ...emptyResult(input, ['No accepted extraction plan was produced'], planAttempts), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, planAttempts }
     const extractionConcurrency = Math.min(config.maxConcurrency, capabilities.maxConcurrency, acceptedPlan.units.length)
-    if (!Number.isSafeInteger(extractionConcurrency) || extractionConcurrency <= 0) return { ...emptyResult(input, ['maxConcurrency or accepted extraction capacity prevents execution']), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan }
+    if (!Number.isSafeInteger(extractionConcurrency) || extractionConcurrency <= 0) return { ...emptyResult(input, ['maxConcurrency or accepted extraction capacity prevents execution'], planAttempts), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, planAttempts }
     const extraction = await boundedExtract(input, document, planned.reportMap, acceptedPlan.units, extractionConcurrency, config)
     unitSummaries = extraction.summaries
-    if (extraction.errors.length > 0) return { ...emptyResult(input, extraction.errors), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, unitSummaries, extractionConcurrency, peakExtractionConcurrency: extraction.peak, candidateCounts: counts(extraction.results.map((item) => item.result)) }
+    if (extraction.errors.length > 0) return { ...emptyResult(input, extraction.errors, planAttempts), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, planAttempts, unitSummaries, extractionConcurrency, peakExtractionConcurrency: extraction.peak, candidateCounts: counts(extraction.results.map((item) => item.result)) }
     const consolidated = consolidateExtractions(extraction.results)
     const assets = await new KnowledgeBaseLoaderV03(registry).load(handle)
     const focused = retrieveFocusedKnowledge(assets, consolidated)
@@ -145,20 +167,20 @@ export async function runRawDocumentKnowledgeIngestion(input: RawDocumentKnowled
       const finalValidation = await validateKnowledgeBaseV03(handle.rootRef)
       const record = { workflowRunId: input.workflowRunId, knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, workflowInputFingerprint: fingerprint, status: terminalStatus(finalValidation, reviewSummary), writeStatus: 'no_changes' as const, baseRevision: handle.revision, committedRevision: handle.revision, reviewSummary, completedAt: clock(), errors: finalValidation.errors.map((item) => item.message) }
       const noOp = await writeNoOpExecutionRecord(handle.rootRef, record)
-      if (noOp.kind === 'conflict') return { workflowRunId: input.workflowRunId, knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, status: 'blocked', acceptedPlan, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary, reconciliationSummary: actionSummary(reconciliation.decisions), writeStatus: 'no_changes', baseRevision: handle.revision, committedRevision: handle.revision, validationSummary: finalValidation, extractionConcurrency, peakExtractionConcurrency: extraction.peak, errors: [noOp.message ?? 'Execution log conflict'] }
+      if (noOp.kind === 'conflict') return { workflowRunId: input.workflowRunId, knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, status: 'blocked', acceptedPlan, planAttempts, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary, reconciliationSummary: actionSummary(reconciliation.decisions), writeStatus: 'no_changes', baseRevision: handle.revision, committedRevision: handle.revision, validationSummary: finalValidation, extractionConcurrency, peakExtractionConcurrency: extraction.peak, errors: [noOp.message ?? 'Execution log conflict'] }
       const persisted = noOp.record
       const persistedStatus = replayStatus(persisted.status) ?? record.status
-      return { workflowRunId: input.workflowRunId, knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, status: persistedStatus, acceptedPlan, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary: reviewSummaryFromRecord(persisted), reconciliationSummary: actionSummary(reconciliation.decisions), writeStatus: noOp.kind === 'replay' ? 'already_committed' : 'no_changes', baseRevision: Number(persisted.baseRevision ?? handle.revision), committedRevision: Number(persisted.committedRevision ?? handle.revision), validationSummary: finalValidation, extractionConcurrency, peakExtractionConcurrency: extraction.peak, errors: finalValidation.errors.map((item) => item.message) }
+      return { workflowRunId: input.workflowRunId, knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, status: persistedStatus, acceptedPlan, planAttempts, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary: reviewSummaryFromRecord(persisted), reconciliationSummary: actionSummary(reconciliation.decisions), writeStatus: noOp.kind === 'replay' ? 'already_committed' : 'no_changes', baseRevision: Number(persisted.baseRevision ?? handle.revision), committedRevision: Number(persisted.committedRevision ?? handle.revision), validationSummary: finalValidation, extractionConcurrency, peakExtractionConcurrency: extraction.peak, errors: finalValidation.errors.map((item) => item.message) }
     }
     const changeSet = { ...planning.changeSet, ingestionContext: { ...(planning.changeSet.ingestionContext ?? {}), workflowInputFingerprint: fingerprint, workflowStatusHint: reviewSummary.total > 0 ? 'completed_with_review' as const : 'completed' as const, reviewSummary } }
     const changeSetValidation = await validateKnowledgeChangeSetV03(handle, changeSet, { mode: 'commit' })
-    if (!changeSetValidation.validatedChangeSet) return { ...emptyResult(input, changeSetValidation.report.errors.map((item) => item.message)), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary, validationSummary: changeSetValidation.report, extractionConcurrency, peakExtractionConcurrency: extraction.peak }
+    if (!changeSetValidation.validatedChangeSet) return { ...emptyResult(input, changeSetValidation.report.errors.map((item) => item.message), planAttempts), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, planAttempts, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary, validationSummary: changeSetValidation.report, extractionConcurrency, peakExtractionConcurrency: extraction.peak }
     const write = await writeKnowledgeBaseV03(handle, { receipt: changeSetValidation.validatedChangeSet, registry, clock, stagedStateValidator: async (rootRef) => { const staged = await validateKnowledgeBaseV03(rootRef); if (staged.status === 'failed') throw new Error(staged.errors.map((item) => item.message).join('; ')) } })
-    if (write.status === 'rejected' || write.status === 'failed') return { ...emptyResult(input, [write.error?.message ?? 'Writer ' + write.status]), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary, changeSetId: changeSet.changeSetId, writeStatus: write.status, baseRevision: write.baseRevision, committedRevision: write.committedRevision, validationSummary: changeSetValidation.report, extractionConcurrency, peakExtractionConcurrency: extraction.peak }
+    if (write.status === 'rejected' || write.status === 'failed') return { ...emptyResult(input, [write.error?.message ?? 'Writer ' + write.status], planAttempts), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, planAttempts, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary, changeSetId: changeSet.changeSetId, writeStatus: write.status, baseRevision: write.baseRevision, committedRevision: write.committedRevision, validationSummary: changeSetValidation.report, extractionConcurrency, peakExtractionConcurrency: extraction.peak }
     handle = await registry.refresh(handle.rootRef)
     const finalValidation = await validateKnowledgeBaseV03(handle.rootRef)
-    return { workflowRunId: input.workflowRunId, knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, status: terminalStatus(finalValidation, reviewSummary), acceptedPlan, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary, reconciliationSummary: actionSummary(reconciliation.decisions), changeSetId: changeSet.changeSetId, writeStatus: write.status, baseRevision: write.baseRevision, committedRevision: write.committedRevision, validationSummary: finalValidation, extractionConcurrency, peakExtractionConcurrency: extraction.peak, errors: finalValidation.errors.map((item) => item.message) }
+    return { workflowRunId: input.workflowRunId, knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, status: terminalStatus(finalValidation, reviewSummary), acceptedPlan, planAttempts, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary, reconciliationSummary: actionSummary(reconciliation.decisions), changeSetId: changeSet.changeSetId, writeStatus: write.status, baseRevision: write.baseRevision, committedRevision: write.committedRevision, validationSummary: finalValidation, extractionConcurrency, peakExtractionConcurrency: extraction.peak, errors: finalValidation.errors.map((item) => item.message) }
   } catch (error) {
-    return { ...emptyResult(input, [errorMessage(error)]), knowledgeBaseId: handle.knowledgeBaseId, ...(rawRef === undefined ? {} : { rawRef }), ...(documentId === undefined ? {} : { documentId }), ...(acceptedPlan === undefined ? {} : { acceptedPlan }), unitSummaries }
+    return { ...emptyResult(input, [errorMessage(error)], planAttempts), knowledgeBaseId: handle.knowledgeBaseId, ...(rawRef === undefined ? {} : { rawRef }), ...(documentId === undefined ? {} : { documentId }), ...(acceptedPlan === undefined ? {} : { acceptedPlan }), planAttempts, unitSummaries }
   }
 }

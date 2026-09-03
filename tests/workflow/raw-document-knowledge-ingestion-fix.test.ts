@@ -192,7 +192,7 @@ test('consolidation emits a review constraint for conflicting Relation attribute
 
 function emptyExtraction(): ValidatedExtractKnowledgeResult { return { entities: [], relations: [], claims: [], rejected: [], summary: { inputCounts: { entity: 0, relation: 0, claim: 0 }, acceptedCounts: { entity: 0, relation: 0, claim: 0 }, rejectedCounts: { entity: 0, relation: 0, claim: 0 }, rejectionCodes: [] } } }
 const extractionUnits = [{ unitId: 'unit-001', proposedUnitId: 'one', topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }, { unitId: 'unit-002', proposedUnitId: 'two', topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }]
-const extractionConfig = { maxExtractionUnits: 64, maxExtractionAttempts: 3, maxConcurrency: 1 }
+const extractionConfig = { maxExtractionUnits: 64, maxPlanAttempts: 2, maxExtractionAttempts: 3, maxConcurrency: 1 }
 
 test('bounded extraction retries invalid model output and does not rerun completed units', async () => {
   const calls: string[] = []

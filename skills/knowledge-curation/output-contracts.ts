@@ -40,7 +40,7 @@ export function buildUnderstandAndPlanOutputContract(schema: CurationSchemaConte
     },
   )
   const unit = objectSchema(['proposedUnitId', 'topic', 'semanticPurpose', 'primaryRefs', 'contextRefs'], { proposedUnitId: text, topic: text, semanticPurpose: text, primaryRefs: arraySchema(contentRefSchema()), contextRefs: arraySchema(contentRefSchema()), extractionFocus: text })
-  const plan = objectSchema(['units'], { units: arraySchema(unit), excludedRefs: arraySchema(contentRefSchema()) })
+  const plan = objectSchema(['units', 'excludedRefs'], { units: arraySchema(unit), excludedRefs: arraySchema(contentRefSchema()) })
   return { format: 'json', root: 'object', additionalProperties: false, schema: objectSchema(['reportMap', 'extractionPlanProposal'], { reportMap, extractionPlanProposal: plan }) }
 }
 

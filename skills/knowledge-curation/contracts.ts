@@ -36,14 +36,34 @@ export interface ProposedExtractionUnit {
   readonly extractionFocus?: string
 }
 
+export type PlanValidationCode = 'uncovered_content' | 'primary_overlap' | 'primary_excluded_conflict' | 'unit_count_exceeded' | 'context_capacity_exceeded' | 'duplicate_unit_id' | 'no_primary_content' | 'canonical_id_in_plan'
+
+export interface PlanValidationFeedback {
+  readonly code: PlanValidationCode
+  readonly message: string
+  readonly uncoveredRefs?: readonly DocumentContentRef[]
+  readonly overlapRefs?: readonly DocumentContentRef[]
+  readonly conflictingUnitIds?: readonly string[]
+  readonly affectedUnitId?: string
+  readonly estimatedTokens?: number
+  readonly allowedTokens?: number
+  readonly unitCount?: number
+  readonly maxUnits?: number
+}
+
 export interface ExtractionPlanProposal {
   readonly units: readonly ProposedExtractionUnit[]
-  readonly excludedRefs?: readonly DocumentContentRef[]
+  readonly excludedRefs: readonly DocumentContentRef[]
 }
 
 export interface UnderstandAndPlanInput {
   readonly document: StructuredDocument
   readonly instructions?: string
+  readonly planRepair?: {
+    readonly previousOutput: UnderstandAndPlanOutput
+    readonly feedback: PlanValidationFeedback
+    readonly attempt: number
+  }
 }
 
 export interface UnderstandAndPlanOutput {

@@ -5,7 +5,7 @@ import { KnowledgeCurationError } from './errors.ts'
 import { buildCurationSchemaContext } from './schema-context.ts'
 import { projectExtractKnowledgeModelInput, projectReconcileKnowledgeModelInput, projectUnderstandAndPlanModelInput } from './model-input.ts'
 import { validateExtractKnowledge, validateReconcileKnowledge, validateUnderstandAndPlanOutput } from './validation.ts'
-import { UNDERSTAND_AND_PLAN_PROMPT } from './prompts/understand-and-plan.ts'
+import { UNDERSTAND_AND_PLAN_PROMPT, PLAN_REPAIR_PROMPT } from './prompts/understand-and-plan.ts'
 import { EXTRACT_KNOWLEDGE_PROMPT } from './prompts/extract-knowledge.ts'
 import { RECONCILE_KNOWLEDGE_PROMPT } from './prompts/reconcile-knowledge.ts'
 import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildReconcileKnowledgeOutputContract } from './output-contracts.ts'
@@ -25,7 +25,7 @@ export class KnowledgeCurationSkill {
   async understandAndPlan(input: UnderstandAndPlanInput): Promise<UnderstandAndPlanOutput> {
     const schemaContext = buildCurationSchemaContext('understand_and_plan')
     const capabilities = validateReasoningCapabilities(this.options.executor.capabilities())
-    const result = await this.invoke({ operation: 'understandAndPlan', instruction: UNDERSTAND_AND_PLAN_PROMPT, input: projectUnderstandAndPlanModelInput({ ...input, capabilities, schemaContext }), outputContract: buildUnderstandAndPlanOutputContract(schemaContext) })
+    const result = await this.invoke({ operation: 'understandAndPlan', instruction: input.planRepair === undefined ? UNDERSTAND_AND_PLAN_PROMPT : `${UNDERSTAND_AND_PLAN_PROMPT}\n\n${PLAN_REPAIR_PROMPT}`, input: projectUnderstandAndPlanModelInput({ ...input, capabilities, schemaContext }), outputContract: buildUnderstandAndPlanOutputContract(schemaContext) })
     return validateUnderstandAndPlanOutput(result, { document: input.document, schemaContext })
   }
 

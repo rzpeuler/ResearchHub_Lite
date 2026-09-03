@@ -3,9 +3,10 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../plugins/reasoning/contracts.ts'
+import type { StructuredDocument } from '../../plugins/document/contracts.ts'
 import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
 import { runRawDocumentKnowledgeIngestion, validateIngestionConfig } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
-import { validateExtractionPlan } from '../../workflows/raw-document-knowledge-ingestion/plan-validation.ts'
+import { ExtractionPlanValidationError, validateExtractionPlan } from '../../workflows/raw-document-knowledge-ingestion/plan-validation.ts'
 import { createKnowledgeBase, readManifest, removeKnowledgeBase } from '../knowledge/helpers.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { KnowledgeBaseLoaderV03 } from '../../knowledge/storage/loader.ts'
@@ -30,11 +31,29 @@ class FixtureExecutor implements ReasoningExecutor {
   }
 }
 
-function plan(units: unknown[]): unknown { return { reportMap, extractionPlanProposal: { units } } }
+class PlanSequenceExecutor implements ReasoningExecutor {
+  readonly calls: ReasoningRequest[] = []
+  constructor(private readonly plans: readonly unknown[], private readonly planCapabilities = capabilities) {}
+  capabilities(): ReasoningCapabilities { return this.planCapabilities }
+  async execute(request: ReasoningRequest): Promise<ReasoningResult> {
+    this.calls.push(structuredClone(request))
+    if (request.operation === 'understandAndPlan') return { operation: request.operation, output: this.plans[Math.min(this.calls.filter((item) => item.operation === 'understandAndPlan').length - 1, this.plans.length - 1)] }
+    if (request.operation === 'extractKnowledge') return { operation: request.operation, output: { entities: [], relations: [], claims: [] } }
+    return { operation: request.operation, output: { decisions: [] } }
+  }
+}
+
+function plan(units: unknown[], excludedRefs: unknown[] = []): unknown { return { reportMap, extractionPlanProposal: { units, excludedRefs } } }
 function unit(proposedUnitId: string, primaryRefs: unknown[]): unknown { return { proposedUnitId, topic: 'Fixture', semanticPurpose: 'Fixture extraction', primaryRefs, contextRefs: [] } }
 function extraction(blockIds: readonly string[], names: readonly { id: string; type: 'company' | 'product'; name: string }[], relation = true): unknown {
   const entities = names.map((item, index) => ({ candidateId: item.id, entityType: item.type, name: item.name, evidenceBlockRefs: [blockIds[index] ?? blockIds[0]], reason: 'Named in fixture' }))
   return { entities, relations: relation && names.length >= 2 ? [{ candidateId: 'offers', relationType: 'offers_product', source: { candidateRef: names[0]!.id, mention: names[0]!.name }, target: { candidateRef: names[1]!.id, mention: names[1]!.name }, evidenceBlockRefs: [blockIds[0]!], reason: 'Direct fixture statement' }] : [], claims: relation ? [{ candidateId: 'fact', claimType: 'fact', statement: 'Alpha makes Beta.', subjectRefs: [{ candidateRef: names[0]!.id, mention: names[0]!.name, entityType: names[0]!.type }], evidenceBlockRefs: [blockIds[0]!], reason: 'Direct fixture statement' }] : [] }
+}
+
+function structuralDocument(sectionCount = 2, blocksPerSection = 2): StructuredDocument {
+  const sections = Array.from({ length: sectionCount }, (_, sectionIndex) => ({ sectionId: `section-000${sectionIndex + 1}`, title: `Section ${sectionIndex + 1}`, level: 1, parentSectionRef: null, blockRefs: Array.from({ length: blocksPerSection }, (_, blockIndex) => `block-${String(sectionIndex * blocksPerSection + blockIndex + 1).padStart(6, '0')}`), pageStart: null, pageEnd: null }))
+  const blocks = sections.flatMap((section, sectionIndex) => section.blockRefs.map((blockId, blockIndex) => ({ blockId, type: 'paragraph' as const, text: `${section.title} block ${blockIndex + 1}`, sectionRef: section.sectionId, page: null, locator: { page: null }, order: sectionIndex * blocksPerSection + blockIndex + 1 })))
+  return { documentId: 'plan-document', parser: { id: 'test' }, metadata: { originalFilename: 'plan.txt', mediaType: 'text/plain' }, normalizedText: blocks.map((block) => block.text).join('\n'), sections, blocks, stats: { pageCount: null, sectionCount: sections.length, blockCount: blocks.length, normalizedCharacters: 1, tableCount: 0, headingCount: 0, listCount: 0, captionCount: 0 }, warnings: [] }
 }
 
 test('offline ingestion archives Raw before parsing, writes canonical objects once, and replays idempotently', async () => {
@@ -82,6 +101,134 @@ test('parallel extraction is bounded and deterministic across multiple units', a
     assert.ok((result.peakExtractionConcurrency ?? 0) <= 2)
     assert.deepEqual(result.unitSummaries.map((item) => item.unitId), ['unit-001', 'unit-002'])
   } finally { await removeKnowledgeBase(root) }
+})
+
+test('exhaustive plan validation accepts primary and explicit excluded coverage', () => {
+  const document = structuralDocument()
+  const accepted = validateExtractionPlan(plan([unit('primary', [{ kind: 'section', sectionId: 'section-0001' }])], [{ kind: 'section', sectionId: 'section-0002' }]) as never, document, capabilities)
+  assert.deepEqual(accepted.excludedBlockIds, ['block-000003', 'block-000004'])
+  assert.deepEqual(accepted.units[0]?.primaryBlockIds, ['block-000001', 'block-000002'])
+})
+
+test('uncovered content is a typed repairable diagnostic and context does not cover it', () => {
+  const document = structuralDocument()
+  const output = plan([unit('primary', [{ kind: 'block', blockId: 'block-000001' }])])
+  assert.throws(() => validateExtractionPlan(output as never, document, capabilities), (error: unknown) => error instanceof ExtractionPlanValidationError && error.code === 'uncovered_content' && error.repairable === true && error.feedback.uncoveredRefs?.some((ref) => ref.kind === 'section' && ref.sectionId === 'section-0002'))
+  const contextOnlyUnit = unit('primary', [{ kind: 'block', blockId: 'block-000001' }]) as Record<string, unknown>
+  const contextOnly = plan([{ ...contextOnlyUnit, contextRefs: [{ kind: 'block', blockId: 'block-000003' }] }])
+  assert.throws(() => validateExtractionPlan(contextOnly as never, document, capabilities), (error: unknown) => error instanceof ExtractionPlanValidationError && error.code === 'uncovered_content')
+})
+
+test('primary ownership conflicts are typed and never auto-repaired', () => {
+  const document = structuralDocument()
+  const overlap = plan([unit('one', [{ kind: 'block', blockId: 'block-000001' }]), unit('two', [{ kind: 'block', blockId: 'block-000001' }])], [{ kind: 'section', sectionId: 'section-000002' }])
+  assert.throws(() => validateExtractionPlan(overlap as never, document, capabilities), (error: unknown) => error instanceof ExtractionPlanValidationError && error.code === 'primary_overlap' && error.feedback.overlapRefs?.[0]?.kind === 'block')
+  const conflict = plan([unit('one', [{ kind: 'block', blockId: 'block-000001' }])], [{ kind: 'block', blockId: 'block-000001' }, { kind: 'section', sectionId: 'section-000002' }])
+  assert.throws(() => validateExtractionPlan(conflict as never, document, capabilities), (error: unknown) => error instanceof ExtractionPlanValidationError && error.code === 'primary_excluded_conflict')
+})
+
+test('section and partial-section references remain structurally auditable', () => {
+  const document = structuralDocument(3, 2)
+  const full = validateExtractionPlan(plan([unit('first', [{ kind: 'section', sectionId: 'section-0001' }])], [{ kind: 'section', sectionId: 'section-0002' }, { kind: 'section', sectionId: 'section-0003' }]) as never, document, capabilities)
+  assert.equal(full.excludedBlockIds.length, 4)
+  const partial = validateExtractionPlan(plan([unit('first', [{ kind: 'block', blockId: 'block-000001' }])], [{ kind: 'block', blockId: 'block-000002' }, { kind: 'section', sectionId: 'section-0002' }, { kind: 'section', sectionId: 'section-0003' }]) as never, document, capabilities)
+  assert.deepEqual(partial.excludedBlockIds, ['block-000002', 'block-000003', 'block-000004', 'block-000005', 'block-000006'])
+})
+
+test('large structural gaps are compressed to auditable section and block references', () => {
+  const document = structuralDocument(3, 3)
+  const output = plan([unit('first', [{ kind: 'section', sectionId: 'section-0001' }]), unit('third', [{ kind: 'block', blockId: 'block-000007' }])])
+  assert.throws(() => validateExtractionPlan(output as never, document, capabilities), (error: unknown) => {
+    if (!(error instanceof ExtractionPlanValidationError) || error.code !== 'uncovered_content') return false
+    const refs = error.feedback.uncoveredRefs ?? []
+    return refs.some((ref) => ref.kind === 'section' && ref.sectionId === 'section-0002') && refs.some((ref) => ref.kind === 'block' && ref.blockId === 'block-000008') && refs.some((ref) => ref.kind === 'block' && ref.blockId === 'block-000009')
+  })
+})
+
+test('bounded semantic plan repair retries once and extracts only after acceptance', async () => {
+  const first = plan([unit('first', [{ kind: 'block', blockId: 'block-000001' }])])
+  const corrected = plan([unit('first', [{ kind: 'section', sectionId: 'section-0001' }])])
+  const executor = new PlanSequenceExecutor([first, corrected])
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-plan-repair' })
+  try {
+    const result = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { type: 'text', text: 'Alpha.\n\nBeta.', originalFilename: 'repair.txt', mediaType: 'text/plain' }, skill: new KnowledgeCurationSkill({ executor }), workflowRunId: 'run-plan-repair' })
+    assert.notEqual(result.status, 'blocked')
+    assert.deepEqual(result.planAttempts?.map((item) => item.status), ['repairable_invalid', 'accepted'])
+    assert.equal(executor.calls.filter((item) => item.operation === 'understandAndPlan').length, 2)
+    assert.equal(executor.calls.filter((item) => item.operation === 'extractKnowledge').length, 1)
+    const repairInput = executor.calls[1]?.input as { planRepair?: { attempt: number; feedback: { code: string; uncoveredRefs?: unknown[] }; previousOutput: unknown } }
+    assert.equal(repairInput.planRepair?.attempt, 2)
+    assert.equal(repairInput.planRepair?.feedback.code, 'uncovered_content')
+    assert.ok(repairInput.planRepair?.feedback.uncoveredRefs?.length)
+    assert.equal(JSON.stringify(repairInput.planRepair).includes('changeSetId'), false)
+  } finally { await removeKnowledgeBase(root) }
+})
+
+test('bounded semantic plan repair reports primary overlap and accepts semantic regrouping', async () => {
+  const first = plan([unit('one', [{ kind: 'block', blockId: 'block-000001' }]), unit('two', [{ kind: 'block', blockId: 'block-000001' }])], [{ kind: 'block', blockId: 'block-000002' }])
+  const corrected = plan([unit('combined', [{ kind: 'section', sectionId: 'section-0001' }])])
+  const executor = new PlanSequenceExecutor([first, corrected])
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-plan-overlap-repair' })
+  try {
+    const result = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { type: 'text', text: 'Alpha.\n\nBeta.', originalFilename: 'overlap-repair.txt', mediaType: 'text/plain' }, skill: new KnowledgeCurationSkill({ executor }), workflowRunId: 'run-plan-overlap-repair' })
+    assert.notEqual(result.status, 'blocked')
+    assert.deepEqual(result.planAttempts?.map((item) => item.status), ['repairable_invalid', 'accepted'])
+    const repairInput = executor.calls[1]?.input as { planRepair?: { feedback: { code: string; overlapRefs?: unknown[]; conflictingUnitIds?: string[] } } }
+    assert.equal(repairInput.planRepair?.feedback.code, 'primary_overlap')
+    assert.deepEqual(repairInput.planRepair?.feedback.conflictingUnitIds, ['one', 'two'])
+    assert.ok(repairInput.planRepair?.feedback.overlapRefs?.length)
+    assert.equal(executor.calls.filter((item) => item.operation === 'extractKnowledge').length, 1)
+  } finally { await removeKnowledgeBase(root) }
+})
+
+test('bounded semantic plan repair reports context capacity and accepts smaller semantic units', async () => {
+  const first = plan([unit('combined', [{ kind: 'section', sectionId: 'section-0001' }])])
+  const corrected = plan([unit('first', [{ kind: 'block', blockId: 'block-000001' }]), unit('second', [{ kind: 'block', blockId: 'block-000002' }])])
+  const executor = new PlanSequenceExecutor([first, corrected], { ...capabilities, maxContextTokens: 10_000 })
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-plan-capacity-repair' })
+  try {
+    const result = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { type: 'text', text: `${'A'.repeat(5_000)}\n\n${'B'.repeat(5_000)}`, originalFilename: 'capacity-repair.txt', mediaType: 'text/plain' }, skill: new KnowledgeCurationSkill({ executor }), workflowRunId: 'run-plan-capacity-repair', config: { maxContextTokens: 10_000 } })
+    assert.notEqual(result.status, 'blocked')
+    assert.deepEqual(result.planAttempts?.map((item) => item.status), ['repairable_invalid', 'accepted'])
+    const repairInput = executor.calls[1]?.input as { planRepair?: { feedback: { code: string; affectedUnitId?: string; estimatedTokens?: number; allowedTokens?: number } } }
+    assert.equal(repairInput.planRepair?.feedback.code, 'context_capacity_exceeded')
+    assert.equal(repairInput.planRepair?.feedback.affectedUnitId, 'combined')
+    assert.ok((repairInput.planRepair?.feedback.estimatedTokens ?? 0) > (repairInput.planRepair?.feedback.allowedTokens ?? Number.MAX_SAFE_INTEGER))
+    assert.equal(executor.calls.filter((item) => item.operation === 'extractKnowledge').length, 2)
+  } finally { await removeKnowledgeBase(root) }
+})
+
+test('bounded plan repair terminates without extraction when the replacement remains invalid', async () => {
+  const invalid = plan([unit('first', [{ kind: 'block', blockId: 'block-000001' }])])
+  const executor = new PlanSequenceExecutor([invalid, invalid])
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-plan-repair-terminal' })
+  try {
+    const result = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { type: 'text', text: 'Alpha.\n\nBeta.', originalFilename: 'repair-terminal.txt', mediaType: 'text/plain' }, skill: new KnowledgeCurationSkill({ executor }), workflowRunId: 'run-plan-repair-terminal' })
+    assert.equal(result.status, 'blocked')
+    assert.deepEqual(result.planAttempts?.map((item) => item.status), ['repairable_invalid', 'terminal_invalid'])
+    assert.equal(executor.calls.filter((item) => item.operation === 'understandAndPlan').length, 2)
+    assert.equal(executor.calls.filter((item) => item.operation === 'extractKnowledge').length, 0)
+  } finally { await removeKnowledgeBase(root) }
+})
+
+test('maxPlanAttempts is bounded and invalid configuration does not invoke reasoning', async () => {
+  assert.deepEqual(validateIngestionConfig({ maxPlanAttempts: 0 }), ['maxPlanAttempts must be a positive safe integer'])
+  const invalid = plan([unit('first', [{ kind: 'block', blockId: 'block-000001' }])])
+  const executor = new PlanSequenceExecutor([invalid, plan([unit('first', [{ kind: 'section', sectionId: 'section-0001' }])])])
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-plan-repair-one-attempt' })
+  try {
+    const result = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { type: 'text', text: 'Alpha.\n\nBeta.', originalFilename: 'repair-one.txt', mediaType: 'text/plain' }, skill: new KnowledgeCurationSkill({ executor }), workflowRunId: 'run-plan-repair-one', config: { maxPlanAttempts: 1 } })
+    assert.equal(result.status, 'blocked')
+    assert.equal(executor.calls.filter((item) => item.operation === 'understandAndPlan').length, 1)
+  } finally { await removeKnowledgeBase(root) }
+
+  const invalidConfigExecutor = new PlanSequenceExecutor([invalid])
+  const invalidConfigRoot = await createKnowledgeBase({ knowledgeBaseId: 'kb-plan-repair-invalid-config' })
+  try {
+    const result = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(invalidConfigRoot), documentInput: { type: 'text', text: 'Alpha.', originalFilename: 'invalid-config.txt', mediaType: 'text/plain' }, skill: new KnowledgeCurationSkill({ executor: invalidConfigExecutor }), workflowRunId: 'run-plan-repair-invalid-config', config: { maxPlanAttempts: 0 } })
+    assert.equal(result.status, 'blocked')
+    assert.equal(invalidConfigExecutor.calls.length, 0)
+  } finally { await removeKnowledgeBase(invalidConfigRoot) }
 })
 
 test('review isolation commits safe independent candidates and excludes dependent relations/claims', async () => {
