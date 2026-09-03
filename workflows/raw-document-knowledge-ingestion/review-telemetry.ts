@@ -27,9 +27,9 @@ export function categoryForRationale(value: string): ReviewCategory {
 }
 export function consolidationReviewKey(candidateId: string, reason: string, conflictingFields: readonly string[] = []): string { return ['consolidation', candidateId, normalized(reason), [...conflictingFields].sort().map(normalized).join(',')].join('|') }
 export function reconciliationReviewKey(candidateId: string, action: string, rationale: string): string { return ['reconciliation', candidateId, action, normalized(rationale)].join('|') }
-function plannerReviewKey(candidateId: string, category: ReviewCategory, rationale: string, dependency: boolean): string { return ['planner', candidateId, category, dependency ? 'dependency' : 'root', normalized(rationale)].join('|') }
+export function plannerReviewKey(candidateId: string, stage: string, category: ReviewCategory, rationale: string, dependency: boolean): string { return ['planner', candidateId, stage, category, dependency ? 'dependency' : 'root', normalized(rationale)].join('|') }
 function addEvent(events: Map<string, Event>, sample: Omit<Event, 'reviewKey'> & { readonly reviewKey?: string }): void {
-  const reviewKey = sample.reviewKey ?? plannerReviewKey(sample.candidateId ?? 'workflow', sample.category, sample.rationale, sample.dependency)
+  const reviewKey = sample.reviewKey ?? plannerReviewKey(sample.candidateId ?? 'workflow', sample.stage, sample.category, sample.rationale, sample.dependency)
   if (!events.has(reviewKey)) events.set(reviewKey, { ...sample, reviewKey })
 }
 
@@ -84,7 +84,7 @@ export function normalizeReviewSummary(input: ReviewNormalizationInput): ReviewS
       if (mirrors.length === 1) reviewKey = mirrors[0]
     }
     if (reviewKey === undefined && (origin === 'planner' || origin === 'reconciliation_mirror')) reviewKey = reconciliationKeys.get(item.candidateId + '|' + rationale)
-    addEvent(events, { candidateId: item.candidateId, kind: kind(item.kind), stage: item.stage ?? 'planner', category, rationale: item.rationale, dependentCandidateIds: item.dependentCandidateIds, dependency, origin, ...(reviewKey === undefined ? {} : { reviewKey }) })
+    addEvent(events, { candidateId: item.candidateId, kind: kind(item.kind), stage: item.stage ?? 'planner', category, rationale: item.rationale, dependentCandidateIds: item.dependentCandidateIds, dependency, origin, reviewKey: reviewKey ?? plannerReviewKey(item.candidateId, item.stage ?? 'planner', category, item.rationale, dependency) })
     if (!dependency) for (const dependent of item.dependentCandidateIds) if (!plannerCandidateIds.has(dependent)) addEvent(events, { candidateId: dependent, kind: kind(groupKinds.get(dependent)), stage: 'planner', category: 'invalid_reference', rationale: 'Dependency isolated by review of ' + item.candidateId, dependentCandidateIds: [item.candidateId], dependency: true, origin: 'dependency_isolation', reviewKey: ['dependency', item.candidateId, dependent].join('|') })
   }
   const ordered = [...events.values()].sort((left, right) => left.reviewKey.localeCompare(right.reviewKey))

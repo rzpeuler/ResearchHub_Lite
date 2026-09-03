@@ -6,7 +6,7 @@ import { hashKnowledgeObject } from '../../knowledge/storage/canonical-hash.ts'
 import { KnowledgeIndexV03 } from '../../knowledge/query/index.ts'
 import type { ReportMap, ReconciliationDecision, ResolvedCandidateGroup, EntityCandidate, RelationCandidate, ClaimCandidate } from '../../skills/knowledge-curation/contracts.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
-import { consolidationReviewKey, reconciliationReviewKey } from './review-telemetry.ts'
+import { categoryForRationale, consolidationReviewKey, plannerReviewKey, reconciliationReviewKey } from './review-telemetry.ts'
 import type { AcceptedExtractionPlan, ReviewItem } from './contracts.ts'
 
 type Dict = Record<string, unknown>
@@ -159,13 +159,15 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
   const decisions = new Map(input.decisions.map((decision) => [decision.candidateId, decision]))
   const groups = new Map(input.groups.map((group) => [group.candidateId, group]))
   const reviews = new Map<string, ReviewItem>()
+  const reviewedCandidates = new Set<string>()
   const rejected = new Set<string>()
   const dependents = new Map<string, string[]>()
   for (const group of input.groups) {
     if (group.kind === 'relation') for (const ref of [(group.candidate as RelationCandidate).source.candidateRef, (group.candidate as RelationCandidate).target.candidateRef]) dependents.set(ref, [...(dependents.get(ref) ?? []), group.candidateId])
     if (group.kind === 'claim') for (const ref of (group.candidate as ClaimCandidate).subjectRefs.map((subject) => subject.candidateRef)) dependents.set(ref, [...(dependents.get(ref) ?? []), group.candidateId])
   }
-  const addReview = (candidateId: string, rationale: string, dependentCandidateIds: readonly string[] = [], metadata: Partial<Pick<ReviewItem, 'stage' | 'category' | 'dependency' | 'origin' | 'reviewKey'>> = {}): void => { const group = groups.get(candidateId); reviews.set(candidateId, { candidateId, kind: group?.kind ?? 'unknown', rationale, dependentCandidateIds: unique(dependentCandidateIds), stage: 'planner', origin: 'planner', dependency: false, ...metadata }) }
+  const addReview = (candidateId: string, rationale: string, dependentCandidateIds: readonly string[] = [], metadata: Partial<Pick<ReviewItem, 'stage' | 'category' | 'dependency' | 'origin' | 'reviewKey'>> = {}): void => { const group = groups.get(candidateId); const stage = metadata.stage ?? 'planner'; const category = metadata.category ?? categoryForRationale(rationale); const dependency = metadata.dependency ?? false; const reviewKey = metadata.reviewKey ?? plannerReviewKey(candidateId, stage, category, rationale, dependency); reviewedCandidates.add(candidateId); if (!reviews.has(reviewKey)) reviews.set(reviewKey, { candidateId, kind: group?.kind ?? 'unknown', rationale, dependentCandidateIds: unique(dependentCandidateIds), stage, category, origin: metadata.origin ?? 'planner', dependency, reviewKey }) }
+  const candidateHasReview = (candidateId: string): boolean => reviewedCandidates.has(candidateId)
   const reconciliationMirror = (decision: ReconciliationDecision): Partial<Pick<ReviewItem, 'category' | 'origin' | 'reviewKey'>> => ({ category: 'reconciliation_review', origin: 'reconciliation_mirror', reviewKey: reconciliationReviewKey(decision.candidateId, decision.action, decision.rationale) })
   for (const constraint of input.consolidationReviews ?? []) addReview(constraint.candidateId, constraint.reason, [], { category: 'other', origin: 'consolidation_mirror', reviewKey: consolidationReviewKey(constraint.candidateId, constraint.reason, constraint.conflictingFields) })
   const entities = new Map<string, string>()
@@ -202,7 +204,7 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
     } else { resolve(group.candidateId, 'review', undefined, decision.action + ' is unsupported for Entity targets'); addReview(group.candidateId, decision.action + ' is unsupported for Entity targets') }
   }
   for (const group of input.groups.filter((item) => item.kind === 'entity')) {
-    if (reviews.has(group.candidateId)) for (const dependent of dependents.get(group.candidateId) ?? []) addReview(dependent, 'Blocked by Entity candidate ' + group.candidateId + ' requiring review', [group.candidateId], { category: 'invalid_reference', dependency: true, origin: 'dependency_isolation', reviewKey: ['dependency', group.candidateId, dependent].join('|') })
+    if (candidateHasReview(group.candidateId)) for (const dependent of dependents.get(group.candidateId) ?? []) addReview(dependent, 'Blocked by Entity candidate ' + group.candidateId + ' requiring review', [group.candidateId], { category: 'invalid_reference', dependency: true, origin: 'dependency_isolation', reviewKey: ['dependency', group.candidateId, dependent].join('|') })
     if (rejected.has(group.candidateId)) for (const dependent of dependents.get(group.candidateId) ?? []) { rejected.add(dependent); addReview(dependent, 'Blocked by rejected Entity candidate ' + group.candidateId, [group.candidateId], { category: 'invalid_reference', dependency: true, origin: 'dependency_isolation', reviewKey: ['dependency', group.candidateId, dependent].join('|') }) }
   }
 
@@ -273,13 +275,14 @@ export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSet
     } else addReview(group.candidateId, decision.action + ' is unsupported for Claim targets')
   }
 
-  const reviewCount = reviews.size
-  if (knowledgeOperations.length === 0) return { reviewItems: [...reviews.values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)), safeOperationCount: 0, summary: { sourceOperations: 0, knowledgeCreates: 0, reviewItems: reviewCount, blockedDependencies: rejected.size, noChanges: 1 }, entityResolutions: resolutions }
+  const reviewItems = [...reviews.values()].sort((left, right) => (left.reviewKey ?? '').localeCompare(right.reviewKey ?? '') || left.candidateId.localeCompare(right.candidateId))
+  const reviewCount = reviewItems.length
+  if (knowledgeOperations.length === 0) return { reviewItems, safeOperationCount: 0, summary: { sourceOperations: 0, knowledgeCreates: 0, reviewItems: reviewCount, blockedDependencies: rejected.size, noChanges: 1 }, entityResolutions: resolutions }
   const sourceOperations: KnowledgeSourceOperationV03[] = []
   const existingSource = index.sources.get(sourceId)
   if (existingSource) sourceOperations.push({ operationId: 'source-merge-001', type: 'source_merge', sourceId, expectedBeforeHash: hashKnowledgeObject(existingSource), addRawRefs: [input.rawRef] })
   else sourceOperations.push({ operationId: 'source-create-001', type: 'source_create', source })
   const changeSetId = 'changeset-' + hashKnowledgeObject({ workflowRunId: input.workflowRunId, knowledgeBaseId: input.knowledgeBaseId, rawRef: input.rawRef, documentId: input.documentId, groups: input.groups, decisions: input.decisions }).slice(7, 23)
   const changeSet: KnowledgeChangeSetV03 = { changeSetId, workflowRunId: input.workflowRunId, knowledgeBaseId: input.knowledgeBaseId, schemaVersion: '0.3', storageFormatVersion: '1', expectedBaseRevision: input.baseRevision, requiresRawProvenance: true, sourceOperations, knowledgeOperations, ingestionContext: { documentId: input.documentId, rawRef: input.rawRef, extractionUnitCount: input.plan.units.length } }
-  return { changeSet, reviewItems: [...reviews.values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)), safeOperationCount: sourceOperations.length + knowledgeOperations.length, summary: { sourceOperations: sourceOperations.length, knowledgeCreates: knowledgeOperations.filter((operation) => operation.type === 'create').length, reviewItems: reviewCount, blockedDependencies: rejected.size }, entityResolutions: resolutions }
+  return { changeSet, reviewItems, safeOperationCount: sourceOperations.length + knowledgeOperations.length, summary: { sourceOperations: sourceOperations.length, knowledgeCreates: knowledgeOperations.filter((operation) => operation.type === 'create').length, reviewItems: reviewCount, blockedDependencies: rejected.size }, entityResolutions: resolutions }
 }

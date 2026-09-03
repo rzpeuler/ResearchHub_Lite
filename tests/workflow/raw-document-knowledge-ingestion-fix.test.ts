@@ -100,6 +100,57 @@ test('planner isolates rejected and review Entity dependencies', () => {
   assert.ok(result.reviewItems.some((item) => item.candidateId === 'c'))
 })
 
+test('planner preserves dependency reviews from two reviewed parent candidates', () => {
+  const a = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A') }
+  const b = { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product') }
+  const r = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b') }
+  const result = planKnowledgeChangeSet(input([a, b, r], [{ candidateId: 'a', action: 'user_review', rationale: 'Review A' }, { candidateId: 'b', action: 'user_review', rationale: 'Review B' }, { candidateId: 'r', action: 'create', rationale: 'create' }]))
+  const dependencies = result.reviewItems.filter((item) => item.candidateId === 'r' && item.dependency)
+  assert.equal(dependencies.length, 2)
+  assert.equal(new Set(dependencies.map((item) => item.reviewKey)).size, 2)
+  const summary = normalizeReviewSummary({ plannerReviewItems: result.reviewItems, candidateGroups: [a, b, r] })
+  assert.ok(summary.dependencyCount >= 2)
+  assert.equal(summary.rootCount + summary.dependencyCount, summary.total)
+  assert.equal(Object.values(summary.byCategory).reduce((sum, value) => sum + value, 0), summary.total)
+  assert.equal(Object.values(summary.byCandidateKind).reduce((sum, value) => sum + value, 0), summary.total)
+})
+
+test('planner preserves a relation root review alongside its dependency review', () => {
+  const a = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A') }
+  const b = { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product') }
+  const r = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b') }
+  const result = planKnowledgeChangeSet(input([a, b, r], [{ candidateId: 'a', action: 'user_review', rationale: 'Review A' }, { candidateId: 'b', action: 'create', rationale: 'create' }, { candidateId: 'r', action: 'user_review', rationale: 'Review relation' }]))
+  const relationReviews = result.reviewItems.filter((item) => item.candidateId === 'r')
+  assert.equal(relationReviews.length, 2)
+  assert.equal(relationReviews.some((item) => item.dependency === true), true)
+  assert.equal(relationReviews.some((item) => item.dependency === false && item.origin === 'reconciliation_mirror'), true)
+  const summary = normalizeReviewSummary({ plannerReviewItems: result.reviewItems, candidateGroups: [a, b, r] })
+  const relationSamples = Object.values(summary.samplesByCategory).flat().filter((sample) => sample.candidateId === 'r')
+  assert.equal(relationSamples.filter((sample) => sample.dependency === true).length, 1)
+  assert.equal(relationSamples.filter((sample) => sample.dependency === false).length, 1)
+})
+
+test('planner consolidation mirror is stored once by its explicit reviewKey', () => {
+  const a = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A') }
+  const b = { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product') }
+  const r = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b') }
+  const constraint = { candidateId: 'r', reason: 'Relation attributes conflict', conflictingFields: ['importance'] }
+  const result = planKnowledgeChangeSet({ ...input([a, b, r], decisionsFor([a, b, r], 'create')), consolidationReviews: [constraint] })
+  assert.equal(result.reviewItems.filter((item) => item.candidateId === 'r').length, 1)
+  assert.equal(normalizeReviewSummary({ consolidationReviews: [constraint], plannerReviewItems: result.reviewItems, candidateGroups: [a, b, r] }).total, 1)
+})
+
+test('planner reviewItems are deterministically ordered by reviewKey', () => {
+  const a = { candidateId: 'a', kind: 'entity' as const, candidate: entity('a', 'A') }
+  const b = { candidateId: 'b', kind: 'entity' as const, candidate: entity('b', 'B', 'product') }
+  const r = { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'offers_product', 'a', 'b') }
+  const decisions = [{ candidateId: 'a', action: 'user_review' as const, rationale: 'Review A' }, { candidateId: 'b', action: 'user_review' as const, rationale: 'Review B' }, { candidateId: 'r', action: 'user_review' as const, rationale: 'Review relation' }]
+  const first = planKnowledgeChangeSet(input([a, b, r], decisions))
+  const second = planKnowledgeChangeSet(input([a, b, r], decisions))
+  assert.deepEqual(first.reviewItems.map((item) => item.reviewKey), second.reviewItems.map((item) => item.reviewKey))
+  assert.deepEqual(first.reviewItems.map((item) => item.candidateId), second.reviewItems.map((item) => item.candidateId))
+})
+
 test('existing InvestmentTheme duplicate and update preserve ThemeGroup identity without model refs', () => {
   const existing = { id: 'entity:theme', type: 'investment_theme', name: 'Energy Transition', themeGroupRef: 'theme-group:energy', taxonomyRefs: ['taxonomy:one'], lifecycle: { status: 'active' } }
   const group = { candidateId: 'theme', kind: 'entity' as const, candidate: entity('theme', 'Energy Transition', 'investment_theme'), existingKnowledge: [existing] }
