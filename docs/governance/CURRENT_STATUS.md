@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion Implemented — CTO Review Pending**
+**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion Implemented — RHL-MIGRATION-005 Independently CTO Accepted / Closed**
 
 ## Completed
 
@@ -31,13 +31,13 @@
 - Runtime-neutral ReasoningExecutor, isolated Codex adapter, Mock executor, and Knowledge Curation Skill implemented in `RHL-MIGRATION-004`; independently accepted / closed.
 - Deterministic Schema 0.3 Knowledge validation and ChangeSet validation implemented under `knowledge/validation/` in `RHL-MIGRATION-005`.
 - Raw Document → Canonical Knowledge deterministic Workflow implemented under `workflows/raw-document-knowledge-ingestion/`, including bounded extraction, consolidation, focused retrieval, review isolation, one ChangeSet, staged Writer validation, reload validation, and replay handling.
-- `RHL-MIGRATION-005` implementation plus `RHL-MIGRATION-005-FIX-002`, `RHL-MIGRATION-005-FIX-003`, `RHL-MIGRATION-005-FIX-004`, and `RHL-MIGRATION-005-FIX-005` are complete; CTO acceptance remains pending.
+- `RHL-MIGRATION-005` implementation plus `RHL-MIGRATION-005-FIX-002`, `RHL-MIGRATION-005-FIX-003`, `RHL-MIGRATION-005-FIX-004`, `RHL-MIGRATION-005-FIX-005`, and `RHL-MIGRATION-005-FIX-006` are complete; `RHL-MIGRATION-005` is independently CTO accepted / closed.
 
 ## Current Limitations
 
 - A production Docling environment has not been exercised in this checkout.
 - A real Codex invocation remains opt-in; deterministic fake-host coverage is present.
-- Architecture acceptance of RHL-MIGRATION-005 remains pending independent review.
+- `RHL-VALIDATION-001` was not executed; validation is blocked by `INPUT_NOT_FOUND` for the required frozen PDF.
 
 ## Current Architecture Baseline
 
@@ -52,4 +52,4 @@
 
 ## Next Pending After CTO Acceptance
 
-No subsequent migration task is authorized until CTO acceptance of RHL-MIGRATION-005.
+No subsequent migration task is authorized until CTO acceptance of `RHL-VALIDATION-001`.
