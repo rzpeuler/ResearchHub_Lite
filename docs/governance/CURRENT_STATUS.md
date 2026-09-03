@@ -32,7 +32,7 @@
 - Deterministic Schema 0.3 Knowledge validation and ChangeSet validation implemented under `knowledge/validation/` in `RHL-MIGRATION-005`.
 - Raw Document → Canonical Knowledge deterministic Workflow implemented under `workflows/raw-document-knowledge-ingestion/`, including bounded extraction, consolidation, focused retrieval, review isolation, one ChangeSet, staged Writer validation, reload validation, and replay handling.
 - `RHL-MIGRATION-005` implementation plus `RHL-MIGRATION-005-FIX-002`, `RHL-MIGRATION-005-FIX-003`, `RHL-MIGRATION-005-FIX-004`, `RHL-MIGRATION-005-FIX-005`, and `RHL-MIGRATION-005-FIX-006` are complete; `RHL-MIGRATION-005` is independently CTO accepted / closed.
-- `RHL-FIX-IDENTITY-001` is implemented: Unicode-safe semantic identity, deterministic mixed-script canonical IDs, collision-safe consolidation, exact Unicode retrieval, and pre-reconciliation candidate uniqueness checks are covered by offline tests; CTO acceptance is pending.
+- `RHL-FIX-IDENTITY-001` implementation is complete and `RHL-FIX-IDENTITY-001-FIX-001` is applied: Unicode-safe semantic identity, deterministic mixed-script canonical IDs, collision-safe consolidation, exact Unicode retrieval, and pre-reconciliation candidate uniqueness checks are covered by offline tests; CTO acceptance is pending.
 
 ## Current Limitations
 

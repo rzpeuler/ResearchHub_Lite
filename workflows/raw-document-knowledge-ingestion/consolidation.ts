@@ -83,12 +83,15 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
   }
   const claims = new Map<string, ClaimCandidate>()
   for (const { unitId, candidate } of claimInputs) {
-    const subjects = candidate.subjectRefs.map((subject) => entityAliases.get(namespaced(unitId, subject.candidateRef))).filter((ref): ref is string => ref !== undefined)
-    if (subjects.length !== candidate.subjectRefs.length) { rejected.push({ candidateId: candidate.candidateId, kind: 'claim', code: 'invalid_reference', message: 'Claim subject was not retained during consolidation' }); continue }
-    const orderedSubjects = subjects
-    const semanticIdentity = { claimType: candidate.claimType, statement: normalizeSemanticText(candidate.statement), subjectRefs: orderedSubjects, temporal: candidate.temporal ?? null, structuredValue: candidate.structuredValue ?? null }
+    const resolvedSubjects = candidate.subjectRefs.map((subject) => {
+      const mergedCandidateId = entityAliases.get(namespaced(unitId, subject.candidateRef))
+      return mergedCandidateId === undefined ? undefined : { mergedCandidateId, originalRef: subject.candidateRef }
+    })
+    if (resolvedSubjects.some((subject) => subject === undefined || entityByMergedId.get(subject.mergedCandidateId) === undefined)) { rejected.push({ candidateId: candidate.candidateId, kind: 'claim', code: 'invalid_reference', message: 'Claim subject was not retained during consolidation' }); continue }
+    const orderedSubjectIds = [...new Set(resolvedSubjects.map((subject) => subject!.mergedCandidateId))].sort()
+    const semanticIdentity = { claimType: candidate.claimType, statement: normalizeSemanticText(candidate.statement), subjectRefs: orderedSubjectIds, temporal: candidate.temporal ?? null, structuredValue: candidate.structuredValue ?? null }
     const key = canonicalSerialize(semanticIdentity)
-    const normalizedCandidate: ClaimCandidate = { ...structuredClone(candidate), candidateId: `merged-claim-${hashKnowledgeObject(semanticIdentity).slice(7, 23)}`, subjectRefs: orderedSubjects.map((ref, index) => candidateRef(ref, candidate.subjectRefs[index]?.mention ?? ref, candidate.subjectRefs[index]?.entityType)) }
+    const normalizedCandidate: ClaimCandidate = { ...structuredClone(candidate), candidateId: `merged-claim-${hashKnowledgeObject(semanticIdentity).slice(7, 23)}`, subjectRefs: orderedSubjectIds.map((mergedCandidateId) => { const entity = entityByMergedId.get(mergedCandidateId)!; return candidateRef(mergedCandidateId, entity.name, entity.entityType) }) }
     const current = claims.get(key)
     if (!current) claims.set(key, normalizedCandidate)
     else claims.set(key, { ...current, evidenceBlockRefs: addUnique(current.evidenceBlockRefs, normalizedCandidate.evidenceBlockRefs), confidence: mergeConfidence(current.confidence, normalizedCandidate.confidence) })

@@ -8,7 +8,7 @@ import { KnowledgeBaseLoaderV03 } from '../../knowledge/storage/loader.ts'
 import { KnowledgeError } from '../../knowledge/storage/errors.ts'
 import { canonicalSerialize, hashKnowledgeObject } from '../../knowledge/storage/canonical-hash.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
-import { allocateEntityId, allocateSourceId, normalizeSemanticText } from '../../knowledge/registry/id-allocation.ts'
+import { allocateEntityId, allocateSourceId, normalizeKnowledgeSlug, normalizeSemanticText } from '../../knowledge/registry/id-allocation.ts'
 import { createKnowledgeBase, readManifest, removeKnowledgeBase } from './helpers.ts'
 
 test('Raw identity is content-derived and archival is immutable/idempotent', async () => {
@@ -44,9 +44,11 @@ test('semantic normalization preserves Unicode and normalizes compatible text', 
 
 test('canonical Entity IDs preserve ASCII compatibility and disambiguate Unicode names', () => {
   assert.equal(allocateEntityId('company', 'NVIDIA Corp'), 'entity:company-nvidia-corp')
+  assert.equal(allocateEntityId('company', '胜宏科技'), `entity:company-${normalizeKnowledgeSlug('胜宏科技')}`)
   assert.equal(allocateEntityId('company', 'NVIDIA Corp'), allocateEntityId('company', 'NVIDIA Corp'))
   assert.notEqual(allocateEntityId('company', '胜宏科技'), allocateEntityId('company', '深南电路'))
   assert.notEqual(allocateEntityId('company', 'SK海力士'), allocateEntityId('company', 'SK集团'))
+  assert.notEqual(allocateEntityId('company', 'H100芯片'), allocateEntityId('company', 'H101芯片'))
   assert.equal(allocateEntityId('company', 'SK海力士'), allocateEntityId('company', 'SK海力士'))
   assert.match(allocateEntityId('company', 'SK海力士'), /^entity:[a-z0-9-]+$/)
 })

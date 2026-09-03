@@ -27,7 +27,9 @@ export function allocateEntityId(type: string, name: string, discriminator?: unk
   const base = normalizeKnowledgeSlug(name)
   const typedBase = ['investment_theme', 'industry', 'company', 'product', 'technology'].includes(type) ? `${type}-${base}` : `entity-${base}`
   const semanticName = normalizeSemanticText(name)
-  const mixedScript = /[^\u0000-\u007F]/u.test(semanticName) && /[A-Za-z0-9]/u.test(base)
+  const hasNonAscii = /[^\u0000-\u007F]/u.test(semanticName)
+  const hasAsciiSemantic = /[A-Za-z0-9]/u.test(semanticName)
+  const mixedScript = hasNonAscii && hasAsciiSemantic
   const identityBase = mixedScript ? `${typedBase}-${semanticHash({ entityType: type, normalizedSemanticName: semanticName }).slice(0, 8)}` : typedBase
   if (discriminator === undefined) return `${namespace}:${identityBase}`
   return `${namespace}:${identityBase}-${semanticHash(discriminator).slice(0, 8)}`

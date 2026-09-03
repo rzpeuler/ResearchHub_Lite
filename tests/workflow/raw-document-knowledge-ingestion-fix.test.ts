@@ -6,7 +6,9 @@ import { consolidateExtractions } from '../../workflows/raw-document-knowledge-i
 import { planKnowledgeChangeSet } from '../../workflows/raw-document-knowledge-ingestion/changeset-planner.ts'
 import { allocateSourceId } from '../../workflows/raw-document-knowledge-ingestion/id-helpers.ts'
 import { boundedExtract } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
+import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
 import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
+import { MockReasoningExecutor } from '../../plugins/reasoning/mock/executor.ts'
 import { retrieveFocusedKnowledge } from '../../workflows/raw-document-knowledge-ingestion/retrieval.ts'
 import { emptyReviewSummary, normalizeReviewSummary, writeNoOpExecutionRecord } from '../../workflows/raw-document-knowledge-ingestion/review-telemetry.ts'
 import { withKnowledgeBaseMutationLock } from '../../knowledge/storage/mutation-lock.ts'
@@ -23,6 +25,7 @@ function loaded(kind: 'entity' | 'relation' | 'claim', value: Record<string, unk
 function entity(id: string, name: string, type: EntityTypeV03 = 'company', extra: Record<string, unknown> = {}): EntityCandidate { return { candidateId: id, entityType: type, name, evidenceBlockRefs: [], reason: 'test', ...extra } }
 function relation(id: string, type: RelationCandidate['relationType'], source: string, target: string, attributes?: Record<string, unknown>): RelationCandidate { return { candidateId: id, relationType: type, source: { candidateRef: source, mention: source }, target: { candidateRef: target, mention: target }, ...(attributes === undefined ? {} : { attributes }), evidenceBlockRefs: [], reason: 'test' } }
 function claim(id: string, statement: string, subject: string, extra: Record<string, unknown> = {}): ClaimCandidate { return { candidateId: id, claimType: 'fact', statement, subjectRefs: [{ candidateRef: subject, mention: subject }], evidenceBlockRefs: [], reason: 'test', ...extra } }
+function multiSubjectClaim(id: string, statement: string, subjects: readonly string[], extra: Record<string, unknown> = {}): ClaimCandidate { return { candidateId: id, claimType: 'fact', statement, subjectRefs: subjects.map((subject) => ({ candidateRef: subject, mention: subject })), evidenceBlockRefs: [], reason: 'test', ...extra } }
 function input(groups: readonly ResolvedCandidateGroup[], decisions: readonly ReconciliationDecision[], assets = emptyAssets()): Parameters<typeof planKnowledgeChangeSet>[0] { return { knowledgeBaseId: 'kb-test', baseRevision: 0, workflowRunId: 'run-test', rawRef, rawManifest: { originalFilename: 'test.txt', suppliedMetadata: { title: 'Test', institution: null, author: null, publishedAt: null, sourceUrl: null } }, documentId: 'doc-test', document: { metadata: { originalFilename: 'test.txt', title: 'Test' } }, reportMap, plan: acceptedPlan, groups, decisions, assets } }
 function decisionsFor(groups: readonly ResolvedCandidateGroup[], action: ReconciliationDecision['action']): ReconciliationDecision[] { return groups.map((group) => ({ candidateId: group.candidateId, action, rationale: 'test' })) }
 function assetsWithEntities(values: Record<string, unknown>[], relations: Record<string, unknown>[] = [], claims: Record<string, unknown>[] = []): KnowledgeAssetCollectionV03 { return { ...emptyAssets(), entities: values.map((value) => loaded('entity', value) as never), relations: relations.map((value) => loaded('relation', value) as never), claims: claims.map((value) => loaded('claim', value) as never) } }
@@ -226,6 +229,49 @@ test('consolidation resolves Chinese relation endpoints without self-collapse', 
   assert.ok(result.groups.every((group) => !group.candidateId.includes('merged-entity-company')))
   const reversed = consolidateExtractions([second, first])
   assert.deepEqual(reversed.groups.map((group) => group.candidateId), result.groups.map((group) => group.candidateId))
+})
+
+test('consolidation makes multi-subject Claim identity order-independent and metadata-aligned', () => {
+  const first = extractionWithKnowledge('u1', [entity('a', '胜宏科技'), entity('b', '深南电路')], [], [multiSubjectClaim('c1', '两家公司形成产业协同', ['a', 'b'])])
+  const second = extractionWithKnowledge('u2', [entity('x', '胜宏科技'), entity('y', '深南电路')], [], [multiSubjectClaim('c2', ' 两家公司形成产业协同 ', ['y', 'x'])])
+  const result = consolidateExtractions([first, second])
+  const claimGroup = result.groups.find((group) => group.kind === 'claim')!
+  const candidate = claimGroup.candidate as ClaimCandidate
+  assert.equal(result.groups.filter((group) => group.kind === 'claim').length, 1)
+  const expectedRefs = [...candidate.subjectRefs].sort((left, right) => left.candidateRef.localeCompare(right.candidateRef))
+  assert.deepEqual(candidate.subjectRefs.map((subject) => subject.candidateRef), expectedRefs.map((subject) => subject.candidateRef))
+  assert.deepEqual(new Set(candidate.subjectRefs.map((subject) => subject.mention)), new Set(['深南电路', '胜宏科技']))
+  assert.equal(candidate.subjectRefs.every((subject) => { const entity = result.entityCandidates.get(subject.candidateRef); return entity?.name === subject.mention && entity.entityType === subject.entityType }), true)
+  assert.equal(consolidateExtractions([second, first]).groups.find((group) => group.kind === 'claim')?.candidateId, claimGroup.candidateId)
+})
+
+test('consolidation deduplicates repeated Claim subjects and separates subject sets', () => {
+  const repeated = extractionWithKnowledge('u1', [entity('a', '胜宏科技'), entity('b', '深南电路'), entity('c', '华为')], [], [multiSubjectClaim('same', '产业协同', ['a', 'a']), multiSubjectClaim('ab', '产业协同', ['a', 'b']), multiSubjectClaim('ac', '产业协同', ['a', 'c'])])
+  const result = consolidateExtractions([repeated])
+  const claims = result.groups.filter((group) => group.kind === 'claim').map((group) => group.candidate as ClaimCandidate)
+  assert.equal(claims.length, 3)
+  assert.deepEqual(claims.find((candidate) => candidate.statement === '产业协同' && candidate.subjectRefs.length === 1)?.subjectRefs.map((subject) => subject.candidateRef).length, 1)
+  assert.equal(new Set(claims.map((candidate) => candidate.candidateId)).size, 3)
+})
+
+test('R2-style Unicode regression reaches exact reconciliation with globally unique candidates', async () => {
+  const first = extractionWithKnowledge('u1', [entity('a', '胜宏科技'), entity('b', '深南电路'), entity('c', 'SK海力士'), entity('d', 'SK集团')], [relation('r1', 'competes_with', 'c', 'd')], [multiSubjectClaim('claim-1', '产业链协同增强', ['a', 'b', 'c'])])
+  const second = extractionWithKnowledge('u2', [entity('x', '胜宏科技'), entity('y', '深南电路'), entity('z', 'SK海力士'), entity('w', 'SK集团')], [relation('r2', 'competes_with', 'w', 'z')], [multiSubjectClaim('claim-2', '产业链协同增强', ['z', 'y', 'x'])])
+  const consolidated = consolidateExtractions([first, second])
+  const focused = retrieveFocusedKnowledge(emptyAssets(), consolidated)
+  const entityGroups = focused.groups.filter((group) => group.kind === 'entity')
+  assert.equal(entityGroups.length, 4)
+  assert.equal(new Set(entityGroups.map((group) => group.candidateId)).size, 4)
+  assert.equal(focused.groups.filter((group) => group.kind === 'relation').length, 1)
+  assert.equal(focused.groups.filter((group) => group.kind === 'claim').length, 1)
+  assert.equal(new Set(focused.groups.map((group) => group.candidateId)).size, focused.groups.length)
+  assert.ok(focused.groups.every((group) => group.candidateId !== 'merged-entity-company'))
+  const groups = focused.groups as readonly ResolvedCandidateGroup[]
+  const executor = new MockReasoningExecutor({ capabilities: { maxContextTokens: 10_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 1 }, responses: { reconcileKnowledge: { decisions: groups.map((group) => ({ candidateId: group.candidateId, action: 'create' as const, rationale: 'Unicode regression candidate' })) } } })
+  const reconciled = await new KnowledgeCurationSkill({ executor }).reconcileKnowledge({ candidateGroups: groups, existingKnowledge: [], reportMap, sourceAssessment: reportMap.sourceAssessment })
+  const reconcileInput = executor.calls[0]?.input as { candidateGroups: readonly { candidateId: string }[] }
+  assert.deepEqual(reconcileInput.candidateGroups.map((group) => group.candidateId), groups.map((group) => group.candidateId))
+  assert.equal(reconciled.decisions.length, groups.length)
 })
 
 function emptyExtraction(): ValidatedExtractKnowledgeResult { return { entities: [], relations: [], claims: [], rejected: [], summary: { inputCounts: { entity: 0, relation: 0, claim: 0 }, acceptedCounts: { entity: 0, relation: 0, claim: 0 }, rejectedCounts: { entity: 0, relation: 0, claim: 0 }, rejectionCodes: [] } } }
