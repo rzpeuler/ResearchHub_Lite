@@ -37,7 +37,7 @@
 
 - A production Docling environment has not been exercised in this checkout.
 - A real Codex invocation remains opt-in; deterministic fake-host coverage is present.
-- `RHL-VALIDATION-001` was not executed; validation is blocked by `INPUT_NOT_FOUND` for the required frozen PDF.
+- `RHL-VALIDATION-001` was executed with the exact frozen PDF; CTO validation acceptance remains pending because the primary Workflow was blocked by deterministic ExtractionPlan coverage validation.
 
 ## Current Architecture Baseline
 

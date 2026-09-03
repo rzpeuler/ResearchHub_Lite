@@ -1,0 +1,166 @@
+{
+  "taskId": "RHL-VALIDATION-001-RESUME-001",
+  "validationTask": "RHL-VALIDATION-001",
+  "validationProductBaseline": "f6e2a3062afe784c114b966a8810b9ed0029be2f",
+  "startedAt": "2026-09-03T06:08:24.828Z",
+  "phase": "blocked",
+  "phaseTimestamps": {
+    "baseline_verified": {
+      "startedAt": "2026-09-03T06:08:24.896Z",
+      "completedAt": "2026-09-03T06:08:24.896Z",
+      "durationMs": 0,
+      "status": "passed"
+    },
+    "pdf_verified": {
+      "startedAt": "2026-09-03T06:08:24.896Z",
+      "completedAt": "2026-09-03T06:08:24.926Z",
+      "durationMs": 30,
+      "status": "passed"
+    },
+    "codex_preflight": {
+      "startedAt": "2026-09-03T06:08:24.926Z",
+      "completedAt": "2026-09-03T06:08:30.663Z",
+      "durationMs": 5737,
+      "status": "passed"
+    },
+    "docling_preflight": {
+      "startedAt": "2026-09-03T06:08:30.663Z",
+      "completedAt": "2026-09-03T06:08:30.664Z",
+      "durationMs": 1,
+      "status": "passed"
+    },
+    "docling_parse": {
+      "startedAt": "2026-09-03T06:08:30.664Z",
+      "completedAt": "2026-09-03T06:10:25.855Z",
+      "durationMs": 115191,
+      "status": "passed"
+    },
+    "fresh_kb_ready": {
+      "startedAt": "2026-09-03T06:10:25.856Z",
+      "completedAt": "2026-09-03T06:10:25.860Z",
+      "durationMs": 4,
+      "status": "passed"
+    },
+    "primary_workflow": {
+      "startedAt": "2026-09-03T06:10:25.860Z",
+      "completedAt": "2026-09-03T06:16:54.103Z",
+      "durationMs": 388243,
+      "status": "passed"
+    }
+  },
+  "architectureDocumentsModified": false,
+  "mockReasoningCalls": 0,
+  "baseline": {
+    "productBaseline": "f6e2a3062afe784c114b966a8810b9ed0029be2f",
+    "currentHead": "423cd1bf510ac3772a7e10f0ba8b21528e03f171",
+    "originMain": "423cd1bf510ac3772a7e10f0ba8b21528e03f171",
+    "governanceOnlySinceBaseline": true
+  },
+  "pdf": {
+    "path": "C:\\Users\\Administrator\\Desktop\\ResearchHub_Lite\\20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf",
+    "filename": "20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf",
+    "bytes": 3209114,
+    "sha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "expectedBytes": 3209114,
+    "expectedSha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "exactMatch": true
+  },
+  "codex": {
+    "executable": "codex",
+    "version": "codex-cli 0.152.1",
+    "helpOutputBytes": 3957,
+    "configuredCapabilities": {
+      "maxContextTokens": 100000,
+      "maxOutputTokens": 20000,
+      "structuredOutputSupport": true,
+      "maxConcurrency": 1
+    },
+    "timeoutMs": 900000,
+    "maxOutputChars": 400000,
+    "smoke": {
+      "operation": "understandAndPlan",
+      "operationId": "rhl-validation-001-codex-smoke",
+      "durationMs": 5695,
+      "outputBytes": 14
+    }
+  },
+  "docling": {
+    "pythonExecutable": "C:\\Users\\Administrator\\Desktop\\ResearchHub\\.researchhub-document-parser\\venv\\Scripts\\python.exe",
+    "artifactsPath": "C:\\Users\\Administrator\\Desktop\\ResearchHub\\.researchhub-document-parser\\models",
+    "bridgePath": "C:\\Users\\Administrator\\Desktop\\ResearchHub_Lite\\plugins\\document\\docling\\bridge\\docling_bridge.py",
+    "offline": true,
+    "preferredVersion": "2.116.0",
+    "parser": {
+      "id": "docling-local",
+      "version": "2.116.0"
+    },
+    "stats": {
+      "pageCount": 103,
+      "sectionCount": 159,
+      "blockCount": 1523,
+      "normalizedCharacters": 97784,
+      "tableCount": 44,
+      "headingCount": 158,
+      "listCount": 27,
+      "captionCount": 63
+    },
+    "warningCount": 0
+  },
+  "freshKnowledgeBase": {
+    "knowledgeBaseId": "kb-rhl-validation-001",
+    "root": "C:\\Users\\Administrator\\Desktop\\ResearchHub_Lite\\runtime-data\\knowledge-bases\\kb-rhl-validation-001",
+    "schemaVersion": "0.3",
+    "storageFormatVersion": "1",
+    "revision": 0,
+    "seedObjects": 0,
+    "initialFullValidation": "passed"
+  },
+  "primary": {
+    "status": "blocked",
+    "workflowRunId": "rhl-validation-001-primary",
+    "knowledgeBaseId": "kb-rhl-validation-001",
+    "rawRef": "raw-sha256-998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "documentId": "document-998703cef1023005",
+    "candidateCounts": {},
+    "rejectedCandidateCount": 0,
+    "reviewItemCount": 0,
+    "reviewSummary": {
+      "total": 0,
+      "rootCount": 0,
+      "dependencyCount": 0,
+      "byCategory": {
+        "invalid_reference": 0,
+        "invalid_semantics": 0,
+        "relation_cardinality": 0,
+        "schema_gap": 0,
+        "theme_creation": 0,
+        "theme_ambiguity": 0,
+        "reconciliation_review": 0,
+        "other": 0
+      },
+      "byCandidateKind": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0,
+        "workflow_level": 0
+      },
+      "samplesByCategory": {
+        "invalid_reference": [],
+        "invalid_semantics": [],
+        "relation_cardinality": [],
+        "schema_gap": [],
+        "theme_creation": [],
+        "theme_ambiguity": [],
+        "reconciliation_review": [],
+        "other": []
+      }
+    },
+    "unitCount": 0,
+    "excludedBlockCount": 0,
+    "unitSummaries": []
+  },
+  "extractionPlan": null,
+  "validationOutcome": "Primary workflow blocked",
+  "error": "Primary workflow blocked: Deterministic plan validation failed: document blocks are neither primary-covered nor explicitly excluded: block-000001, block-000002, block-000003, block-000004, block-000005, block-000006, block-000007, block-000008, block-000009, block-000010, block-000011, block-000012, block-000013, block-000028, block-000030, block-000031, block-000032, block-000033, block-000034, block-000035, block-000036, block-000037, block-000038, block-000039, block-000040, block-000041, block-000042, block-000043, block-000044, block-000045, block-000046, block-000047, block-000048, block-000049, block-000050, block-000051, block-000052, block-000053, block-000054, block-000055, block-000056, block-000057, block-000058, block-000059, block-000060, block-000061, block-000065, block-000066, block-000068, block-000069, block-000070, block-000071, block-000075, block-000076, block-000077, block-000078, block-000079, block-000080, block-000081, block-000082, block-000083, block-000084, block-000085, block-00008",
+  "completedAt": "2026-09-03T06:16:54.103Z"
+}
