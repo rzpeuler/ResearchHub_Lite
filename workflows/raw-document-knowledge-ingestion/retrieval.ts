@@ -1,10 +1,10 @@
-import { normalizeKnowledgeSlug } from '../../knowledge/registry/id-allocation.ts'
+import { normalizeSemanticText } from '../../knowledge/registry/id-allocation.ts'
 import { KnowledgeIndexV03 } from '../../knowledge/query/index.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
 import type { EntityCandidate, RelationCandidate, ClaimCandidate } from '../../skills/knowledge-curation/contracts.ts'
 import type { ConsolidatedExtraction } from './consolidation.ts'
 
-function norm(value: string): string { return normalizeKnowledgeSlug(value) }
+function norm(value: string): string { return normalizeSemanticText(value) }
 function exactEntity(index: KnowledgeIndexV03, candidate: EntityCandidate) { const candidateNames = new Set([candidate.name, ...(candidate.aliases ?? [])].map(norm)); return [...index.entities.values()].filter((entity) => entity.type === candidate.entityType && [entity.name, ...(entity.aliases ?? [])].some((name) => candidateNames.has(norm(name)))).sort((a, b) => a.id.localeCompare(b.id)) }
 function endpointMatches(index: KnowledgeIndexV03, extraction: ConsolidatedExtraction, candidate: RelationCandidate): { sourceIds: Set<string>; targetIds: Set<string> } {
   const source = extraction.entityCandidates.get(candidate.source.candidateRef)

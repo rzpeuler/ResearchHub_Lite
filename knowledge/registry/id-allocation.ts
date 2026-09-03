@@ -8,6 +8,11 @@ export function normalizeKnowledgeSlug(value: string): string {
   return ascii || `item-${semanticHash(value).slice(0, 16)}`
 }
 
+/** Normalize text for semantic equality without deleting meaningful Unicode. */
+export function normalizeSemanticText(value: string): string {
+  return value.normalize('NFKC').trim().replace(/\s+/gu, ' ').toLowerCase()
+}
+
 export function semanticHash(value: unknown): string {
   const copy = stripDurableIdentity(value)
   return createHash('sha256').update(canonicalSerialize(copy)).digest('hex')
@@ -21,8 +26,11 @@ export function allocateEntityId(type: string, name: string, discriminator?: unk
   const namespace = 'entity'
   const base = normalizeKnowledgeSlug(name)
   const typedBase = ['investment_theme', 'industry', 'company', 'product', 'technology'].includes(type) ? `${type}-${base}` : `entity-${base}`
-  if (discriminator === undefined) return `${namespace}:${typedBase}`
-  return `${namespace}:${typedBase}-${semanticHash(discriminator).slice(0, 8)}`
+  const semanticName = normalizeSemanticText(name)
+  const mixedScript = /[^\u0000-\u007F]/u.test(semanticName) && /[A-Za-z0-9]/u.test(base)
+  const identityBase = mixedScript ? `${typedBase}-${semanticHash({ entityType: type, normalizedSemanticName: semanticName }).slice(0, 8)}` : typedBase
+  if (discriminator === undefined) return `${namespace}:${identityBase}`
+  return `${namespace}:${identityBase}-${semanticHash(discriminator).slice(0, 8)}`
 }
 
 export function allocateSourceId(input: { sourceUrl?: string | null; publishedAt?: string | null; title?: string | null; rawRef: string }): string {

@@ -27,6 +27,7 @@ function input(groups: readonly ResolvedCandidateGroup[], decisions: readonly Re
 function decisionsFor(groups: readonly ResolvedCandidateGroup[], action: ReconciliationDecision['action']): ReconciliationDecision[] { return groups.map((group) => ({ candidateId: group.candidateId, action, rationale: 'test' })) }
 function assetsWithEntities(values: Record<string, unknown>[], relations: Record<string, unknown>[] = [], claims: Record<string, unknown>[] = []): KnowledgeAssetCollectionV03 { return { ...emptyAssets(), entities: values.map((value) => loaded('entity', value) as never), relations: relations.map((value) => loaded('relation', value) as never), claims: claims.map((value) => loaded('claim', value) as never) } }
 function extraction(unitId: string, candidate: ClaimCandidate, description = 'same'): { unit: { unitId: string; proposedUnitId: string; topic: string; semanticPurpose: string; primaryRefs: []; contextRefs: []; primaryBlockIds: string[]; contextBlockIds: string[] }; result: ValidatedExtractKnowledgeResult } { return { unit: { unitId, proposedUnitId: unitId, topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }, result: { entities: [entity('e', 'Entity', 'company', { description, evidenceBlockRefs: [] })], relations: [], claims: [candidate], rejected: [], summary: { inputCounts: { entity: 1, relation: 0, claim: 1 }, acceptedCounts: { entity: 1, relation: 0, claim: 1 }, rejectedCounts: { entity: 0, relation: 0, claim: 0 }, rejectionCodes: [] } } } }
+function extractionWithKnowledge(unitId: string, entities: readonly EntityCandidate[], relations: readonly RelationCandidate[] = [], claims: readonly ClaimCandidate[] = []): { unit: { unitId: string; proposedUnitId: string; topic: string; semanticPurpose: string; primaryRefs: []; contextRefs: []; primaryBlockIds: string[]; contextBlockIds: string[] }; result: ValidatedExtractKnowledgeResult } { return { unit: { unitId, proposedUnitId: unitId, topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }, result: { entities: [...entities], relations: [...relations], claims: [...claims], rejected: [], summary: { inputCounts: { entity: entities.length, relation: relations.length, claim: claims.length }, acceptedCounts: { entity: entities.length, relation: relations.length, claim: claims.length }, rejectedCounts: { entity: 0, relation: 0, claim: 0 }, rejectionCodes: [] } } } }
 
 test('planner duplicate Entity requires one exact target and never creates', () => {
   const group = { candidateId: 'e', kind: 'entity' as const, candidate: entity('e', 'Acme'), existingKnowledge: [{ id: 'entity:acme', type: 'company', name: 'Acme', lifecycle: { status: 'active' } }] }
@@ -190,6 +191,43 @@ test('consolidation emits a review constraint for conflicting Relation attribute
   assert.equal(result.reviewConstraints.some((item) => item.reason.includes('Relation attributes conflict')), true)
 })
 
+test('consolidation keeps distinct Chinese and mixed-script entity identities', () => {
+  const result = consolidateExtractions([extractionWithKnowledge('u1', [entity('cn-1', '胜宏科技'), entity('cn-2', '深南电路'), entity('mixed-1', 'SK海力士'), entity('mixed-2', 'SK集团')])])
+  const entities = result.groups.filter((group) => group.kind === 'entity')
+  assert.equal(entities.length, 4)
+  assert.equal(new Set(entities.map((group) => group.candidateId)).size, 4)
+  assert.ok(entities.every((group) => !group.candidateId.endsWith('merged-entity-company')))
+})
+
+test('consolidation merges same Chinese entities across units and retains aliases', () => {
+  const first = entity('first', 'SK海力士', 'company', { aliases: ['海力士'], evidenceBlockRefs: ['block-1'] })
+  const second = entity('second', ' SK海力士 ', 'company', { aliases: ['SK Hynix'], evidenceBlockRefs: ['block-2'] })
+  const result = consolidateExtractions([extractionWithKnowledge('u1', [first]), extractionWithKnowledge('u2', [second])])
+  const entities = result.groups.filter((group) => group.kind === 'entity')
+  assert.equal(entities.length, 1)
+  assert.equal(result.candidateAliases.get('u1::first'), result.candidateAliases.get('u2::second'))
+  assert.deepEqual((entities[0]?.candidate as EntityCandidate).aliases, ['SK Hynix', '海力士'])
+  assert.deepEqual((entities[0]?.candidate as EntityCandidate).evidenceBlockRefs, ['block-1', 'block-2'])
+})
+
+test('consolidation resolves Chinese relation endpoints without self-collapse', () => {
+  const firstRelation = relation('r1', 'competes_with', 'a', 'b')
+  const secondRelation = relation('r2', 'offers_product', 'a', 'p')
+  const reverseRelation = relation('r2', 'competes_with', 'y', 'x')
+  const first = extractionWithKnowledge('u1', [entity('a', 'SK海力士'), entity('b', 'SK集团'), entity('p', '昇腾芯片', 'product')], [firstRelation, secondRelation], [claim('c1', '2026年收入增长', 'a'), claim('c2', '2026年利润增长', 'a')])
+  const second = extractionWithKnowledge('u2', [entity('x', 'SK海力士'), entity('y', 'SK集团')], [reverseRelation], [claim('c3', ' 2026年收入增长 ', 'x')])
+  const result = consolidateExtractions([first, second])
+  const relations = result.groups.filter((group) => group.kind === 'relation')
+  const claims = result.groups.filter((group) => group.kind === 'claim')
+  assert.equal(relations.length, 2)
+  assert.equal(claims.length, 2)
+  assert.ok(relations.every((group) => (group.candidate as RelationCandidate).source.candidateRef !== (group.candidate as RelationCandidate).target.candidateRef))
+  assert.equal(new Set(result.groups.map((group) => group.candidateId)).size, result.groups.length)
+  assert.ok(result.groups.every((group) => !group.candidateId.includes('merged-entity-company')))
+  const reversed = consolidateExtractions([second, first])
+  assert.deepEqual(reversed.groups.map((group) => group.candidateId), result.groups.map((group) => group.candidateId))
+})
+
 function emptyExtraction(): ValidatedExtractKnowledgeResult { return { entities: [], relations: [], claims: [], rejected: [], summary: { inputCounts: { entity: 0, relation: 0, claim: 0 }, acceptedCounts: { entity: 0, relation: 0, claim: 0 }, rejectedCounts: { entity: 0, relation: 0, claim: 0 }, rejectionCodes: [] } } }
 const extractionUnits = [{ unitId: 'unit-001', proposedUnitId: 'one', topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }, { unitId: 'unit-002', proposedUnitId: 'two', topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] }]
 const extractionConfig = { maxExtractionUnits: 64, maxPlanAttempts: 2, maxExtractionAttempts: 3, maxConcurrency: 1 }
@@ -218,6 +256,21 @@ test('focused retrieval finds reverse-oriented symmetric Relations', () => {
   const groups = [{ candidateId: 'a', kind: 'entity' as const, candidate: a }, { candidateId: 'b', kind: 'entity' as const, candidate: b }, { candidateId: 'r', kind: 'relation' as const, candidate: relation('r', 'competes_with', 'a', 'b') }]
   const result = retrieveFocusedKnowledge(assets, { groups, reviewConstraints: [], rejected: [], candidateCounts: {}, candidateAliases: new Map(), entityCandidates: new Map([['a', a], ['b', b]]) })
   assert.equal(result.groups.find((group) => group.candidateId === 'r')?.existingKnowledge?.length, 1)
+})
+
+test('focused retrieval uses exact Unicode name and alias matching', () => {
+  const hynix = entity('hynix', 'SK海力士')
+  const group = { candidateId: 'hynix', kind: 'entity' as const, candidate: hynix }
+  const assets = assetsWithEntities([
+    { id: 'entity:hynix', type: 'company', name: 'SK海力士', lifecycle: { status: 'active' } },
+    { id: 'entity:sk-group', type: 'company', name: 'SK集团', lifecycle: { status: 'active' } },
+    { id: 'entity:alias', type: 'company', name: '其他名称', aliases: ['海力士'], lifecycle: { status: 'active' } },
+  ])
+  const exact = retrieveFocusedKnowledge(assets, { groups: [group], reviewConstraints: [], rejected: [], candidateCounts: {}, candidateAliases: new Map(), entityCandidates: new Map([['hynix', hynix]]) })
+  assert.deepEqual(exact.groups[0]?.existingKnowledge?.map((item) => (item as { id: string }).id), ['entity:hynix'])
+  const aliasCandidate = entity('alias-candidate', '海力士')
+  const alias = retrieveFocusedKnowledge(assets, { groups: [{ candidateId: 'alias-candidate', kind: 'entity', candidate: aliasCandidate }], reviewConstraints: [], rejected: [], candidateCounts: {}, candidateAliases: new Map(), entityCandidates: new Map([['alias-candidate', aliasCandidate]]) })
+  assert.deepEqual(alias.groups[0]?.existingKnowledge?.map((item) => (item as { id: string }).id), ['entity:alias'])
 })
 
 test('ReviewSummary has the frozen zero shape', () => {

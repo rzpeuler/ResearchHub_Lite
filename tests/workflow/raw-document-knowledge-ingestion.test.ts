@@ -10,6 +10,7 @@ import { ExtractionPlanValidationError, validateExtractionPlan } from '../../wor
 import { createKnowledgeBase, readManifest, removeKnowledgeBase } from '../knowledge/helpers.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { KnowledgeBaseLoaderV03 } from '../../knowledge/storage/loader.ts'
+import { hashKnowledgeObject } from '../../knowledge/storage/canonical-hash.ts'
 
 const capabilities: ReasoningCapabilities = { maxContextTokens: 100_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 4 }
 const reportMap = { sourceAssessment: { summary: 'Fixture source', sourceType: 'unknown' as const, reliability: 'unknown' as const }, researchScope: 'Fixture scope', majorTopics: [], majorEntityMentions: [], majorConclusions: [], sectionSemantics: [{ sectionRef: 'section-0001', summary: 'Fixture section' }], semanticDependencies: [], themeHypotheses: [], uncertainty: [] }
@@ -26,8 +27,8 @@ class FixtureExecutor implements ReasoningExecutor {
       const input = request.input as { unit: { proposedUnitId: string }; blocks: readonly { blockId: string }[] }
       return { operation: request.operation, output: this.extract(input.unit.proposedUnitId, input.blocks.map((block) => block.blockId)) }
     }
-    const input = request.input as { candidateGroups: readonly { candidateId: string }[] }
-    return { operation: request.operation, output: { decisions: input.candidateGroups.map((group) => { const review = group.candidateId === this.reviewCandidate || this.reviewCandidate === 'all'; const reject = this.reviewCandidate === 'reject-all' || (this.reviewCandidate === 'reject-beta' && group.candidateId.startsWith('merged-entity-') && group.candidateId.includes('beta')); return { candidateId: group.candidateId, action: reject ? 'reject' : review ? 'user_review' : 'create', rationale: reject ? 'Rejected fixture candidate' : review ? 'Ambiguous fixture candidate' : 'Fixture candidate is grounded' } }) } }
+    const input = request.input as { candidateGroups: readonly { candidateId: string; candidate?: { name?: string } }[] }
+    return { operation: request.operation, output: { decisions: input.candidateGroups.map((group) => { const review = group.candidateId === this.reviewCandidate || this.reviewCandidate === 'all'; const reject = this.reviewCandidate === 'reject-all' || (this.reviewCandidate === 'reject-beta' && group.candidate?.name === 'Beta'); return { candidateId: group.candidateId, action: reject ? 'reject' : review ? 'user_review' : 'create', rationale: reject ? 'Rejected fixture candidate' : review ? 'Ambiguous fixture candidate' : 'Fixture candidate is grounded' } }) } }
   }
 }
 
@@ -234,7 +235,7 @@ test('maxPlanAttempts is bounded and invalid configuration does not invoke reaso
 test('review isolation commits safe independent candidates and excludes dependent relations/claims', async () => {
   const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-review' })
   try {
-    const reviewId = 'merged-entity-company-alpha'
+    const reviewId = `merged-entity-${hashKnowledgeObject({ entityType: 'company', normalizedSemanticName: 'alpha' }).slice(7, 23)}`
     const executor = new FixtureExecutor(plan([unit('unit-1', [{ kind: 'section', sectionId: 'section-0001' }])]), (_unitId, blocks) => extraction(blocks, [{ id: 'alpha', type: 'company', name: 'Alpha' }, { id: 'beta', type: 'product', name: 'Beta' }]), reviewId)
     const result = await runRawDocumentKnowledgeIngestion({ handle: await new KnowledgeBaseRegistry().mount(root), documentInput: { type: 'text', text: 'Alpha makes Beta.\n\nBeta is a product.', originalFilename: 'review.txt', mediaType: 'text/plain' }, skill: new KnowledgeCurationSkill({ executor }), workflowRunId: 'run-review' })
     assert.equal(result.status, 'completed_with_review')

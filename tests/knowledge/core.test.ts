@@ -8,7 +8,7 @@ import { KnowledgeBaseLoaderV03 } from '../../knowledge/storage/loader.ts'
 import { KnowledgeError } from '../../knowledge/storage/errors.ts'
 import { canonicalSerialize, hashKnowledgeObject } from '../../knowledge/storage/canonical-hash.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
-import { allocateEntityId, allocateSourceId } from '../../knowledge/registry/id-allocation.ts'
+import { allocateEntityId, allocateSourceId, normalizeSemanticText } from '../../knowledge/registry/id-allocation.ts'
 import { createKnowledgeBase, readManifest, removeKnowledgeBase } from './helpers.ts'
 
 test('Raw identity is content-derived and archival is immutable/idempotent', async () => {
@@ -33,6 +33,22 @@ test('canonical serialization orders keys and ID allocation is deterministic', (
   assert.equal(hashKnowledgeObject({ a: 1, b: 2 }), 'sha256:' + createHash('sha256').update('{"a":1,"b":2}').digest('hex'))
   assert.equal(allocateEntityId('company', 'Acme'), allocateEntityId('company', 'Acme'))
   assert.equal(allocateSourceId({ rawRef: 'raw-sha256-' + 'a'.repeat(64) }), allocateSourceId({ rawRef: 'raw-sha256-' + 'a'.repeat(64) }))
+})
+
+test('semantic normalization preserves Unicode and normalizes compatible text', () => {
+  assert.equal(normalizeSemanticText('  ＳＫ海力士\t  集团  '), 'sk海力士 集团')
+  assert.notEqual(normalizeSemanticText('胜宏科技'), normalizeSemanticText('深南电路'))
+  assert.notEqual(normalizeSemanticText('SK海力士'), normalizeSemanticText('SK集团'))
+  assert.match(normalizeSemanticText('胜宏科技'), /胜宏科技/u)
+})
+
+test('canonical Entity IDs preserve ASCII compatibility and disambiguate Unicode names', () => {
+  assert.equal(allocateEntityId('company', 'NVIDIA Corp'), 'entity:company-nvidia-corp')
+  assert.equal(allocateEntityId('company', 'NVIDIA Corp'), allocateEntityId('company', 'NVIDIA Corp'))
+  assert.notEqual(allocateEntityId('company', '胜宏科技'), allocateEntityId('company', '深南电路'))
+  assert.notEqual(allocateEntityId('company', 'SK海力士'), allocateEntityId('company', 'SK集团'))
+  assert.equal(allocateEntityId('company', 'SK海力士'), allocateEntityId('company', 'SK海力士'))
+  assert.match(allocateEntityId('company', 'SK海力士'), /^entity:[a-z0-9-]+$/)
 })
 
 test('v0.3 loader resolves registry assets and rejects unsupported or unsafe storage', async () => {

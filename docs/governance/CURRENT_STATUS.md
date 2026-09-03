@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion Implemented — RHL-MIGRATION-005 Independently CTO Accepted / Closed**
+**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion Implemented — Unicode Candidate Identity Hardening Implemented / CTO Acceptance Pending**
 
 ## Completed
 
@@ -32,6 +32,7 @@
 - Deterministic Schema 0.3 Knowledge validation and ChangeSet validation implemented under `knowledge/validation/` in `RHL-MIGRATION-005`.
 - Raw Document → Canonical Knowledge deterministic Workflow implemented under `workflows/raw-document-knowledge-ingestion/`, including bounded extraction, consolidation, focused retrieval, review isolation, one ChangeSet, staged Writer validation, reload validation, and replay handling.
 - `RHL-MIGRATION-005` implementation plus `RHL-MIGRATION-005-FIX-002`, `RHL-MIGRATION-005-FIX-003`, `RHL-MIGRATION-005-FIX-004`, `RHL-MIGRATION-005-FIX-005`, and `RHL-MIGRATION-005-FIX-006` are complete; `RHL-MIGRATION-005` is independently CTO accepted / closed.
+- `RHL-FIX-IDENTITY-001` is implemented: Unicode-safe semantic identity, deterministic mixed-script canonical IDs, collision-safe consolidation, exact Unicode retrieval, and pre-reconciliation candidate uniqueness checks are covered by offline tests; CTO acceptance is pending.
 
 ## Current Limitations
 
@@ -39,7 +40,7 @@
 - A real Codex invocation remains opt-in; deterministic fake-host coverage is present.
 - `RHL-VALIDATION-001` was executed with the exact frozen PDF; it was blocked at deterministic ExtractionPlan coverage validation and remains historical evidence.
 - `RHL-FIX-PLAN-001` was independently CTO accepted / closed.
-- `RHL-VALIDATION-001-R2` was executed against the accepted product baseline and blocked at reconciliation because candidate `merged-entity-company` received more than one decision; CTO validation acceptance remains pending.
+- `RHL-VALIDATION-001-R2` was executed against the accepted product baseline and blocked at reconciliation because candidate `merged-entity-company` received more than one decision; this remains historical evidence and is not marked successful.
 
 ## Current Architecture Baseline
 
@@ -54,4 +55,4 @@
 
 ## Next Pending After CTO Acceptance
 
-No subsequent migration task is authorized until CTO acceptance of `RHL-VALIDATION-001`.
+No real R3 validation is authorized until CTO acceptance of `RHL-FIX-IDENTITY-001`.

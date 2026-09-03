@@ -160,6 +160,11 @@ export async function runRawDocumentKnowledgeIngestion(input: RawDocumentKnowled
     const consolidated = consolidateExtractions(extraction.results)
     const assets = await new KnowledgeBaseLoaderV03(registry).load(handle)
     const focused = retrieveFocusedKnowledge(assets, consolidated)
+    const candidateIds = new Set<string>()
+    for (const group of focused.groups) {
+      if (candidateIds.has(group.candidateId)) throw new Error(`Duplicate consolidated candidateId before reconciliation: ${group.candidateId}`)
+      candidateIds.add(group.candidateId)
+    }
     const reconciliation = await input.skill.reconcileKnowledge({ candidateGroups: focused.groups as readonly ResolvedCandidateGroup[], existingKnowledge: focused.groups.flatMap((group) => group.existingKnowledge ?? []), reportMap: planned.reportMap, sourceAssessment: planned.reportMap.sourceAssessment, instructions: input.instructions })
     const planning = planKnowledgeChangeSet({ knowledgeBaseId: handle.knowledgeBaseId, baseRevision: handle.revision, workflowRunId: input.workflowRunId, rawRef, rawManifest: archived.manifest, documentId: document.documentId, document: { metadata: document.metadata }, reportMap: planned.reportMap, plan: acceptedPlan, groups: focused.groups as readonly ResolvedCandidateGroup[], decisions: reconciliation.decisions, assets, consolidationReviews: consolidated.reviewConstraints })
     const reviewSummary = normalizeReviewSummary({ extractionRejected: extraction.results.flatMap((item) => item.result.rejected), consolidationReviews: consolidated.reviewConstraints, reconciliationDecisions: reconciliation.decisions, plannerReviewItems: planning.reviewItems, candidateGroups: focused.groups as readonly ResolvedCandidateGroup[] })

@@ -117,6 +117,20 @@ test('reconcileKnowledge requires exactly one decision for every supplied candid
   assert.equal(result.decisions[0]?.action, 'create')
 })
 
+test('reconcileKnowledge rejects duplicate decisions for one candidate', async () => {
+  const candidate = { candidateId: 'alpha', entityType: 'company' as const, name: 'Alpha', evidenceBlockRefs: ['block-1'], reason: 'named' }
+  const input = { candidateGroups: [{ candidateId: 'alpha', kind: 'entity' as const, candidate }], existingKnowledge: [], reportMap, sourceAssessment: { summary: 'test' } }
+  const executor = new MockReasoningExecutor({ capabilities, responses: { reconcileKnowledge: { decisions: [{ candidateId: 'alpha', action: 'create', rationale: 'first' }, { candidateId: 'alpha', action: 'reject', rationale: 'duplicate' }] } } })
+  await assert.rejects(() => new KnowledgeCurationSkill({ executor }).reconcileKnowledge(input), (error: unknown) => error instanceof KnowledgeCurationError && error.code === 'reconciliation_invalid' && error.message.includes('more than one decision'))
+})
+
+test('reconcileKnowledge rejects missing candidate decisions', async () => {
+  const candidate = { candidateId: 'alpha', entityType: 'company' as const, name: 'Alpha', evidenceBlockRefs: ['block-1'], reason: 'named' }
+  const input = { candidateGroups: [{ candidateId: 'alpha', kind: 'entity' as const, candidate }], existingKnowledge: [], reportMap, sourceAssessment: { summary: 'test' } }
+  const executor = new MockReasoningExecutor({ capabilities, responses: { reconcileKnowledge: { decisions: [] } } })
+  await assert.rejects(() => new KnowledgeCurationSkill({ executor }).reconcileKnowledge(input), (error: unknown) => error instanceof KnowledgeCurationError && error.code === 'reconciliation_invalid' && error.message.includes('exactly one decision'))
+})
+
 test('every operation derives trusted Schema Context internally and ignores caller-shaped overrides', async () => {
   const executor = new MockReasoningExecutor({ capabilities, responses: { extractKnowledge: { entities: [], relations: [], claims: [] } } })
   const shapedOverride = { slice: 'knowledge_extraction', relationContracts: [{ relationType: 'offers_product', allowedSourceTypes: ['industry'], allowedTargetTypes: ['industry'] }] }
