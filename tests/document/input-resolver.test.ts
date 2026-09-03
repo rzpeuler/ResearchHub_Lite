@@ -15,6 +15,16 @@ test('text input preserves raw bytes and produces Sections/Blocks, not the retir
   assert.deepEqual(result.document.blocks.map((block) => block.order), [1, 2, 3])
 })
 
+test('document acquisition and parsing are independently callable', async () => {
+  const resolver = new DocumentInputResolver()
+  const acquired = await resolver.acquire({ type: 'text', text: 'Acquired text', originalFilename: 'acquired.txt', documentId: 'doc-acquired' })
+  assert.equal(acquired.filename, 'acquired.txt')
+  assert.equal(acquired.documentId, 'doc-acquired')
+  const document = await resolver.parse(acquired)
+  assert.equal(document.documentId, 'doc-acquired')
+  assert.equal(document.normalizedText, 'Acquired text')
+})
+
 test('file input resolves media type and missing references use Document Plugin errors', async () => {
   const path = join(process.cwd(), 'tests', 'document', 'resolver-fixture.md')
   await writeFile(path, '# Title\n\nBody')

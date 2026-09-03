@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Knowledge Core + Document + Reasoning/Curation Contracts Implemented — CTO Review Pending**
+**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion Implemented — CTO Review Pending**
 
 ## Completed
 
@@ -29,14 +29,14 @@
   `c85a222a178280a0b11b4a5a049554c485ea0cc8`.
 - StructuredDocument and Document Plugin / Docling adaptation implemented in `RHL-MIGRATION-003`.
 - Runtime-neutral ReasoningExecutor, isolated Codex adapter, Mock executor, and Knowledge Curation Skill implemented in `RHL-MIGRATION-004`; CTO acceptance pending.
+- Deterministic Schema 0.3 Knowledge validation and ChangeSet validation implemented under `knowledge/validation/` in `RHL-MIGRATION-005`.
+- Raw Document → Canonical Knowledge deterministic Workflow implemented under `workflows/raw-document-knowledge-ingestion/`, including bounded extraction, consolidation, focused retrieval, review isolation, one ChangeSet, staged Writer validation, reload validation, and replay handling.
 
 ## Current Limitations
 
-- Full Knowledge validation, ChangeSet validation, and staged-state validation have not yet been migrated.
 - A production Docling environment has not been exercised in this checkout.
 - A real Codex invocation remains opt-in; deterministic fake-host coverage is present.
-- New deterministic ingestion Workflow is not implemented.
-- Lite real Raw → Knowledge Base E2E validation has not yet been run.
+- Architecture acceptance of RHL-MIGRATION-005 remains pending independent review.
 
 ## Current Architecture Baseline
 
@@ -51,6 +51,4 @@
 
 ## Next Pending After CTO Acceptance
 
-**RHL-MIGRATION-005 — Knowledge Validation + Deterministic Ingestion Workflow**
-
-The next task must add deterministic Knowledge validation and Workflow control without moving routing, retries, acceptance, or persistence into the ReasoningExecutor or Skill.
+No subsequent migration task is authorized until CTO acceptance of RHL-MIGRATION-005.

@@ -96,3 +96,10 @@ export interface ResolvedDocumentInput {
   readonly mediaType: string
   readonly document: StructuredDocument
 }
+
+export interface AcquiredDocumentInput {
+  readonly bytes: Uint8Array
+  readonly filename: string
+  readonly mediaType: string
+  readonly documentId?: string
+}

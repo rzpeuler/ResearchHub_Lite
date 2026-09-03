@@ -18,6 +18,10 @@ export class KnowledgeCurationSkill {
     if (!options?.executor || typeof options.executor.execute !== 'function' || typeof options.executor.capabilities !== 'function') throw new KnowledgeCurationError('reasoning_failed', 'KnowledgeCurationSkill requires an injected ReasoningExecutor')
   }
 
+  capabilities() {
+    return validateReasoningCapabilities(this.options.executor.capabilities())
+  }
+
   async understandAndPlan(input: UnderstandAndPlanInput): Promise<UnderstandAndPlanOutput> {
     const schemaContext = buildCurationSchemaContext('understand_and_plan')
     const capabilities = validateReasoningCapabilities(this.options.executor.capabilities())
