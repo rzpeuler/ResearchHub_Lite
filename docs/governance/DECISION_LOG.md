@@ -8,7 +8,17 @@ This log records only architecture/product decisions that materially constrain f
 
 **Status:** Implemented / CTO acceptance pending
 
-R5 remains historical `PRODUCT_DEFECT` evidence because three Claim temporal values passed the Candidate boundary and failed deterministic Schema 0.3 ChangeSet validation before Writer. The remediation aligns ClaimCandidate temporal validation with the existing canonical `Date.parse`-based date-like predicate, keeps semantic periods in `scope.label`, and adds a narrow Planner guard that isolates any bypassed malformed Claim as Review. Schema 0.3 vocabulary and canonical semantics are unchanged; R5 evidence remains immutable and no real R6 is authorized by this implementation.
+R5 remains historical `PRODUCT_DEFECT` evidence because three Claim temporal values passed the Candidate boundary and failed deterministic Schema 0.3 ChangeSet validation before Writer. The remediation aligns ClaimCandidate temporal validation with the existing canonical `Date.parse`-based date-like predicate, keeps semantic periods in `scope.label`, and adds a narrow Planner guard that isolates any bypassed malformed Claim as Review. Schema 0.3 vocabulary and canonical semantics are unchanged; R5 evidence remains immutable. The separate R6 validation result is recorded below.
+
+---
+
+## RHL-VALIDATION-001-R6 — 2026-09-04
+
+**Status:** Executed / PRODUCT_DEFECT / CTO acceptance pending
+
+R6 used the exact frozen PDF, a fresh `kb-rhl-validation-001-r6`, real Docling `2.116.0`, and real Codex CLI `0.152.1` with explicit `gpt-5.6-luna` and `high`. The accepted plan contained 21 ExtractionUnits, all 21 units completed, and all 23 recorded real reasoning calls passed without timeout. Extraction produced 582 Entity, 513 Relation, and 269 Claim candidates, with 8 deterministic rejections.
+
+The run stopped before Writer at deterministic Schema 0.3 ChangeSet validation because `InvestmentTheme must reference exactly one registered ThemeGroup`. This is recorded as `PRODUCT_DEFECT`; it is distinct from the historical R5 temporal-scope defect. Fresh-KB revision remained 0, Writer invocation was zero, and no replay ran. Historical R1-R5 and timeout-smoke evidence remain immutable. No architecture decision is changed, and no production remediation is included in the validation task.
 
 ---
 
