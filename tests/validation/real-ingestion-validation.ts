@@ -33,6 +33,8 @@ const r3EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-r3-rea
 const r4EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-r4-real-e2e.json')
 const r4SummaryPath = resolve(validationEvidenceDir, 'RHL_VALIDATION_001_R4_SUMMARY.md')
 const configuredCapabilities: ReasoningCapabilities = { maxContextTokens: 100000, maxOutputTokens: 20000, structuredOutputSupport: true, maxConcurrency: 1 }
+const requestedModel = 'gpt-5.6-luna'
+const requestedReasoningEffort = 'high' as const
 const validationTimeoutMs = 900000
 const validationMaxOutputChars = 400000
 
@@ -391,10 +393,10 @@ async function main(): Promise<void> {
         const help = await commandOutput('codex', ['exec', '--help'])
         helpBytes = Buffer.byteLength(help.stdout, 'utf8')
       } catch (error) { throw new ValidationFailure(`CODEX_PREFLIGHT_BLOCKED: ${errorText(error).slice(0, 500)}`) }
-      const inner = new CodexReasoningExecutor({ capabilities: configuredCapabilities, timeoutMs: validationTimeoutMs, maxOutputChars: validationMaxOutputChars })
+      const inner = new CodexReasoningExecutor({ capabilities: configuredCapabilities, timeoutMs: validationTimeoutMs, maxOutputChars: validationMaxOutputChars, model: requestedModel, reasoningEffort: requestedReasoningEffort })
       const smokeStarted = Date.now()
       const smoke = await inner.execute({ operation: 'understandAndPlan', instruction: 'Return a JSON object with one key named smoke and value ok. Return no other text.', input: { smoke: true }, outputContract: { type: 'object' }, metadata: { executionId: 'rhl-validation-001-codex-smoke' } })
-      evidence.codex = { executable: 'codex', version, helpOutputBytes: helpBytes, configuredCapabilities, timeoutMs: validationTimeoutMs, maxOutputChars: validationMaxOutputChars, smoke: { operation: smoke.operation, operationId: smoke.operationId, durationMs: Date.now() - smokeStarted, outputBytes: Buffer.byteLength(String(smoke.rawOutput ?? smoke.output), 'utf8') } }
+      evidence.codex = { executable: 'codex', version, helpOutputBytes: helpBytes, configuredCapabilities, timeoutMs: validationTimeoutMs, maxOutputChars: validationMaxOutputChars, reasoningRuntime: inner.runtimeMetadata(), globalConfigDependency: 'none for model/reasoning effort; both are explicit invocation args', smoke: { operation: smoke.operation, operationId: smoke.operationId, durationMs: Date.now() - smokeStarted, outputBytes: Buffer.byteLength(String(smoke.rawOutput ?? smoke.output), 'utf8') } }
       await checkpoint()
       return inner
     })

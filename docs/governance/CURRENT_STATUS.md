@@ -35,6 +35,8 @@
 - `RHL-FIX-IDENTITY-001` and `RHL-FIX-IDENTITY-001-FIX-001` are independently CTO accepted / closed: Unicode-safe semantic identity, deterministic mixed-script canonical IDs, collision-safe consolidation, exact Unicode retrieval, and pre-reconciliation candidate uniqueness checks are covered by offline tests.
 - `RHL-REFACTOR-KNOWLEDGE-RESOLUTION-001` is implementation-complete pending CTO independent acceptance: full-set post-extraction Reconciliation was retired and replaced by deterministic Entity Binding, Entity/Relation/Claim Diff, bounded semantic cases, deterministic ResolutionIntent policy/barrier, and ResolutionIntent-driven ChangeSet planning.
 - `RHL-REFACTOR-KNOWLEDGE-RESOLUTION-001-FIX-001` is implemented pending CTO independent acceptance: semantic cases now carry bounded real document excerpts and source projections, Entity plausible retrieval overflows to Review without truncation, semantic case/retry accounting is separate, durable-ref token leakage is rejected recursively, and the mixed fresh-KB scale regression is covered offline.
+- `RHL-FIX-REASONING-TIMEOUT-001` is implemented: Codex process-tree termination and wall-clock timeout enforcement are covered by tests; the Codex host plugin now explicitly requests model `gpt-5.6-luna` with reasoning effort `high` and exposes safe runtime metadata. A complete real smoke and R5 validation remain pending.
+- Temporary Reasoning Runtime Policy: ResearchHub_Lite currently requests Codex model `gpt-5.6-luna` with reasoning effort `high`. This is host-specific runtime configuration, not a frozen Knowledge architecture dependency; future hosts/models remain replaceable through `ReasoningExecutor` configuration.
 
 ## Current Limitations
 

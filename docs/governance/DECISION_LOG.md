@@ -4,6 +4,19 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## Temporary Reasoning Runtime Policy — 2026-09-04
+
+ResearchHub_Lite currently requests the Codex host configuration:
+
+- Model: `gpt-5.6-luna`
+- Reasoning effort: `high`
+
+This is a temporary host-specific runtime policy. It is not a frozen Knowledge architecture dependency and must not be copied into Workflow, Knowledge Resolution, Knowledge Schema, or Skill semantic contracts. Future model or reasoning-host changes remain supported through `CodexReasoningExecutor` options and the runtime-neutral `ReasoningExecutor` boundary.
+
+The policy is passed explicitly on each Codex CLI invocation rather than inherited from `config.toml`.
+
+---
+
 ## RHL-ADR-001 — No Custom Agent Runtime
 
 **Status:** Accepted

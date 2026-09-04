@@ -1,11 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readdir, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { MockReasoningExecutor } from '../../plugins/reasoning/mock/executor.ts'
 import { ReasoningExecutorError } from '../../plugins/reasoning/errors.ts'
-import { CodexReasoningExecutor } from '../../plugins/reasoning/codex/executor.ts'
+import { buildCodexInvocationArgs, CodexReasoningExecutor } from '../../plugins/reasoning/codex/executor.ts'
 
 const capabilities = { maxContextTokens: 1000, maxOutputTokens: 500, structuredOutputSupport: false, maxConcurrency: 1 }
 
@@ -19,6 +19,30 @@ test('MockReasoningExecutor records calls and returns deterministic operation re
 
 test('reasoning capabilities reject guessed or invalid limits', () => {
   assert.throws(() => new MockReasoningExecutor({ capabilities: { ...capabilities, maxContextTokens: 0 } }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_configuration_invalid')
+})
+
+test('Codex executor pins the default model and reasoning effort explicitly', () => {
+  const executor = new CodexReasoningExecutor({ capabilities })
+  assert.deepEqual(executor.runtimeMetadata(), { provider: 'codex-cli', requestedModel: 'gpt-5.6-luna', requestedReasoningEffort: 'high' })
+  const args = buildCodexInvocationArgs({ commandPrefix: ['exec'], model: executor.runtimeMetadata().requestedModel, reasoningEffort: executor.runtimeMetadata().requestedReasoningEffort, invocationDirectory: 'temp', outputPath: 'temp/final-output.txt' })
+  assert.deepEqual(args.slice(0, 7), ['exec', '--model', 'gpt-5.6-luna', '-c', 'model_reasoning_effort="high"', '--ephemeral', '--sandbox'])
+  assert.equal(args.includes('--model'), true)
+  assert.equal(args.includes('gpt-5.6-luna'), true)
+  assert.equal(args.includes('model_reasoning_effort="high"'), true)
+})
+
+test('Codex executor supports explicit model and reasoning-effort overrides', () => {
+  const executor = new CodexReasoningExecutor({ capabilities, model: 'another-model', reasoningEffort: 'medium' })
+  assert.deepEqual(executor.runtimeMetadata(), { provider: 'codex-cli', requestedModel: 'another-model', requestedReasoningEffort: 'medium' })
+  const args = buildCodexInvocationArgs({ commandPrefix: ['exec'], model: executor.runtimeMetadata().requestedModel, reasoningEffort: executor.runtimeMetadata().requestedReasoningEffort, invocationDirectory: 'temp', outputPath: 'temp/final-output.txt' })
+  assert.equal(args.includes('another-model'), true)
+  assert.equal(args.includes('model_reasoning_effort="medium"'), true)
+  assert.equal(args.includes('gpt-5.6-luna'), false)
+})
+
+test('Codex executor rejects an empty model and unsupported runtime effort', () => {
+  assert.throws(() => new CodexReasoningExecutor({ capabilities, model: '   ' }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_configuration_invalid')
+  assert.throws(() => new CodexReasoningExecutor({ capabilities, reasoningEffort: 'unsupported' as never }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_configuration_invalid')
 })
 
 test('Codex executor isolates and cleans its invocation directory', async () => {
@@ -41,6 +65,22 @@ test('Codex executor preserves bounded failure details and timeout errors', asyn
   await assert.rejects(() => failure.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_execution_failed' && error.exitCode === 7 && error.stderr === 'fixture failure\n')
   const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, timeoutMs: 20, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--sleep'] })
   await assert.rejects(() => timeout.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_timeout')
+})
+
+test('Codex executor terminates a timed-out process tree', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-reasoning-tree-test-'))
+  const pidFile = join(root, 'grandchild.pid')
+  try {
+    const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, tempRoot: root, timeoutMs: 50, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--spawn-grandchild', '--pid-file', pidFile] })
+    await assert.rejects(() => timeout.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_timeout')
+    const pid = Number((await readFile(pidFile, 'utf8')).trim())
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    let alive = true
+    try { process.kill(pid, 0) } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') alive = false }
+    assert.equal(alive, false)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 })
 
 test('Codex executor classifies unavailable hosts and oversized output', async () => {

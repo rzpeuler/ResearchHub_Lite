@@ -1,8 +1,9 @@
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
+import { execFile as execFileCallback, spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { promisify } from 'node:util'
 import { ReasoningExecutorError } from '../errors.ts'
 import { validateReasoningCapabilities } from '../capabilities.ts'
 import type { ReasoningExecutor, ReasoningOperation, ReasoningRequest, ReasoningResult, ReasoningCapabilities } from '../contracts.ts'
@@ -10,6 +11,18 @@ import type { ReasoningExecutor, ReasoningOperation, ReasoningRequest, Reasoning
 const STDERR_LIMIT = 4_000
 const DEFAULT_TIMEOUT_MS = 60_000
 const DEFAULT_OUTPUT_LIMIT = 256_000
+const PROCESS_TERMINATION_TIMEOUT_MS = 5_000
+const DEFAULT_MODEL = 'gpt-5.6-luna'
+const CODEX_REASONING_EFFORTS = ['none', 'low', 'medium', 'high', 'xhigh', 'max'] as const
+const execFile = promisify(execFileCallback)
+
+export type CodexReasoningEffort = (typeof CODEX_REASONING_EFFORTS)[number]
+
+export interface CodexReasoningRuntimeMetadata {
+  readonly provider: 'codex-cli'
+  readonly requestedModel: string
+  readonly requestedReasoningEffort: CodexReasoningEffort
+}
 
 export interface CodexReasoningExecutorOptions {
   readonly capabilities: ReasoningCapabilities
@@ -17,6 +30,8 @@ export interface CodexReasoningExecutorOptions {
   readonly timeoutMs?: number
   readonly maxOutputChars?: number
   readonly tempRoot?: string
+  readonly model?: string
+  readonly reasoningEffort?: CodexReasoningEffort
   /** Test-only command prefix; production uses the default command prefix. */
   readonly commandPrefix?: readonly string[]
 }
@@ -27,6 +42,8 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
   private readonly timeoutMs: number
   private readonly maxOutputChars: number
   private readonly tempRoot: string
+  private readonly model: string
+  private readonly reasoningEffort: CodexReasoningEffort
   private readonly commandPrefix: readonly string[]
 
   constructor(options: CodexReasoningExecutorOptions) {
@@ -35,8 +52,12 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
     this.maxOutputChars = options.maxOutputChars ?? DEFAULT_OUTPUT_LIMIT
     this.tempRoot = options.tempRoot ?? tmpdir()
+    this.model = (options.model ?? DEFAULT_MODEL).trim()
+    this.reasoningEffort = options.reasoningEffort ?? 'high'
     this.commandPrefix = options.commandPrefix ?? ['exec']
     if (!this.executable.trim()) invalid('executable must be non-empty')
+    if (!this.model) invalid('model must be non-empty')
+    if (!(CODEX_REASONING_EFFORTS as readonly string[]).includes(this.reasoningEffort)) invalid('reasoningEffort is unsupported')
     if (!Number.isSafeInteger(this.timeoutMs) || this.timeoutMs <= 0) invalid('timeoutMs must be a positive safe integer')
     if (!Number.isSafeInteger(this.maxOutputChars) || this.maxOutputChars <= 0) invalid('maxOutputChars must be a positive safe integer')
     if (this.commandPrefix.length === 0) invalid('commandPrefix must not be empty')
@@ -44,6 +65,10 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
 
   capabilities(): ReasoningCapabilities {
     return this.configuredCapabilities
+  }
+
+  runtimeMetadata(): CodexReasoningRuntimeMetadata {
+    return { provider: 'codex-cli', requestedModel: this.model, requestedReasoningEffort: this.reasoningEffort }
   }
 
   async execute(request: ReasoningRequest): Promise<ReasoningResult> {
@@ -59,15 +84,7 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
         input: request.input,
         outputContract: request.outputContract,
       })
-      const args = [
-        ...this.commandPrefix,
-        '--ephemeral',
-        '--sandbox', 'read-only',
-        '--skip-git-repo-check',
-        '-C', invocationDirectory,
-        '-o', outputPath,
-        '-',
-      ]
+      const args = buildCodexInvocationArgs({ commandPrefix: this.commandPrefix, model: this.model, reasoningEffort: this.reasoningEffort, invocationDirectory, outputPath })
       const output = await this.runProcess(request.operation, operationId, invocationDirectory, args, prompt)
       let finalOutput: string
       try {
@@ -92,7 +109,7 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
 
   private runProcess(operation: ReasoningOperation, operationId: string, cwd: string, args: readonly string[], prompt: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const child = spawn(this.executable, [...args], { cwd, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
+      const child = spawn(this.executable, [...args], { cwd, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, detached: process.platform !== 'win32' })
       let stdout = ''
       let stderr = ''
       let settled = false
@@ -106,7 +123,11 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
       }
       const timeout = setTimeout(() => {
         timedOut = true
-        child.kill('SIGTERM')
+        void terminateProcessTree(child.pid).then(() => {
+          finish(() => reject(new ReasoningExecutorError('reasoning_timeout', 'Reasoning host execution timed out', { operation, operationId })))
+        }).catch((error) => {
+          finish(() => reject(new ReasoningExecutorError('reasoning_timeout', `Reasoning host execution timed out; process-tree termination failed: ${error instanceof Error ? error.message : String(error)}`, { operation, operationId, cause: error })))
+        })
       }, this.timeoutMs)
       child.stdout.setEncoding('utf8')
       child.stderr.setEncoding('utf8')
@@ -130,6 +151,37 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
       })
       child.stdin.end(prompt)
     })
+  }
+}
+
+export function buildCodexInvocationArgs(input: { commandPrefix: readonly string[]; model: string; reasoningEffort: CodexReasoningEffort; invocationDirectory: string; outputPath: string }): string[] {
+  return [
+    ...input.commandPrefix,
+    '--model', input.model,
+    '-c', `model_reasoning_effort="${input.reasoningEffort}"`,
+    '--ephemeral',
+    '--sandbox', 'read-only',
+    '--skip-git-repo-check',
+    '-C', input.invocationDirectory,
+    '-o', input.outputPath,
+    '-',
+  ]
+}
+
+async function terminateProcessTree(pid: number | undefined): Promise<void> {
+  if (pid === undefined) return
+  if (process.platform === 'win32') {
+    try {
+      await execFile('taskkill', ['/pid', String(pid), '/t', '/f'], { windowsHide: true, timeout: PROCESS_TERMINATION_TIMEOUT_MS, maxBuffer: STDERR_LIMIT * 2 })
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code !== 'ESRCH' && code !== 'ENOENT') throw error
+    }
+    return
+  }
+  try { process.kill(-pid, 'SIGTERM') } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (code !== 'ESRCH') throw error
   }
 }
 
