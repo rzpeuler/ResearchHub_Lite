@@ -4,6 +4,14 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-FIX-CLAIM-TEMPORAL-001 — 2026-09-04
+
+**Status:** Implemented / CTO acceptance pending
+
+R5 remains historical `PRODUCT_DEFECT` evidence because three Claim temporal values passed the Candidate boundary and failed deterministic Schema 0.3 ChangeSet validation before Writer. The remediation aligns ClaimCandidate temporal validation with the existing canonical `Date.parse`-based date-like predicate, keeps semantic periods in `scope.label`, and adds a narrow Planner guard that isolates any bypassed malformed Claim as Review. Schema 0.3 vocabulary and canonical semantics are unchanged; R5 evidence remains immutable and no real R6 is authorized by this implementation.
+
+---
+
 ## Temporary Reasoning Runtime Policy — 2026-09-04
 
 ResearchHub_Lite currently requests the Codex host configuration:

@@ -1,4 +1,6 @@
 import type { DocumentContentRef, StructuredDocument, EntityCandidate, CandidateEntityRef, RelationCandidate, ClaimCandidate, ValidatedExtractKnowledgeResult, CandidateKind, CandidateValidationCode, CandidateValidationRejection, UnderstandAndPlanOutput, ResolutionCaseKind, ResolutionOutcome, SemanticResolutionResult } from './contracts.ts'
+import type { ClaimTemporalV03 } from '../../knowledge/schema/domain.ts'
+import { isV03DateLike } from '../../knowledge/validation/v03-validation-core.ts'
 import type { PreparedExtractKnowledgeInput, PreparedResolveSemanticCaseInput } from './model-input.ts'
 import { KnowledgeCurationError } from './errors.ts'
 import { blockIdsForRef } from './model-input.ts'
@@ -95,18 +97,45 @@ export function semanticOutcomeVocabulary(caseKind: ResolutionCaseKind): readonl
   return caseKind === 'EntityBindingCase' ? ENTITY_OUTCOMES : caseKind === 'RelationConflictCase' ? RELATION_OUTCOMES : CLAIM_OUTCOMES
 }
 
-function claimTemporal(value: unknown, schema: CurationSchemaContext, label: string): RecordValue {
-  const temporal = record(value, label)
-  exact(temporal, ['asOf', 'scope'], label)
-  const scope = record(temporal.scope, `${label}.scope`)
-  exact(scope, ['type', 'start', 'end', 'label'], `${label}.scope`)
+function temporalDate(value: unknown, label: string): string | null {
+  if (value === null) return null
+  if (!isV03DateLike(value)) fail('invalid_semantics', `${label} must be a Schema 0.3 date-like string or null`)
+  return value
+}
+
+function temporalRecord(value: unknown, label: string): RecordValue {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('invalid_semantics', `${label} must be a Schema 0.3 temporal object`)
+  return value as RecordValue
+}
+
+function temporalExact(value: RecordValue, allowed: readonly string[], label: string): void {
+  const keys = new Set(allowed)
+  for (const key of Object.keys(value)) if (!keys.has(key)) fail('invalid_semantics', `${label} contains unsupported temporal field ${key}`)
+}
+
+function temporalScopeType(value: unknown, schema: CurationSchemaContext, label: string): ClaimTemporalV03['scope']['type'] {
+  if (typeof value !== 'string' || value.trim() === '') fail('invalid_semantics', `${label} must be a Schema 0.3 temporal scope type`)
+  return enumText(value, schema.claimTemporalScopeTypes, label)
+}
+
+function temporalLabel(value: unknown, label: string): string | null {
+  if (value === null) return null
+  if (typeof value !== 'string' || value.trim() === '') fail('invalid_semantics', `${label} must be a semantic label or null`)
+  return value.trim()
+}
+
+function claimTemporal(value: unknown, schema: CurationSchemaContext, label: string): ClaimTemporalV03 {
+  const temporal = temporalRecord(value, label)
+  temporalExact(temporal, ['asOf', 'scope'], label)
+  const scope = temporalRecord(temporal.scope, `${label}.scope`)
+  temporalExact(scope, ['type', 'start', 'end', 'label'], `${label}.scope`)
   return {
-    asOf: temporal.asOf === null ? null : text(temporal.asOf, `${label}.asOf`),
+    asOf: temporalDate(temporal.asOf, `${label}.asOf`),
     scope: {
-      type: enumText(scope.type, schema.claimTemporalScopeTypes, `${label}.scope.type`),
-      start: scope.start === null ? null : text(scope.start, `${label}.scope.start`),
-      end: scope.end === null ? null : text(scope.end, `${label}.scope.end`),
-      label: scope.label === null ? null : text(scope.label, `${label}.scope.label`),
+      type: temporalScopeType(scope.type, schema, `${label}.scope.type`),
+      start: temporalDate(scope.start, `${label}.scope.start`),
+      end: temporalDate(scope.end, `${label}.scope.end`),
+      label: temporalLabel(scope.label, `${label}.scope.label`),
     },
   }
 }

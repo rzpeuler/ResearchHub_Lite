@@ -4,6 +4,7 @@ import type { StructuredDocument } from '../../plugins/document/contracts.ts'
 import { buildCurationSchemaContext } from '../../skills/knowledge-curation/schema-context.ts'
 import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildResolveSemanticCaseOutputContract } from '../../skills/knowledge-curation/output-contracts.ts'
 import { UNDERSTAND_AND_PLAN_PROMPT } from '../../skills/knowledge-curation/prompts/understand-and-plan.ts'
+import { EXTRACT_KNOWLEDGE_PROMPT } from '../../skills/knowledge-curation/prompts/extract-knowledge.ts'
 import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
 import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
 import { MockReasoningExecutor } from '../../plugins/reasoning/mock/executor.ts'
@@ -93,6 +94,38 @@ test('extractKnowledge isolates invalid, ungrounded, and dependent candidates', 
   assert.equal(result.rejected.length, 3)
   assert.ok(result.rejected.some((item) => item.code === 'ungrounded_candidate'))
   assert.ok(result.rejected.some((item) => item.code === 'invalid_reference'))
+})
+
+test('Claim temporal validation uses Schema 0.3 date-like semantics and preserves semantic labels', async () => {
+  const makeResponse = (temporal: unknown, includeTemporal = true) => ({
+    entities: [{ candidateId: 'alpha', entityType: 'company', name: 'Alpha', evidenceBlockRefs: ['block-1'], reason: 'named' }],
+    relations: [],
+    claims: [{ candidateId: 'claim-1', claimType: 'fact', statement: 'Alpha has the stated outlook.', subjectRefs: [{ candidateRef: 'alpha', mention: 'Alpha' }], ...(includeTemporal ? { temporal } : {}), evidenceBlockRefs: ['block-1'], reason: 'direct statement' }],
+  })
+  const validTemporal = { asOf: '2026-08-05', scope: { type: 'period', start: '2026-01-01', end: '2026-12-31', label: '2026E' } }
+  const valid = await new KnowledgeCurationSkill({ executor: new MockReasoningExecutor({ capabilities, responses: { extractKnowledge: makeResponse(validTemporal) } }) }).extractKnowledge({ document, reportMap, unit })
+  assert.deepEqual(valid.claims[0]?.temporal, validTemporal)
+  assert.equal(valid.rejected.length, 0)
+  for (const [field, temporal] of [
+    ['asOf', { asOf: '2026E', scope: { type: 'period', start: null, end: null, label: null } }],
+    ['scope.start', { asOf: null, scope: { type: 'period', start: '2026E', end: null, label: null } }],
+    ['scope.end', { asOf: null, scope: { type: 'period', start: null, end: '未来三年', label: null } }],
+    ['scope.start empty', { asOf: null, scope: { type: 'period', start: '', end: null, label: null } }],
+    ['scope.type', { asOf: null, scope: { type: 'forecast', start: null, end: null, label: null } }],
+    ['incomplete temporal', { asOf: null }],
+    ['incomplete scope', { asOf: null, scope: { type: 'period', start: null, end: null } }],
+  ] as const) {
+    const result = await new KnowledgeCurationSkill({ executor: new MockReasoningExecutor({ capabilities, responses: { extractKnowledge: makeResponse(temporal) } }) }).extractKnowledge({ document, reportMap, unit })
+    assert.equal(result.claims.length, 0, `${field} should be rejected`)
+    assert.equal(result.rejected[0]?.kind, 'claim')
+    assert.equal(result.rejected[0]?.code, 'invalid_semantics', field)
+  }
+  const nullTemporal = await new KnowledgeCurationSkill({ executor: new MockReasoningExecutor({ capabilities, responses: { extractKnowledge: makeResponse(null) } }) }).extractKnowledge({ document, reportMap, unit })
+  assert.equal(nullTemporal.claims[0]?.temporal, null)
+  const omittedTemporal = await new KnowledgeCurationSkill({ executor: new MockReasoningExecutor({ capabilities, responses: { extractKnowledge: makeResponse(undefined, false) } }) }).extractKnowledge({ document, reportMap, unit })
+  assert.equal('temporal' in (omittedTemporal.claims[0] ?? {}), false)
+  assert.match(EXTRACT_KNOWLEDGE_PROMPT, /semantic periods.*scope\.label/i)
+  assert.match(EXTRACT_KNOWLEDGE_PROMPT, /publication time.*Claim temporal/i)
 })
 
 test('semanticFields recursively reject durable canonical namespace values', async () => {

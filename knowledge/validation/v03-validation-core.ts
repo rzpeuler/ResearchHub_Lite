@@ -1,4 +1,5 @@
 import { KNOWLEDGE_SCHEMA_V03 } from '../schema/executable-schema.ts'
+import type { ClaimTemporalV03 } from '../schema/domain.ts'
 import type { CanonicalKind, V03CanonicalObject, V03CanonicalValidationContext, V03DiagnosticContext, ValidationDiagnostic } from './types.ts'
 
 const namespaces: Record<CanonicalKind, string> = {
@@ -15,7 +16,16 @@ type Dict = Record<string, unknown>
 
 function isRecord(value: unknown): value is Dict { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function strings(value: unknown): value is string[] { return Array.isArray(value) && value.every((item) => typeof item === 'string') }
-function dateLike(value: unknown): boolean { return typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Date.parse(value)) }
+export function isV03DateLike(value: unknown): value is string { return typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Date.parse(value)) }
+export function isV03NullableDateLike(value: unknown): value is string | null { return value === null || isV03DateLike(value) }
+export function isV03ClaimTemporal(value: unknown): value is ClaimTemporalV03 {
+  if (!isRecord(value) || Object.keys(value).some((key) => !['asOf', 'scope'].includes(key)) || !isV03NullableDateLike(value.asOf) || !isRecord(value.scope)) return false
+  return Object.keys(value.scope).every((key) => ['type', 'start', 'end', 'label'].includes(key)) &&
+    KNOWLEDGE_SCHEMA_V03.claim.temporalScopeTypes.includes(value.scope.type as never) &&
+    isV03NullableDateLike(value.scope.start) && isV03NullableDateLike(value.scope.end) &&
+    (typeof value.scope.label === 'string' || value.scope.label === null)
+}
+const dateLike = isV03DateLike
 function jsonValue(value: unknown): boolean { if (value === null || typeof value === 'string' || typeof value === 'boolean') return true; if (typeof value === 'number') return Number.isFinite(value); if (Array.isArray(value)) return value.every(jsonValue); return isRecord(value) && Object.values(value).every(jsonValue) }
 function inRange(value: unknown, constraint: { minimum: number; maximum: number }): boolean { return value === null || (typeof value === 'number' && Number.isFinite(value) && value >= constraint.minimum && value <= constraint.maximum) }
 function add(diagnostics: ValidationDiagnostic[], code: string, message: string, context: V03DiagnosticContext): void { diagnostics.push({ code, severity: 'error', message, ...(context.assetId === undefined ? {} : { assetId: context.assetId }), ...(context.operationId === undefined ? {} : { operationId: context.operationId }), ...(context.filePath === undefined ? {} : { filePath: context.filePath }) }) }
