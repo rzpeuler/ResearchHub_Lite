@@ -4,6 +4,18 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-FIX-INVESTMENT-THEME-CREATION-001-FIX-001 — 2026-09-04
+
+**Status:** Implemented / CTO acceptance pending
+
+The final CTO remediation preserves the existing InvestmentTheme novelty and recommendation design while correcting two contract issues. Materiality now resolves `supportingUnitIds` back to the accepted ExtractionPlan and counts only those Units' `primaryBlockIds`; primary ownership by an unrelated Unit and context blocks borrowed from another Unit cannot inflate `supportingPrimaryBlockCount`. Unknown supporting Unit IDs contribute zero primary support. The v0.1 recommendation threshold is unchanged: at least two supporting Units, or one supporting Unit with at least eight owned primary blocks.
+
+The `InvestmentThemeCoverageCase` prompt now has an explicit three-outcome branch: `matches_existing`, `ambiguous_existing`, and `potential_new`. Multiple possible matches, uncertain coverage, incomplete Theme context, or insufficient evidence for novelty map to `ambiguous_existing`; `uncertain` is not instructed or accepted for this case. Other semantic case kinds retain their existing `uncertain` behavior. The validator vocabulary, Planner behavior, no-auto-creation ThemeGroup policy, Schema, Writer, ReasoningExecutor, and frozen architecture are unchanged.
+
+Offline regressions cover cross-Unit context inflation (`1` supporting Unit, `1` primary block, `do_not_recommend`), strong single-Unit support (`1`, `8`, `recommend`), low-evidence multi-Unit support (`2`, `recommend`), prompt wording, and outcome validation. Historical R1-R6 and timeout-smoke evidence remain immutable. Real R7 is not authorized by this task.
+
+---
+
 ## RHL-FIX-INVESTMENT-THEME-CREATION-001 — 2026-09-04
 
 **Status:** Implemented / CTO acceptance pending

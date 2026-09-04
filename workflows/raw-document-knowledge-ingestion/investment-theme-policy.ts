@@ -10,9 +10,10 @@ function unique(values: readonly string[]): string[] { return [...new Set(values
 export function assessPotentialNewInvestmentTheme(candidate: EntityCandidate, consolidated: ConsolidatedCandidateSupport | undefined, plan: AcceptedExtractionPlan, document: StructuredDocument): PotentialInvestmentThemeAssessment {
   const evidenceBlockRefs = unique(consolidated?.evidenceBlockRefs ?? candidate.evidenceBlockRefs)
   const supportingUnitIds = unique(consolidated?.supportingUnitIds ?? [candidate.candidateId])
-  const primaryBlockIds = new Set(plan.units.flatMap((unit) => unit.primaryBlockIds))
+  const supportingUnitSet = new Set(supportingUnitIds)
+  const supportingPrimaryBlockIds = new Set(plan.units.filter((unit) => supportingUnitSet.has(unit.unitId)).flatMap((unit) => unit.primaryBlockIds))
   const blockById = new Map(document.blocks.map((block) => [block.blockId, block]))
-  const supportingPrimaryBlockCount = evidenceBlockRefs.filter((blockId) => primaryBlockIds.has(blockId)).length
+  const supportingPrimaryBlockCount = evidenceBlockRefs.filter((blockId) => supportingPrimaryBlockIds.has(blockId)).length
   const supportingSectionCount = new Set(evidenceBlockRefs.map((blockId) => blockById.get(blockId)?.sectionRef).filter((sectionRef): sectionRef is string => typeof sectionRef === 'string')).size
   const support: PotentialInvestmentThemeSupport = { supportingCandidateCount: consolidated?.supportingCandidateCount ?? 1, supportingUnitCount: supportingUnitIds.length, supportingPrimaryBlockCount, supportingSectionCount, evidenceBlockRefs }
   const recommendation = supportingUnitIds.length >= 2 || (supportingUnitIds.length === 1 && supportingPrimaryBlockCount >= MATERIAL_PRIMARY_BLOCK_THRESHOLD) ? 'recommend' : 'do_not_recommend'
