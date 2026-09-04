@@ -4,6 +4,16 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-VALIDATION-001-R7 — 2026-09-05
+
+**Status:** Executed / SUCCESS / CTO acceptance pending
+
+R7 used product baseline `a8586f0ef4710e377baf18947a11c0f7f79840ff`, the exact frozen PDF (`3,209,114` bytes; SHA-256 `998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63`), real Docling `2.116.0`, and real Codex CLI `0.152.1` with explicit `gpt-5.6-luna` and `high`. A fresh Schema 0.3 / Storage Format 1 Knowledge Base passed initial validation. The accepted plan covered all `1,523` document blocks in `17` ExtractionUnits; `18/18` real reasoning calls completed without timeout. Primary ingestion completed with review, and one staged, validated atomic ChangeSet committed revision `0` to `1`, creating `801` safe canonical objects (`389` Entity, `272` Relation, `140` Claim) plus one Source. No InvestmentTheme or ThemeGroup mutation occurred, and no planned-reference leak was persisted.
+
+Post-write reload and full validation passed with exact Raw provenance for all `140` Claims and the Source. Exact replay returned `already_committed`, made zero additional real reasoning calls, preserved status, ReviewSummary, ChangeSet identity, revision, and durable counts. Classification is `SUCCESS` with CTO acceptance still pending. Historical R1-R6 and timeout-smoke evidence remain unchanged; no architecture decision is changed.
+
+---
+
 ## RHL-FIX-INVESTMENT-THEME-CREATION-001-FIX-001 — 2026-09-04
 
 **Status:** Implemented / CTO acceptance pending
