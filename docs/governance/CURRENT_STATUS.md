@@ -40,7 +40,7 @@
 
 ## Current Limitations
 
-- `RHL-VALIDATION-001-R4` exercised the exact frozen PDF with real Docling 2.116.0 and real Codex CLI 0.152.1; preflight, Raw archival, parse, and Plan passed, but primary Extraction blocked at `unit-017` after two real Codex reasoning timeouts. Classification: `REASONING_FAILURE`; Writer was not invoked. Evidence is preserved in `tests/validation/evidence/rhl-validation-001-r4-real-e2e.json`.
+- `RHL-VALIDATION-001-R4` exercised the exact frozen PDF with real Docling 2.116.0 and real Codex CLI 0.152.1; preflight, Raw archival, parse, and Plan passed, but primary Extraction blocked at `unit-017` after two real Codex reasoning timeouts. Classification: `REASONING_FAILURE`; Writer was not invoked. This remains historical evidence of the ReasoningExecutor timeout-enforcement defect addressed by `RHL-FIX-REASONING-TIMEOUT-001`. Evidence is preserved in `tests/validation/evidence/rhl-validation-001-r4-real-e2e.json`.
 - A complete real Codex validation remains pending; deterministic fake-host coverage is present.
 - `RHL-VALIDATION-001` was executed with the exact frozen PDF; it was blocked at deterministic ExtractionPlan coverage validation and remains historical evidence.
 - `RHL-FIX-PLAN-001` was independently CTO accepted / closed.
