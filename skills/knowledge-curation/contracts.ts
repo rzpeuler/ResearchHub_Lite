@@ -142,10 +142,11 @@ export interface ValidatedExtractKnowledgeResult extends ExtractKnowledgeOutput 
 
 export interface ResolvedCandidateGroup { readonly candidateId: string; readonly kind: CandidateKind; readonly candidate: EntityCandidate | RelationCandidate | ClaimCandidate }
 
-export type ResolutionCaseKind = 'EntityBindingCase' | 'RelationConflictCase' | 'ClaimConflictCase'
+export type ResolutionCaseKind = 'EntityBindingCase' | 'RelationConflictCase' | 'ClaimConflictCase' | 'InvestmentThemeCoverageCase'
 export type ResolutionOutcome =
   | 'equivalent_to' | 'distinct_from_all'
   | 'equivalent' | 'state_changed' | 'supersedes' | 'coexists' | 'contradicts' | 'invalid' | 'uncertain'
+  | 'matches_existing' | 'potential_new' | 'ambiguous_existing'
 
 export interface SemanticCaseEvidence {
   readonly blockId: string

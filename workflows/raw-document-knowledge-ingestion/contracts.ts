@@ -64,6 +64,27 @@ export interface EntityResolution {
   readonly candidateId: string
   readonly status: 'existing' | 'created' | 'review' | 'rejected'
   readonly canonicalId?: string
+  readonly rationale?: string
+}
+export type ThemeCoverageOutcome = 'matches_existing' | 'ambiguous_existing' | 'potential_new'
+export type ThemeRecommendation = 'recommend' | 'do_not_recommend'
+export interface PotentialInvestmentThemeSupport {
+  readonly supportingCandidateCount: number
+  readonly supportingUnitCount: number
+  readonly supportingPrimaryBlockCount: number
+  readonly supportingSectionCount: number
+  readonly evidenceBlockRefs: readonly string[]
+}
+export interface PotentialInvestmentThemeAssessment {
+  readonly candidateId: string
+  readonly name: string
+  readonly aliases: readonly string[]
+  readonly description?: string | null
+  readonly noveltyState: 'potential_new'
+  readonly support: PotentialInvestmentThemeSupport
+  readonly recommendation: ThemeRecommendation
+  readonly recommendationReason: string
+  readonly evidenceBlockRefs: readonly string[]
 }
 export type ReviewCategory = 'invalid_reference' | 'invalid_semantics' | 'relation_cardinality' | 'schema_gap' | 'theme_creation' | 'theme_ambiguity' | 'reconciliation_review' | 'other'
 export type ReviewOrigin = 'extraction_rejection' | 'consolidation' | 'consolidation_mirror' | 'knowledge_resolution' | 'semantic_case' | 'planner' | 'dependency_isolation'
@@ -84,6 +105,8 @@ export interface IngestionWorkflowResult {
   readonly reviewItems: readonly ReviewItem[]
   readonly reviewSummary: ReviewSummary
   readonly resolutionSummary?: Readonly<Record<string, number>>
+  readonly potentialNewInvestmentThemes?: readonly PotentialInvestmentThemeAssessment[]
+  readonly recommendedNewInvestmentThemes?: readonly PotentialInvestmentThemeAssessment[]
   /** Historical validation telemetry field; new production flow uses resolutionSummary. */
   readonly reconciliationSummary?: Readonly<Record<string, number>>
   readonly changeSetId?: string

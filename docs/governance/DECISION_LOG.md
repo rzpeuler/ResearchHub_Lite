@@ -4,6 +4,20 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-FIX-INVESTMENT-THEME-CREATION-001 — 2026-09-04
+
+**Status:** Implemented / CTO acceptance pending
+
+The R6 `InvestmentTheme must reference exactly one registered ThemeGroup` product defect is contained without changing Schema 0.3, Storage Format 1, Writer, or the frozen architecture. Raw ingestion now uses a bounded, case-local comparison set containing aliases plus definition/inclusion/exclusion context for every active existing `InvestmentTheme`; durable IDs, `themeGroupRef`, and unrelated Knowledge Base data are not sent to semantic reasoning. `matches_existing` binds to the canonical theme, while `ambiguous_existing` and `potential_new` remain Review. Missing or incomplete existing-theme context cannot produce novelty.
+
+After deterministic consolidation, potential-new assessments record candidate, unit, primary-block, section, and evidence-block support. The advisory recommendation is `recommend` only at two supporting units, or one unit with at least eight supporting primary blocks; candidate count alone is insufficient. Weak or incidental support remains `do_not_recommend`, and duplicate candidates are assessed once after consolidation. Neither assessment path creates a durable ID.
+
+Planner defense-in-depth converts any bypassed new `investment_theme` create intent into `theme_creation` Review. Dependent Relations and Claims remain isolated with the unresolved theme, while unrelated safe operations may continue. The ChangeSet therefore creates or updates zero `ThemeGroup` entities and creates zero new canonical `InvestmentTheme` entities. Existing-theme enrichment preserves its `themeGroupRef`. Future user-created themes are outside raw-ingestion scope and default to `Default ThemeGroup` when explicitly created; Theme management is not implemented by this task.
+
+Historical R1-R6 and timeout-smoke evidence remain immutable. Validation for this task is offline only; real Docling/Codex/PDF/R7 execution is not included.
+
+---
+
 ## RHL-FIX-CLAIM-TEMPORAL-001 — 2026-09-04
 
 **Status:** Implemented / CTO acceptance pending

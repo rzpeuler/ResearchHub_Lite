@@ -3,6 +3,12 @@ import { canonicalSerialize, hashKnowledgeObject } from '../../knowledge/storage
 import type { CandidateEntityRef, ClaimCandidate, EntityCandidate, RelationCandidate, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
 import type { AcceptedExtractionUnit } from './contracts.ts'
 
+export interface ConsolidatedCandidateSupport {
+  readonly supportingCandidateCount: number
+  readonly supportingUnitIds: readonly string[]
+  readonly evidenceBlockRefs: readonly string[]
+}
+
 export interface ConsolidatedExtraction {
   readonly groups: readonly { candidateId: string; kind: 'entity' | 'relation' | 'claim'; candidate: EntityCandidate | RelationCandidate | ClaimCandidate }[]
   readonly reviewConstraints: readonly { candidateId: string; reason: string; conflictingFields: readonly string[] }[]
@@ -10,6 +16,7 @@ export interface ConsolidatedExtraction {
   readonly candidateCounts: Readonly<Record<string, number>>
   readonly candidateAliases: ReadonlyMap<string, string>
   readonly entityCandidates: ReadonlyMap<string, EntityCandidate>
+  readonly candidateSupport: ReadonlyMap<string, ConsolidatedCandidateSupport>
 }
 
 function semanticEntityIdentity(candidate: Pick<EntityCandidate, 'entityType' | 'name'>) { return { entityType: candidate.entityType, normalizedSemanticName: normalizeSemanticText(candidate.name) } }
@@ -25,6 +32,7 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
   const entityGroups = new Map<string, EntityCandidate>()
   const entityByMergedId = new Map<string, EntityCandidate>()
   const entityAliases = new Map<string, string>()
+  const supportByEntityKey = new Map<string, { supportingCandidateCount: number; supportingUnitIds: Set<string>; evidenceBlockRefs: Set<string> }>()
   const relationInputs: Array<{ unitId: string; candidate: RelationCandidate }> = []
   const claimInputs: Array<{ unitId: string; candidate: ClaimCandidate }> = []
   const rejected: unknown[] = []
@@ -38,6 +46,11 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
       entityInput += 1
       const originalId = namespaced(extraction.unit.unitId, candidate.candidateId)
       const key = entityKey(candidate)
+      const support = supportByEntityKey.get(key) ?? { supportingCandidateCount: 0, supportingUnitIds: new Set<string>(), evidenceBlockRefs: new Set<string>() }
+      support.supportingCandidateCount += 1
+      support.supportingUnitIds.add(extraction.unit.unitId)
+      for (const blockId of candidate.evidenceBlockRefs) support.evidenceBlockRefs.add(blockId)
+      supportByEntityKey.set(key, support)
       const current = entityGroups.get(key)
       if (!current) {
         const mergedId = mergedEntityId(candidate)
@@ -107,5 +120,9 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
     candidateIds.add(group.candidateId)
   }
   const entityCandidates = new Map([...entityGroups.values()].map((candidate) => [candidate.candidateId, candidate]))
-  return { groups, reviewConstraints: [...new Map(reviewConstraints.map((item) => [item.candidateId, item])).values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)), rejected, candidateCounts: { entity: entityInput, relation: relationInput, claim: claimInput, consolidated: groups.length, rejected: rejected.length }, candidateAliases: entityAliases, entityCandidates }
+  const candidateSupport = new Map([...entityGroups.entries()].map(([key, candidate]) => {
+    const support = supportByEntityKey.get(key)!
+    return [candidate.candidateId, { supportingCandidateCount: support.supportingCandidateCount, supportingUnitIds: [...support.supportingUnitIds].sort(), evidenceBlockRefs: [...support.evidenceBlockRefs].sort() }] as const
+  }))
+  return { groups, reviewConstraints: [...new Map(reviewConstraints.map((item) => [item.candidateId, item])).values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)), rejected, candidateCounts: { entity: entityInput, relation: relationInput, claim: claimInput, consolidated: groups.length, rejected: rejected.length }, candidateAliases: entityAliases, entityCandidates, candidateSupport }
 }

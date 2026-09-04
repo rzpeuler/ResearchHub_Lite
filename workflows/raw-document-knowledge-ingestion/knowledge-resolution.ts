@@ -7,7 +7,9 @@ import type { StructuredDocument } from '../../plugins/document/contracts.ts'
 import type { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
 import type { ClaimCandidate, EntityCandidate, IncomingSourceContext, RelationCandidate, ReportMap, ResolutionCase, ResolutionOutcome, ResolvedCandidateGroup, SemanticCaseEvidence, SemanticResolutionResult, SemanticSourceProjection } from '../../skills/knowledge-curation/contracts.ts'
 import { semanticOutcomeVocabulary } from '../../skills/knowledge-curation/validation.ts'
-import type { AcceptedExtractionPlan, ReviewItem } from './contracts.ts'
+import type { AcceptedExtractionPlan, PotentialInvestmentThemeAssessment, ReviewCategory, ReviewItem } from './contracts.ts'
+import { assessPotentialNewInvestmentTheme } from './investment-theme-policy.ts'
+import type { ConsolidatedCandidateSupport } from './consolidation.ts'
 
 type Dict = Record<string, unknown>
 export type BindingState = 'BoundExisting' | 'PlannedNew' | 'Unresolved'
@@ -49,6 +51,7 @@ export interface KnowledgeResolutionInput {
   readonly maxEntityBindingCandidates?: number
   readonly maxContextTokens?: number
   readonly consolidationReviews?: readonly { readonly candidateId: string; readonly reason: string; readonly conflictingFields?: readonly string[] }[]
+  readonly candidateSupport?: ReadonlyMap<string, ConsolidatedCandidateSupport>
 }
 export interface KnowledgeResolutionResult {
   readonly intents: readonly ResolutionIntent[]
@@ -59,6 +62,8 @@ export interface KnowledgeResolutionResult {
   readonly semanticCaseCalls: number
   readonly semanticCaseCount: number
   readonly summary: Readonly<Record<string, number>>
+  readonly potentialNewInvestmentThemes: readonly PotentialInvestmentThemeAssessment[]
+  readonly recommendedNewInvestmentThemes: readonly PotentialInvestmentThemeAssessment[]
 }
 
 const CASE_LIMIT = 32
@@ -97,7 +102,7 @@ function plausibleEntities(index: KnowledgeIndexV03, candidate: EntityCandidate)
     return byName || byTicker || byExchange
   }).filter(active).sort((a, b) => a.id.localeCompare(b.id))
 }
-function entityProjection(entity: KnowledgeEntityV03): unknown { return { type: entity.type, name: entity.name, aliases: [...(entity.aliases ?? [])].sort(), ...(entity.description == null ? {} : { description: entity.description }), ...(entity.type === 'company' ? { ticker: entity.ticker ?? null, exchange: entity.exchange ?? null, legalName: entity.legalName ?? null } : {}) } }
+function entityProjection(entity: KnowledgeEntityV03): unknown { return { type: entity.type, name: entity.name, aliases: [...(entity.aliases ?? [])].sort(), ...(entity.description == null ? {} : { description: entity.description }), ...(entity.type === 'investment_theme' ? { definition: entity.definition ?? null, inclusionCriteria: [...(entity.inclusionCriteria ?? [])].sort(), exclusionCriteria: [...(entity.exclusionCriteria ?? [])].sort() } : {}), ...(entity.type === 'company' ? { ticker: entity.ticker ?? null, exchange: entity.exchange ?? null, legalName: entity.legalName ?? null } : {}) } }
 function candidateProjection(candidate: EntityCandidate | RelationCandidate | ClaimCandidate): unknown {
   if ('entityType' in candidate) return { kind: 'entity', type: candidate.entityType, name: candidate.name, aliases: [...(candidate.aliases ?? [])].sort(), description: candidate.description ?? null, semanticFields: candidate.semanticFields ?? null }
   if ('relationType' in candidate) return { kind: 'relation', type: candidate.relationType, source: candidate.source.mention, target: candidate.target.mention, attributes: candidate.attributes ?? null }
@@ -134,8 +139,8 @@ function caseInput(caseId: string, caseKind: ResolutionCase['caseKind'], candida
   const evidenceProjection = caseEvidence(candidate, plan, document)
   return { resolutionCase: { caseId, caseKind, candidateProjection: candidateProjection(candidate), existingProjections: existing, evidence: evidenceProjection.evidence, sourceContext, schemaContextSlice: { caseKind, allowedOutcomes }, allowedOutcomes }, missingBlockIds: evidenceProjection.missingBlockIds }
 }
-function review(candidateId: string, kind: ReviewItem['kind'], rationale: string, dependency = false, refs: readonly string[] = [], origin: 'knowledge_resolution' | 'semantic_case' = 'knowledge_resolution'): ReviewItem {
-  return { candidateId, kind, rationale, dependentCandidateIds: [...refs].sort(), stage: dependency ? 'knowledge_resolution_dependency' : origin === 'semantic_case' ? 'semantic_case' : 'knowledge_resolution', category: 'reconciliation_review', origin, dependency, reviewKey: ['knowledge-resolution', candidateId, dependency ? 'dependency' : 'root', rationale, ...refs].join('|') }
+function review(candidateId: string, kind: ReviewItem['kind'], rationale: string, dependency = false, refs: readonly string[] = [], origin: 'knowledge_resolution' | 'semantic_case' = 'knowledge_resolution', category: ReviewCategory = 'reconciliation_review'): ReviewItem {
+  return { candidateId, kind, rationale, dependentCandidateIds: [...refs].sort(), stage: dependency ? 'knowledge_resolution_dependency' : origin === 'semantic_case' ? 'semantic_case' : 'knowledge_resolution', category, origin, dependency, reviewKey: ['knowledge-resolution', candidateId, dependency ? 'dependency' : 'root', category, rationale, ...refs].join('|') }
 }
 function intent(group: ResolvedCandidateGroup, disposition: ResolutionDisposition, rationale: string, targetRef: string | undefined, basis: Partial<SemanticBasis> = {}, dependencies: readonly string[] = []): ResolutionIntent {
   return { candidateRef: group.candidateId, candidateKind: group.kind, disposition, ...(targetRef === undefined ? {} : { targetRef }), semanticBasis: { rationale, ...basis }, evidenceRefs: evidence(group.candidate as EntityCandidate | RelationCandidate | ClaimCandidate), ...(dependencies.length === 0 ? {} : { reviewDependencyRefs: unique(dependencies) }) }
@@ -217,11 +222,59 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
   const maxCases = input.maxResolutionCases ?? CASE_LIMIT
   let semanticCaseCalls = 0
   let semanticCaseCount = 0
+  const potentialNewInvestmentThemes: PotentialInvestmentThemeAssessment[] = []
+  const recommendedNewInvestmentThemes: PotentialInvestmentThemeAssessment[] = []
   const entityGroups = groups.filter((group) => group.kind === 'entity')
   const maxEntityBindingCandidates = input.maxEntityBindingCandidates ?? 8
   const sourceContext: IncomingSourceContext = input.incomingSourceContext ?? { sourceType: (input.reportMap.sourceAssessment.sourceType as IncomingSourceContext['sourceType']) ?? null, reliability: input.reportMap.sourceAssessment.reliability ?? null }
   const consolidationReviews = new Map(input.consolidationReviews?.map((item) => [item.candidateId, item.reason] as const) ?? [])
   const addEntityResult = (group: ResolvedCandidateGroup, binding: EntityBinding, disposition: ResolutionDisposition, rationale: string, targetRef?: string, basis: Partial<SemanticBasis> = {}): void => { bindings.set(group.candidateId, binding); intents.push(intent(group, disposition, rationale, targetRef ?? binding.ref ?? binding.plannedRef, basis)); if (disposition === 'review') reviews.push(review(group.candidateId, group.kind, rationale, false, [], basis.caseKind === 'EntityBindingCase' ? 'semantic_case' : 'knowledge_resolution')) }
+  const addThemeReview = (group: ResolvedCandidateGroup, rationale: string, category: ReviewCategory, plausibleMatches: readonly string[] = [], basis: Partial<SemanticBasis> = {}): void => {
+    bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches })
+    intents.push(intent(group, 'review', rationale, undefined, basis))
+    reviews.push(review(group.candidateId, group.kind, rationale, false, [], basis.caseKind === 'InvestmentThemeCoverageCase' ? 'semantic_case' : 'knowledge_resolution', category))
+  }
+  const themeGroups = entityGroups.filter((group) => (group.candidate as EntityCandidate).entityType === 'investment_theme')
+  const existingThemes = [...index.entities.values()].filter((entity): entity is Extract<KnowledgeEntityV03, { type: 'investment_theme' }> => entity.type === 'investment_theme' && active(entity)).sort((a, b) => a.id.localeCompare(b.id))
+  const resolveInvestmentTheme = async (group: ResolvedCandidateGroup): Promise<void> => {
+    const candidate = group.candidate as EntityCandidate
+    const existing = existingThemes
+    if (existing.length === 0) {
+      const assessment = assessPotentialNewInvestmentTheme(candidate, input.candidateSupport?.get(group.candidateId), input.plan, input.document)
+      potentialNewInvestmentThemes.push(assessment)
+      if (assessment.recommendation === 'recommend') recommendedNewInvestmentThemes.push(assessment)
+      addThemeReview(group, assessment.recommendationReason, 'theme_creation', [], { outcome: 'potential_new' })
+      return
+    }
+    const projections = existing.map((entity, number) => ({ alias: `existing-theme-${String(number + 1).padStart(3, '0')}`, projection: entityProjection(entity) }))
+    const caseId = `semantic-case-${hashKnowledgeObject({ kind: 'InvestmentThemeCoverageCase', candidateId: group.candidateId, existing: projections.map((item) => item.alias) }).slice(7, 23)}`
+    const preparedCase = caseInput(caseId, 'InvestmentThemeCoverageCase', candidate, projections, input.plan, input.document, sourceContext, semanticOutcomeVocabulary('InvestmentThemeCoverageCase'))
+    if (preparedCase.missingBlockIds.length > 0) { addThemeReview(group, `semantic_case_missing_evidence_block: ${preparedCase.missingBlockIds.join(', ')}`, 'theme_ambiguity', existing.map((item) => item.id), { caseId, caseKind: 'InvestmentThemeCoverageCase', outcome: 'ambiguous_existing' }); return }
+    if (!isCapacitySafe(preparedCase.resolutionCase, input.maxContextTokens)) { addThemeReview(group, `investment_theme_coverage_context_incomplete: ${caseId} exceeds configured context capacity`, 'theme_ambiguity', existing.map((item) => item.id), { caseId, caseKind: 'InvestmentThemeCoverageCase', outcome: 'ambiguous_existing' }); return }
+    if (semanticCaseCount >= maxCases) { addThemeReview(group, `InvestmentTheme coverage case limit ${maxCases} exceeded`, 'theme_ambiguity', existing.map((item) => item.id), { caseId, caseKind: 'InvestmentThemeCoverageCase', outcome: 'ambiguous_existing' }); return }
+    semanticCaseCount += 1
+    let result: SemanticResolutionResult | undefined
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) { semanticCaseCalls += 1; try { result = await input.skill.resolveSemanticCase({ resolutionCase: preparedCase.resolutionCase, instructions: input.instructions }); break } catch { /* bounded semantic failure remains an auditable Review */ } }
+    if (result?.outcome === 'matches_existing') {
+      const targetIndex = projections.findIndex((item) => item.alias === result!.targetAlias)
+      if (targetIndex >= 0) {
+        const target = existing[targetIndex]!
+        const binding: EntityBinding = { candidateId: group.candidateId, state: 'BoundExisting', ref: target.id, plausibleMatches: existing.map((item) => item.id) }
+        const conflict = fieldConflict(candidate, target)
+        addEntityResult(group, binding, conflict ? 'review' : hasEnrichment(candidate, target) ? 'enrich_existing' : 'no_op', conflict ?? (hasEnrichment(candidate, target) ? 'Semantic InvestmentTheme binding with additive enrichment; themeGroupRef preserved' : 'Semantic InvestmentTheme binding; themeGroupRef preserved'), target.id, { caseId, caseKind: 'InvestmentThemeCoverageCase', outcome: result.outcome, rationale: result.rationale })
+        return
+      }
+    }
+    if (result?.outcome === 'potential_new') {
+      const assessment = assessPotentialNewInvestmentTheme(candidate, input.candidateSupport?.get(group.candidateId), input.plan, input.document)
+      potentialNewInvestmentThemes.push(assessment)
+      if (assessment.recommendation === 'recommend') recommendedNewInvestmentThemes.push(assessment)
+      addThemeReview(group, assessment.recommendationReason, 'theme_creation', existing.map((item) => item.id), { caseId, caseKind: 'InvestmentThemeCoverageCase', outcome: result.outcome, rationale: result.rationale })
+      return
+    }
+    const rationale = result?.outcome === 'ambiguous_existing' ? result.rationale : result?.rationale ?? `InvestmentTheme coverage case ${caseId} failed after bounded retries`
+    addThemeReview(group, rationale, 'theme_ambiguity', existing.map((item) => item.id), { caseId, caseKind: 'InvestmentThemeCoverageCase', outcome: result?.outcome ?? 'ambiguous_existing' })
+  }
   for (const group of entityGroups) {
     const candidate = group.candidate as EntityCandidate
     const constraint = consolidationReviews.get(group.candidateId)
@@ -230,6 +283,7 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
     const hardMatches = key === undefined ? [] : [...index.entities.values()].filter((entity) => entityHardKey(entity) === key && active(entity))
     if (hardMatches.length > 1) { const rationale = `Knowledge integrity defect: hard Company key ${key} matches multiple canonical Entities`; bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: hardMatches.map((item) => item.id) }); intents.push(intent(group, 'review', rationale, undefined)); reviews.push(review(group.candidateId, group.kind, rationale)); errors.push(rationale); continue }
     if (hardMatches.length === 1) { const existing = hardMatches[0]!; const conflict = fieldConflict(candidate, existing); const binding: EntityBinding = { candidateId: group.candidateId, state: 'BoundExisting', ref: existing.id, plausibleMatches: [existing.id] }; if (conflict) addEntityResult(group, binding, 'review', conflict); else addEntityResult(group, binding, hasEnrichment(candidate, existing) ? 'enrich_existing' : 'no_op', hasEnrichment(candidate, existing) ? 'Deterministic additive Entity enrichment' : 'Deterministic hard-key Entity match'); continue }
+    if (candidate.entityType === 'investment_theme') { await resolveInvestmentTheme(group); continue }
     const plausible = plausibleEntities(index, candidate)
     if (plausible.length === 0) { const ref = plannedRef(candidate); addEntityResult(group, { candidateId: group.candidateId, state: 'PlannedNew', plannedRef: ref, plausibleMatches: [] }, 'create', 'No plausible canonical Entity match; planned new Entity', ref); continue }
     if (plausible.length > maxEntityBindingCandidates) { const rationale = `entity_plausible_match_overflow: ${plausible.length} plausible canonical Entities exceed bound ${maxEntityBindingCandidates}`; bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: plausible.map((item) => item.id) }); intents.push(intent(group, 'review', rationale, undefined)); reviews.push(review(group.candidateId, group.kind, rationale)); continue }
@@ -308,5 +362,5 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
   }
   const barrier = resolveResolutionIntentBarrier(groups, intents, bindings)
   if (!barrier.valid) errors.push(...barrier.errors)
-  return { intents: intents.sort((a, b) => a.candidateRef.localeCompare(b.candidateRef)), bindings, reviewItems: [...new Map(reviews.map((item) => [item.reviewKey, item])).values()].sort((a, b) => (a.reviewKey ?? '').localeCompare(b.reviewKey ?? '')), blocked: errors.length > 0 || !barrier.valid, errors, semanticCaseCalls, semanticCaseCount, summary: { entities: entityGroups.length, relations: groups.filter((group) => group.kind === 'relation').length, claims: groups.filter((group) => group.kind === 'claim').length, semanticCases: semanticCaseCount, semanticCaseCalls, intents: intents.length, reviews: reviews.length } }
+  return { intents: intents.sort((a, b) => a.candidateRef.localeCompare(b.candidateRef)), bindings, reviewItems: [...new Map(reviews.map((item) => [item.reviewKey, item])).values()].sort((a, b) => (a.reviewKey ?? '').localeCompare(b.reviewKey ?? '')), blocked: errors.length > 0 || !barrier.valid, errors, semanticCaseCalls, semanticCaseCount, summary: { entities: entityGroups.length, relations: groups.filter((group) => group.kind === 'relation').length, claims: groups.filter((group) => group.kind === 'claim').length, semanticCases: semanticCaseCount, semanticCaseCalls, intents: intents.length, reviews: reviews.length, investmentThemes: themeGroups.length, potentialNewInvestmentThemes: potentialNewInvestmentThemes.length, recommendedNewInvestmentThemes: recommendedNewInvestmentThemes.length }, potentialNewInvestmentThemes: potentialNewInvestmentThemes.sort((a, b) => a.candidateId.localeCompare(b.candidateId)), recommendedNewInvestmentThemes: recommendedNewInvestmentThemes.sort((a, b) => a.candidateId.localeCompare(b.candidateId)) }
 }

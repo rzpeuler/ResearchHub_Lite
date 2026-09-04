@@ -69,6 +69,7 @@ export function validateExtractKnowledge(value: unknown, input: PreparedExtractK
 const ENTITY_OUTCOMES: readonly ResolutionOutcome[] = ['equivalent_to', 'distinct_from_all', 'uncertain']
 const RELATION_OUTCOMES: readonly ResolutionOutcome[] = ['equivalent', 'state_changed', 'coexists', 'contradicts', 'invalid', 'uncertain']
 const CLAIM_OUTCOMES: readonly ResolutionOutcome[] = ['equivalent', 'supersedes', 'coexists', 'contradicts', 'invalid', 'uncertain']
+const INVESTMENT_THEME_COVERAGE_OUTCOMES: readonly ResolutionOutcome[] = ['matches_existing', 'ambiguous_existing', 'potential_new']
 
 export function validateSemanticResolutionResult(value: unknown, input: PreparedResolveSemanticCaseInput): SemanticResolutionResult {
   const root = record(value, 'resolveSemanticCase output')
@@ -84,7 +85,7 @@ export function validateSemanticResolutionResult(value: unknown, input: Prepared
   const outcome = enumText(root.outcome, allowed, 'resolveSemanticCase.outcome')
   const alias = optionalText(root.targetAlias, 'resolveSemanticCase.targetAlias')
   const aliases = new Set(resolutionCase.existingProjections.map((item) => item.alias))
-  const requiresTarget = outcome === 'equivalent_to' || outcome === 'equivalent' || outcome === 'state_changed' || outcome === 'supersedes'
+  const requiresTarget = outcome === 'equivalent_to' || outcome === 'equivalent' || outcome === 'state_changed' || outcome === 'supersedes' || outcome === 'matches_existing'
   if (requiresTarget && alias === undefined) fail('invalid_reference', 'resolveSemanticCase outcome requires exactly one targetAlias')
   if (!requiresTarget && alias !== undefined) fail('invalid_reference', 'resolveSemanticCase outcome forbids targetAlias')
   if (alias !== undefined && !aliases.has(alias)) fail('invalid_reference', `Unknown case-local target alias ${alias}`)
@@ -94,7 +95,7 @@ export function validateSemanticResolutionResult(value: unknown, input: Prepared
 }
 
 export function semanticOutcomeVocabulary(caseKind: ResolutionCaseKind): readonly ResolutionOutcome[] {
-  return caseKind === 'EntityBindingCase' ? ENTITY_OUTCOMES : caseKind === 'RelationConflictCase' ? RELATION_OUTCOMES : CLAIM_OUTCOMES
+  return caseKind === 'EntityBindingCase' ? ENTITY_OUTCOMES : caseKind === 'RelationConflictCase' ? RELATION_OUTCOMES : caseKind === 'ClaimConflictCase' ? CLAIM_OUTCOMES : INVESTMENT_THEME_COVERAGE_OUTCOMES
 }
 
 function temporalDate(value: unknown, label: string): string | null {
