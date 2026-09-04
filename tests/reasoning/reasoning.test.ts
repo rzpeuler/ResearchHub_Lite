@@ -45,6 +45,11 @@ test('Codex executor rejects an empty model and unsupported runtime effort', () 
   assert.throws(() => new CodexReasoningExecutor({ capabilities, reasoningEffort: 'unsupported' as never }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_configuration_invalid')
 })
 
+test('Codex executor rejects invalid termination budgets', () => {
+  assert.throws(() => new CodexReasoningExecutor({ capabilities, terminationGraceMs: 0 }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_configuration_invalid')
+  assert.throws(() => new CodexReasoningExecutor({ capabilities, forcedTerminationWaitMs: 0 }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_configuration_invalid')
+})
+
 test('Codex executor isolates and cleans its invocation directory', async () => {
   const root = await mkdtemp(join(tmpdir(), 'rhl-reasoning-test-'))
   try {
@@ -63,8 +68,10 @@ test('Codex executor isolates and cleans its invocation directory', async () => 
 test('Codex executor preserves bounded failure details and timeout errors', async () => {
   const failure = new CodexReasoningExecutor({ capabilities, executable: process.execPath, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--fail'] })
   await assert.rejects(() => failure.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_execution_failed' && error.exitCode === 7 && error.stderr === 'fixture failure\n')
-  const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, timeoutMs: 20, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--sleep'] })
+  const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, timeoutMs: 50, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--sleep'] })
+  const started = Date.now()
   await assert.rejects(() => timeout.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_timeout')
+  assert.ok(Date.now() - started < 2_000)
 })
 
 test('Codex executor terminates a timed-out process tree', async () => {
@@ -72,16 +79,33 @@ test('Codex executor terminates a timed-out process tree', async () => {
   const pidFile = join(root, 'grandchild.pid')
   try {
     const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, tempRoot: root, timeoutMs: 50, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--spawn-grandchild', '--pid-file', pidFile] })
+    const started = Date.now()
     await assert.rejects(() => timeout.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_timeout')
+    assert.ok(Date.now() - started < 2_000)
+    assert.deepEqual((await readdir(root)).filter((entry) => entry.startsWith('researchhub-reasoning-')), [])
     const pid = Number((await readFile(pidFile, 'utf8')).trim())
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    let alive = true
-    try { process.kill(pid, 0) } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') alive = false }
-    assert.equal(alive, false)
+    assert.equal(await waitForProcessExit(pid, 1_500), true)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
 })
+
+if (process.platform !== 'win32') {
+  test('Codex executor falls back to SIGKILL when a process tree ignores SIGTERM', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'rhl-reasoning-kill-test-'))
+    const pidFile = join(root, 'grandchild.pid')
+    try {
+      const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, tempRoot: root, timeoutMs: 50, terminationGraceMs: 100, forcedTerminationWaitMs: 500, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--spawn-grandchild', '--ignore-term', '--pid-file', pidFile] })
+      const started = Date.now()
+      await assert.rejects(() => timeout.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_timeout')
+      assert.ok(Date.now() - started < 2_000)
+      const pid = Number((await readFile(pidFile, 'utf8')).trim())
+      assert.equal(await waitForProcessExit(pid, 1_500), true)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+}
 
 test('Codex executor classifies unavailable hosts and oversized output', async () => {
   const unavailable = new CodexReasoningExecutor({ capabilities, executable: join(process.cwd(), 'tests/reasoning/fixtures/does-not-exist.exe') })
@@ -89,3 +113,17 @@ test('Codex executor classifies unavailable hosts and oversized output', async (
   const oversized = new CodexReasoningExecutor({ capabilities, executable: process.execPath, maxOutputChars: 10, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--big'] })
   await assert.rejects(() => oversized.execute({ operation: 'understandAndPlan', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_output_too_large')
 })
+
+async function waitForProcessExit(pid: number, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+  while (true) {
+    try {
+      process.kill(pid, 0)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ESRCH') return true
+      throw error
+    }
+    if (Date.now() >= deadline) return false
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+}

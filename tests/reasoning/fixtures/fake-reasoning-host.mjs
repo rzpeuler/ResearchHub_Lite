@@ -11,7 +11,10 @@ if (process.argv.includes('--sleep')) await new Promise((resolve) => setTimeout(
 if (process.argv.includes('--spawn-grandchild')) {
   const pidFileFlag = process.argv.indexOf('--pid-file')
   const pidFile = pidFileFlag >= 0 ? process.argv[pidFileFlag + 1] : undefined
-  const grandchild = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' })
+  const ignoresTermination = process.argv.includes('--ignore-term')
+  if (ignoresTermination) process.on('SIGTERM', () => {})
+  const grandchildCode = ignoresTermination ? 'process.on(\'SIGTERM\', () => {}); setInterval(() => {}, 1000)' : 'setInterval(() => {}, 1000)'
+  const grandchild = spawn(process.execPath, ['-e', grandchildCode], { stdio: 'ignore' })
   if (pidFile) writeFileSync(pidFile, String(grandchild.pid))
   await new Promise(() => {})
 }

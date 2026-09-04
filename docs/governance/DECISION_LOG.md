@@ -17,6 +17,16 @@ The policy is passed explicitly on each Codex CLI invocation rather than inherit
 
 ---
 
+## RHL-FIX-REASONING-TIMEOUT-001-FIX-001 — 2026-09-04
+
+**Status:** Implemented / CTO acceptance pending
+
+The Codex ReasoningExecutor timeout lifecycle is finalized behind the existing Plugin boundary. After timeout, direct-child close/error events cannot settle the request before bounded process-tree termination completes. Windows retains bounded `taskkill /PID /T /F`; POSIX uses detached process-group termination with SIGTERM, bounded grace, SIGKILL fallback, and bounded forced-wait handling. Invocation-directory cleanup runs after timeout termination handling.
+
+The accepted temporary runtime policy remains explicit `gpt-5.6-luna` with reasoning effort `high`. A bounded real smoke is recorded in `tests/validation/evidence/RHL_FIX_REASONING_TIMEOUT_001_SMOKE.json`. This task does not authorize R5, change historical R4 evidence, or alter Workflow, Knowledge Resolution, Schema, or Writer architecture.
+
+---
+
 ## RHL-ADR-001 — No Custom Agent Runtime
 
 **Status:** Accepted

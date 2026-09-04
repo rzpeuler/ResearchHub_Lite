@@ -35,13 +35,14 @@
 - `RHL-FIX-IDENTITY-001` and `RHL-FIX-IDENTITY-001-FIX-001` are independently CTO accepted / closed: Unicode-safe semantic identity, deterministic mixed-script canonical IDs, collision-safe consolidation, exact Unicode retrieval, and pre-reconciliation candidate uniqueness checks are covered by offline tests.
 - `RHL-REFACTOR-KNOWLEDGE-RESOLUTION-001` is implementation-complete pending CTO independent acceptance: full-set post-extraction Reconciliation was retired and replaced by deterministic Entity Binding, Entity/Relation/Claim Diff, bounded semantic cases, deterministic ResolutionIntent policy/barrier, and ResolutionIntent-driven ChangeSet planning.
 - `RHL-REFACTOR-KNOWLEDGE-RESOLUTION-001-FIX-001` is implemented pending CTO independent acceptance: semantic cases now carry bounded real document excerpts and source projections, Entity plausible retrieval overflows to Review without truncation, semantic case/retry accounting is separate, durable-ref token leakage is rejected recursively, and the mixed fresh-KB scale regression is covered offline.
-- `RHL-FIX-REASONING-TIMEOUT-001` is implemented: Codex process-tree termination and wall-clock timeout enforcement are covered by tests; the Codex host plugin now explicitly requests model `gpt-5.6-luna` with reasoning effort `high` and exposes safe runtime metadata. A complete real smoke and R5 validation remain pending.
+- `RHL-FIX-REASONING-TIMEOUT-001` is implemented: Codex process-tree termination and wall-clock timeout enforcement are covered by tests; the Codex host plugin now explicitly requests model `gpt-5.6-luna` with reasoning effort `high` and exposes safe runtime metadata.
+- `RHL-FIX-REASONING-TIMEOUT-001-FIX-001` is implemented pending CTO independent acceptance: timeout settlement is owned by the bounded termination path, POSIX termination includes SIGTERM/grace/SIGKILL fallback, descendant cleanup is covered, and a bounded real Luna High smoke is recorded in `tests/validation/evidence/RHL_FIX_REASONING_TIMEOUT_001_SMOKE.json`. R5 remains unauthorized until CTO acceptance.
 - Temporary Reasoning Runtime Policy: ResearchHub_Lite currently requests Codex model `gpt-5.6-luna` with reasoning effort `high`. This is host-specific runtime configuration, not a frozen Knowledge architecture dependency; future hosts/models remain replaceable through `ReasoningExecutor` configuration.
 
 ## Current Limitations
 
 - `RHL-VALIDATION-001-R4` exercised the exact frozen PDF with real Docling 2.116.0 and real Codex CLI 0.152.1; preflight, Raw archival, parse, and Plan passed, but primary Extraction blocked at `unit-017` after two real Codex reasoning timeouts. Classification: `REASONING_FAILURE`; Writer was not invoked. This remains historical evidence of the ReasoningExecutor timeout-enforcement defect addressed by `RHL-FIX-REASONING-TIMEOUT-001`. Evidence is preserved in `tests/validation/evidence/rhl-validation-001-r4-real-e2e.json`.
-- A complete real Codex validation remains pending; deterministic fake-host coverage is present.
+- A complete real Codex validation remains pending; deterministic fake-host coverage and a bounded Luna High smoke are present.
 - `RHL-VALIDATION-001` was executed with the exact frozen PDF; it was blocked at deterministic ExtractionPlan coverage validation and remains historical evidence.
 - `RHL-FIX-PLAN-001` was independently CTO accepted / closed.
 - `RHL-VALIDATION-001-R2` was executed against the accepted product baseline and blocked at the historical full-set reconciliation stage; this remains historical evidence and is not marked successful.
@@ -60,4 +61,4 @@
 
 ## Next Pending After CTO Acceptance
 
-After CTO review of the R4 reasoning failure evidence, the next task is to decide whether to remediate the real Codex timeout path and schedule a fresh validation run. R4 is not marked successful or CTO accepted.
+After CTO review of `RHL-FIX-REASONING-TIMEOUT-001-FIX-001`, the next task is to decide whether to schedule `RHL-VALIDATION-001-R5`. R4 is not marked successful or CTO accepted.

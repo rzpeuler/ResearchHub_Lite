@@ -11,7 +11,10 @@ import type { ReasoningExecutor, ReasoningOperation, ReasoningRequest, Reasoning
 const STDERR_LIMIT = 4_000
 const DEFAULT_TIMEOUT_MS = 60_000
 const DEFAULT_OUTPUT_LIMIT = 256_000
-const PROCESS_TERMINATION_TIMEOUT_MS = 5_000
+const WINDOWS_TERMINATION_TIMEOUT_MS = 5_000
+const DEFAULT_TERMINATION_GRACE_MS = 5_000
+const DEFAULT_FORCED_TERMINATION_WAIT_MS = 1_500
+const PROCESS_GROUP_POLL_INTERVAL_MS = 25
 const DEFAULT_MODEL = 'gpt-5.6-luna'
 const CODEX_REASONING_EFFORTS = ['none', 'low', 'medium', 'high', 'xhigh', 'max'] as const
 const execFile = promisify(execFileCallback)
@@ -28,6 +31,9 @@ export interface CodexReasoningExecutorOptions {
   readonly capabilities: ReasoningCapabilities
   readonly executable?: string
   readonly timeoutMs?: number
+  /** Narrow process-termination controls; not Workflow semantic configuration. */
+  readonly terminationGraceMs?: number
+  readonly forcedTerminationWaitMs?: number
   readonly maxOutputChars?: number
   readonly tempRoot?: string
   readonly model?: string
@@ -40,6 +46,8 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
   private readonly configuredCapabilities: ReasoningCapabilities
   private readonly executable: string
   private readonly timeoutMs: number
+  private readonly terminationGraceMs: number
+  private readonly forcedTerminationWaitMs: number
   private readonly maxOutputChars: number
   private readonly tempRoot: string
   private readonly model: string
@@ -50,6 +58,8 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
     this.configuredCapabilities = validateReasoningCapabilities(options?.capabilities)
     this.executable = options.executable ?? process.env.CODEX_EXECUTABLE ?? 'codex'
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
+    this.terminationGraceMs = options.terminationGraceMs ?? DEFAULT_TERMINATION_GRACE_MS
+    this.forcedTerminationWaitMs = options.forcedTerminationWaitMs ?? DEFAULT_FORCED_TERMINATION_WAIT_MS
     this.maxOutputChars = options.maxOutputChars ?? DEFAULT_OUTPUT_LIMIT
     this.tempRoot = options.tempRoot ?? tmpdir()
     this.model = (options.model ?? DEFAULT_MODEL).trim()
@@ -59,6 +69,8 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
     if (!this.model) invalid('model must be non-empty')
     if (!(CODEX_REASONING_EFFORTS as readonly string[]).includes(this.reasoningEffort)) invalid('reasoningEffort is unsupported')
     if (!Number.isSafeInteger(this.timeoutMs) || this.timeoutMs <= 0) invalid('timeoutMs must be a positive safe integer')
+    if (!Number.isSafeInteger(this.terminationGraceMs) || this.terminationGraceMs <= 0) invalid('terminationGraceMs must be a positive safe integer')
+    if (!Number.isSafeInteger(this.forcedTerminationWaitMs) || this.forcedTerminationWaitMs <= 0) invalid('forcedTerminationWaitMs must be a positive safe integer')
     if (!Number.isSafeInteger(this.maxOutputChars) || this.maxOutputChars <= 0) invalid('maxOutputChars must be a positive safe integer')
     if (this.commandPrefix.length === 0) invalid('commandPrefix must not be empty')
   }
@@ -113,7 +125,7 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
       let stdout = ''
       let stderr = ''
       let settled = false
-      let timedOut = false
+      let timeoutTriggered = false
       let stdoutTruncated = false
       const finish = (callback: () => void): void => {
         if (settled) return
@@ -122,8 +134,9 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
         callback()
       }
       const timeout = setTimeout(() => {
-        timedOut = true
-        void terminateProcessTree(child.pid).then(() => {
+        if (settled || timeoutTriggered) return
+        timeoutTriggered = true
+        void terminateProcessTreeAndWait(child.pid, this.terminationGraceMs, this.forcedTerminationWaitMs).then(() => {
           finish(() => reject(new ReasoningExecutorError('reasoning_timeout', 'Reasoning host execution timed out', { operation, operationId })))
         }).catch((error) => {
           finish(() => reject(new ReasoningExecutorError('reasoning_timeout', `Reasoning host execution timed out; process-tree termination failed: ${error instanceof Error ? error.message : String(error)}`, { operation, operationId, cause: error })))
@@ -138,13 +151,14 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
       })
       child.stderr.on('data', (data: string) => { stderr = (stderr + data).slice(-STDERR_LIMIT) })
       child.once('error', (error: NodeJS.ErrnoException) => {
+        if (timeoutTriggered) return
         const code = error.code === 'ENOENT' ? 'reasoning_host_unavailable' : 'reasoning_execution_failed'
         finish(() => reject(new ReasoningExecutorError(code, error.message, { operation, operationId, stderr, cause: error })))
       })
       child.once('close', (exitCode) => {
+        if (timeoutTriggered) return
         finish(() => {
-          if (timedOut) reject(new ReasoningExecutorError('reasoning_timeout', 'Reasoning host execution timed out', { operation, operationId }))
-          else if (exitCode !== 0) reject(new ReasoningExecutorError('reasoning_execution_failed', `Reasoning host exited with code ${String(exitCode)}`, { operation, operationId, exitCode: exitCode ?? undefined, stderr }))
+          if (exitCode !== 0) reject(new ReasoningExecutorError('reasoning_execution_failed', `Reasoning host exited with code ${String(exitCode)}`, { operation, operationId, exitCode: exitCode ?? undefined, stderr }))
           else if (stdoutTruncated) reject(new ReasoningExecutorError('reasoning_output_too_large', 'Reasoning output exceeded the configured limit', { operation, operationId }))
           else resolve(stdout)
         })
@@ -168,20 +182,49 @@ export function buildCodexInvocationArgs(input: { commandPrefix: readonly string
   ]
 }
 
-async function terminateProcessTree(pid: number | undefined): Promise<void> {
+async function terminateProcessTreeAndWait(pid: number | undefined, terminationGraceMs: number, forcedTerminationWaitMs: number): Promise<void> {
   if (pid === undefined) return
   if (process.platform === 'win32') {
     try {
-      await execFile('taskkill', ['/pid', String(pid), '/t', '/f'], { windowsHide: true, timeout: PROCESS_TERMINATION_TIMEOUT_MS, maxBuffer: STDERR_LIMIT * 2 })
+      await execFile('taskkill', ['/pid', String(pid), '/t', '/f'], { windowsHide: true, timeout: WINDOWS_TERMINATION_TIMEOUT_MS, maxBuffer: STDERR_LIMIT * 2 })
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
       if (code !== 'ESRCH' && code !== 'ENOENT') throw error
     }
     return
   }
-  try { process.kill(-pid, 'SIGTERM') } catch (error) {
+  sendProcessGroupSignal(pid, 'SIGTERM')
+  if (await waitForProcessGroupExit(pid, terminationGraceMs)) return
+  sendProcessGroupSignal(pid, 'SIGKILL')
+  await waitForProcessGroupExit(pid, forcedTerminationWaitMs)
+}
+
+function sendProcessGroupSignal(pid: number, signal: NodeJS.Signals): void {
+  try { process.kill(-pid, signal) } catch (error) {
     const code = (error as NodeJS.ErrnoException).code
     if (code !== 'ESRCH') throw error
+  }
+}
+
+async function waitForProcessGroupExit(pid: number, waitMs: number): Promise<boolean> {
+  const deadline = Date.now() + waitMs
+  while (isProcessGroupAlive(pid)) {
+    const remainingMs = deadline - Date.now()
+    if (remainingMs <= 0) return false
+    await new Promise((resolve) => setTimeout(resolve, Math.min(PROCESS_GROUP_POLL_INTERVAL_MS, remainingMs)))
+  }
+  return true
+}
+
+function isProcessGroupAlive(pid: number): boolean {
+  try {
+    process.kill(-pid, 0)
+    return true
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (code === 'ESRCH') return false
+    if (code === 'EPERM') return true
+    throw error
   }
 }
 
