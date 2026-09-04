@@ -24,14 +24,16 @@ const validationEvidenceDir = resolve(repoRoot, 'tests/validation/evidence')
 const pdfFilename = '20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf'
 const expectedSha256 = '998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63'
 const expectedBytes = 3209114
-const productBaseline = 'fa00f5a2ed764975be5b99500555b373d64053ad'
-const workflowRunId = 'rhl-validation-001-r4-primary'
-const knowledgeBaseId = 'kb-rhl-validation-001-r4'
+const productBaseline = '9cc9911ba8ca0bf3001e62766e6bcc6b4e0de802'
+const workflowRunId = 'rhl-validation-001-r5-primary'
+const knowledgeBaseId = 'kb-rhl-validation-001-r5'
 const r1EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-real-e2e.json')
 const r2EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-r2-real-e2e.json')
 const r3EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-r3-real-e2e.json')
 const r4EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-r4-real-e2e.json')
-const r4SummaryPath = resolve(validationEvidenceDir, 'RHL_VALIDATION_001_R4_SUMMARY.md')
+const r5EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-r5-real-e2e.json')
+const r5SummaryPath = resolve(validationEvidenceDir, 'RHL_VALIDATION_001_R5_SUMMARY.md')
+const timeoutSmokePath = resolve(validationEvidenceDir, 'RHL_FIX_REASONING_TIMEOUT_001_SMOKE.json')
 const configuredCapabilities: ReasoningCapabilities = { maxContextTokens: 100000, maxOutputTokens: 20000, structuredOutputSupport: true, maxConcurrency: 1 }
 const requestedModel = 'gpt-5.6-luna'
 const requestedReasoningEffort = 'high' as const
@@ -62,10 +64,11 @@ class RecordingExecutor implements ReasoningExecutor {
   async execute(request: ReasoningRequest): Promise<ReasoningResult> {
     const sequence = ++this.sequence
     const startedAt = new Date().toISOString()
-    const executionId = `rhl-validation-001-r4-primary-${String(sequence).padStart(3, '0')}`
+    const executionId = `rhl-validation-001-r5-primary-${String(sequence).padStart(3, '0')}`
     const inputChars = JSON.stringify(request.input).length
     const contractChars = JSON.stringify(request.outputContract).length
-    const entry: Dict = { sequence, executionId, operation: request.operation, startedAt, instructionChars: request.instruction.length, inputChars, contractChars, status: 'running' }
+    const runtime = this.inner.runtimeMetadata()
+    const entry: Dict = { sequence, executionId, operation: request.operation, requestedModel: runtime.requestedModel, requestedReasoningEffort: runtime.requestedReasoningEffort, startedAt, instructionChars: request.instruction.length, inputChars, contractChars, status: 'running' }
     this.calls.push(entry)
     if (request.operation === 'resolveSemanticCase') {
       const input = isDict(request.input) ? request.input : {}
@@ -122,6 +125,7 @@ class RecordingExecutor implements ReasoningExecutor {
       }
       entry.errorCode = typeof (error as { code?: unknown })?.code === 'string' ? (error as { code: string }).code : 'unknown'
       entry.error = error instanceof Error ? error.message.slice(0, 240) : String(error).slice(0, 240)
+      if (entry.errorCode === 'reasoning_timeout') { entry.configuredTimeoutMs = validationTimeoutMs; entry.terminationGraceMs = 5000; entry.forcedTerminationWaitMs = 1500; entry.actualDurationMs = entry.durationMs }
       throw error
     }
   }
@@ -183,7 +187,7 @@ async function prepareFreshKnowledgeBase(root: string): Promise<void> {
   try { await access(root); throw new ValidationFailure(`Fresh Knowledge Base path already exists: ${root}`) } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
   for (const directory of ['raw', 'registry', 'theme-groups', 'entities', 'relations', 'claims', 'sources', 'modules', 'logs/ingestion']) await mkdir(join(root, directory), { recursive: true })
   const timestamp = '2026-09-03T00:00:00.000Z'
-  await writeFile(join(root, 'manifest.yaml'), JSON.stringify({ knowledgeBaseId, name: 'RHL-VALIDATION-001-R4 Real Ingestion', schemaVersion: '0.3', storageFormatVersion: '1', revision: 0, status: 'active', createdAt: timestamp, updatedAt: timestamp }) + '\n')
+  await writeFile(join(root, 'manifest.yaml'), JSON.stringify({ knowledgeBaseId, name: 'RHL-VALIDATION-001-R5 Real Ingestion', schemaVersion: '0.3', storageFormatVersion: '1', revision: 0, status: 'active', createdAt: timestamp, updatedAt: timestamp }) + '\n')
   await writeFile(join(root, 'registry', 'assets.yaml'), '{}\n')
   await writeFile(join(root, 'registry', 'raw.yaml'), '{}\n')
 }
@@ -332,7 +336,7 @@ function acceptedPlanMetrics(document: Awaited<ReturnType<DocumentInputResolver[
     contextBlockCount: contextBlockIds.size,
     estimatedContextTokens: plan.estimatedContextTokens,
     coverageInvariant: covered.size === allBlocks.size && conflicts.length === 0 && uncovered.length === 0,
-    primaryExcludedConflict: conflicts.length === 0,
+    primaryExcludedDisjoint: conflicts.length === 0,
     capacity: Object.values(plan.estimatedContextTokens).every((tokens) => tokens <= 100000),
   }
 }
@@ -359,7 +363,7 @@ function countByValues(values: readonly string[]): Dict { return Object.fromEntr
 
 async function main(): Promise<void> {
   const stages: Record<string, Stage> = {}
-  const evidence: Dict = { taskId: 'RHL-VALIDATION-001-R4', validationTask: 'RHL-VALIDATION-001-R4', validationProductBaseline: productBaseline, startedAt: now(), phase: 'executing', phaseTimestamps: stages, architectureDocumentsModified: false, mockReasoningCalls: 0, realReasoningExecutor: 'CodexReasoningExecutor via RecordingExecutor' }
+  const evidence: Dict = { taskId: 'RHL-VALIDATION-001-R5', validationTask: 'RHL-VALIDATION-001-R5', validationProductBaseline: productBaseline, startedAt: now(), phase: 'executing', phaseTimestamps: stages, architectureDocumentsModified: false, mockReasoningCalls: 0, realReasoningExecutor: 'CodexReasoningExecutor via RecordingExecutor' }
   const checkpoint = async (): Promise<void> => { await writeEvidence(evidence, 'IN_PROGRESS') }
   let pdfPath: string | undefined
   let kbRoot: string | undefined
@@ -371,6 +375,7 @@ async function main(): Promise<void> {
     evidence.baseline = { productBaseline, currentHead: gitHead, originMain: remoteHead, governanceOnlySinceBaseline: changedProduct === '' }
     assertCondition(gitHead === remoteHead, `Git parity failed: HEAD=${gitHead}, origin/main=${remoteHead}`)
     assertCondition(changedProduct === '', 'Product-code freeze failed: production paths differ from the accepted product baseline')
+    evidence.historicalEvidence = await verifyHistoricalEvidence()
     stages.baseline_verified = { startedAt: now(), completedAt: now(), durationMs: 0, status: 'passed' }
     await checkpoint()
 
@@ -396,7 +401,7 @@ async function main(): Promise<void> {
       const inner = new CodexReasoningExecutor({ capabilities: configuredCapabilities, timeoutMs: validationTimeoutMs, maxOutputChars: validationMaxOutputChars, model: requestedModel, reasoningEffort: requestedReasoningEffort })
       const smokeStarted = Date.now()
       const smoke = await inner.execute({ operation: 'understandAndPlan', instruction: 'Return a JSON object with one key named smoke and value ok. Return no other text.', input: { smoke: true }, outputContract: { type: 'object' }, metadata: { executionId: 'rhl-validation-001-codex-smoke' } })
-      evidence.codex = { executable: 'codex', version, helpOutputBytes: helpBytes, configuredCapabilities, timeoutMs: validationTimeoutMs, maxOutputChars: validationMaxOutputChars, reasoningRuntime: inner.runtimeMetadata(), globalConfigDependency: 'none for model/reasoning effort; both are explicit invocation args', smoke: { operation: smoke.operation, operationId: smoke.operationId, durationMs: Date.now() - smokeStarted, outputBytes: Buffer.byteLength(String(smoke.rawOutput ?? smoke.output), 'utf8') } }
+      evidence.codex = { executable: 'codex', version, helpOutputBytes: helpBytes, configuredCapabilities, timeoutMs: validationTimeoutMs, terminationGraceMs: 5000, forcedTerminationWaitMs: 1500, windowsTerminationStrategy: process.platform === 'win32' ? 'taskkill /PID <pid> /T /F with bounded execFile timeout' : null, maxOutputChars: validationMaxOutputChars, reasoningRuntime: inner.runtimeMetadata(), globalConfigDependency: 'none for model/reasoning effort; both are explicit invocation args', smoke: { operation: smoke.operation, operationId: smoke.operationId, durationMs: Date.now() - smokeStarted, outputBytes: Buffer.byteLength(String(smoke.rawOutput ?? smoke.output), 'utf8') } }
       await checkpoint()
       return inner
     })
@@ -449,7 +454,7 @@ async function main(): Promise<void> {
     if (primary.status === 'blocked' && primary.planAttempts?.some((attempt) => attempt.status === 'terminal_invalid')) throw new ValidationFailure(`PLAN_REPAIR_EXHAUSTED: ${primary.errors.join('; ').slice(0, 1000)}`)
     if (primary.acceptedPlan !== undefined) {
       evidence.extractionPlan = acceptedPlanMetrics(document, primary)
-      evidence.extractionPlanDetails = { units: primary.acceptedPlan.units.map((unit) => ({ unitId: unit.unitId, proposedUnitId: unit.proposedUnitId, primaryBlockCount: unit.primaryBlockIds.length, contextBlockCount: unit.contextBlockIds.length, topic: unit.topic, semanticPurpose: unit.semanticPurpose, extractionFocus: unit.extractionFocus })), exclusionQuality: exclusionQuality(document, primary) }
+      evidence.extractionPlanDetails = { units: primary.acceptedPlan.units.map((unit) => ({ unitId: unit.unitId, proposedUnitId: unit.proposedUnitId, primaryBlockCount: unit.primaryBlockIds.length, contextBlockCount: unit.contextBlockIds.length, estimatedContextTokens: primary.acceptedPlan?.estimatedContextTokens[unit.unitId] ?? null, topic: unit.topic, semanticPurpose: unit.semanticPurpose, extractionFocus: unit.extractionFocus })), exclusionQuality: exclusionQuality(document, primary) }
     }
     const unitCandidateCounts = primary.unitSummaries.reduce((totals, unit) => ({ entity: totals.entity + Number(unit.candidateCounts.entity ?? 0), relation: totals.relation + Number(unit.candidateCounts.relation ?? 0), claim: totals.claim + Number(unit.candidateCounts.claim ?? 0), rejected: totals.rejected + unit.rejectedCount }), { entity: 0, relation: 0, claim: 0, rejected: 0 })
     evidence.candidates = { rawEntityCandidates: unitCandidateCounts.entity, rawRelationCandidates: unitCandidateCounts.relation, rawClaimCandidates: unitCandidateCounts.claim, rejectedCandidates: unitCandidateCounts.rejected, unitCandidateCounts }
@@ -519,24 +524,40 @@ async function main(): Promise<void> {
     evidence.phase = 'completed'
     evidence.completedAt = now()
     await writeEvidence(evidence, String(evidence.validationOutcome))
-    console.log(JSON.stringify({ outcome: evidence.validationOutcome, pdf: evidence.pdf, docling: evidence.docling, primary: primarySummary(primary), finalKnowledgeBase: evidence.finalKnowledgeBase, replay: evidence.replay, evidence: r4EvidencePath, summary: r4SummaryPath }))
+    console.log(JSON.stringify({ outcome: evidence.validationOutcome, pdf: evidence.pdf, docling: evidence.docling, primary: primarySummary(primary), finalKnowledgeBase: evidence.finalKnowledgeBase, replay: evidence.replay, evidence: r5EvidencePath, summary: r5SummaryPath }))
     void document; void assets
   } catch (error) {
     evidence.phase = 'blocked'
     const failureText = errorText(error)
-    evidence.validationOutcome = /reasoning host execution timed out|reasoning_timeout/i.test(failureText) ? 'REASONING_FAILURE' : error instanceof ValidationFailure ? error.message.split(':')[0] : 'VALIDATION_BLOCKED'
+    evidence.validationOutcome = /reasoning host execution timed out|reasoning_timeout/i.test(failureText) ? 'REASONING_FAILURE' : /Primary workflow blocked:/i.test(failureText) ? 'PRODUCT_DEFECT' : error instanceof ValidationFailure ? error.message.split(':')[0] : 'VALIDATION_BLOCKED'
     evidence.failureClassification = evidence.validationOutcome
+    evidence.failureStage = /Primary workflow blocked:/i.test(failureText) ? 'ChangeSet validation before Writer' : undefined
+    evidence.classificationReason = /Primary workflow blocked:/i.test(failureText) ? 'Deterministic Schema 0.3 ChangeSet validation rejected three real extracted Claims with invalid temporal scope; no Writer invocation occurred.' : undefined
     evidence.error = failureText.slice(0, 2000)
     evidence.completedAt = now()
     await writeEvidence(evidence, String(evidence.validationOutcome))
-    console.error(JSON.stringify({ outcome: evidence.validationOutcome, error: evidence.error, evidence: r4EvidencePath, summary: r4SummaryPath }))
+    console.error(JSON.stringify({ outcome: evidence.validationOutcome, error: evidence.error, evidence: r5EvidencePath, summary: r5SummaryPath }))
     process.exitCode = 1
   }
 }
 
+async function verifyHistoricalEvidence(): Promise<Dict> {
+  const paths = [r1EvidencePath, r2EvidencePath, r3EvidencePath, r4EvidencePath, timeoutSmokePath]
+  const entries: Dict[] = []
+  for (const path of paths) {
+    const relativePath = path.slice(repoRoot.length + 1).replaceAll('\\', '/')
+    const digest = sha256(await readFile(path))
+    const currentHash = (await commandOutput('git', ['hash-object', path])).stdout.trim()
+    const baselineHash = (await commandOutput('git', ['rev-parse', `${productBaseline}:${relativePath}`])).stdout.trim()
+    assertCondition(currentHash === baselineHash, `Historical evidence changed: ${relativePath}`)
+    entries.push({ path, sha256: digest, gitBlobHash: currentHash, baselineGitBlobHash: baselineHash, unchanged: true })
+  }
+  return { allUnchanged: true, files: entries }
+}
+
 async function writeEvidence(evidence: Dict, outcome: string): Promise<void> {
   await mkdir(validationEvidenceDir, { recursive: true })
-  await writeFile(r4EvidencePath, JSON.stringify(evidence, null, 2) + '\n')
+  await writeFile(r5EvidencePath, JSON.stringify(evidence, null, 2) + '\n')
   const primary = isDict(evidence.primary) ? evidence.primary : {}
   const finalKb = isDict(evidence.finalKnowledgeBase) ? evidence.finalKnowledgeBase : {}
   const replay = isDict(evidence.replay) ? evidence.replay : {}
@@ -546,8 +567,8 @@ async function writeEvidence(evidence: Dict, outcome: string): Promise<void> {
   const doclingStats = isDict(evidence.docling) && isDict(evidence.docling.stats) ? evidence.docling.stats : {}
   const candidateTotals = isDict(evidence.candidates) ? evidence.candidates : {}
   const resolution = isDict(evidence.resolution) ? evidence.resolution : {}
-  const summary = ['# RHL-VALIDATION-001-R4 Real E2E Validation', '', `- Outcome: ${outcome}`, `- Product baseline: ${String(evidence.validationProductBaseline)}`, `- CTO acceptance: ${String(evidence.ctoAcceptance ?? 'pending')}`, `- PDF: ${String((evidence.pdf as Dict | undefined)?.filename ?? 'not verified')} (${String((evidence.pdf as Dict | undefined)?.bytes ?? 'n/a')} bytes; ${String((evidence.pdf as Dict | undefined)?.sha256 ?? 'n/a')})`, `- Docling: ${String((evidence.docling as Dict | undefined)?.parser ? JSON.stringify((evidence.docling as Dict).parser) : 'not executed')}`, `- StructuredDocument: ${String(doclingStats.pageCount ?? 'n/a')} pages, ${String(doclingStats.sectionCount ?? 'n/a')} sections, ${String(doclingStats.blockCount ?? 'n/a')} blocks, ${String(doclingStats.tableCount ?? 'n/a')} tables, ${String(doclingStats.headingCount ?? 'n/a')} headings, ${String(doclingStats.listCount ?? 'n/a')} lists, ${String(doclingStats.captionCount ?? 'n/a')} captions, ${String(evidence.docling && isDict(evidence.docling) ? evidence.docling.warningCount ?? 'n/a' : 'n/a')} warnings`, `- Raw archive: ${JSON.stringify(evidence.rawArchive ?? {})}`, `- Primary status / Writer: ${String(primary.status ?? 'not executed')} / ${String(primary.writeStatus ?? 'not executed')}`, `- Plan attempts: ${JSON.stringify(planAttempts)}`, `- Accepted plan: ${JSON.stringify({ unitCount: plan.unitCount, primaryCoveredBlockCount: plan.primaryCoveredBlockCount, excludedBlockCount: plan.excludedBlockCount, primaryCoveragePercentage: plan.primaryCoveragePercentage, excludedPercentage: plan.excludedPercentage })}`, `- Exclusion quality: ${JSON.stringify({ excludedPercentage: exclusion.excludedPercentage, semanticQualityWarning: exclusion.semanticQualityWarning })}`, `- Extraction: ${String(primary.unitCount ?? 'n/a')} units; raw Entity ${String(candidateTotals.rawEntityCandidates ?? 'n/a')}, Relation ${String(candidateTotals.rawRelationCandidates ?? 'n/a')}, Claim ${String(candidateTotals.rawClaimCandidates ?? 'n/a')}, rejected ${String(candidateTotals.rejectedCandidates ?? 'n/a')}`, `- Knowledge Resolution: Cases ${String(resolution.semanticCaseCount ?? 'n/a')} / ${String(resolution.semanticCaseRatioPercentage ?? 'n/a')}%; intents ${JSON.stringify(resolution.intents ?? {})}`, `- Consolidation: ${JSON.stringify(evidence.consolidation ?? {})}`, `- Final KB counts: ${JSON.stringify(finalKb.counts ?? {})}`, `- ReviewSummary: ${JSON.stringify(primary.reviewSummary ?? {})}`, `- Final ChangeSet validation: ${JSON.stringify(evidence.finalChangeSetValidation ?? {})}`, `- Replay: ${JSON.stringify(replay)}`, '', 'The JSON evidence contains bounded telemetry only; prompts, model output bodies, chain-of-thought, credentials, and runtime artifacts are excluded. Historical raw counts are comparison-only and do not establish semantic quality.']
-  await writeFile(r4SummaryPath, summary.join('\n') + '\n')
+  const summary = ['# RHL-VALIDATION-001-R5 Real E2E Validation', '', `- Outcome: ${outcome}`, `- Failure stage: ${String(evidence.failureStage ?? 'n/a')}`, `- Classification reason: ${String(evidence.classificationReason ?? 'n/a')}`, `- Product baseline: ${String(evidence.validationProductBaseline)}`, `- CTO acceptance: ${String(evidence.ctoAcceptance ?? 'pending')}`, `- PDF: ${String((evidence.pdf as Dict | undefined)?.filename ?? 'not verified')} (${String((evidence.pdf as Dict | undefined)?.bytes ?? 'n/a')} bytes; ${String((evidence.pdf as Dict | undefined)?.sha256 ?? 'n/a')})`, `- Docling: ${String((evidence.docling as Dict | undefined)?.parser ? JSON.stringify((evidence.docling as Dict).parser) : 'not executed')}`, `- StructuredDocument: ${String(doclingStats.pageCount ?? 'n/a')} pages, ${String(doclingStats.sectionCount ?? 'n/a')} sections, ${String(doclingStats.blockCount ?? 'n/a')} blocks, ${String(doclingStats.tableCount ?? 'n/a')} tables, ${String(doclingStats.headingCount ?? 'n/a')} headings, ${String(doclingStats.listCount ?? 'n/a')} lists, ${String(doclingStats.captionCount ?? 'n/a')} captions, ${String(evidence.docling && isDict(evidence.docling) ? evidence.docling.warningCount ?? 'n/a' : 'n/a')} warnings`, `- Raw archive: ${JSON.stringify(evidence.rawArchive ?? {})}`, `- Primary status / Writer: ${String(primary.status ?? 'not executed')} / ${String(primary.writeStatus ?? 'not executed')}`, `- Plan attempts: ${JSON.stringify(planAttempts)}`, `- Accepted plan: ${JSON.stringify({ unitCount: plan.unitCount, primaryCoveredBlockCount: plan.primaryCoveredBlockCount, excludedBlockCount: plan.excludedBlockCount, primaryCoveragePercentage: plan.primaryCoveragePercentage, excludedPercentage: plan.excludedPercentage })}`, `- Exclusion quality: ${JSON.stringify({ excludedPercentage: exclusion.excludedPercentage, semanticQualityWarning: exclusion.semanticQualityWarning })}`, `- Extraction: ${String(primary.unitCount ?? 'n/a')} units; raw Entity ${String(candidateTotals.rawEntityCandidates ?? 'n/a')}, Relation ${String(candidateTotals.rawRelationCandidates ?? 'n/a')}, Claim ${String(candidateTotals.rawClaimCandidates ?? 'n/a')}, rejected ${String(candidateTotals.rejectedCandidates ?? 'n/a')}`, `- Knowledge Resolution: Cases ${String(resolution.semanticCaseCount ?? 'n/a')} / ${String(resolution.semanticCaseRatioPercentage ?? 'n/a')}%; intents ${JSON.stringify(resolution.intents ?? {})}`, `- Consolidation: ${JSON.stringify(evidence.consolidation ?? {})}`, `- Final KB counts: ${JSON.stringify(finalKb.counts ?? {})}`, `- ReviewSummary: ${JSON.stringify(primary.reviewSummary ?? {})}`, `- Final ChangeSet validation: ${JSON.stringify(evidence.finalChangeSetValidation ?? {})}`, `- Replay: ${JSON.stringify(replay)}`, '', 'The JSON evidence contains bounded telemetry only; prompts, model output bodies, chain-of-thought, credentials, and runtime artifacts are excluded. Historical raw counts are comparison-only and do not establish semantic quality.']
+  await writeFile(r5SummaryPath, summary.join('\n') + '\n')
 }
 
 await main()

@@ -17,6 +17,16 @@ The policy is passed explicitly on each Codex CLI invocation rather than inherit
 
 ---
 
+## RHL-VALIDATION-001-R5 — 2026-09-04
+
+**Status:** Executed / PRODUCT_DEFECT / CTO acceptance pending
+
+R5 used the exact frozen 103-page PDF, a fresh `kb-rhl-validation-001-r5`, real Docling `2.116.0`, and real Codex CLI `0.152.1` with explicit `gpt-5.6-luna` and `high`. Plan validation and all 18 serial ExtractionUnits completed without a reasoning timeout. The fresh Knowledge Resolution path required zero semantic resolution cases.
+
+The run stopped before Writer at deterministic ChangeSet validation because three real extracted Claims failed the Schema 0.3 temporal-scope validator. This is recorded as `PRODUCT_DEFECT`: the deterministic production contract prevented safe progression after malformed Claim temporal data reached ChangeSet validation. Writer invocation was zero, no replay was run, and R1–R4 plus timeout-smoke evidence remain immutable. No architecture decision is changed; a separate remediation task is required before any new R5 attempt.
+
+---
+
 ## RHL-FIX-REASONING-TIMEOUT-001-FIX-001 — 2026-09-04
 
 **Status:** Implemented / CTO acceptance pending
