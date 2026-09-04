@@ -38,12 +38,12 @@
 
 ## Current Limitations
 
-- A production Docling environment has not been exercised in this checkout.
-- A real Codex invocation remains opt-in; deterministic fake-host coverage is present.
+- `RHL-VALIDATION-001-R4` exercised the exact frozen PDF with real Docling 2.116.0 and real Codex CLI 0.152.1; preflight, Raw archival, parse, and Plan passed, but primary Extraction blocked at `unit-017` after two real Codex reasoning timeouts. Classification: `REASONING_FAILURE`; Writer was not invoked. Evidence is preserved in `tests/validation/evidence/rhl-validation-001-r4-real-e2e.json`.
+- A complete real Codex validation remains pending; deterministic fake-host coverage is present.
 - `RHL-VALIDATION-001` was executed with the exact frozen PDF; it was blocked at deterministic ExtractionPlan coverage validation and remains historical evidence.
 - `RHL-FIX-PLAN-001` was independently CTO accepted / closed.
 - `RHL-VALIDATION-001-R2` was executed against the accepted product baseline and blocked at the historical full-set reconciliation stage; this remains historical evidence and is not marked successful.
-- `RHL-VALIDATION-001-R3` was executed against a fresh Knowledge Base with the exact frozen PDF, real Docling, and real Codex; it was blocked at the historical full-set reconciliation stage because the real output did not provide exactly one decision for every supplied candidate. Historical evidence is preserved; no real R4 was run in the refactor task.
+- `RHL-VALIDATION-001-R3` was executed against a fresh Knowledge Base with the exact frozen PDF, real Docling, and real Codex; it was blocked at the historical full-set reconciliation stage because the real output did not provide exactly one decision for every supplied candidate. Historical evidence is preserved.
 
 ## Current Architecture Baseline
 
@@ -58,4 +58,4 @@
 
 ## Next Pending After CTO Acceptance
 
-After CTO acceptance, the next task is a fresh `RHL-VALIDATION-001-R4` run through Knowledge Resolution, ChangeSet, Writer, Reload, and Replay using the exact frozen PDF.
+After CTO review of the R4 reasoning failure evidence, the next task is to decide whether to remediate the real Codex timeout path and schedule a fresh validation run. R4 is not marked successful or CTO accepted.

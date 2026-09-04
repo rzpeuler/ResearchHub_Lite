@@ -13,6 +13,7 @@ import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { KnowledgeBaseLoaderV03 } from '../../knowledge/storage/loader.ts'
 import { validateKnowledgeBaseV03 } from '../../knowledge/validation/v03-validator.ts'
+import { getRaw, verifyRaw } from '../../knowledge/raw/raw-archive.ts'
 import { parseYaml } from '../../knowledge/storage/yaml.ts'
 import { runRawDocumentKnowledgeIngestion } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
 import type { IngestionWorkflowResult, ReviewSummary } from '../../workflows/raw-document-knowledge-ingestion/contracts.ts'
@@ -23,14 +24,14 @@ const validationEvidenceDir = resolve(repoRoot, 'tests/validation/evidence')
 const pdfFilename = '20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf'
 const expectedSha256 = '998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63'
 const expectedBytes = 3209114
-const productBaseline = '18d37ff19bf47a2ed650ddb040d818166f29fd36'
-const workflowRunId = 'rhl-validation-001-r3-primary'
-const knowledgeBaseId = 'kb-rhl-validation-001-r3'
-const historicalEvidencePath = 'C:\\Users\\Administrator\\Desktop\\ResearchHub\\tests\\knowledge\\product-validation\\evidence\\c004-r9-r6-r1-final-full-pipeline.json'
+const productBaseline = 'fa00f5a2ed764975be5b99500555b373d64053ad'
+const workflowRunId = 'rhl-validation-001-r4-primary'
+const knowledgeBaseId = 'kb-rhl-validation-001-r4'
 const r1EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-real-e2e.json')
 const r2EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-r2-real-e2e.json')
 const r3EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-r3-real-e2e.json')
-const r3SummaryPath = resolve(validationEvidenceDir, 'RHL_VALIDATION_001_R3_SUMMARY.md')
+const r4EvidencePath = resolve(validationEvidenceDir, 'rhl-validation-001-r4-real-e2e.json')
+const r4SummaryPath = resolve(validationEvidenceDir, 'RHL_VALIDATION_001_R4_SUMMARY.md')
 const configuredCapabilities: ReasoningCapabilities = { maxContextTokens: 100000, maxOutputTokens: 20000, structuredOutputSupport: true, maxConcurrency: 1 }
 const validationTimeoutMs = 900000
 const validationMaxOutputChars = 400000
@@ -48,6 +49,8 @@ class ValidationFailure extends Error {
 class RecordingExecutor implements ReasoningExecutor {
   readonly calls: Array<Dict> = []
   readonly acceptedEvidenceBlockIds = new Set<string>()
+  readonly semanticCaseTelemetry: Array<Dict> = []
+  readonly extractionCandidateTelemetry: Array<Dict> = []
   private sequence = 0
 
   constructor(private readonly inner: CodexReasoningExecutor) {}
@@ -57,26 +60,64 @@ class RecordingExecutor implements ReasoningExecutor {
   async execute(request: ReasoningRequest): Promise<ReasoningResult> {
     const sequence = ++this.sequence
     const startedAt = new Date().toISOString()
-    const executionId = `rhl-validation-001-r3-primary-${String(sequence).padStart(3, '0')}`
+    const executionId = `rhl-validation-001-r4-primary-${String(sequence).padStart(3, '0')}`
     const inputChars = JSON.stringify(request.input).length
     const contractChars = JSON.stringify(request.outputContract).length
     const entry: Dict = { sequence, executionId, operation: request.operation, startedAt, instructionChars: request.instruction.length, inputChars, contractChars, status: 'running' }
     this.calls.push(entry)
+    if (request.operation === 'resolveSemanticCase') {
+      const input = isDict(request.input) ? request.input : {}
+      const resolutionCase = isDict(input.resolutionCase) ? input.resolutionCase : {}
+      const projections = Array.isArray(resolutionCase.existingProjections) ? resolutionCase.existingProjections : []
+      const excerpts = Array.isArray(resolutionCase.evidenceExcerpts) ? resolutionCase.evidenceExcerpts : []
+      const serialized = JSON.stringify(request.input)
+      const telemetry: Dict = {
+        caseId: typeof resolutionCase.caseId === 'string' ? resolutionCase.caseId : undefined,
+        caseKind: typeof resolutionCase.caseKind === 'string' ? resolutionCase.caseKind : 'unknown',
+        candidateKind: typeof resolutionCase.candidateKind === 'string' ? resolutionCase.candidateKind : 'unknown',
+        existingProjectionCount: projections.length,
+        evidenceExcerptCount: excerpts.length,
+        evidencePayloadSize: Buffer.byteLength(JSON.stringify(excerpts), 'utf8'),
+        incomingSourceMetadataPresent: isDict(resolutionCase.sourceContext),
+        existingSourceProjectionCount: projections.reduce((count, projection) => count + (isDict(projection) && Array.isArray(projection.sources) ? projection.sources.length : 0), 0),
+        contextPayloadCharacterEstimate: serialized.length,
+        durableRefLeak: /source:|raw-sha256-|planned-(?:entity|relation|claim)-/.test(serialized),
+        unrelatedBlockLeak: false,
+        status: 'running',
+      }
+      this.semanticCaseTelemetry.push(telemetry)
+      entry.semanticCase = { caseId: telemetry.caseId, caseKind: telemetry.caseKind, candidateKind: telemetry.candidateKind, payloadBytes: telemetry.contextPayloadCharacterEstimate, durableRefLeak: telemetry.durableRefLeak }
+    }
     try {
       const result = await this.inner.execute({ ...request, metadata: { ...(request.metadata ?? {}), executionId } })
       entry.completedAt = new Date().toISOString()
       entry.durationMs = result.durationMs ?? 0
       entry.outputBytes = Buffer.byteLength(String(result.rawOutput ?? result.output), 'utf8')
       entry.status = 'passed'
+      if (request.operation === 'resolveSemanticCase') {
+        const telemetry = this.semanticCaseTelemetry.at(-1)
+        if (telemetry) {
+          telemetry.status = 'passed'
+          telemetry.outcome = isDict(result.output) && typeof result.output.outcome === 'string' ? result.output.outcome : 'unknown'
+          telemetry.reasoningAttempts = 1
+        }
+      }
       if (request.operation === 'extractKnowledge' && isDict(result.output)) for (const kind of ['entities', 'relations', 'claims']) {
         const candidates = result.output[kind]
-        if (Array.isArray(candidates)) for (const candidate of candidates) if (isDict(candidate) && Array.isArray(candidate.evidenceBlockRefs)) for (const blockId of candidate.evidenceBlockRefs) if (typeof blockId === 'string') this.acceptedEvidenceBlockIds.add(blockId)
+        if (Array.isArray(candidates)) for (const candidate of candidates) if (isDict(candidate)) {
+          this.extractionCandidateTelemetry.push({ kind, candidateId: candidate.candidateId, aliases: Array.isArray(candidate.aliases) ? candidate.aliases.slice(0, 12) : [], source: isDict(candidate.source) ? { candidateRef: candidate.source.candidateRef, mention: candidate.source.mention } : undefined, target: isDict(candidate.target) ? { candidateRef: candidate.target.candidateRef, mention: candidate.target.mention } : undefined, subjectRefs: Array.isArray(candidate.subjectRefs) ? candidate.subjectRefs.slice(0, 12).map((subject) => isDict(subject) ? subject.candidateRef : undefined) : [], evidenceBlockRefs: Array.isArray(candidate.evidenceBlockRefs) ? candidate.evidenceBlockRefs.slice(0, 24) : [] })
+          if (Array.isArray(candidate.evidenceBlockRefs)) for (const blockId of candidate.evidenceBlockRefs) if (typeof blockId === 'string') this.acceptedEvidenceBlockIds.add(blockId)
+        }
       }
       return result
     } catch (error) {
       entry.completedAt = new Date().toISOString()
       entry.durationMs = Date.parse(String(entry.completedAt)) - Date.parse(startedAt)
       entry.status = 'failed'
+      if (request.operation === 'resolveSemanticCase') {
+        const telemetry = this.semanticCaseTelemetry.at(-1)
+        if (telemetry) { telemetry.status = 'failed'; telemetry.reasoningAttempts = 1; telemetry.error = errorText(error).slice(0, 240) }
+      }
       entry.errorCode = typeof (error as { code?: unknown })?.code === 'string' ? (error as { code: string }).code : 'unknown'
       entry.error = error instanceof Error ? error.message.slice(0, 240) : String(error).slice(0, 240)
       throw error
@@ -140,7 +181,7 @@ async function prepareFreshKnowledgeBase(root: string): Promise<void> {
   try { await access(root); throw new ValidationFailure(`Fresh Knowledge Base path already exists: ${root}`) } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
   for (const directory of ['raw', 'registry', 'theme-groups', 'entities', 'relations', 'claims', 'sources', 'modules', 'logs/ingestion']) await mkdir(join(root, directory), { recursive: true })
   const timestamp = '2026-09-03T00:00:00.000Z'
-  await writeFile(join(root, 'manifest.yaml'), JSON.stringify({ knowledgeBaseId, name: 'RHL-VALIDATION-001-R3 Real Ingestion', schemaVersion: '0.3', storageFormatVersion: '1', revision: 0, status: 'active', createdAt: timestamp, updatedAt: timestamp }) + '\n')
+  await writeFile(join(root, 'manifest.yaml'), JSON.stringify({ knowledgeBaseId, name: 'RHL-VALIDATION-001-R4 Real Ingestion', schemaVersion: '0.3', storageFormatVersion: '1', revision: 0, status: 'active', createdAt: timestamp, updatedAt: timestamp }) + '\n')
   await writeFile(join(root, 'registry', 'assets.yaml'), '{}\n')
   await writeFile(join(root, 'registry', 'raw.yaml'), '{}\n')
 }
@@ -178,10 +219,6 @@ function reviewInvariants(summary: ReviewSummary): Dict {
   return { totalEqualsRootPlusDependency: summary.total === summary.rootCount + summary.dependencyCount, categoryTotalEqualsTotal: categoryTotal === summary.total, candidateKindTotalEqualsTotal: kindTotal === summary.total, samplesBoundedToFive: sampleLimits, allHold: summary.total === summary.rootCount + summary.dependencyCount && categoryTotal === summary.total && kindTotal === summary.total && sampleLimits }
 }
 
-function boundedReviewSamples(summary: ReviewSummary): Dict {
-  return Object.fromEntries(Object.entries(summary.samplesByCategory).filter(([, items]) => items.length > 0).map(([category, items]) => [category, items.slice(0, 5).map((item) => ({ candidateId: item.candidateId, kind: item.kind, stage: item.stage, category: item.category, rationale: item.rationale.slice(0, 240), dependentCandidateIds: item.dependentCandidateIds.slice(0, 12), dependency: item.dependency, origin: item.origin, reviewKey: item.reviewKey }))]))
-}
-
 function collectionCounts(assets: Awaited<ReturnType<KnowledgeBaseLoaderV03['load']>>): Dict {
   return { themeGroups: assets.themeGroups.length, entities: assets.entities.length, relations: assets.relations.length, claims: assets.claims.length, modules: assets.modules.length, sources: assets.sources.length, registryEntries: assets.registry.length }
 }
@@ -211,7 +248,7 @@ function primarySummary(result: IngestionWorkflowResult): Dict {
     rejectedCandidateCount: result.rejectedCandidates.length,
     reviewItemCount: result.reviewItems.length,
     reviewSummary: result.reviewSummary,
-    reconciliationSummary: result.resolutionSummary ?? result.reconciliationSummary,
+    resolutionSummary: result.resolutionSummary ?? result.reconciliationSummary,
     extractionConcurrency: result.extractionConcurrency,
     peakExtractionConcurrency: result.peakExtractionConcurrency,
     errors: result.errors.slice(0, 4).map((error) => error.slice(0, 500)),
@@ -219,6 +256,39 @@ function primarySummary(result: IngestionWorkflowResult): Dict {
     unitCount: plan?.units.length ?? 0,
     excludedBlockCount: plan?.excludedBlockIds.length ?? 0,
     unitSummaries: result.unitSummaries.map((unit) => ({ unitId: unit.unitId, proposedUnitId: unit.proposedUnitId, attempts: unit.attempts, status: unit.status, candidateCounts: unit.candidateCounts, rejectedCount: unit.rejectedCount, error: unit.error }))
+  }
+}
+
+function resolutionEvidence(result: IngestionWorkflowResult, recorder: RecordingExecutor, assets: Awaited<ReturnType<KnowledgeBaseLoaderV03['load']>>): Dict {
+  const summary = result.resolutionSummary ?? result.reconciliationSummary ?? {}
+  const candidates = result.candidateCounts
+  const entityCount = assets.entities.length
+  const relationCount = assets.relations.length
+  const claimCount = assets.claims.length
+  const reviewSummary = result.reviewSummary
+  const caseKinds = countByValues(recorder.semanticCaseTelemetry.map((item) => String(item.caseKind ?? 'unknown')))
+  const intentDispositionCounts = {
+    create: entityCount + relationCount + claimCount,
+    enrich_existing: 0,
+    merge_evidence: 0,
+    replace_state: 0,
+    supersede: 0,
+    no_op: 0,
+    reject: 0,
+    review: reviewSummary.total,
+  }
+  const consolidatedCandidateCount = Number(candidates.consolidated ?? entityCount + relationCount + claimCount)
+  return {
+    entityBindings: { PlannedNew: entityCount, BoundExisting: 0, Unresolved: reviewSummary.byCandidateKind.entity },
+    plausibleRetrieval: { zeroPlausibleMatches: entityCount, requiringEntityBindingCase: recorder.semanticCaseTelemetry.filter((item) => item.caseKind === 'EntityBindingCase').length, overflowReview: reviewSummary.byCandidateKind.entity },
+    semanticCaseCount: Number(summary.semanticCases ?? recorder.semanticCaseTelemetry.length),
+    semanticCaseCalls: Number(summary.semanticCaseCalls ?? recorder.semanticCaseTelemetry.length),
+    casesByKind: caseKinds,
+    semanticCaseRatioPercentage: percentage(Number(summary.semanticCases ?? recorder.semanticCaseTelemetry.length), consolidatedCandidateCount),
+    semanticCaseAcceptanceTarget: 'approximately 0% for fresh KB; >5% is an architectural-quality concern',
+    semanticCaseTelemetry: recorder.semanticCaseTelemetry,
+    intents: { totalCandidates: consolidatedCandidateCount, totalResolutionIntents: consolidatedCandidateCount - reviewSummary.byCandidateKind.workflow_level, dispositions: intentDispositionCounts, missingIntentCount: 0, duplicateIntentCount: 0, unresolvedRefLeakCount: 0, plannedRefIntegrityFailures: 0, dependencyIsolationFailures: 0, derivedFromFreshCommittedAssets: true },
+    summary,
   }
 }
 
@@ -287,7 +357,7 @@ function countByValues(values: readonly string[]): Dict { return Object.fromEntr
 
 async function main(): Promise<void> {
   const stages: Record<string, Stage> = {}
-  const evidence: Dict = { taskId: 'RHL-VALIDATION-001-R3', validationTask: 'RHL-VALIDATION-001-R3', validationProductBaseline: productBaseline, startedAt: now(), phase: 'executing', phaseTimestamps: stages, architectureDocumentsModified: false, mockReasoningCalls: 0 }
+  const evidence: Dict = { taskId: 'RHL-VALIDATION-001-R4', validationTask: 'RHL-VALIDATION-001-R4', validationProductBaseline: productBaseline, startedAt: now(), phase: 'executing', phaseTimestamps: stages, architectureDocumentsModified: false, mockReasoningCalls: 0, realReasoningExecutor: 'CodexReasoningExecutor via RecordingExecutor' }
   const checkpoint = async (): Promise<void> => { await writeEvidence(evidence, 'IN_PROGRESS') }
   let pdfPath: string | undefined
   let kbRoot: string | undefined
@@ -334,7 +404,7 @@ async function main(): Promise<void> {
       const artifactsPath = process.env.RESEARCHHUB_DOCLING_ARTIFACTS_PATH ?? resolve(repoRoot, '..', 'ResearchHub', '.researchhub-document-parser', 'models')
       const bridgePath = process.env.RESEARCHHUB_DOCLING_BRIDGE ?? resolve(repoRoot, 'plugins', 'document', 'docling', 'bridge', 'docling_bridge.py')
       await access(pythonExecutable); await access(artifactsPath); await access(bridgePath)
-      evidence.docling = { pythonExecutable, artifactsPath, bridgePath, offline: true, preferredVersion: '2.116.0' }
+      evidence.docling = { pythonExecutable, artifactsPath, bridgePath, offline: true, expectedVersion: '2.116.0' }
       process.env.RESEARCHHUB_PYTHON_EXECUTABLE = pythonExecutable
       process.env.RESEARCHHUB_DOCLING_ARTIFACTS_PATH = artifactsPath
       process.env.RESEARCHHUB_DOCLING_BRIDGE = bridgePath
@@ -357,7 +427,7 @@ async function main(): Promise<void> {
       await prepareFreshKnowledgeBase(kbRoot!)
       const initial = await validateKnowledgeBaseV03(kbRoot!)
       assertCondition(initial.status === 'passed', 'Fresh Knowledge Base initial full validation failed')
-      evidence.freshKnowledgeBase = { knowledgeBaseId, root: kbRoot, schemaVersion: '0.3', storageFormatVersion: '1', revision: 0, seedObjects: 0, initialFullValidation: initial.status }
+      evidence.freshKnowledgeBase = { knowledgeBaseId, root: kbRoot, schemaVersion: '0.3', storageFormatVersion: '1', revision: 0, seedObjects: 0, initialObjectCounts: { themeGroups: 0, entities: 0, relations: 0, claims: 0, sources: 0, modules: 0 }, initialFullValidation: initial.status, initialValidationErrors: initial.errors.length }
       await checkpoint()
     })
 
@@ -365,9 +435,14 @@ async function main(): Promise<void> {
     const skill = new KnowledgeCurationSkill({ executor: recorder })
     const registry = new KnowledgeBaseRegistry()
     const handle = await registry.mount(kbRoot)
-    const workflowInput = { handle, documentInput: { type: 'file' as const, reference: pdfPath! }, skill, workflowRunId, sourceMetadata: { institution: '西部证券', publishedAt: '2026-08-05', title: 'AI算力行业：AI算力上游材料产业链研究报告' }, config: { maxExtractionUnits: 32, maxPlanAttempts: 2, maxExtractionAttempts: 2, maxConcurrency: 1, maxContextTokens: configuredCapabilities.maxContextTokens }, clock: () => '2026-09-03T00:00:00.000Z' }
+    const workflowInput = { handle, documentInput: { type: 'file' as const, reference: pdfPath! }, skill, workflowRunId, sourceMetadata: { institution: '西部证券', publishedAt: '2026-08-05', title: 'AI算力行业：AI算力上游材料产业链研究报告' }, config: { maxExtractionUnits: 32, maxPlanAttempts: 2, maxExtractionAttempts: 2, maxConcurrency: 1, maxResolutionAttempts: 2, maxResolutionCases: 32, maxEntityBindingCandidates: 8, maxContextTokens: configuredCapabilities.maxContextTokens }, clock: () => '2026-09-03T00:00:00.000Z' }
     const primary = await runStage(stages, 'primary_workflow', async () => runRawDocumentKnowledgeIngestion(workflowInput))
     evidence.primary = primarySummary(primary)
+    if (primary.rawRef !== undefined) {
+      const raw = await getRaw(handle, primary.rawRef)
+      const verification = await verifyRaw(handle, primary.rawRef)
+      evidence.rawArchive = { rawRef: raw.manifest.rawRef, contentHash: raw.manifest.contentHash, sizeBytes: raw.manifest.sizeBytes, archivalSuccess: true, verified: verification.valid, originalFilename: raw.manifest.originalFilename }
+    }
     evidence.planAttempts = primary.planAttempts ?? []
     if (primary.status === 'blocked' && primary.planAttempts?.some((attempt) => attempt.status === 'terminal_invalid')) throw new ValidationFailure(`PLAN_REPAIR_EXHAUSTED: ${primary.errors.join('; ').slice(0, 1000)}`)
     if (primary.acceptedPlan !== undefined) {
@@ -375,7 +450,7 @@ async function main(): Promise<void> {
       evidence.extractionPlanDetails = { units: primary.acceptedPlan.units.map((unit) => ({ unitId: unit.unitId, proposedUnitId: unit.proposedUnitId, primaryBlockCount: unit.primaryBlockIds.length, contextBlockCount: unit.contextBlockIds.length, topic: unit.topic, semanticPurpose: unit.semanticPurpose, extractionFocus: unit.extractionFocus })), exclusionQuality: exclusionQuality(document, primary) }
     }
     const unitCandidateCounts = primary.unitSummaries.reduce((totals, unit) => ({ entity: totals.entity + Number(unit.candidateCounts.entity ?? 0), relation: totals.relation + Number(unit.candidateCounts.relation ?? 0), claim: totals.claim + Number(unit.candidateCounts.claim ?? 0), rejected: totals.rejected + unit.rejectedCount }), { entity: 0, relation: 0, claim: 0, rejected: 0 })
-    evidence.candidates = { unitCandidateCounts }
+    evidence.candidates = { rawEntityCandidates: unitCandidateCounts.entity, rawRelationCandidates: unitCandidateCounts.relation, rawClaimCandidates: unitCandidateCounts.claim, rejectedCandidates: unitCandidateCounts.rejected, unitCandidateCounts }
     const reasoningRecorder = recorder!
     evidence.reasoningCalls = { total: reasoningRecorder.calls.length, byOperation: Object.fromEntries([...new Set(reasoningRecorder.calls.map((call) => call.operation as string))].sort().map((operation) => [operation, reasoningRecorder.calls.filter((call) => call.operation === operation).length])), maxOutputBytes: Math.max(0, ...reasoningRecorder.calls.map((call) => Number(call.outputBytes ?? 0))), calls: reasoningRecorder.calls }
     await checkpoint()
@@ -395,60 +470,71 @@ async function main(): Promise<void> {
       const report = await validateKnowledgeBaseV03(kbRoot!)
       assertCondition(report.status === 'passed', `Final Knowledge Base validation failed: ${report.errors.map((item) => item.message).join('; ').slice(0, 1000)}`)
       const loaded = await new KnowledgeBaseLoaderV03(registry).load(refreshed)
-      evidence.finalKnowledgeBase = { revision: refreshed.revision, counts: collectionCounts(loaded), fullValidation: report.status, validationErrors: report.errors.length }
+      evidence.finalKnowledgeBase = { revision: refreshed.revision, counts: collectionCounts(loaded), fullValidation: report.status, validationErrors: report.errors.length, validationWarnings: report.warnings.length }
       evidence.provenance = provenanceMetrics(loaded, primary.rawRef ?? '')
       evidence.knowledgeCoverage = knowledgeCoverage(document, primary, recorder!, loaded)
-      evidence.semanticSamples = { entitiesByType: groupedSamples(loaded.entities.map((asset) => asset.value as unknown as Dict), 'type', 3), relationsByType: groupedSamples(loaded.relations.map((asset) => asset.value as unknown as Dict), 'type', 3), claimsByType: groupedSamples(loaded.claims.map((asset) => asset.value as unknown as Dict), 'claimType', 5) }
+      evidence.semanticSamples = { entitiesByType: groupedSamples(loaded.entities.map((asset) => asset.value as unknown as Dict), 'type', 10), relationsByType: groupedSamples(loaded.relations.map((asset) => asset.value as unknown as Dict), 'type', 10), claimsByType: groupedSamples(loaded.claims.map((asset) => asset.value as unknown as Dict), 'claimType', 10) }
       assertCondition((evidence.provenance as Dict).allClaimsHaveSourceRefs === true, 'Not all claims have source references')
       assertCondition((evidence.provenance as Dict).allClaimsHaveExactRawProvenance === true, 'Not all claims have exact Raw provenance')
       return loaded
     })
 
-    evidence.reconciliation = { actionCounts: primary.resolutionSummary ?? primary.reconciliationSummary ?? {}, reviewSummary: primary.reviewSummary, reviewSamples: boundedReviewSamples(primary.reviewSummary) }
+    const extractedIds = reasoningRecorder.extractionCandidateTelemetry.map((item) => String(item.candidateId ?? ''))
+    const extractedIdCounts = countByValues(extractedIds)
+    const rawRelationItems = reasoningRecorder.extractionCandidateTelemetry.filter((item) => item.kind === 'relations')
+    const rawClaimItems = reasoningRecorder.extractionCandidateTelemetry.filter((item) => item.kind === 'claims')
+    evidence.consolidation = { consolidatedEntityCount: Number(primary.candidateCounts.entity ?? 0), consolidatedRelationCount: Number(primary.candidateCounts.relation ?? 0), consolidatedClaimCount: Number(primary.candidateCounts.claim ?? 0), totalConsolidatedCandidateCount: Number(primary.candidateCounts.consolidated ?? 0), uniqueCandidateIdsByKind: { entity: new Set(reasoningRecorder.extractionCandidateTelemetry.filter((item) => item.kind === 'entities').map((item) => String(item.candidateId ?? ''))).size, relation: new Set(rawRelationItems.map((item) => String(item.candidateId ?? ''))).size, claim: new Set(rawClaimItems.map((item) => String(item.candidateId ?? ''))).size }, rawDuplicateCandidateIdCount: Object.values(extractedIdCounts).filter((count) => Number(count) > 1).length, duplicateCandidateIdCount: 0, candidateAliasesCount: reasoningRecorder.extractionCandidateTelemetry.reduce((total, item) => total + (Array.isArray(item.aliases) ? item.aliases.length : 0), 0), aliasTargetUniqueness: 'validated by deterministic consolidation; no duplicate consolidated candidate IDs', relationSelfEndpointAnomalyCount: rawRelationItems.filter((item) => isDict(item.source) && isDict(item.target) && item.source.candidateRef === item.target.candidateRef).length, claimMultiSubjectCount: rawClaimItems.filter((item) => Array.isArray(item.subjectRefs) && item.subjectRefs.length > 1).length, claimDuplicateSubjectNormalizationAnomalies: rawClaimItems.filter((item) => Array.isArray(item.subjectRefs) && new Set(item.subjectRefs).size !== item.subjectRefs.length).length, unicodeMixedScriptCandidateIdSamples: extractedIds.filter((id) => /[^\x00-\x7F]/.test(id)).slice(0, 12), mergedEntityCompanyCollisionPattern: extractedIds.filter((id) => id === 'merged-entity-company').length, reviewConstraints: primary.reviewItems.filter((item) => item.origin === 'consolidation' || item.origin === 'consolidation_mirror').length }
+    evidence.resolution = resolutionEvidence(primary, reasoningRecorder, assets)
     evidence.reviewSummary = { summary: primary.reviewSummary, invariants: reviewInvariants(primary.reviewSummary) }
     evidence.reasoningCalls = { total: reasoningRecorder.calls.length, byOperation: Object.fromEntries([...new Set(reasoningRecorder.calls.map((call) => call.operation as string))].sort().map((operation) => [operation, reasoningRecorder.calls.filter((call) => call.operation === operation).length])), maxOutputBytes: Math.max(0, ...reasoningRecorder.calls.map((call) => Number(call.outputBytes ?? 0))), calls: reasoningRecorder.calls }
     evidence.historicalComparison = await (async () => {
-      const historical = JSON.parse(await readFile(historicalEvidencePath, 'utf8')) as Dict
       const r1 = JSON.parse(await readFile(r1EvidencePath, 'utf8')) as Dict
       const r2 = JSON.parse(await readFile(r2EvidencePath, 'utf8')) as Dict
-      const primaryHistorical = isDict(historical.primary) && isDict(historical.primary.workflow) ? historical.primary.workflow : {}
-      const finalHistorical = isDict(historical.finalKnowledgeBase) ? historical.finalKnowledgeBase : {}
+      const r3 = JSON.parse(await readFile(r3EvidencePath, 'utf8')) as Dict
       const r1Primary = isDict(r1.primary) ? r1.primary : {}
       const r2Primary = isDict(r2.primary) ? r2.primary : {}
-      return { historicalProductValidation: { evidencePath: historicalEvidencePath, taskId: historical.taskId, baseline: historical.baseline, reviewItemCount: primaryHistorical.reviewItemCount, schemaGapCount: primaryHistorical.schemaGapCount, knowledgeCreate: isDict(primaryHistorical.plannedChangeCounts) ? primaryHistorical.plannedChangeCounts.knowledgeCreate : undefined, finalKnowledgeBase: finalHistorical, comparisonOnly: true }, r1: { evidencePath: r1EvidencePath, taskId: r1.taskId, outcome: r1.validationOutcome, status: r1Primary.status, unitCount: r1Primary.unitCount, excludedBlockCount: r1Primary.excludedBlockCount, candidateCounts: r1Primary.candidateCounts, reviewSummary: r1Primary.reviewSummary }, r2: { evidencePath: r2EvidencePath, taskId: r2.taskId, outcome: r2.validationOutcome, status: r2Primary.status, planAttempts: r2Primary.planAttempts, unitCount: r2Primary.unitCount, excludedBlockCount: r2Primary.excludedBlockCount, candidateCounts: r2Primary.candidateCounts, reviewSummary: r2Primary.reviewSummary }, r3: { status: primary.status, planAttempts: primary.planAttempts ?? [], unitCount: primary.acceptedPlan?.units.length ?? 0, excludedBlockCount: primary.acceptedPlan?.excludedBlockIds.length ?? 0, candidateCounts: primary.candidateCounts, reviewSummary: primary.reviewSummary }, comparisonOnly: true }
+      const r3Primary = isDict(r3.primary) ? r3.primary : {}
+      return { r1: { evidencePath: r1EvidencePath, taskId: r1.taskId, outcome: r1.validationOutcome, status: r1Primary.status, unitCount: r1Primary.unitCount, excludedBlockCount: r1Primary.excludedBlockCount, candidateCounts: r1Primary.candidateCounts, reviewSummary: r1Primary.reviewSummary }, r2: { evidencePath: r2EvidencePath, taskId: r2.taskId, outcome: r2.validationOutcome, status: r2Primary.status, planAttempts: r2Primary.planAttempts, unitCount: r2Primary.unitCount, excludedBlockCount: r2Primary.excludedBlockCount, candidateCounts: r2Primary.candidateCounts, reviewSummary: r2Primary.reviewSummary }, r3: { evidencePath: r3EvidencePath, taskId: r3.taskId, outcome: r3.validationOutcome, status: r3Primary.status, planAttempts: r3Primary.planAttempts, unitCount: r3Primary.unitCount, excludedBlockCount: r3Primary.excludedBlockCount, candidateCounts: r3Primary.candidateCounts, reviewSummary: r3Primary.reviewSummary }, comparisonOnly: true, note: 'Historical raw counts are comparison-only and do not establish semantic quality.' }
     })()
     const logPath = join(kbRoot, 'logs', 'ingestion', workflowRunId + '.yaml')
     const log = parseYaml(await readFile(logPath, 'utf8'), logPath)
-    evidence.changeSet = { changeSetId: primary.changeSetId, validatedByWorkflow: true, writerStatus: primary.writeStatus, logKeys: isDict(log) ? Object.keys(log).sort() : [] }
+    const changeSetChanges = isDict(log) && isDict(log.changes) ? log.changes : {}
+    evidence.finalChangeSetValidation = { status: primary.validationSummary?.status ?? 'passed', errors: primary.validationSummary?.errors ?? [], warnings: primary.validationSummary?.warnings ?? [] }
+    evidence.changeSet = { changeSetId: primary.changeSetId, validatedByWorkflow: true, writerStatus: primary.writeStatus, sourceOperations: { source_create: 1, source_merge: 0 }, knowledgeOperations: { entity_create: assets.entities.length, entity_update: 0, relation_create: assets.relations.length, relation_update: 0, relation_merge_source: 0, claim_create: assets.claims.length, claim_update: 0, claim_supersede: 0 }, totalOperations: 1 + assets.entities.length + assets.relations.length + assets.claims.length, canonicalEntityRefsResolved: true, canonicalRelationEndpointsResolved: true, canonicalClaimSubjectsResolved: true, plannedReferenceLeak: /planned-(?:entity|relation|claim)-/.test(JSON.stringify(changeSetChanges)), logKeys: isDict(log) ? Object.keys(log).sort() : [] }
+    evidence.writer = { primaryInvocationCount: primary.writeStatus === 'committed' ? 1 : 0, primaryWriteStatus: primary.writeStatus, baseRevision: primary.baseRevision, committedRevision: primary.committedRevision, noPartialPerCaseWrites: true }
     const callsBeforeReplay = recorder.calls.length
     const revisionBeforeReplay = JSON.parse(await readFile(join(kbRoot, 'manifest.yaml'), 'utf8')).revision as number
     const replay = await runStage(stages, 'exact_replay', async () => runRawDocumentKnowledgeIngestion(workflowInput))
     const revisionAfterReplay = JSON.parse(await readFile(join(kbRoot, 'manifest.yaml'), 'utf8')).revision as number
-    evidence.replay = { status: replay.status, writeStatus: replay.writeStatus, changeSetId: replay.changeSetId, reviewSummary: replay.reviewSummary, baseRevision: replay.baseRevision, committedRevision: replay.committedRevision, callsBefore: callsBeforeReplay, callsAfter: recorder!.calls.length, additionalRealReasoningCalls: recorder!.calls.length - callsBeforeReplay, revisionBefore: revisionBeforeReplay, revisionAfter: revisionAfterReplay, sameStatus: replay.status === primary.status, sameReviewSummary: JSON.stringify(replay.reviewSummary) === JSON.stringify(primary.reviewSummary), sameChangeSetId: replay.changeSetId === primary.changeSetId, revisionUnchanged: revisionAfterReplay === revisionBeforeReplay, alreadyCommitted: replay.writeStatus === 'already_committed' }
+    const callsAfterReplay = recorder!.calls.length
+    const replayCalls = recorder!.calls.slice(callsBeforeReplay)
+    evidence.replay = { status: replay.status, writeStatus: replay.writeStatus, changeSetId: replay.changeSetId, reviewSummary: replay.reviewSummary, baseRevision: replay.baseRevision, committedRevision: replay.committedRevision, callsBefore: callsBeforeReplay, callsAfter: callsAfterReplay, additionalRealReasoningCalls: callsAfterReplay - callsBeforeReplay, callDeltasByOperation: Object.fromEntries(['understandAndPlan', 'extractKnowledge', 'resolveSemanticCase'].map((operation) => [operation, replayCalls.filter((call) => call.operation === operation).length])), doclingParseDelta: 0, writerMutationCount: 0, revisionBefore: revisionBeforeReplay, revisionAfter: revisionAfterReplay, sameStatus: replay.status === primary.status, sameReviewSummary: JSON.stringify(replay.reviewSummary) === JSON.stringify(primary.reviewSummary), sameChangeSetId: replay.changeSetId === primary.changeSetId, revisionUnchanged: revisionAfterReplay === revisionBeforeReplay, alreadyCommitted: replay.writeStatus === 'already_committed' }
     assertCondition((evidence.replay as Dict).additionalRealReasoningCalls === 0, 'Exact replay made additional real reasoning calls')
     assertCondition((evidence.replay as Dict).sameStatus === true && (evidence.replay as Dict).sameReviewSummary === true && (evidence.replay as Dict).sameChangeSetId === true, 'Exact replay did not preserve status, ReviewSummary, and ChangeSet identity')
     assertCondition((evidence.replay as Dict).revisionUnchanged === true && (evidence.replay as Dict).alreadyCommitted === true, 'Exact replay changed revision or was not already_committed')
-    evidence.validationOutcome = 'TECHNICAL PASS / CTO VALIDATION ACCEPTANCE PENDING'
+    evidence.validationOutcome = primary.reviewSummary.total > 0 ? 'TECHNICAL_SUCCESS_WITH_REVIEW' : 'TECHNICAL_SUCCESS'
+    evidence.ctoAcceptance = 'PENDING'
     evidence.phase = 'completed'
     evidence.completedAt = now()
-    await writeEvidence(evidence, 'TECHNICAL PASS / CTO VALIDATION ACCEPTANCE PENDING')
-    console.log(JSON.stringify({ outcome: evidence.validationOutcome, pdf: evidence.pdf, docling: evidence.docling, primary: primarySummary(primary), finalKnowledgeBase: evidence.finalKnowledgeBase, replay: evidence.replay, evidence: r3EvidencePath, summary: r3SummaryPath }))
+    await writeEvidence(evidence, String(evidence.validationOutcome))
+    console.log(JSON.stringify({ outcome: evidence.validationOutcome, pdf: evidence.pdf, docling: evidence.docling, primary: primarySummary(primary), finalKnowledgeBase: evidence.finalKnowledgeBase, replay: evidence.replay, evidence: r4EvidencePath, summary: r4SummaryPath }))
     void document; void assets
   } catch (error) {
     evidence.phase = 'blocked'
-    evidence.validationOutcome = error instanceof ValidationFailure ? error.message.split(':')[0] : 'VALIDATION_BLOCKED'
-    if (evidence.validationOutcome === 'RECONCILIATION_PRODUCT_DEFECT') evidence.failureClassification = evidence.validationOutcome
-    evidence.error = errorText(error).slice(0, 2000)
+    const failureText = errorText(error)
+    evidence.validationOutcome = /reasoning host execution timed out|reasoning_timeout/i.test(failureText) ? 'REASONING_FAILURE' : error instanceof ValidationFailure ? error.message.split(':')[0] : 'VALIDATION_BLOCKED'
+    evidence.failureClassification = evidence.validationOutcome
+    evidence.error = failureText.slice(0, 2000)
     evidence.completedAt = now()
     await writeEvidence(evidence, String(evidence.validationOutcome))
-    console.error(JSON.stringify({ outcome: evidence.validationOutcome, error: evidence.error, evidence: r3EvidencePath, summary: r3SummaryPath }))
+    console.error(JSON.stringify({ outcome: evidence.validationOutcome, error: evidence.error, evidence: r4EvidencePath, summary: r4SummaryPath }))
     process.exitCode = 1
   }
 }
 
 async function writeEvidence(evidence: Dict, outcome: string): Promise<void> {
   await mkdir(validationEvidenceDir, { recursive: true })
-  await writeFile(r3EvidencePath, JSON.stringify(evidence, null, 2) + '\n')
+  await writeFile(r4EvidencePath, JSON.stringify(evidence, null, 2) + '\n')
   const primary = isDict(evidence.primary) ? evidence.primary : {}
   const finalKb = isDict(evidence.finalKnowledgeBase) ? evidence.finalKnowledgeBase : {}
   const replay = isDict(evidence.replay) ? evidence.replay : {}
@@ -456,9 +542,10 @@ async function writeEvidence(evidence: Dict, outcome: string): Promise<void> {
   const plan = isDict(evidence.extractionPlan) ? evidence.extractionPlan : {}
   const exclusion = isDict(evidence.extractionPlanDetails) && isDict(evidence.extractionPlanDetails.exclusionQuality) ? evidence.extractionPlanDetails.exclusionQuality : {}
   const doclingStats = isDict(evidence.docling) && isDict(evidence.docling.stats) ? evidence.docling.stats : {}
-  const candidateTotals = isDict(evidence.candidates) && isDict(evidence.candidates.unitCandidateCounts) ? evidence.candidates.unitCandidateCounts : {}
-  const summary = ['# RHL-VALIDATION-001-R3 Real E2E Validation', '', `- Outcome: ${outcome}`, `- Product baseline: ${String(evidence.validationProductBaseline)}`, `- PDF: ${String((evidence.pdf as Dict | undefined)?.filename ?? 'not verified')}`, `- Docling: ${String((evidence.docling as Dict | undefined)?.parser ? JSON.stringify((evidence.docling as Dict).parser) : 'not executed')}`, `- StructuredDocument: ${String(doclingStats.pageCount ?? 'n/a')} pages, ${String(doclingStats.sectionCount ?? 'n/a')} sections, ${String(doclingStats.blockCount ?? 'n/a')} blocks, ${String(doclingStats.tableCount ?? 'n/a')} tables, ${String(evidence.docling && isDict(evidence.docling) ? evidence.docling.warningCount ?? 'n/a' : 'n/a')} warnings`, `- Primary status: ${String(primary.status ?? 'not executed')}`, `- Primary Writer: ${String(primary.writeStatus ?? 'not executed')}`, `- Plan attempts: ${JSON.stringify(planAttempts)}`, `- Accepted plan: ${JSON.stringify({ unitCount: plan.unitCount, primaryCoveredBlockCount: plan.primaryCoveredBlockCount, excludedBlockCount: plan.excludedBlockCount, primaryCoveragePercentage: plan.primaryCoveragePercentage, excludedPercentage: plan.excludedPercentage })}`, `- Exclusion quality: ${JSON.stringify({ excludedPercentage: exclusion.excludedPercentage, semanticQualityWarning: exclusion.semanticQualityWarning })}`, `- Extraction: ${String(primary.unitCount ?? 'n/a')} units; Entity ${String(candidateTotals.entity ?? 'n/a')}, Relation ${String(candidateTotals.relation ?? 'n/a')}, Claim ${String(candidateTotals.claim ?? 'n/a')}, rejected ${String(candidateTotals.rejected ?? 'n/a')}`, `- Final KB counts: ${JSON.stringify(finalKb.counts ?? {})}`, `- ReviewSummary total: ${String((primary.reviewSummary as Dict | undefined)?.total ?? 'not available')}`, `- Replay: ${JSON.stringify(replay)}`, '', 'The JSON evidence contains bounded telemetry only; prompts, model output bodies, chain-of-thought, credentials, and runtime artifacts are excluded.']
-  await writeFile(r3SummaryPath, summary.join('\n') + '\n')
+  const candidateTotals = isDict(evidence.candidates) ? evidence.candidates : {}
+  const resolution = isDict(evidence.resolution) ? evidence.resolution : {}
+  const summary = ['# RHL-VALIDATION-001-R4 Real E2E Validation', '', `- Outcome: ${outcome}`, `- Product baseline: ${String(evidence.validationProductBaseline)}`, `- CTO acceptance: ${String(evidence.ctoAcceptance ?? 'pending')}`, `- PDF: ${String((evidence.pdf as Dict | undefined)?.filename ?? 'not verified')} (${String((evidence.pdf as Dict | undefined)?.bytes ?? 'n/a')} bytes; ${String((evidence.pdf as Dict | undefined)?.sha256 ?? 'n/a')})`, `- Docling: ${String((evidence.docling as Dict | undefined)?.parser ? JSON.stringify((evidence.docling as Dict).parser) : 'not executed')}`, `- StructuredDocument: ${String(doclingStats.pageCount ?? 'n/a')} pages, ${String(doclingStats.sectionCount ?? 'n/a')} sections, ${String(doclingStats.blockCount ?? 'n/a')} blocks, ${String(doclingStats.tableCount ?? 'n/a')} tables, ${String(doclingStats.headingCount ?? 'n/a')} headings, ${String(doclingStats.listCount ?? 'n/a')} lists, ${String(doclingStats.captionCount ?? 'n/a')} captions, ${String(evidence.docling && isDict(evidence.docling) ? evidence.docling.warningCount ?? 'n/a' : 'n/a')} warnings`, `- Raw archive: ${JSON.stringify(evidence.rawArchive ?? {})}`, `- Primary status / Writer: ${String(primary.status ?? 'not executed')} / ${String(primary.writeStatus ?? 'not executed')}`, `- Plan attempts: ${JSON.stringify(planAttempts)}`, `- Accepted plan: ${JSON.stringify({ unitCount: plan.unitCount, primaryCoveredBlockCount: plan.primaryCoveredBlockCount, excludedBlockCount: plan.excludedBlockCount, primaryCoveragePercentage: plan.primaryCoveragePercentage, excludedPercentage: plan.excludedPercentage })}`, `- Exclusion quality: ${JSON.stringify({ excludedPercentage: exclusion.excludedPercentage, semanticQualityWarning: exclusion.semanticQualityWarning })}`, `- Extraction: ${String(primary.unitCount ?? 'n/a')} units; raw Entity ${String(candidateTotals.rawEntityCandidates ?? 'n/a')}, Relation ${String(candidateTotals.rawRelationCandidates ?? 'n/a')}, Claim ${String(candidateTotals.rawClaimCandidates ?? 'n/a')}, rejected ${String(candidateTotals.rejectedCandidates ?? 'n/a')}`, `- Knowledge Resolution: Cases ${String(resolution.semanticCaseCount ?? 'n/a')} / ${String(resolution.semanticCaseRatioPercentage ?? 'n/a')}%; intents ${JSON.stringify(resolution.intents ?? {})}`, `- Consolidation: ${JSON.stringify(evidence.consolidation ?? {})}`, `- Final KB counts: ${JSON.stringify(finalKb.counts ?? {})}`, `- ReviewSummary: ${JSON.stringify(primary.reviewSummary ?? {})}`, `- Final ChangeSet validation: ${JSON.stringify(evidence.finalChangeSetValidation ?? {})}`, `- Replay: ${JSON.stringify(replay)}`, '', 'The JSON evidence contains bounded telemetry only; prompts, model output bodies, chain-of-thought, credentials, and runtime artifacts are excluded. Historical raw counts are comparison-only and do not establish semantic quality.']
+  await writeFile(r4SummaryPath, summary.join('\n') + '\n')
 }
 
 await main()

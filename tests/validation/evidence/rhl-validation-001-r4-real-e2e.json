@@ -1,0 +1,1200 @@
+{
+  "taskId": "RHL-VALIDATION-001-R4",
+  "validationTask": "RHL-VALIDATION-001-R4",
+  "validationProductBaseline": "fa00f5a2ed764975be5b99500555b373d64053ad",
+  "startedAt": "2026-09-03T19:37:47.028Z",
+  "phase": "blocked",
+  "phaseTimestamps": {
+    "baseline_verified": {
+      "startedAt": "2026-09-03T19:37:47.097Z",
+      "completedAt": "2026-09-03T19:37:47.097Z",
+      "durationMs": 0,
+      "status": "passed"
+    },
+    "pdf_verified": {
+      "startedAt": "2026-09-03T19:37:47.099Z",
+      "completedAt": "2026-09-03T19:37:47.132Z",
+      "durationMs": 33,
+      "status": "passed"
+    },
+    "codex_preflight": {
+      "startedAt": "2026-09-03T19:37:47.132Z",
+      "completedAt": "2026-09-03T19:37:55.872Z",
+      "durationMs": 8740,
+      "status": "passed"
+    },
+    "docling_preflight": {
+      "startedAt": "2026-09-03T19:37:55.872Z",
+      "completedAt": "2026-09-03T19:37:55.873Z",
+      "durationMs": 1,
+      "status": "passed"
+    },
+    "docling_parse": {
+      "startedAt": "2026-09-03T19:37:55.873Z",
+      "completedAt": "2026-09-03T19:39:35.177Z",
+      "durationMs": 99304,
+      "status": "passed"
+    },
+    "fresh_kb_ready": {
+      "startedAt": "2026-09-03T19:39:35.177Z",
+      "completedAt": "2026-09-03T19:39:35.183Z",
+      "durationMs": 6,
+      "status": "passed"
+    },
+    "primary_workflow": {
+      "startedAt": "2026-09-03T19:39:35.184Z",
+      "completedAt": "2026-09-04T03:06:25.821Z",
+      "durationMs": 26810637,
+      "status": "passed"
+    }
+  },
+  "architectureDocumentsModified": false,
+  "mockReasoningCalls": 0,
+  "realReasoningExecutor": "CodexReasoningExecutor via RecordingExecutor",
+  "baseline": {
+    "productBaseline": "fa00f5a2ed764975be5b99500555b373d64053ad",
+    "currentHead": "fa00f5a2ed764975be5b99500555b373d64053ad",
+    "originMain": "fa00f5a2ed764975be5b99500555b373d64053ad",
+    "governanceOnlySinceBaseline": true
+  },
+  "pdf": {
+    "path": "C:\\Users\\Administrator\\Desktop\\ResearchHub_Lite\\20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf",
+    "filename": "20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf",
+    "bytes": 3209114,
+    "sha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "expectedBytes": 3209114,
+    "expectedSha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "exactMatch": true
+  },
+  "codex": {
+    "executable": "codex",
+    "version": "codex-cli 0.152.1",
+    "helpOutputBytes": 3957,
+    "configuredCapabilities": {
+      "maxContextTokens": 100000,
+      "maxOutputTokens": 20000,
+      "structuredOutputSupport": true,
+      "maxConcurrency": 1
+    },
+    "timeoutMs": 900000,
+    "maxOutputChars": 400000,
+    "smoke": {
+      "operation": "understandAndPlan",
+      "operationId": "rhl-validation-001-codex-smoke",
+      "durationMs": 8694,
+      "outputBytes": 14
+    }
+  },
+  "docling": {
+    "pythonExecutable": "C:\\Users\\Administrator\\Desktop\\ResearchHub\\.researchhub-document-parser\\venv\\Scripts\\python.exe",
+    "artifactsPath": "C:\\Users\\Administrator\\Desktop\\ResearchHub\\.researchhub-document-parser\\models",
+    "bridgePath": "C:\\Users\\Administrator\\Desktop\\ResearchHub_Lite\\plugins\\document\\docling\\bridge\\docling_bridge.py",
+    "offline": true,
+    "expectedVersion": "2.116.0",
+    "parser": {
+      "id": "docling-local",
+      "version": "2.116.0"
+    },
+    "stats": {
+      "pageCount": 103,
+      "sectionCount": 159,
+      "blockCount": 1523,
+      "normalizedCharacters": 97784,
+      "tableCount": 44,
+      "headingCount": 158,
+      "listCount": 27,
+      "captionCount": 63
+    },
+    "warningCount": 0
+  },
+  "freshKnowledgeBase": {
+    "knowledgeBaseId": "kb-rhl-validation-001-r4",
+    "root": "C:\\Users\\Administrator\\Desktop\\ResearchHub_Lite\\runtime-data\\knowledge-bases\\kb-rhl-validation-001-r4",
+    "schemaVersion": "0.3",
+    "storageFormatVersion": "1",
+    "revision": 0,
+    "seedObjects": 0,
+    "initialObjectCounts": {
+      "themeGroups": 0,
+      "entities": 0,
+      "relations": 0,
+      "claims": 0,
+      "sources": 0,
+      "modules": 0
+    },
+    "initialFullValidation": "passed",
+    "initialValidationErrors": 0
+  },
+  "primary": {
+    "status": "blocked",
+    "workflowRunId": "rhl-validation-001-r4-primary",
+    "knowledgeBaseId": "kb-rhl-validation-001-r4",
+    "rawRef": "raw-sha256-998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "documentId": "document-998703cef1023005",
+    "candidateCounts": {
+      "entity": 464,
+      "relation": 407,
+      "claim": 216,
+      "rejected": 8
+    },
+    "rejectedCandidateCount": 0,
+    "reviewItemCount": 0,
+    "reviewSummary": {
+      "total": 0,
+      "rootCount": 0,
+      "dependencyCount": 0,
+      "byCategory": {
+        "invalid_reference": 0,
+        "invalid_semantics": 0,
+        "relation_cardinality": 0,
+        "schema_gap": 0,
+        "theme_creation": 0,
+        "theme_ambiguity": 0,
+        "reconciliation_review": 0,
+        "other": 0
+      },
+      "byCandidateKind": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0,
+        "workflow_level": 0
+      },
+      "samplesByCategory": {
+        "invalid_reference": [],
+        "invalid_semantics": [],
+        "relation_cardinality": [],
+        "schema_gap": [],
+        "theme_creation": [],
+        "theme_ambiguity": [],
+        "reconciliation_review": [],
+        "other": []
+      }
+    },
+    "extractionConcurrency": 1,
+    "peakExtractionConcurrency": 1,
+    "errors": [
+      "Extraction unit unit-017 failed after 2 attempt(s): Reasoning host execution timed out"
+    ],
+    "planAttempts": [
+      {
+        "attempt": 1,
+        "status": "accepted"
+      }
+    ],
+    "unitCount": 19,
+    "excludedBlockCount": 83,
+    "unitSummaries": [
+      {
+        "unitId": "unit-001",
+        "proposedUnitId": "unit-01",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 52,
+          "relation": 37,
+          "claim": 8
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-002",
+        "proposedUnitId": "unit-02",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 31,
+          "relation": 27,
+          "claim": 15
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-003",
+        "proposedUnitId": "unit-03",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 9,
+          "relation": 6,
+          "claim": 11
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-004",
+        "proposedUnitId": "unit-04",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 28,
+          "relation": 21,
+          "claim": 12
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-005",
+        "proposedUnitId": "unit-05",
+        "attempts": 2,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 40,
+          "relation": 42,
+          "claim": 14
+        },
+        "rejectedCount": 2
+      },
+      {
+        "unitId": "unit-006",
+        "proposedUnitId": "unit-06",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 23,
+          "relation": 20,
+          "claim": 14
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-007",
+        "proposedUnitId": "unit-07",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 28,
+          "relation": 20,
+          "claim": 10
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-008",
+        "proposedUnitId": "unit-08",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 12,
+          "relation": 11,
+          "claim": 8
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-009",
+        "proposedUnitId": "unit-09",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 18,
+          "relation": 17,
+          "claim": 11
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-010",
+        "proposedUnitId": "unit-10",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 22,
+          "relation": 21,
+          "claim": 12
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-011",
+        "proposedUnitId": "unit-11",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 23,
+          "relation": 45,
+          "claim": 13
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-012",
+        "proposedUnitId": "unit-12",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 13,
+          "relation": 16,
+          "claim": 15
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-013",
+        "proposedUnitId": "unit-13",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 32,
+          "relation": 26,
+          "claim": 13
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-014",
+        "proposedUnitId": "unit-14",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 25,
+          "relation": 25,
+          "claim": 19
+        },
+        "rejectedCount": 2
+      },
+      {
+        "unitId": "unit-015",
+        "proposedUnitId": "unit-15",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 35,
+          "relation": 33,
+          "claim": 7
+        },
+        "rejectedCount": 2
+      },
+      {
+        "unitId": "unit-016",
+        "proposedUnitId": "unit-16",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 34,
+          "relation": 24,
+          "claim": 14
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-017",
+        "proposedUnitId": "unit-17",
+        "attempts": 2,
+        "status": "failed",
+        "candidateCounts": {},
+        "rejectedCount": 0,
+        "error": "Reasoning host execution timed out"
+      },
+      {
+        "unitId": "unit-018",
+        "proposedUnitId": "unit-18",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 32,
+          "relation": 16,
+          "claim": 15
+        },
+        "rejectedCount": 2
+      },
+      {
+        "unitId": "unit-019",
+        "proposedUnitId": "unit-19",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 7,
+          "relation": 0,
+          "claim": 5
+        },
+        "rejectedCount": 0
+      }
+    ]
+  },
+  "rawArchive": {
+    "rawRef": "raw-sha256-998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "contentHash": "sha256:998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "sizeBytes": 3209114,
+    "archivalSuccess": true,
+    "verified": true,
+    "originalFilename": "20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf"
+  },
+  "planAttempts": [
+    {
+      "attempt": 1,
+      "status": "accepted"
+    }
+  ],
+  "extractionPlan": {
+    "unitCount": 19,
+    "primaryCoveredBlockCount": 1440,
+    "excludedBlockCount": 83,
+    "primaryCoveragePercentage": 94.55,
+    "excludedPercentage": 5.45,
+    "contextRefCount": 18,
+    "contextBlockCount": 85,
+    "estimatedContextTokens": {
+      "unit-001": 17271,
+      "unit-002": 22045,
+      "unit-003": 19830,
+      "unit-004": 19097,
+      "unit-005": 19727,
+      "unit-006": 19397,
+      "unit-007": 18830,
+      "unit-008": 18077,
+      "unit-009": 18312,
+      "unit-010": 18836,
+      "unit-011": 18315,
+      "unit-012": 19201,
+      "unit-013": 18281,
+      "unit-014": 19470,
+      "unit-015": 18548,
+      "unit-016": 18382,
+      "unit-017": 18126,
+      "unit-018": 18023,
+      "unit-019": 17342
+    },
+    "coverageInvariant": true,
+    "primaryExcludedConflict": true,
+    "capacity": true
+  },
+  "extractionPlanDetails": {
+    "units": [
+      {
+        "unitId": "unit-001",
+        "proposedUnitId": "unit-01",
+        "primaryBlockCount": 13,
+        "contextBlockCount": 0,
+        "topic": "报告总览与核心结论",
+        "semanticPurpose": "提取报告身份、研究对象、AI算力对材料产业链的总体传导、关注公司和总体风险。",
+        "extractionFocus": "报告元信息、总论点、板块概览、推荐公司和总风险。"
+      },
+      {
+        "unitId": "unit-002",
+        "proposedUnitId": "unit-02",
+        "primaryBlockCount": 238,
+        "contextBlockCount": 0,
+        "topic": "PCB树脂与电子布",
+        "semanticPurpose": "提取PCB成本结构、电子树脂技术和价格传导、电子布分类应用、市场空间、产业链及主要厂商。",
+        "extractionFocus": "树脂配方、Dk/Df、上游原料、PCB和电子布产业链、市场预测、技术趋势、公司产品和竞争信息。"
+      },
+      {
+        "unitId": "unit-003",
+        "proposedUnitId": "unit-03",
+        "primaryBlockCount": 75,
+        "contextBlockCount": 8,
+        "topic": "硅微粉",
+        "semanticPurpose": "提取硅微粉的性能、下游应用、市场测算、发展趋势和主要厂商。",
+        "extractionFocus": "硅微粉功能、粒度和纯度要求、行业市场容量、下游测算、球形化和表面改性、供应商。"
+      },
+      {
+        "unitId": "unit-004",
+        "proposedUnitId": "unit-04",
+        "primaryBlockCount": 166,
+        "contextBlockCount": 8,
+        "topic": "半导体产业与硅片",
+        "semanticPurpose": "提取半导体产业链、市场规模、制造材料结构、硅片尺寸迁移和竞争格局。",
+        "extractionFocus": "产业链环节、产品分类、市场预测、材料占比、12英寸硅片逻辑、厂商产能与集中度。"
+      },
+      {
+        "unitId": "unit-005",
+        "proposedUnitId": "unit-05",
+        "primaryBlockCount": 113,
+        "contextBlockCount": 31,
+        "topic": "光刻材料",
+        "semanticPurpose": "提取光刻材料分类、工艺作用、SOC、抗反射涂层、光刻胶的市场与技术驱动及厂商。",
+        "extractionFocus": "光刻流程、材料分类、市场规模、制程节点、多重曝光、先进封装需求和境内外公司。"
+      },
+      {
+        "unitId": "unit-006",
+        "proposedUnitId": "unit-06",
+        "primaryBlockCount": 137,
+        "contextBlockCount": 31,
+        "topic": "电子特气",
+        "semanticPurpose": "提取电子特气工艺用途、应用结构、市场空间、竞争格局、NF3和WF6及主要厂商。",
+        "extractionFocus": "气体品类和工艺映射、市场规模、全球集中度、NF3/WF6需求和产能、厂商业务。"
+      },
+      {
+        "unitId": "unit-007",
+        "proposedUnitId": "unit-07",
+        "primaryBlockCount": 62,
+        "contextBlockCount": 31,
+        "topic": "前驱体材料",
+        "semanticPurpose": "提取前驱体分类、沉积工艺、High-K/Low-K技术逻辑、市场规模和厂商。",
+        "extractionFocus": "硅基和金属基前驱体、逻辑与存储芯片需求、市场预测、产品和供应商。"
+      },
+      {
+        "unitId": "unit-008",
+        "proposedUnitId": "unit-08",
+        "primaryBlockCount": 59,
+        "contextBlockCount": 31,
+        "topic": "CMP抛光材料",
+        "semanticPurpose": "提取CMP工艺原理、抛光液和抛光垫需求、市场规模及主要厂商。",
+        "extractionFocus": "化学机械协同、先进逻辑和3D NAND驱动、全球及中国市场、厂商。"
+      },
+      {
+        "unitId": "unit-009",
+        "proposedUnitId": "unit-09",
+        "primaryBlockCount": 52,
+        "contextBlockCount": 31,
+        "topic": "溅射靶材",
+        "semanticPurpose": "提取溅射靶材结构、分类、半导体和显示面板应用、市场空间、行业壁垒和厂商。",
+        "extractionFocus": "靶坯、背板、纯度和应用差异、半导体及显示市场预测、竞争壁垒和主要公司。"
+      },
+      {
+        "unitId": "unit-010",
+        "proposedUnitId": "unit-10",
+        "primaryBlockCount": 81,
+        "contextBlockCount": 31,
+        "topic": "湿电子化学品",
+        "semanticPurpose": "提取湿电子化学品的品类、工艺用途、市场规模、应用结构、竞争格局和厂商。",
+        "extractionFocus": "清洗、蚀刻、显影、剥离应用，全球和中国市场，海外主导、国内突破和企业产品。"
+      },
+      {
+        "unitId": "unit-011",
+        "proposedUnitId": "unit-11",
+        "primaryBlockCount": 28,
+        "contextBlockCount": 8,
+        "topic": "半导体封装材料",
+        "semanticPurpose": "提取封装流程、技术代际、材料类型、市场规模、性能要求和主要公司。",
+        "extractionFocus": "封装工序、塑料封装、环氧塑封料、先进封装、市场规模、材料结构和参与者。"
+      },
+      {
+        "unitId": "unit-012",
+        "proposedUnitId": "unit-12",
+        "primaryBlockCount": 127,
+        "contextBlockCount": 5,
+        "topic": "磷化铟及光模块材料",
+        "semanticPurpose": "提取半导体材料分类、InP性能、产业链、应用市场、竞争格局和主要厂商。",
+        "extractionFocus": "InP衬底、外延片、光模块、传感和射频应用，市场规模、份额、产能和企业。"
+      },
+      {
+        "unitId": "unit-013",
+        "proposedUnitId": "unit-13",
+        "primaryBlockCount": 28,
+        "contextBlockCount": 5,
+        "topic": "铌酸锂与薄膜铌酸锂",
+        "semanticPurpose": "提取铌酸锂和TFLN的材料属性、制备、应用、市场规模和厂商。",
+        "extractionFocus": "传统铌酸锂与薄膜化差异、光通信和量子等应用、市场预测、晶圆和企业。"
+      },
+      {
+        "unitId": "unit-014",
+        "proposedUnitId": "unit-14",
+        "primaryBlockCount": 137,
+        "contextBlockCount": 28,
+        "topic": "光纤光缆上游材料",
+        "semanticPurpose": "提取光纤光缆需求、四氯化硅、四氯化锗、氦气、芳纶、UV涂覆材料及供应商。",
+        "extractionFocus": "光纤结构、需求预测、原料作用、资源供给、市场规模、技术性能和公司业务。"
+      },
+      {
+        "unitId": "unit-015",
+        "proposedUnitId": "unit-15",
+        "primaryBlockCount": 37,
+        "contextBlockCount": 8,
+        "topic": "氟化工与AI液冷",
+        "semanticPurpose": "提取氟化工分类、制冷剂代际、AI服务器液冷应用、市场变化和主要企业。",
+        "extractionFocus": "氟化物和制冷剂分类、环保约束、PFPE/HFE/HFC/HFO等冷却液、产量和公司。"
+      },
+      {
+        "unitId": "unit-016",
+        "proposedUnitId": "unit-16",
+        "primaryBlockCount": 47,
+        "contextBlockCount": 8,
+        "topic": "MLCC上游材料",
+        "semanticPurpose": "提取MLCC结构、市场规模、竞争格局及介质粉体和电极材料要求。",
+        "extractionFocus": "MLCC应用、需求和市场、BaTiO3粉体、纳米镍粉、离型膜及供应商。"
+      },
+      {
+        "unitId": "unit-017",
+        "proposedUnitId": "unit-17",
+        "primaryBlockCount": 25,
+        "contextBlockCount": 8,
+        "topic": "PI膜",
+        "semanticPurpose": "提取PI及PI膜性能、分类、应用、市场规模和境内外公司。",
+        "extractionFocus": "耐温、绝缘、耐辐照、电子级和柔性显示应用、市场预测、产品和公司。"
+      },
+      {
+        "unitId": "unit-018",
+        "proposedUnitId": "unit-18",
+        "primaryBlockCount": 9,
+        "contextBlockCount": 21,
+        "topic": "玻璃基板与玻璃桥",
+        "semanticPurpose": "提取玻璃基板先进封装逻辑、TGV、玻璃桥光互连和相关公司。",
+        "extractionFocus": "玻璃核心层、翘曲、TGV、光纤与PIC连接、无源对准和公司业务。"
+      },
+      {
+        "unitId": "unit-019",
+        "proposedUnitId": "unit-19",
+        "primaryBlockCount": 6,
+        "contextBlockCount": 8,
+        "topic": "风险提示",
+        "semanticPurpose": "提取报告明确列示的行业研究和投资判断风险。",
+        "extractionFocus": "商业化、资本开支、技术路线、竞争格局和数据时效风险。"
+      }
+    ],
+    "exclusionQuality": {
+      "excludedBlockCount": 83,
+      "excludedPercentage": 5.45,
+      "distribution": {
+        "byBlockType": {
+          "heading": 10,
+          "list": 10,
+          "paragraph": 62,
+          "table": 1
+        },
+        "bySection": {
+          "section-0004": 14,
+          "section-0038": 13,
+          "section-0096": 15,
+          "section-0104": 11,
+          "section-0135": 12,
+          "section-0155": 3,
+          "section-0156": 2,
+          "section-0157": 4,
+          "section-0158": 1,
+          "section-0159": 8
+        },
+        "byPage": {
+          "3": 13,
+          "4": 1,
+          "26": 9,
+          "27": 4,
+          "63": 12,
+          "64": 3,
+          "68": 11,
+          "88": 12,
+          "102": 10,
+          "103": 8
+        }
+      },
+      "sampleLimit": 30,
+      "samples": [
+        {
+          "blockId": "block-000014",
+          "type": "heading",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "CONTENTS 目录 CONTENTS 目录"
+        },
+        {
+          "blockId": "block-000015",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "01"
+        },
+        {
+          "blockId": "block-000016",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "02"
+        },
+        {
+          "blockId": "block-000017",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "AI 算力升级驱动 PCB 上游材料需求扩容与高端化"
+        },
+        {
+          "blockId": "block-000018",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "全球晶圆及芯片扩产迭代驱动半导体制造材料升级"
+        },
+        {
+          "blockId": "block-000019",
+          "type": "list",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "半导体封测材料受半导体发展影响将面临更高要求 03"
+        },
+        {
+          "blockId": "block-000020",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "04"
+        },
+        {
+          "blockId": "block-000021",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "AI 算力规模扩张驱动光通信上游材料升级"
+        },
+        {
+          "blockId": "block-000022",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "05"
+        },
+        {
+          "blockId": "block-000023",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "MLCC 、氟化工冷却液等材料受益于 AI 算力需求增加"
+        },
+        {
+          "blockId": "block-000024",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "06"
+        },
+        {
+          "blockId": "block-000025",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "风险提示"
+        },
+        {
+          "blockId": "block-000026",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 3,
+          "textExcerpt": "EYJVAWSV4Z3XSVFZaQ9R7NtRrRoMrPlOnNwOjMqRpO7NpOmOwMrNtRuOtPtP"
+        },
+        {
+          "blockId": "block-000027",
+          "type": "paragraph",
+          "sectionRef": "section-0004",
+          "page": 4,
+          "textExcerpt": "⚫"
+        },
+        {
+          "blockId": "block-000341",
+          "type": "heading",
+          "sectionRef": "section-0038",
+          "page": 26,
+          "textExcerpt": "CONTENTS 目录 CONTENTS 目录"
+        },
+        {
+          "blockId": "block-000342",
+          "type": "paragraph",
+          "sectionRef": "section-0038",
+          "page": 26,
+          "textExcerpt": "01"
+        },
+        {
+          "blockId": "block-000343",
+          "type": "list",
+          "sectionRef": "section-0038",
+          "page": 26,
+          "textExcerpt": "02 全球晶圆及芯片扩产迭代驱动半导体制造材料升级"
+        },
+        {
+          "blockId": "block-000344",
+          "type": "list",
+          "sectionRef": "section-0038",
+          "page": 26,
+          "textExcerpt": "03 半导体封测材料受半导体发展影响将面临更高要求"
+        },
+        {
+          "blockId": "block-000345",
+          "type": "list",
+          "sectionRef": "section-0038",
+          "page": 26,
+          "textExcerpt": "04 AI 算力规模扩张驱动光通信上游材料升级"
+        },
+        {
+          "blockId": "block-000346",
+          "type": "paragraph",
+          "sectionRef": "section-0038",
+          "page": 26,
+          "textExcerpt": "风险提示"
+        },
+        {
+          "blockId": "block-000347",
+          "type": "list",
+          "sectionRef": "section-0038",
+          "page": 26,
+          "textExcerpt": "05"
+        },
+        {
+          "blockId": "block-000348",
+          "type": "paragraph",
+          "sectionRef": "section-0038",
+          "page": 26,
+          "textExcerpt": "AI 算力升级驱动 PCB 上游材料需求扩容与高端化"
+        },
+        {
+          "blockId": "block-000349",
+          "type": "paragraph",
+          "sectionRef": "section-0038",
+          "page": 26,
+          "textExcerpt": "MLCC 、氟化工冷却液等材料受益于 AI 算力需求增加"
+        },
+        {
+          "blockId": "block-000350",
+          "type": "paragraph",
+          "sectionRef": "section-0038",
+          "page": 27,
+          "textExcerpt": "⚫"
+        },
+        {
+          "blockId": "block-000351",
+          "type": "paragraph",
+          "sectionRef": "section-0038",
+          "page": 27,
+          "textExcerpt": "⚫"
+        },
+        {
+          "blockId": "block-000352",
+          "type": "paragraph",
+          "sectionRef": "section-0038",
+          "page": 27,
+          "textExcerpt": "半导体前道制造工艺主要包括光刻、刻蚀、离子注入、扩散、薄膜沉积、研 磨抛光、晶圆检测等环节"
+        },
+        {
+          "blockId": "block-000353",
+          "type": "paragraph",
+          "sectionRef": "section-0038",
+          "page": 27,
+          "textExcerpt": "集成电路为半导体核心功能载体， 四大品类分别对应计算、存储、传 输与系统集成核心场景：集成电路 简称 IC （ IntegratedCircuit ），是指 通过一系列特定加工工艺，将晶体 管、二极管等有源器件和电阻器、 电容器等无源器件，按照一定电路 互联，'集成'在半导体晶片上， 随后封装在一个外壳内，执行特定 功能的电路或系统。按照产品种类 划分，集成电路可进一步细分为承 担计算功能的逻辑芯片、承担存储 功能的存储芯片、承担传输与能源 供给功能的模拟芯片以及将运算..."
+        },
+        {
+          "blockId": "block-001024",
+          "type": "heading",
+          "sectionRef": "section-0096",
+          "page": 63,
+          "textExcerpt": "CONTENTS 目录 CONTENTS 目录"
+        },
+        {
+          "blockId": "block-001025",
+          "type": "paragraph",
+          "sectionRef": "section-0096",
+          "page": 63,
+          "textExcerpt": "01"
+        },
+        {
+          "blockId": "block-001026",
+          "type": "paragraph",
+          "sectionRef": "section-0096",
+          "page": 63,
+          "textExcerpt": "02"
+        }
+      ],
+      "semanticQualityWarning": null
+    }
+  },
+  "candidates": {
+    "rawEntityCandidates": 464,
+    "rawRelationCandidates": 407,
+    "rawClaimCandidates": 216,
+    "rejectedCandidates": 8,
+    "unitCandidateCounts": {
+      "entity": 464,
+      "relation": 407,
+      "claim": 216,
+      "rejected": 8
+    }
+  },
+  "reasoningCalls": {
+    "total": 22,
+    "byOperation": {
+      "extractKnowledge": 21,
+      "understandAndPlan": 1
+    },
+    "maxOutputBytes": 58003,
+    "calls": [
+      {
+        "sequence": 1,
+        "executionId": "rhl-validation-001-r4-primary-001",
+        "operation": "understandAndPlan",
+        "startedAt": "2026-09-03T19:41:14.201Z",
+        "instructionChars": 1326,
+        "inputChars": 618659,
+        "contractChars": 5626,
+        "status": "passed",
+        "completedAt": "2026-09-03T19:45:05.035Z",
+        "durationMs": 230830,
+        "outputBytes": 58003
+      },
+      {
+        "sequence": 2,
+        "executionId": "rhl-validation-001-r4-primary-002",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T19:45:05.113Z",
+        "instructionChars": 493,
+        "inputChars": 42297,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T19:47:33.569Z",
+        "durationMs": 148455,
+        "outputBytes": 30910
+      },
+      {
+        "sequence": 3,
+        "executionId": "rhl-validation-001-r4-primary-003",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T19:47:33.574Z",
+        "instructionChars": 493,
+        "inputChars": 118984,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T19:50:01.222Z",
+        "durationMs": 147647,
+        "outputBytes": 27418
+      },
+      {
+        "sequence": 4,
+        "executionId": "rhl-validation-001-r4-primary-004",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T19:50:01.249Z",
+        "instructionChars": 493,
+        "inputChars": 71386,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T19:51:26.396Z",
+        "durationMs": 85146,
+        "outputBytes": 12658
+      },
+      {
+        "sequence": 5,
+        "executionId": "rhl-validation-001-r4-primary-005",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T19:51:26.403Z",
+        "instructionChars": 493,
+        "inputChars": 87544,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T19:53:34.564Z",
+        "durationMs": 128160,
+        "outputBytes": 21889
+      },
+      {
+        "sequence": 6,
+        "executionId": "rhl-validation-001-r4-primary-006",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T19:53:34.600Z",
+        "instructionChars": 493,
+        "inputChars": 86283,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T19:56:37.919Z",
+        "durationMs": 183317,
+        "outputBytes": 38466
+      },
+      {
+        "sequence": 7,
+        "executionId": "rhl-validation-001-r4-primary-007",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T19:56:37.921Z",
+        "instructionChars": 493,
+        "inputChars": 86283,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T19:59:24.090Z",
+        "durationMs": 166169,
+        "outputBytes": 37521
+      },
+      {
+        "sequence": 8,
+        "executionId": "rhl-validation-001-r4-primary-008",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T19:59:24.146Z",
+        "instructionChars": 493,
+        "inputChars": 89453,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T20:01:06.107Z",
+        "durationMs": 101959,
+        "outputBytes": 20688
+      },
+      {
+        "sequence": 9,
+        "executionId": "rhl-validation-001-r4-primary-009",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T20:01:06.156Z",
+        "instructionChars": 493,
+        "inputChars": 70084,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T20:03:05.804Z",
+        "durationMs": 119647,
+        "outputBytes": 25031
+      },
+      {
+        "sequence": 10,
+        "executionId": "rhl-validation-001-r4-primary-010",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T20:03:05.830Z",
+        "instructionChars": 493,
+        "inputChars": 64248,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T20:04:24.588Z",
+        "durationMs": 78757,
+        "outputBytes": 13886
+      },
+      {
+        "sequence": 11,
+        "executionId": "rhl-validation-001-r4-primary-011",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T20:04:24.602Z",
+        "instructionChars": 493,
+        "inputChars": 64285,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T20:06:06.485Z",
+        "durationMs": 101883,
+        "outputBytes": 18222
+      },
+      {
+        "sequence": 12,
+        "executionId": "rhl-validation-001-r4-primary-012",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T20:06:06.506Z",
+        "instructionChars": 493,
+        "inputChars": 74135,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T20:07:49.638Z",
+        "durationMs": 103131,
+        "outputBytes": 21962
+      },
+      {
+        "sequence": 13,
+        "executionId": "rhl-validation-001-r4-primary-013",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T20:07:49.674Z",
+        "instructionChars": 493,
+        "inputChars": 54385,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T20:17:04.816Z",
+        "durationMs": 555141,
+        "outputBytes": 29175
+      },
+      {
+        "sequence": 14,
+        "executionId": "rhl-validation-001-r4-primary-014",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T20:17:04.836Z",
+        "instructionChars": 493,
+        "inputChars": 80570,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T20:19:13.228Z",
+        "durationMs": 128392,
+        "outputBytes": 18681
+      },
+      {
+        "sequence": 15,
+        "executionId": "rhl-validation-001-r4-primary-015",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T20:19:13.275Z",
+        "instructionChars": 493,
+        "inputChars": 54164,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T20:21:43.847Z",
+        "durationMs": 150571,
+        "outputBytes": 24078
+      },
+      {
+        "sequence": 16,
+        "executionId": "rhl-validation-001-r4-primary-016",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T20:21:43.868Z",
+        "instructionChars": 493,
+        "inputChars": 89098,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T20:24:05.137Z",
+        "durationMs": 141268,
+        "outputBytes": 24659
+      },
+      {
+        "sequence": 17,
+        "executionId": "rhl-validation-001-r4-primary-017",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T20:24:05.236Z",
+        "instructionChars": 493,
+        "inputChars": 57572,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T20:26:16.705Z",
+        "durationMs": 131467,
+        "outputBytes": 22955
+      },
+      {
+        "sequence": 18,
+        "executionId": "rhl-validation-001-r4-primary-018",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T20:26:16.733Z",
+        "instructionChars": 493,
+        "inputChars": 58828,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-03T20:28:28.600Z",
+        "durationMs": 131865,
+        "outputBytes": 26194
+      },
+      {
+        "sequence": 19,
+        "executionId": "rhl-validation-001-r4-primary-019",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T20:28:28.635Z",
+        "instructionChars": 493,
+        "inputChars": 53100,
+        "contractChars": 3628,
+        "status": "failed",
+        "completedAt": "2026-09-03T22:34:09.577Z",
+        "durationMs": 7540942,
+        "errorCode": "reasoning_timeout",
+        "error": "Reasoning host execution timed out"
+      },
+      {
+        "sequence": 20,
+        "executionId": "rhl-validation-001-r4-primary-020",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-03T22:34:09.579Z",
+        "instructionChars": 493,
+        "inputChars": 53100,
+        "contractChars": 3628,
+        "status": "failed",
+        "completedAt": "2026-09-04T03:00:16.969Z",
+        "durationMs": 15967390,
+        "errorCode": "reasoning_timeout",
+        "error": "Reasoning host execution timed out"
+      },
+      {
+        "sequence": 21,
+        "executionId": "rhl-validation-001-r4-primary-021",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-04T03:00:16.971Z",
+        "instructionChars": 493,
+        "inputChars": 50795,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-04T03:05:51.695Z",
+        "durationMs": 334722,
+        "outputBytes": 22874
+      },
+      {
+        "sequence": 22,
+        "executionId": "rhl-validation-001-r4-primary-022",
+        "operation": "extractKnowledge",
+        "startedAt": "2026-09-04T03:05:51.707Z",
+        "instructionChars": 493,
+        "inputChars": 42961,
+        "contractChars": 3628,
+        "status": "passed",
+        "completedAt": "2026-09-04T03:06:25.820Z",
+        "durationMs": 34111,
+        "outputBytes": 5242
+      }
+    ]
+  },
+  "validationOutcome": "REASONING_FAILURE",
+  "failureClassification": "REASONING_FAILURE",
+  "error": "Primary workflow blocked: Extraction unit unit-017 failed after 2 attempt(s): Reasoning host execution timed out",
+  "completedAt": "2026-09-04T03:06:25.836Z"
+}
