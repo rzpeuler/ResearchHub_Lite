@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { rm } from 'node:fs/promises'
+import { join } from 'node:path'
 import { resolveKnowledge, resolveResolutionIntentBarrier } from '../../workflows/raw-document-knowledge-ingestion/knowledge-resolution.ts'
 import { planKnowledgeChangeSet } from '../../workflows/raw-document-knowledge-ingestion/changeset-planner.ts'
 import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
@@ -10,8 +12,13 @@ import { KnowledgeIngestionLogStore } from '../../knowledge/storage/ingestion-lo
 import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
 import { createKnowledgeBase, readManifest, removeKnowledgeBase } from '../knowledge/helpers.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
+import { KnowledgeBaseLoaderV03 } from '../../knowledge/storage/loader.ts'
+import { ReviewCaseStore } from '../../knowledge/review/store.ts'
+import { hashKnowledgeObject } from '../../knowledge/storage/canonical-hash.ts'
+import { writeKnowledgeBaseV03 } from '../../knowledge/writer/writer-v03.ts'
 import { validateKnowledgeChangeSetV03 } from '../../knowledge/validation/v03-change-set-validator.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
+import type { KnowledgeChangeSetV03 } from '../../knowledge/schema/mutation.ts'
 import type { ClaimCandidate, EntityCandidate, RelationCandidate, ResolvedCandidateGroup, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
 import type { AcceptedExtractionPlan } from '../../workflows/raw-document-knowledge-ingestion/contracts.ts'
 import type { EffectiveConfig } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
@@ -310,4 +317,188 @@ test('no-op execution log detects a changed authoritative ReviewCase set', async
     assert.equal(changed.kind, 'conflict')
     assert.match(changed.message ?? '', /ReviewCase set/)
   } finally { await removeKnowledgeBase(root) }
+})
+
+const durableReplayCapabilities = { maxContextTokens: 100_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 4 } as const
+const durableReplayClock = () => '2026-09-06T00:00:00.000Z'
+
+function durableReplayPlan(): unknown {
+  return {
+    reportMap,
+    extractionPlanProposal: {
+      units: [{ proposedUnitId: 'replay-unit', topic: 'replay', semanticPurpose: 'durable review replay fixture', primaryRefs: [{ kind: 'block', blockId: 'block-000001' }], contextRefs: [] }],
+      excludedRefs: [],
+    },
+  }
+}
+
+function durableReplayExecutor(entities: readonly Record<string, unknown>[]): MockReasoningExecutor {
+  return new MockReasoningExecutor({
+    capabilities: durableReplayCapabilities,
+    responses: {
+      understandAndPlan: durableReplayPlan(),
+      extractKnowledge: { entities, relations: [], claims: [] },
+      resolveSemanticCase: { outcome: 'uncertain', rationale: 'This fixture must not require semantic resolution.' },
+    },
+  })
+}
+
+function reasoningCallCounts(executor: MockReasoningExecutor): Record<string, number> {
+  const counts: Record<string, number> = { reasoning: executor.calls.length, understandAndPlan: 0, extractKnowledge: 0, resolveSemanticCase: 0 }
+  for (const call of executor.calls) counts[call.operation] = (counts[call.operation] ?? 0) + 1
+  return counts
+}
+
+async function canonicalObjectCounts(root: string): Promise<Record<string, number>> {
+  const registry = new KnowledgeBaseRegistry()
+  const mounted = await registry.mount(root)
+  const loadedAssets = await new KnowledgeBaseLoaderV03().load(mounted)
+  return {
+    themeGroups: loadedAssets.themeGroups.length,
+    entities: loadedAssets.entities.length,
+    relations: loadedAssets.relations.length,
+    claims: loadedAssets.claims.length,
+    modules: loadedAssets.modules.length,
+    sources: loadedAssets.sources.length,
+  }
+}
+
+async function seedDuplicateCompanyHardKey(root: string): Promise<void> {
+  const registry = new KnowledgeBaseRegistry()
+  const handle = await registry.mount(root)
+  const objects = [
+    { id: 'entity:duplicate-a', type: 'company', name: 'Duplicate A', exchange: 'NYSE', ticker: 'DUP', lifecycle: { status: 'active' } },
+    { id: 'entity:duplicate-b', type: 'company', name: 'Duplicate B', exchange: 'NYSE', ticker: 'DUP', lifecycle: { status: 'active' } },
+  ]
+  const changeSet: KnowledgeChangeSetV03 = {
+    changeSetId: 'fixture-seed-duplicate-hard-key',
+    workflowRunId: 'fixture-seed-duplicate-hard-key',
+    knowledgeBaseId: handle.knowledgeBaseId,
+    schemaVersion: '0.3',
+    storageFormatVersion: '1',
+    expectedBaseRevision: handle.revision,
+    requiresRawProvenance: false,
+    sourceOperations: [],
+    knowledgeOperations: objects.map((object, index) => ({ operationId: `seed-company-${index + 1}`, type: 'create' as const, object: object as never })),
+  }
+  const validation = await validateKnowledgeChangeSetV03(handle, changeSet, { mode: 'commit' })
+  assert.equal(validation.report.status, 'passed', JSON.stringify(validation.report.errors))
+  assert.ok(validation.validatedChangeSet)
+  const write = await writeKnowledgeBaseV03(handle, { receipt: validation.validatedChangeSet, registry, clock: durableReplayClock, stagedStateValidator: async () => undefined })
+  assert.equal(write.status, 'committed')
+}
+
+async function assertDurableReviewReplay(input: {
+  readonly knowledgeBaseId: string
+  readonly workflowRunId: string
+  readonly text: string
+  readonly entities: readonly Record<string, unknown>[]
+  readonly seedDuplicateHardKey?: boolean
+  readonly firstStatus: 'blocked' | 'completed_with_review'
+  readonly firstWriteStatus?: 'no_changes' | 'committed'
+}): Promise<void> {
+  const root = await createKnowledgeBase({ knowledgeBaseId: input.knowledgeBaseId })
+  try {
+    if (input.seedDuplicateHardKey) await seedDuplicateCompanyHardKey(root)
+    const registry = new KnowledgeBaseRegistry()
+    const executor = durableReplayExecutor(input.entities)
+    const skill = new KnowledgeCurationSkill({ executor })
+    const workflowInput = {
+      handle: await registry.mount(root),
+      documentInput: { type: 'text' as const, text: input.text, originalFilename: `${input.workflowRunId}.txt`, mediaType: 'text/plain' },
+      skill,
+      workflowRunId: input.workflowRunId,
+      clock: durableReplayClock,
+    }
+
+    const first = await runRawDocumentKnowledgeIngestion(workflowInput)
+    assert.equal(first.status, input.firstStatus)
+    assert.equal(first.writeStatus, input.firstWriteStatus)
+    assert.ok(first.reviewCases && first.reviewCases.length > 0, 'first run must produce at least one durable actionable ReviewCase')
+    assert.ok(first.reviewCases.every((reviewCase) => ['knowledge_decision', 'research_followup', 'schema_design'].includes(reviewCase.classification.actionability)))
+
+    const logStore = new KnowledgeIngestionLogStore()
+    const reviewStore = new ReviewCaseStore(root)
+    const firstLog = await logStore.read(await registry.mount(root), input.workflowRunId)
+    assert.ok(firstLog, 'first run must leave an authoritative execution log')
+    const firstCases = await reviewStore.list({ producerRunId: input.workflowRunId })
+    const firstCaseIds = firstCases.map((reviewCase) => reviewCase.reviewCaseId)
+    const firstContext = firstLog?.ingestionContext && typeof firstLog.ingestionContext === 'object' && !Array.isArray(firstLog.ingestionContext)
+      ? firstLog.ingestionContext as Record<string, unknown>
+      : firstLog as unknown as Record<string, unknown>
+    assert.deepEqual(first.reviewCases?.map((reviewCase) => reviewCase.reviewCaseId), firstCaseIds)
+    assert.deepEqual(firstContext.reviewCases, firstCases)
+    assert.deepEqual(firstContext.reviewCaseIds, firstCaseIds)
+    assert.equal(firstContext.reviewCaseSetHash, hashKnowledgeObject(firstCases))
+    assert.equal(firstContext.reviewCaseSetHash, hashKnowledgeObject(firstCases))
+    assert.equal(firstLog?.status, input.firstStatus)
+
+    const firstRevision = (await readManifest(root)).revision
+    const firstCounts = await canonicalObjectCounts(root)
+    const firstReasoningCounts = reasoningCallCounts(executor)
+    const firstChanges = firstLog?.changes
+
+    await rm(join(root, 'reviews', 'runs', input.workflowRunId), { recursive: true, force: true })
+    assert.deepEqual(await reviewStore.list({ producerRunId: input.workflowRunId }), [])
+    assert.ok(await logStore.read(await registry.mount(root), input.workflowRunId), 'authoritative log must survive ReviewCase directory deletion')
+
+    const replay = await runRawDocumentKnowledgeIngestion({ ...workflowInput, handle: await registry.mount(root) })
+    assert.equal(replay.status, input.firstStatus)
+    assert.equal(replay.writeStatus, 'already_committed')
+    assert.deepEqual(replay.reviewCases, firstCases)
+    assert.deepEqual(reasoningCallCounts(executor), firstReasoningCounts)
+    assert.equal(reasoningCallCounts(executor).reasoning, firstReasoningCounts.reasoning)
+    assert.equal(reasoningCallCounts(executor).understandAndPlan, firstReasoningCounts.understandAndPlan)
+    assert.equal(reasoningCallCounts(executor).extractKnowledge, firstReasoningCounts.extractKnowledge)
+    assert.equal(reasoningCallCounts(executor).resolveSemanticCase, firstReasoningCounts.resolveSemanticCase)
+    assert.deepEqual(await reviewStore.list({ producerRunId: input.workflowRunId }), firstCases)
+    assert.equal((await readManifest(root)).revision, firstRevision)
+    assert.deepEqual(await canonicalObjectCounts(root), firstCounts)
+
+    const replayLog = await logStore.read(await registry.mount(root), input.workflowRunId)
+    assert.deepEqual(replayLog, firstLog)
+    const replayContext = replayLog?.ingestionContext && typeof replayLog.ingestionContext === 'object' && !Array.isArray(replayLog.ingestionContext)
+      ? replayLog.ingestionContext as Record<string, unknown>
+      : replayLog as unknown as Record<string, unknown>
+    assert.equal(replayContext.reviewCaseSetHash, firstContext.reviewCaseSetHash)
+    assert.deepEqual(replayLog?.changes, firstChanges)
+  } finally {
+    await removeKnowledgeBase(root)
+  }
+}
+
+test('durable ReviewCase replay acceptance: blocked run recovers from authoritative log', async () => {
+  await assertDurableReviewReplay({
+    knowledgeBaseId: 'kb-durable-replay-blocked',
+    workflowRunId: 'run-durable-replay-blocked',
+    text: 'Duplicate company identity requires review.',
+    entities: [{ candidateId: 'duplicate', entityType: 'company', name: 'Incoming Duplicate', semanticFields: { exchange: 'NYSE', ticker: 'DUP' }, evidenceBlockRefs: ['block-000001'], reason: 'Fixture duplicate hard key' }],
+    seedDuplicateHardKey: true,
+    firstStatus: 'blocked',
+  })
+})
+
+test('durable ReviewCase replay acceptance: no-change run rebuilds ReviewCase store', async () => {
+  await assertDurableReviewReplay({
+    knowledgeBaseId: 'kb-durable-replay-no-change',
+    workflowRunId: 'run-durable-replay-no-change',
+    text: 'Potential new investment theme requires review.',
+    entities: [{ candidateId: 'theme', entityType: 'investment_theme', name: 'Quantum Cooling', evidenceBlockRefs: ['block-000001'], reason: 'Fixture potential new theme' }],
+    firstStatus: 'completed_with_review',
+    firstWriteStatus: 'no_changes',
+  })
+})
+
+test('durable ReviewCase replay acceptance: Writer success preserves safe mutations exactly once', async () => {
+  await assertDurableReviewReplay({
+    knowledgeBaseId: 'kb-durable-replay-writer',
+    workflowRunId: 'run-durable-replay-writer',
+    text: 'A safe company and a potential new theme are present.',
+    entities: [
+      { candidateId: 'theme', entityType: 'investment_theme', name: 'Quantum Cooling', evidenceBlockRefs: ['block-000001'], reason: 'Fixture potential new theme' },
+      { candidateId: 'safe', entityType: 'company', name: 'Safe Company', evidenceBlockRefs: ['block-000001'], reason: 'Fixture safe company' },
+    ],
+    firstStatus: 'completed_with_review',
+    firstWriteStatus: 'committed',
+  })
 })
