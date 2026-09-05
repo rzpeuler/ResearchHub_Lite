@@ -31,7 +31,14 @@ async function assertReviewAncestors(rootRef: string): Promise<void> { const roo
 async function loadManifest(path: string): Promise<ReviewRunManifest> { const value = parseYaml(await readFile(path, 'utf8'), path); validateReviewRunManifest(value); return value }
 async function loadRun(rootRef: string, producerRunId: string): Promise<{ manifest: ReviewRunManifest; cases: ReviewCase[] }> {
   const root = runPath(rootRef, producerRunId); await assertNotSymlink(root); const manifest = await loadManifest(join(root, 'manifest.yaml')); if (manifest.producerRunId !== producerRunId) throw new Error(`ReviewCase manifest producerRunId mismatch: ${producerRunId}`); const cases: ReviewCase[] = []
-  for (const id of manifest.caseIds) { const path = casePath(rootRef, producerRunId, id); await assertNotSymlink(path); const value = parseYaml(await readFile(path, 'utf8'), path); validateReviewCase(value); if (value.reviewCaseId !== id || value.producerRunId !== producerRunId || value.knowledgeBaseId !== manifest.knowledgeBaseId) throw new Error(`ReviewCase identity mismatch in run ${producerRunId}`); cases.push(value) }
+  for (const id of manifest.caseIds) {
+    const path = casePath(rootRef, producerRunId, id)
+    await assertNotSymlink(path)
+    const value = parseYaml(await readFile(path, 'utf8'), path)
+    validateReviewCase(value)
+    if (value.reviewCaseId !== id || value.producerRunId !== producerRunId || value.knowledgeBaseId !== manifest.knowledgeBaseId || value.producerType !== manifest.producerType || value.createdAt !== manifest.createdAt || value.resolutionContext.schemaVersionAtCreation !== manifest.schemaVersionAtCreation || value.resolutionContext.knowledgeBaseRevisionAtCreation !== manifest.knowledgeBaseRevisionAtCreation) throw new Error(`ReviewCase identity or manifest consistency mismatch in run ${producerRunId}`)
+    cases.push(value)
+  }
   cases.sort((left, right) => left.reviewCaseId.localeCompare(right.reviewCaseId))
   if (hashCaseSet(cases) !== manifest.deterministicSetHash) throw new Error(`ReviewCase set hash mismatch for run ${producerRunId}`)
   return { manifest, cases }
@@ -66,7 +73,7 @@ export async function persistReviewCases(input: PersistReviewCasesInput): Promis
 
 export async function loadReviewCase(rootRef: string, reviewCaseId: string, producerRunId?: string): Promise<ReviewCase | undefined> {
   if (!isSafeReviewPathSegment(reviewCaseId)) throw new Error(`Unsafe reviewCaseId: ${reviewCaseId}`)
-  if (producerRunId !== undefined) { const path = casePath(rootRef, producerRunId, reviewCaseId); if (!(await exists(path))) return undefined; await assertNotSymlink(path); const value = parseYaml(await readFile(path, 'utf8'), path); validateReviewCase(value); return value }
+  if (producerRunId !== undefined) { if (!(await exists(runPath(rootRef, producerRunId)))) return undefined; const run = await loadRun(rootRef, producerRunId); return run.cases.find((item) => item.reviewCaseId === reviewCaseId) }
   for (const reviewCase of await listReviewCases(rootRef, { openOnly: false })) if (reviewCase.reviewCaseId === reviewCaseId) return reviewCase
   return undefined
 }
@@ -100,7 +107,7 @@ export async function recoverReviewCasesFromExecutionLog(rootRef: string, logVal
   const createdAt = typeof context.reviewCasesCreatedAt === 'string' ? context.reviewCasesCreatedAt : typeof logValue.completedAt === 'string' ? logValue.completedAt : new Date(0).toISOString()
   const expectedSetHash = typeof context.reviewCaseSetHash === 'string' ? context.reviewCaseSetHash : undefined
   if (expectedSetHash !== undefined && expectedSetHash !== hashCaseSet(cases as ReviewCase[])) throw new Error('ReviewCase execution log set hash mismatch')
-  const revision = Number(context.knowledgeBaseRevisionAtCreation ?? logValue.committedRevision ?? 0)
+  const revision = Number(context.knowledgeBaseRevisionAtCreation ?? logValue.committedRevision ?? (cases[0] as ReviewCase).resolutionContext.knowledgeBaseRevisionAtCreation)
   const producerType = typeof context.producerType === 'string' ? context.producerType : typeof logValue.producerType === 'string' ? logValue.producerType : (cases[0] as ReviewCase).producerType
   const result = await persistReviewCases({ rootRef, knowledgeBaseId, producerRunId, producerType, cases: cases as ReviewCase[], createdAt, knowledgeBaseRevisionAtCreation: Number.isSafeInteger(revision) && revision >= 0 ? revision : 0 })
   if (result.kind === 'conflict') throw new Error(result.message ?? 'ReviewCase recovery conflict')

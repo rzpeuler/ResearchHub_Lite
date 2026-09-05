@@ -3,6 +3,7 @@ import { access, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/prom
 import { dirname, join, resolve } from 'node:path'
 import { canonicalSerialize } from '../../knowledge/storage/canonical-hash.ts'
 import { withKnowledgeBaseMutationLock } from '../../knowledge/storage/mutation-lock.ts'
+import { parseYaml } from '../../knowledge/storage/yaml.ts'
 import type { ResolvedCandidateGroup } from '../../skills/knowledge-curation/contracts.ts'
 import type { ReviewCase } from '../../knowledge/review/contracts.ts'
 import type { ConsolidationReviewConstraint, ReviewCategory, ReviewItem, ReviewOrigin, ReviewSample, ReviewSummary } from './contracts.ts'
@@ -115,6 +116,16 @@ export type NoOpLogResult = { readonly kind: 'written' | 'replay' | 'conflict'; 
 
 function logFingerprint(value: Dict): string | undefined { if (typeof value.workflowInputFingerprint === 'string') return value.workflowInputFingerprint; const context = isRecord(value.ingestionContext) ? value.ingestionContext : undefined; return typeof context?.workflowInputFingerprint === 'string' ? context.workflowInputFingerprint : undefined }
 function logRawRef(value: Dict): string | undefined { if (typeof value.rawRef === 'string') return value.rawRef; const context = isRecord(value.ingestionContext) ? value.ingestionContext : undefined; return typeof context?.rawRef === 'string' ? context.rawRef : undefined }
+function logReviewCaseSetHash(value: Dict): string | undefined { if (typeof value.reviewCaseSetHash === 'string') return value.reviewCaseSetHash; const context = isRecord(value.ingestionContext) ? value.ingestionContext : undefined; return typeof context?.reviewCaseSetHash === 'string' ? context.reviewCaseSetHash : undefined }
+function logReviewCaseIds(value: Dict): readonly string[] | undefined { const direct = Array.isArray(value.reviewCaseIds) ? value.reviewCaseIds : isRecord(value.ingestionContext) && Array.isArray(value.ingestionContext.reviewCaseIds) ? value.ingestionContext.reviewCaseIds : undefined; return direct !== undefined && direct.every((item) => typeof item === 'string') ? [...direct].sort() : undefined }
+function sameReviewCaseSet(existing: Dict, incoming: NoOpExecutionRecord): boolean {
+  const existingHash = logReviewCaseSetHash(existing)
+  const incomingHash = incoming.reviewCaseSetHash
+  if (existingHash !== undefined && incomingHash !== undefined) return existingHash === incomingHash
+  const existingIds = logReviewCaseIds(existing)
+  const incomingIds = incoming.reviewCaseIds === undefined ? undefined : [...incoming.reviewCaseIds].sort()
+  return existingIds === undefined || incomingIds === undefined || JSON.stringify(existingIds) === JSON.stringify(incomingIds)
+}
 function writerAuthoritative(value: Dict): boolean { return typeof value.changeSetId === 'string' || typeof value.changeSetHash === 'string' || typeof value.ingestionLogRef === 'string' || isRecord(value.changes) }
 
 export async function writeNoOpExecutionRecord(rootRef: string, record: NoOpExecutionRecord): Promise<NoOpLogResult> {
@@ -125,9 +136,10 @@ export async function writeNoOpExecutionRecord(rootRef: string, record: NoOpExec
     await mkdir(dirname(path), { recursive: true })
     const existingRecord = async (): Promise<NoOpLogResult | undefined> => {
       try {
-        const existing = JSON.parse(await readFile(path, 'utf8')) as unknown
+        const existing = parseYaml(await readFile(path, 'utf8'), path) as unknown
         if (!isRecord(existing)) return { kind: 'conflict', record: {}, path, message: 'Execution log already exists and is not a valid record' }
         const same = logFingerprint(existing) === record.workflowInputFingerprint && logRawRef(existing) === record.rawRef
+        if (same && !sameReviewCaseSet(existing, record)) return { kind: 'conflict', record: existing, path, message: 'Execution log exists with a different authoritative ReviewCase set' }
         if (same) return { kind: 'replay', record: existing, path }
         return { kind: 'conflict', record: existing, path, message: writerAuthoritative(existing) ? 'Authoritative Writer execution log exists for a different input' : 'Execution log already exists for a different input fingerprint or rawRef' }
       } catch (error) {

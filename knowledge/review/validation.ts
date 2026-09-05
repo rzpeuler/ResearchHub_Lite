@@ -8,9 +8,13 @@ import type {
   ReviewRunManifest,
   ReviewSemanticProposal,
 } from './contracts.ts'
+import { KNOWLEDGE_SCHEMA_V03 } from '../schema/executable-schema.ts'
 
 const TELEMETRY_CATEGORIES = new Set<ReviewCaseCategory>(['invalid_reference', 'invalid_semantics'])
 const NON_ACTIONABLE_ORIGINS = new Set(['extraction_rejection', 'consolidation_mirror', 'dependency_isolation'])
+const ALLOWED_CATEGORIES = new Set<ReviewCaseCategory>(['invalid_reference', 'invalid_semantics', 'relation_cardinality', 'schema_gap', 'theme_creation', 'theme_ambiguity', 'reconciliation_review', 'other'])
+const ALLOWED_ORIGINS = new Set(['extraction_rejection', 'consolidation', 'consolidation_mirror', 'knowledge_resolution', 'semantic_case', 'planner', 'dependency_isolation'])
+const ALLOWED_ACTIONABILITIES = new Set<ReviewCaseActionability>(['knowledge_decision', 'research_followup', 'schema_design'])
 const KNOWN_ACTIONABILITY: Readonly<Record<string, ReviewCaseActionability>> = {
   relation_cardinality: 'knowledge_decision',
   reconciliation_review: 'knowledge_decision',
@@ -25,6 +29,7 @@ export function isSafeReviewPathSegment(value: string): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function nonEmptyString(value: unknown): value is string { return typeof value === 'string' && value.trim() !== '' }
+function validDateString(value: unknown): value is string { return nonEmptyString(value) && !Number.isNaN(Date.parse(value)) }
 function stringArray(value: unknown, label: string, unique = false): asserts value is string[] {
   if (!Array.isArray(value) || value.some((item) => !nonEmptyString(item))) throw new Error(`${label} must be a non-empty string array`)
   if (unique && new Set(value).size !== value.length) throw new Error(`${label} must not contain duplicates`)
@@ -49,16 +54,16 @@ function validateSemanticPayload(kind: ReviewProposalKind, payload: unknown, sem
   if (!isRecord(payload) || payload.candidateId !== proposalId || !nonEmptyString(payload.candidateId) || !Array.isArray(payload.evidenceBlockRefs)) throw new Error(`Malformed ReviewCase ${label} semantic payload`)
   stringArray(payload.evidenceBlockRefs, `${label}.semanticPayload.evidenceBlockRefs`, true)
   if (kind === 'entity') {
-    if (!nonEmptyString(payload.entityType) || payload.entityType !== semanticType || !nonEmptyString(payload.name)) throw new Error(`ReviewCase ${label} entity payload does not match its semantic kind`)
+    if (!nonEmptyString(payload.entityType) || !KNOWLEDGE_SCHEMA_V03.entity.types.includes(payload.entityType as never) || payload.entityType !== semanticType || !nonEmptyString(payload.name)) throw new Error(`ReviewCase ${label} entity payload does not match its semantic kind`)
     if (payload.aliases !== undefined) stringArray(payload.aliases, `${label}.semanticPayload.aliases`)
     return
   }
   if (kind === 'relation') {
-    if (!nonEmptyString(payload.relationType) || payload.relationType !== semanticType || !isRecord(payload.source) || !isRecord(payload.target) || !nonEmptyString(payload.source.candidateRef) || !nonEmptyString(payload.source.mention) || !nonEmptyString(payload.target.candidateRef) || !nonEmptyString(payload.target.mention)) throw new Error(`ReviewCase ${label} relation payload does not match its semantic kind`)
+    if (!nonEmptyString(payload.relationType) || !KNOWLEDGE_SCHEMA_V03.relation.types.includes(payload.relationType as never) || payload.relationType !== semanticType || !isRecord(payload.source) || !isRecord(payload.target) || !nonEmptyString(payload.source.candidateRef) || !nonEmptyString(payload.source.mention) || !nonEmptyString(payload.target.candidateRef) || !nonEmptyString(payload.target.mention)) throw new Error(`ReviewCase ${label} relation payload does not match its semantic kind`)
     optionalRecord(payload.attributes, `${label}.semanticPayload.attributes`)
     return
   }
-  if (!nonEmptyString(payload.claimType) || payload.claimType !== semanticType || !nonEmptyString(payload.statement) || !Array.isArray(payload.subjectRefs) || payload.subjectRefs.length === 0 || payload.subjectRefs.some((subject) => !isRecord(subject) || !nonEmptyString(subject.candidateRef) || !nonEmptyString(subject.mention))) throw new Error(`ReviewCase ${label} claim payload does not match its semantic kind`)
+  if (!nonEmptyString(payload.claimType) || !KNOWLEDGE_SCHEMA_V03.claim.types.includes(payload.claimType as never) || payload.claimType !== semanticType || !nonEmptyString(payload.statement) || !Array.isArray(payload.subjectRefs) || payload.subjectRefs.length === 0 || payload.subjectRefs.some((subject) => !isRecord(subject) || !nonEmptyString(subject.candidateRef) || !nonEmptyString(subject.mention))) throw new Error(`ReviewCase ${label} claim payload does not match its semantic kind`)
   optionalRecord(payload.structuredValue, `${label}.semanticPayload.structuredValue`)
 }
 
@@ -76,21 +81,21 @@ function validateProjection(value: unknown, label: string): asserts value is Exi
   const payload = value.payload
   if (payload.kind !== value.kind) throw new Error(`ReviewCase existing Knowledge projection kind mismatch: ${label}`)
   if (value.kind === 'entity') {
-    if (!nonEmptyString(payload.type) || value.semanticType !== payload.type || !nonEmptyString(payload.name) || !Array.isArray(payload.aliases) || payload.aliases.some((item: unknown) => !nonEmptyString(item))) throw new Error(`Malformed Entity projection: ${label}`)
+    if (!nonEmptyString(payload.type) || !KNOWLEDGE_SCHEMA_V03.entity.types.includes(payload.type as never) || value.semanticType !== payload.type || !nonEmptyString(payload.name) || !Array.isArray(payload.aliases) || payload.aliases.some((item: unknown) => !nonEmptyString(item))) throw new Error(`Malformed Entity projection: ${label}`)
     return
   }
   if (value.kind === 'relation') {
-    if (!nonEmptyString(payload.type) || value.semanticType !== payload.type || !nonEmptyString(payload.sourceRef) || !nonEmptyString(payload.targetRef)) throw new Error(`Malformed Relation projection: ${label}`)
+    if (!nonEmptyString(payload.type) || !KNOWLEDGE_SCHEMA_V03.relation.types.includes(payload.type as never) || value.semanticType !== payload.type || !nonEmptyString(payload.sourceRef) || !new RegExp('^entity:[A-Za-z0-9][A-Za-z0-9._-]*$').test(payload.sourceRef) || !nonEmptyString(payload.targetRef) || !new RegExp('^entity:[A-Za-z0-9][A-Za-z0-9._-]*$').test(payload.targetRef)) throw new Error(`Malformed Relation projection: ${label}`)
     optionalRecord(payload.attributes, `${label}.payload.attributes`)
     return
   }
-  if (!nonEmptyString(payload.claimType) || value.semanticType !== payload.claimType || !nonEmptyString(payload.statement) || !Array.isArray(payload.subjectRefs) || payload.subjectRefs.some((item: unknown) => !nonEmptyString(item))) throw new Error(`Malformed Claim projection: ${label}`)
+  if (!nonEmptyString(payload.claimType) || !KNOWLEDGE_SCHEMA_V03.claim.types.includes(payload.claimType as never) || value.semanticType !== payload.claimType || !nonEmptyString(payload.statement) || !Array.isArray(payload.subjectRefs) || payload.subjectRefs.length === 0 || payload.subjectRefs.some((item: unknown) => !nonEmptyString(item) || !/^(entity|relation):[A-Za-z0-9][A-Za-z0-9._-]*$/.test(item))) throw new Error(`Malformed Claim projection: ${label}`)
   optionalRecord(payload.structuredValue, `${label}.payload.structuredValue`)
 }
 
 export function validateReviewCase(value: unknown): asserts value is ReviewCase {
-  if (!isRecord(value) || value.version !== '0.1' || !nonEmptyString(value.reviewCaseId) || !isSafeReviewPathSegment(value.reviewCaseId) || !nonEmptyString(value.knowledgeBaseId) || !nonEmptyString(value.producerType) || !nonEmptyString(value.producerRunId) || !isSafeReviewPathSegment(value.producerRunId) || !nonEmptyString(value.createdAt)) throw new Error('Malformed ReviewCase contract')
-  if (!isRecord(value.classification) || !nonEmptyString(value.classification.category) || !nonEmptyString(value.classification.actionability) || !nonEmptyString(value.classification.origin) || !nonEmptyString(value.classification.stage) || !nonEmptyString(value.classification.rationale)) throw new Error(`Malformed ReviewCase classification: ${value.reviewCaseId}`)
+  if (!isRecord(value) || value.version !== '0.1' || !nonEmptyString(value.reviewCaseId) || !isSafeReviewPathSegment(value.reviewCaseId) || !nonEmptyString(value.knowledgeBaseId) || !nonEmptyString(value.producerType) || !nonEmptyString(value.producerRunId) || !isSafeReviewPathSegment(value.producerRunId) || !validDateString(value.createdAt)) throw new Error('Malformed ReviewCase contract')
+  if (!isRecord(value.classification) || !nonEmptyString(value.classification.category) || !nonEmptyString(value.classification.actionability) || !nonEmptyString(value.classification.origin) || !nonEmptyString(value.classification.stage) || !nonEmptyString(value.classification.rationale) || !ALLOWED_CATEGORIES.has(value.classification.category as ReviewCaseCategory) || !ALLOWED_ACTIONABILITIES.has(value.classification.actionability as ReviewCaseActionability) || !ALLOWED_ORIGINS.has(value.classification.origin)) throw new Error(`Malformed ReviewCase classification: ${value.reviewCaseId}`)
   const expected = expectedActionability(value.classification.category)
   if (TELEMETRY_CATEGORIES.has(value.classification.category as ReviewCaseCategory) || NON_ACTIONABLE_ORIGINS.has(value.classification.origin) || (expected !== undefined && value.classification.actionability !== expected)) throw new Error(`ReviewCase classification is not actionable or is inconsistent: ${value.reviewCaseId}`)
   if (!isRecord(value.rootProposal)) throw new Error(`Malformed ReviewCase root proposal: ${value.reviewCaseId}`)
@@ -103,7 +108,7 @@ export function validateReviewCase(value: unknown): asserts value is ReviewCase 
     proposalIds.add(proposal.proposalId)
   }
   if (!isRecord(value.resolutionContext) || !Array.isArray(value.resolutionContext.existingKnowledgeProjections) || value.resolutionContext.schemaVersionAtCreation !== '0.3' || typeof value.resolutionContext.knowledgeBaseRevisionAtCreation !== 'number' || !Number.isSafeInteger(value.resolutionContext.knowledgeBaseRevisionAtCreation) || value.resolutionContext.knowledgeBaseRevisionAtCreation < 0) throw new Error(`Malformed ReviewCase resolution context: ${value.reviewCaseId}`)
-  if ((value.rootProposal.proposalKind === 'relation' || value.rootProposal.proposalKind === 'claim') && value.resolutionContext.existingKnowledgeProjections.length > 8) throw new Error(`ReviewCase existing Knowledge context exceeds the deterministic bound: ${value.reviewCaseId}`)
+  if (value.resolutionContext.existingKnowledgeProjections.length > 8) throw new Error(`ReviewCase existing Knowledge context exceeds the deterministic bound: ${value.reviewCaseId}`)
   const projectionRefs = new Set<string>()
   for (const [index, projection] of value.resolutionContext.existingKnowledgeProjections.entries()) { validateProjection(projection, `existingKnowledgeProjections[${index}]`); if (projectionRefs.has(projection.canonicalRef)) throw new Error(`ReviewCase existing Knowledge projections contain duplicate canonicalRef: ${projection.canonicalRef}`); projectionRefs.add(projection.canonicalRef) }
   if (value.resolutionContext.context !== undefined && (!isRecord(value.resolutionContext.context) || Object.values(value.resolutionContext.context).some((item) => item !== null && typeof item !== 'string' && typeof item !== 'number' && typeof item !== 'boolean'))) throw new Error(`Malformed ReviewCase context: ${value.reviewCaseId}`)
@@ -115,6 +120,6 @@ export function validateReviewCase(value: unknown): asserts value is ReviewCase 
 }
 
 export function validateReviewRunManifest(value: unknown): asserts value is ReviewRunManifest {
-  if (!isRecord(value) || value.version !== '0.1' || !nonEmptyString(value.knowledgeBaseId) || !nonEmptyString(value.producerType) || !nonEmptyString(value.producerRunId) || !isSafeReviewPathSegment(value.producerRunId) || typeof value.reviewCaseCount !== 'number' || !Number.isSafeInteger(value.reviewCaseCount) || value.reviewCaseCount < 1 || !Array.isArray(value.caseIds) || value.caseIds.some((id) => typeof id !== 'string' || !isSafeReviewPathSegment(id)) || typeof value.deterministicSetHash !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(value.deterministicSetHash) || !nonEmptyString(value.createdAt) || value.schemaVersionAtCreation !== '0.3' || typeof value.knowledgeBaseRevisionAtCreation !== 'number' || !Number.isSafeInteger(value.knowledgeBaseRevisionAtCreation) || value.knowledgeBaseRevisionAtCreation < 0) throw new Error('Malformed ReviewCase run manifest')
+  if (!isRecord(value) || value.version !== '0.1' || !nonEmptyString(value.knowledgeBaseId) || !nonEmptyString(value.producerType) || !nonEmptyString(value.producerRunId) || !isSafeReviewPathSegment(value.producerRunId) || typeof value.reviewCaseCount !== 'number' || !Number.isSafeInteger(value.reviewCaseCount) || value.reviewCaseCount < 1 || !Array.isArray(value.caseIds) || value.caseIds.some((id) => typeof id !== 'string' || !isSafeReviewPathSegment(id)) || typeof value.deterministicSetHash !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(value.deterministicSetHash) || !validDateString(value.createdAt) || value.schemaVersionAtCreation !== '0.3' || typeof value.knowledgeBaseRevisionAtCreation !== 'number' || !Number.isSafeInteger(value.knowledgeBaseRevisionAtCreation) || value.knowledgeBaseRevisionAtCreation < 0) throw new Error('Malformed ReviewCase run manifest')
   if (value.caseIds.length !== value.reviewCaseCount || new Set(value.caseIds).size !== value.caseIds.length || [...value.caseIds].sort().join('\u0000') !== value.caseIds.join('\u0000')) throw new Error('ReviewCase run manifest has duplicate, unsorted, or inconsistent case IDs')
 }

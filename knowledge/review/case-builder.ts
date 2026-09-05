@@ -92,6 +92,7 @@ function findRoots(input: BuildReviewCasesInput): RootReview[] {
   return [...roots.values()].sort((left, right) => left.key.localeCompare(right.key))
 }
 function existingProjections(root: RootReview, group: ResolvedCandidateGroup, input: BuildReviewCasesInput, index: KnowledgeIndexV03): readonly Projection[] {
+  const maxProjections = 8
   const refs = new Set<string>()
   for (const ref of input.bindings?.get(group.candidateId)?.plausibleMatches ?? []) refs.add(ref)
   const resolutionIntent = input.intents?.find((intent) => intent.candidateRef === group.candidateId)
@@ -102,7 +103,7 @@ function existingProjections(root: RootReview, group: ResolvedCandidateGroup, in
     for (const ref of input.bindings?.get(group.candidateId)?.plausibleMatches ?? []) refs.add(ref)
   }
   const result: Projection[] = []
-  for (const ref of [...refs].sort()) {
+  for (const ref of [...refs].sort().slice(0, maxProjections)) {
     const value = index.entities.get(ref) ?? index.relations.get(ref) ?? index.claims.get(ref)
     if (!value) continue
     if (group.kind === 'entity' && index.entities.has(ref)) result.push(entityProjection(value as KnowledgeEntityV03))

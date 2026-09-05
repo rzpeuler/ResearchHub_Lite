@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { buildReviewCases } from '../../knowledge/review/case-builder.ts'
@@ -85,6 +85,15 @@ test('ReviewCase actionability is deterministic metadata, not rationale text', (
   ])
 })
 
+test('ReviewCase projections are bounded and deterministically ordered', () => {
+  const root = entity('root', 'Ambiguous')
+  const groups = [group(root), ...Array.from({ length: 9 }, (_, index) => group(entity(`candidate-${index}`, `Candidate ${index}`)))]
+  const assets = { ...baseAssets(), entities: Array.from({ length: 9 }, (_, index) => loaded('entity', { id: `entity:candidate-${index}`, type: 'company', name: `Candidate ${index}`, aliases: [], lifecycle: { status: 'active' } })) as never }
+  const cases = buildReviewCases({ knowledgeBaseId: 'kb-projection-bound', producerRunId: 'run-projection-bound', createdAt: '2026-09-06T00:00:00.000Z', rawRef: 'raw-sha256-' + '3'.repeat(64), documentId: 'doc-projection-bound', knowledgeBaseRevisionAtCreation: 0, assets, groups, reviewItems: [{ candidateId: 'root', kind: 'entity', rationale: 'ambiguous identity', dependentCandidateIds: [], category: 'reconciliation_review', origin: 'knowledge_resolution', dependency: false }], bindings: new Map([['root', { candidateId: 'root', state: 'Unresolved', plausibleMatches: Array.from({ length: 9 }, (_, index) => `entity:candidate-${index}`).reverse() }]]) })
+  assert.equal(cases[0]?.resolutionContext.existingKnowledgeProjections.length, 8)
+  assert.deepEqual(cases[0]?.resolutionContext.existingKnowledgeProjections.map((item) => item.canonicalRef), Array.from({ length: 8 }, (_, index) => `entity:candidate-${index}`))
+})
+
 test('RelationConflictCase and ClaimConflictCase preserve bounded canonical projections', () => {
   const groups = [group(entity('a', 'A')), group(entity('b', 'B', 'product')), group(relation('r', 'e-a', 'e-b')), group(claim('c', 'e-a'))]
   const assets = {
@@ -119,7 +128,22 @@ test('ReviewCase and manifest validation reject inconsistent semantic and impact
   const inconsistentImpact = structuredClone(cases[0]!) as any
   inconsistentImpact.impact.dependentProposalCount = 0
   assert.throws(() => validateReviewCase(inconsistentImpact), /impact is inconsistent/)
-  assert.throws(() => validateReviewRunManifest({ version: '0.1', knowledgeBaseId: 'kb', producerType: 'producer', producerRunId: 'run', reviewCaseCount: 2, caseIds: ['case-b', 'case-a'], deterministicSetHash: 'sha256:' + '0'.repeat(64), createdAt: 'now', schemaVersionAtCreation: '0.3', knowledgeBaseRevisionAtCreation: 0 }), /unsorted/)
+  const unknownClassification = structuredClone(cases[0]!) as any
+  unknownClassification.classification.category = 'unknown_category'
+  assert.throws(() => validateReviewCase(unknownClassification), /Malformed ReviewCase classification/)
+  const unknownActionability = structuredClone(cases[0]!) as any
+  unknownActionability.classification.actionability = 'knowledge_decision_from_rationale'
+  assert.throws(() => validateReviewCase(unknownActionability), /Malformed ReviewCase classification/)
+  const invalidDate = structuredClone(cases[0]!) as any
+  invalidDate.createdAt = 'not-a-date'
+  assert.throws(() => validateReviewCase(invalidDate), /Malformed ReviewCase contract/)
+  const invalidProjection = structuredClone(cases[0]!) as any
+  invalidProjection.resolutionContext.existingKnowledgeProjections[0].canonicalRef = 'relation:not-an-entity'
+  assert.throws(() => validateReviewCase(invalidProjection), /canonical entity reference/)
+  const excessiveProjection = structuredClone(cases[0]!) as any
+  excessiveProjection.resolutionContext.existingKnowledgeProjections = Array.from({ length: 9 }, (_, index) => ({ ...excessiveProjection.resolutionContext.existingKnowledgeProjections[0], canonicalRef: `entity:extra-${index}` }))
+  assert.throws(() => validateReviewCase(excessiveProjection), /exceeds the deterministic bound/)
+  assert.throws(() => validateReviewRunManifest({ version: '0.1', knowledgeBaseId: 'kb', producerType: 'producer', producerRunId: 'run', reviewCaseCount: 2, caseIds: ['case-b', 'case-a'], deterministicSetHash: 'sha256:' + '0'.repeat(64), createdAt: '2026-09-06T00:00:00.000Z', schemaVersionAtCreation: '0.3', knowledgeBaseRevisionAtCreation: 0 }), /unsorted/)
 })
 
 test('ReviewCase store is atomic, reloadable, idempotent, and rejects conflicting runs', async () => {
@@ -133,12 +157,17 @@ test('ReviewCase store is atomic, reloadable, idempotent, and rejects conflictin
     await rm(join(root, 'reviews', 'runs', 'run-001'), { recursive: true, force: true })
     const recovered = await recoverReviewCasesFromExecutionLog(root, { workflowRunId: 'run-001', knowledgeBaseId: 'kb-review-case', completedAt: '2026-09-06T00:00:00.000Z', ingestionContext: { producerRunId: 'run-001', producerType: 'raw_document_knowledge_ingestion', reviewCases: cases, reviewCaseSetHash: first.manifest?.deterministicSetHash } })
     assert.deepEqual(recovered.map((item) => item.reviewCaseId), cases.map((item) => item.reviewCaseId))
-    const replay = await persistReviewCases({ rootRef: root, knowledgeBaseId: 'kb-review-case', producerRunId: 'run-001', cases, createdAt: 'different', knowledgeBaseRevisionAtCreation: 9 })
+    const replay = await persistReviewCases({ rootRef: root, knowledgeBaseId: 'kb-review-case', producerRunId: 'run-001', cases, createdAt: '2026-09-07T00:00:00.000Z', knowledgeBaseRevisionAtCreation: 9 })
     assert.equal(replay.kind, 'replay')
     assert.equal((await listOpenReviewCases(root)).length, 1)
     assert.equal((await loadReviewCase(root, cases[0]!.reviewCaseId, 'run-001'))?.reviewCaseId, cases[0]!.reviewCaseId)
     const changed = [{ ...cases[0]!, classification: { ...cases[0]!.classification, rationale: 'changed' } }]
-    const conflict = await persistReviewCases({ rootRef: root, knowledgeBaseId: 'kb-review-case', producerRunId: 'run-001', cases: changed, createdAt: 'different', knowledgeBaseRevisionAtCreation: 9 })
+    const conflict = await persistReviewCases({ rootRef: root, knowledgeBaseId: 'kb-review-case', producerRunId: 'run-001', cases: changed, createdAt: '2026-09-07T00:00:00.000Z', knowledgeBaseRevisionAtCreation: 9 })
     assert.equal(conflict.kind, 'conflict')
+    const casePath = join(root, 'reviews', 'runs', 'run-001', 'cases', `${cases[0]!.reviewCaseId}.yaml`)
+    const stored = JSON.parse(await readFile(casePath, 'utf8')) as Record<string, unknown>
+    stored.producerType = 'tampered'
+    await writeFile(casePath, JSON.stringify(stored) + '\n', 'utf8')
+    await assert.rejects(() => loadReviewCase(root, cases[0]!.reviewCaseId, 'run-001'), /manifest consistency/)
   } finally { await rm(root, { recursive: true, force: true }) }
 })

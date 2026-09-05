@@ -1,5 +1,7 @@
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { access, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { dirname, join, resolve } from 'node:path'
+import { canonicalSerialize } from './canonical-hash.ts'
 import { parseYaml } from './yaml.ts'
 import { withKnowledgeBaseMutationLock } from './mutation-lock.ts'
 import type { KnowledgeBaseHandle } from './handle.ts'
@@ -26,6 +28,42 @@ function logPath(handle: KnowledgeBaseHandle, workflowRunId: string): string {
 
 async function exists(path: string): Promise<boolean> {
   try { await access(path); return true } catch { return false }
+}
+
+function recordContext(record: KnowledgeIngestionLogRecord | undefined): Record<string, unknown> | undefined {
+  return record?.ingestionContext && typeof record.ingestionContext === 'object' && !Array.isArray(record.ingestionContext)
+    ? record.ingestionContext as Record<string, unknown>
+    : undefined
+}
+
+function recordField(record: KnowledgeIngestionLogRecord | undefined, field: string): unknown {
+  return record?.[field] ?? recordContext(record)?.[field]
+}
+
+function reviewCaseSetHash(record: KnowledgeIngestionLogRecord | undefined): string | undefined {
+  const value = recordField(record, 'reviewCaseSetHash')
+  return typeof value === 'string' ? value : undefined
+}
+
+function reviewCaseIds(record: KnowledgeIngestionLogRecord | undefined): readonly string[] | undefined {
+  const value = recordField(record, 'reviewCaseIds')
+  return Array.isArray(value) && value.every((item) => typeof item === 'string') ? [...value].sort() : undefined
+}
+
+function sameReviewCaseSet(existing: KnowledgeIngestionLogRecord, incoming: KnowledgeIngestionLogRecord): boolean {
+  const existingHash = reviewCaseSetHash(existing)
+  const incomingHash = reviewCaseSetHash(incoming)
+  if (existingHash !== undefined && incomingHash !== undefined) return existingHash === incomingHash
+  const existingIds = reviewCaseIds(existing)
+  const incomingIds = reviewCaseIds(incoming)
+  return existingIds === undefined || incomingIds === undefined || JSON.stringify(existingIds) === JSON.stringify(incomingIds)
+}
+
+function sameAuthoritativeIdentity(existing: KnowledgeIngestionLogRecord, incoming: KnowledgeIngestionLogRecord): boolean {
+  return recordField(existing, 'workflowRunId') === recordField(incoming, 'workflowRunId') &&
+    recordField(existing, 'rawRef') === recordField(incoming, 'rawRef') &&
+    recordField(existing, 'workflowInputFingerprint') === recordField(incoming, 'workflowInputFingerprint') &&
+    sameReviewCaseSet(existing, incoming)
 }
 
 export class KnowledgeIngestionLogStore {
@@ -57,14 +95,21 @@ export class KnowledgeIngestionLogStore {
       if (await exists(path)) {
         const existing = parseYaml(await readFile(path, 'utf8'), path)
         const existingRecord = existing && typeof existing === 'object' && !Array.isArray(existing) ? existing as KnowledgeIngestionLogRecord : undefined
-        const existingContext = existingRecord?.ingestionContext && typeof existingRecord.ingestionContext === 'object' && !Array.isArray(existingRecord.ingestionContext) ? existingRecord.ingestionContext as Record<string, unknown> : undefined
-        const existingFingerprint = typeof existingRecord?.workflowInputFingerprint === 'string' ? existingRecord.workflowInputFingerprint : typeof existingContext?.workflowInputFingerprint === 'string' ? existingContext.workflowInputFingerprint : undefined
-        const fingerprint = typeof record.workflowInputFingerprint === 'string' ? record.workflowInputFingerprint : undefined
-        if (existingRecord?.rawRef === record.rawRef && existingFingerprint === fingerprint) return
+        if (existingRecord && sameAuthoritativeIdentity(existingRecord, record)) return
+        if (existingRecord && recordField(existingRecord, 'rawRef') === recordField(record, 'rawRef') && recordField(existingRecord, 'workflowInputFingerprint') === recordField(record, 'workflowInputFingerprint') && !sameReviewCaseSet(existingRecord, record)) {
+          throw new Error(`Execution log conflict for workflowRunId ${record.workflowRunId}: authoritative ReviewCase set differs`)
+        }
         throw new Error(`Execution log conflict for workflowRunId ${record.workflowRunId}`)
       }
-      await mkdir(join(resolve(handle.rootRef), 'logs', 'ingestion'), { recursive: true })
-      await writeFile(path, `${JSON.stringify(record, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' })
+      await mkdir(dirname(path), { recursive: true })
+      const temporary = `${path}.tmp-${process.pid}-${randomUUID()}`
+      try {
+        await writeFile(temporary, canonicalSerialize(record) + '\n', 'utf8')
+        await rename(temporary, path)
+        if (!(await exists(path))) throw new Error('Blocked execution record was not durably created')
+      } finally {
+        await unlink(temporary).catch(() => undefined)
+      }
     })
     return `logs/ingestion/${safeRunId(record.workflowRunId)}.yaml`
   }

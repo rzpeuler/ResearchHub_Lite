@@ -6,6 +6,7 @@ import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts
 import { MockReasoningExecutor } from '../../plugins/reasoning/mock/executor.ts'
 import { emptyReviewSummary, normalizeReviewSummary, writeNoOpExecutionRecord } from '../../workflows/raw-document-knowledge-ingestion/review-telemetry.ts'
 import { boundedExtract, isAllRejectedExtractionAttempt, runRawDocumentKnowledgeIngestion } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
+import { KnowledgeIngestionLogStore } from '../../knowledge/storage/ingestion-log.ts'
 import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
 import { createKnowledgeBase, readManifest, removeKnowledgeBase } from '../knowledge/helpers.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
@@ -271,4 +272,42 @@ test('all-rejected retries remain unit-local under bounded parallel extraction',
   assert.equal(calls.get('C'), 1)
   assert.equal(result.results.length, 3)
   assert.ok(result.peak <= 2)
+})
+
+test('blocked execution log is atomic, idempotent, and detects ReviewCase set conflicts', async () => {
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-blocked-log-atomicity' })
+  try {
+    const handle = await new KnowledgeBaseRegistry().mount(root)
+    const store = new KnowledgeIngestionLogStore()
+    const record = { workflowRunId: 'run-blocked-log', knowledgeBaseId: handle.knowledgeBaseId, status: 'blocked' as const, rawRef, workflowInputFingerprint: 'fingerprint-a', reviewCaseIds: ['case-a'], reviewCaseSetHash: 'hash-a', errors: [] }
+    await store.writeBlocked(handle, record)
+    await store.writeBlocked(handle, record)
+    const recovered = await store.read(handle, record.workflowRunId)
+    assert.equal(recovered?.reviewCaseSetHash, 'hash-a')
+    await assert.rejects(() => store.writeBlocked(handle, { ...record, reviewCaseSetHash: 'hash-b' }), /authoritative ReviewCase set differs/)
+  } finally { await removeKnowledgeBase(root) }
+})
+
+test('historical blocked execution log without ReviewCases remains readable', async () => {
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-blocked-log-legacy' })
+  try {
+    const handle = await new KnowledgeBaseRegistry().mount(root)
+    const store = new KnowledgeIngestionLogStore()
+    const record = { workflowRunId: 'run-blocked-legacy', knowledgeBaseId: handle.knowledgeBaseId, status: 'blocked' as const, rawRef, workflowInputFingerprint: 'fingerprint-legacy', errors: [] }
+    await store.writeBlocked(handle, record)
+    const reread = await store.read(handle, record.workflowRunId)
+    assert.equal(reread?.workflowRunId, record.workflowRunId)
+    assert.equal(reread?.reviewCases, undefined)
+  } finally { await removeKnowledgeBase(root) }
+})
+
+test('no-op execution log detects a changed authoritative ReviewCase set', async () => {
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-noop-review-conflict' })
+  try {
+    const base = { workflowRunId: 'run-noop-review-conflict', knowledgeBaseId: 'kb-noop-review-conflict', rawRef, documentId: 'doc', workflowInputFingerprint: 'fingerprint', status: 'completed_with_review' as const, writeStatus: 'no_changes' as const, baseRevision: 0, committedRevision: 0, reviewSummary: emptyReviewSummary(), reviewCaseIds: ['case-a'], reviewCaseSetHash: 'hash-a', completedAt: 'now', errors: [] }
+    assert.equal((await writeNoOpExecutionRecord(root, base)).kind, 'written')
+    const changed = await writeNoOpExecutionRecord(root, { ...base, reviewCaseSetHash: 'hash-b' })
+    assert.equal(changed.kind, 'conflict')
+    assert.match(changed.message ?? '', /ReviewCase set/)
+  } finally { await removeKnowledgeBase(root) }
 })
