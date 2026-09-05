@@ -3421,6 +3421,11 @@
         "claim": 23,
         "workflow_level": 0
       }
+    },
+    "badHardIdentitySafety": {
+      "unsupportedDisplaySuffixCandidatesObserved": [],
+      "canonicalCreatedFromUnsupportedDisplaySuffix": false,
+      "status": "not observed"
     }
   },
   "reviewSummary": {
