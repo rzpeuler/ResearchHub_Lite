@@ -6,7 +6,7 @@ This log records only architecture/product decisions that materially constrain f
 
 ## RHL-VALIDATION-SEMANTIC-QUALITY-001 — 2026-09-05
 
-**Status:** Executed / SUCCESS / CTO acceptance pending
+**Status:** PASS / CLOSED
 
 The validation run used product baseline `a76dab149071eaf804ba191fcd0c9d796010f7f7`, the exact frozen 103-page PDF, real Docling `2.116.0`, and real Codex CLI `0.152.1` with `gpt-5.6-luna` / `high`. The accepted 21-unit plan covered all `1,523` blocks with no overlap or uncovered blocks. Primary ingestion completed with review; Candidate validation accepted `585` Relations and rejected `8`, with zero invalid-attribute Relation candidates emitted in this run, and no late Planner Relation-attribute Review. Description/legalName field conflicts caused zero dependency isolation. ChangeSet validation passed, Writer committed revision `0→1`, reload/full validation and provenance passed with zero failures and zero transient-reference leaks, and exact replay returned `already_committed` with zero additional reasoning calls and unchanged revision/counts. ReviewSummary invariants passed; R7 comparison is descriptive only and makes no improvement claim from lower Review counts. Evidence is preserved in `tests/validation/evidence/rhl-validation-semantic-quality-001-real-e2e.json` and `tests/validation/evidence/RHL_VALIDATION_SEMANTIC_QUALITY_001_SUMMARY.md`. No architecture decision was introduced and no production code was modified.
 
@@ -14,7 +14,7 @@ The validation run used product baseline `a76dab149071eaf804ba191fcd0c9d796010f7
 
 ## RHL-VALIDATION-SEMANTIC-QUALITY-001-KB-INSPECTION — 2026-09-05
 
-**Status:** Completed / read-only inspection and export
+**Status:** PASS / CLOSED
 
 The persisted `kb-rhl-semantic-quality-001` was inspected without invoking Model, Docling, Workflow, ingestion, Writer, or Replay. Manifest revision `1` contains `522` Entities, `570` Relations, `268` Claims, and `1` Source. The runtime ingestion log records an authoritative Review total of `50` (`33` root and `17` dependency), but persists only `21` bounded `samplesByCategory` records; the export states that a complete Review list is unavailable. The one `potentialNewInvestmentTheme` and the `Relation attributes conflict across extraction units` item are preserved as Review findings; because neither has a durable canonical object or complete candidate payload in runtime data, unavailable names, endpoints, attributes, support details, and conflicting values are reported as unavailable rather than inferred. Entity quality findings separately inspect actual names and do not treat `-item-` durable IDs alone as defects. Outputs are preserved in `tests/validation/evidence/rhl-semantic-quality-001-kb-inspection.json` and `tests/validation/evidence/RHL_SEMANTIC_QUALITY_001_KB_INSPECTION.md`. This inspection introduces no architecture or product decision.
 
@@ -22,11 +22,21 @@ The persisted `kb-rhl-semantic-quality-001` was inspected without invoking Model
 
 ## RHL-FIX-COMPANY-IDENTITY-NORMALIZATION-001 — 2026-09-05
 
-**Status:** Implemented / CTO acceptance pending
+**Status:** CHANGES REQUIRED / FIX-001 in progress
 
 Company Identity Normalization & Document-local Canonicalization v0.1 is implemented behind the existing Candidate validation and consolidation boundaries. Explicit trailing stock-code decorations use deterministic syntax; normalized `ticker` and `exchange` are structured identity fields rather than display-name text. An exact complete `(exchange, ticker)` identity may unify Company Candidates only within the current document, while conflicting complete hard identities cannot be automatically merged. Exact name/alias agreement is a weak document-local signal for attaching an unkeyed Company and creates a blocking Review when it is ambiguous; no fuzzy matching, Levenshtein, embeddings, external company database, or new reasoning case is introduced.
 
 The existing global Knowledge Resolution binding remains conservative and unchanged. Schema 0.3, Storage Format 1, Writer behavior, durable ID allocation, reasoning-host integration, historical KB/runtime data, and historical evidence are unchanged. This task has no real semantic-quality validation conclusion; a fresh real ingestion is required before measuring product impact.
+
+---
+
+## RHL-FIX-COMPANY-IDENTITY-NORMALIZATION-001-FIX-001 — 2026-09-05
+
+**Status:** Implemented / CTO acceptance pending
+
+Automatic Company securities-decoration parsing now requires exactly six ASCII digits and an explicitly supported exchange token: `SH`, `SSE`, `SZ`, `SZSE`, `BJ`, `BSE`, `NQ`, or `NEEQ`. Unknown or short security-looking suffixes remain part of the display name and do not create deterministic hard identity. Explicit `semanticFields.exchange` values outside this display-parser vocabulary, including `NYSE`, remain supported; recognized parsed/supplied contradictions remain `invalid_semantics`.
+
+The approved Company consolidation, unkeyed attachment, ambiguity Review, aliases, and Relation/Claim local-reference convergence are unchanged. The parallel design spec was removed, governance statuses were reconciled, and representative Shanghai, Zhongjixin, and Honeywell composition regressions were added. Schema 0.3, Writer, durable ID allocation, Knowledge Resolution, reasoning behavior, historical evidence, and historical runtime KB data are unchanged. No real semantic-quality validation was rerun; a fresh run is required after CTO acceptance.
 
 ---
 
@@ -56,21 +66,21 @@ Consolidation, Resolution, Planner, and Workflow telemetry now preserve source/s
 
 ## RHL-VALIDATION-001-R7-EVIDENCE-FIX-001 — 2026-09-05
 
-**Status:** Implemented / CTO acceptance pending
+**Status:** PASS / CLOSED
 
 R7 product E2E remains `SUCCESS`; this task corrected the committed v1 evidence offline and did not rerun the real Workflow, Reasoning, Docling, Writer, or Replay. Extraction accepted candidates are sourced from `IngestionWorkflowResult.unitSummaries`, post-consolidation candidates and Resolution totals from `IngestionWorkflowResult.resolutionSummary`, normalized ReviewSummary from `IngestionWorkflowResult.reviewSummary`, and ChangeSet observations from the persisted ingestion log. Raw Claim temporal distribution and raw InvestmentTheme candidate/coverage outcomes are explicitly unavailable because the v1 recorder did not provide authoritative complete extraction output telemetry. Fabricated v1 Resolution intent binding/disposition totals were removed. No product outcome, architecture decision, Schema, Writer behavior, or historical evidence changed.
 
-The corrected evidence records the unchanged R7 facts: revision `0→1`, `801` safe canonical creates, final counts `389/272/140` for Entity/Relation/Claim, full validation passed, zero planned-reference leaks, complete provenance, and exact replay `already_committed` with zero additional reasoning calls. Historical R1-R6 and timeout-smoke evidence remain immutable. CTO independent acceptance remains pending.
+The corrected evidence records the unchanged R7 facts: revision `0→1`, `801` safe canonical creates, final counts `389/272/140` for Entity/Relation/Claim, full validation passed, zero planned-reference leaks, complete provenance, and exact replay `already_committed` with zero additional reasoning calls. Historical R1-R6 and timeout-smoke evidence remain immutable. CTO independent acceptance is complete.
 
 ---
 
 ## RHL-VALIDATION-001-R7 — 2026-09-05
 
-**Status:** Executed / SUCCESS / CTO acceptance pending
+**Status:** PASS / CLOSED
 
 R7 used product baseline `a8586f0ef4710e377baf18947a11c0f7f79840ff`, the exact frozen PDF (`3,209,114` bytes; SHA-256 `998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63`), real Docling `2.116.0`, and real Codex CLI `0.152.1` with explicit `gpt-5.6-luna` and `high`. A fresh Schema 0.3 / Storage Format 1 Knowledge Base passed initial validation. The accepted plan covered all `1,523` document blocks in `17` ExtractionUnits; `18/18` real reasoning calls completed without timeout. Primary ingestion completed with review, and one staged, validated atomic ChangeSet committed revision `0` to `1`, creating `801` safe canonical objects (`389` Entity, `272` Relation, `140` Claim) plus one Source. No InvestmentTheme or ThemeGroup mutation occurred, and no planned-reference leak was persisted.
 
-Post-write reload and full validation passed with exact Raw provenance for all `140` Claims and the Source. Exact replay returned `already_committed`, made zero additional real reasoning calls, preserved status, ReviewSummary, ChangeSet identity, revision, and durable counts. Classification is `SUCCESS` with CTO acceptance still pending. Historical R1-R6 and timeout-smoke evidence remain unchanged; no architecture decision is changed.
+Post-write reload and full validation passed with exact Raw provenance for all `140` Claims and the Source. Exact replay returned `already_committed`, made zero additional real reasoning calls, preserved status, ReviewSummary, ChangeSet identity, revision, and durable counts. Classification is `PASS / CLOSED` by CTO decision. Historical R1-R6 and timeout-smoke evidence remain unchanged; no architecture decision is changed.
 
 ---
 
