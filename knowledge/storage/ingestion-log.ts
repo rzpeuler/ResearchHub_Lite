@@ -54,7 +54,15 @@ export class KnowledgeIngestionLogStore {
   async writeBlocked(handle: KnowledgeBaseHandle, record: KnowledgeIngestionLogRecord): Promise<string> {
     const path = logPath(handle, record.workflowRunId)
     await withKnowledgeBaseMutationLock(resolve(handle.rootRef), async () => {
-      if (await exists(path)) return
+      if (await exists(path)) {
+        const existing = parseYaml(await readFile(path, 'utf8'), path)
+        const existingRecord = existing && typeof existing === 'object' && !Array.isArray(existing) ? existing as KnowledgeIngestionLogRecord : undefined
+        const existingContext = existingRecord?.ingestionContext && typeof existingRecord.ingestionContext === 'object' && !Array.isArray(existingRecord.ingestionContext) ? existingRecord.ingestionContext as Record<string, unknown> : undefined
+        const existingFingerprint = typeof existingRecord?.workflowInputFingerprint === 'string' ? existingRecord.workflowInputFingerprint : typeof existingContext?.workflowInputFingerprint === 'string' ? existingContext.workflowInputFingerprint : undefined
+        const fingerprint = typeof record.workflowInputFingerprint === 'string' ? record.workflowInputFingerprint : undefined
+        if (existingRecord?.rawRef === record.rawRef && existingFingerprint === fingerprint) return
+        throw new Error(`Execution log conflict for workflowRunId ${record.workflowRunId}`)
+      }
       await mkdir(join(resolve(handle.rootRef), 'logs', 'ingestion'), { recursive: true })
       await writeFile(path, `${JSON.stringify(record, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' })
     })

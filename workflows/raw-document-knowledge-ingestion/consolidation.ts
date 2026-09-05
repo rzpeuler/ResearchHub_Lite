@@ -42,8 +42,8 @@ function mergedEntityId(candidates: readonly EntityCandidate[], hardKey: string 
   return `merged-entity-${hashKnowledgeObject(identity).slice(7, 23)}`
 }
 function addUnique(values: readonly string[], additions: readonly string[]): string[] { return [...new Set([...values, ...additions])].sort() }
-function constraint(candidateId: string, reason: string, fields: readonly string[], blocking: boolean, category: ConsolidationReviewConstraint['category']): ConsolidationReviewConstraint {
-  return { candidateId, reason, conflictingFields: [...new Set(fields)].sort(), blocking, category, reviewKey: consolidationReviewKey(candidateId, reason, fields) }
+function constraint(candidateId: string, reason: string, fields: readonly string[], blocking: boolean, category: ConsolidationReviewConstraint['category'], conflictValues?: ConsolidationReviewConstraint['conflictValues']): ConsolidationReviewConstraint {
+  return { candidateId, reason, conflictingFields: [...new Set(fields)].sort(), blocking, category, reviewKey: consolidationReviewKey(candidateId, reason, fields), ...(conflictValues === undefined ? {} : { conflictValues }) }
 }
 function mergeConfidence(left: number | undefined, right: number | undefined): number | undefined { if (left === undefined) return right; if (right === undefined) return left; return Math.min(left, right) }
 function candidateRef(candidateRef: string, mention: string, entityType?: EntityCandidate['entityType']): CandidateEntityRef { return { candidateRef, mention, ...(entityType === undefined ? {} : { entityType }) } }
@@ -185,7 +185,11 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
       const right = normalizedCandidate.attributes ?? null
       const conflict = canonicalSerialize(left) !== canonicalSerialize(right)
       const mergedAttributes = !conflict && current.attributes !== undefined ? current.attributes : current.attributes ?? normalizedCandidate.attributes
-      if (conflict) reviewConstraints.push(constraint(current.candidateId, 'Relation attributes conflict across extraction units', [...new Set([...Object.keys((left && typeof left === 'object' ? left : {}) as object), ...Object.keys((right && typeof right === 'object' ? right : {}) as object)])].sort(), true, 'reconciliation_review'))
+      if (conflict) {
+        const leftAttributes = left && typeof left === 'object' && !Array.isArray(left) ? left as Record<string, unknown> : {}
+        const rightAttributes = right && typeof right === 'object' && !Array.isArray(right) ? right as Record<string, unknown> : {}
+        reviewConstraints.push(constraint(current.candidateId, 'Relation attributes conflict across extraction units', [...new Set([...Object.keys(leftAttributes), ...Object.keys(rightAttributes)])].sort(), true, 'reconciliation_review', { left: structuredClone(leftAttributes), right: structuredClone(rightAttributes) }))
+      }
       relations.set(key, { ...current, evidenceBlockRefs: addUnique(current.evidenceBlockRefs, normalizedCandidate.evidenceBlockRefs), confidence: mergeConfidence(current.confidence, normalizedCandidate.confidence), ...(mergedAttributes === undefined ? {} : { attributes: mergedAttributes }) })
     }
   }

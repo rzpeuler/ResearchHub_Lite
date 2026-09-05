@@ -4,6 +4,7 @@ import type { KnowledgeCurationSkill } from '../../skills/knowledge-curation/ski
 import type { ReportMap, ProposedExtractionUnit, ValidatedExtractKnowledgeResult, DocumentContentRef, PlanValidationCode } from '../../skills/knowledge-curation/contracts.ts'
 import type { ValidationReport } from '../../knowledge/validation/types.ts'
 import type { KnowledgeWriteResult } from '../../knowledge/schema/mutation.ts'
+import type { ReviewCase } from '../../knowledge/review/contracts.ts'
 
 export interface IngestionWorkflowConfig {
   readonly maxExtractionUnits?: number
@@ -97,6 +98,7 @@ export interface ConsolidationReviewConstraint {
   readonly blocking: boolean
   readonly category: ReviewCategory
   readonly reviewKey: string
+  readonly conflictValues?: { readonly left: Readonly<Record<string, unknown>>; readonly right: Readonly<Record<string, unknown>> }
 }
 export interface ReviewItem { readonly candidateId: string; readonly kind: string; readonly rationale: string; readonly dependentCandidateIds: readonly string[]; readonly stage?: string; readonly category?: ReviewCategory; readonly dependency?: boolean; readonly origin?: ReviewOrigin; readonly reviewKey?: string }
 export interface ReviewSample { readonly candidateId?: string; readonly kind: 'entity' | 'relation' | 'claim' | 'workflow_level'; readonly stage: string; readonly category: ReviewCategory; readonly rationale: string; readonly dependentCandidateIds: readonly string[]; readonly dependency?: boolean; readonly origin?: ReviewOrigin; readonly reviewKey?: string }
@@ -114,6 +116,7 @@ export interface IngestionWorkflowResult {
   readonly rejectedCandidates: readonly unknown[]
   readonly reviewItems: readonly ReviewItem[]
   readonly reviewSummary: ReviewSummary
+  readonly reviewCases?: readonly ReviewCase[]
   readonly resolutionSummary?: Readonly<Record<string, number>>
   readonly potentialNewInvestmentThemes?: readonly PotentialInvestmentThemeAssessment[]
   readonly recommendedNewInvestmentThemes?: readonly PotentialInvestmentThemeAssessment[]

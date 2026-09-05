@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path'
 import { canonicalSerialize } from '../../knowledge/storage/canonical-hash.ts'
 import { withKnowledgeBaseMutationLock } from '../../knowledge/storage/mutation-lock.ts'
 import type { ResolvedCandidateGroup } from '../../skills/knowledge-curation/contracts.ts'
+import type { ReviewCase } from '../../knowledge/review/contracts.ts'
 import type { ConsolidationReviewConstraint, ReviewCategory, ReviewItem, ReviewOrigin, ReviewSample, ReviewSummary } from './contracts.ts'
 
 type Dict = Record<string, unknown>
@@ -100,6 +101,13 @@ export interface NoOpExecutionRecord {
   readonly baseRevision: number
   readonly committedRevision: number
   readonly reviewSummary: ReviewSummary
+  readonly reviewCases?: readonly ReviewCase[]
+  readonly reviewCaseIds?: readonly string[]
+  readonly reviewCaseSetHash?: string
+  readonly producerType?: 'raw_document_knowledge_ingestion'
+  readonly producerRunId?: string
+  readonly reviewCasesCreatedAt?: string
+  readonly knowledgeBaseRevisionAtCreation?: number
   readonly completedAt: string
   readonly errors: readonly string[]
 }
