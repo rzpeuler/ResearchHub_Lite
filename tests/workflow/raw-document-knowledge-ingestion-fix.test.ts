@@ -5,9 +5,9 @@ import { planKnowledgeChangeSet } from '../../workflows/raw-document-knowledge-i
 import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
 import { MockReasoningExecutor } from '../../plugins/reasoning/mock/executor.ts'
 import { emptyReviewSummary, normalizeReviewSummary, writeNoOpExecutionRecord } from '../../workflows/raw-document-knowledge-ingestion/review-telemetry.ts'
-import { boundedExtract } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
+import { boundedExtract, isAllRejectedExtractionAttempt, runRawDocumentKnowledgeIngestion } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
 import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
-import { createKnowledgeBase, removeKnowledgeBase } from '../knowledge/helpers.ts'
+import { createKnowledgeBase, readManifest, removeKnowledgeBase } from '../knowledge/helpers.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { validateKnowledgeChangeSetV03 } from '../../knowledge/validation/v03-change-set-validator.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
@@ -186,3 +186,89 @@ test('unkeyed Company matching multiple hard identities becomes blocking Review'
 test('Company display variants converge Relation and Claim local references', () => { const companyA = entity('company-a', '中巨芯'); const companyB = entity('company-b', '中巨芯（688549.SH）'); const p1 = entity('product-a', 'Product A', 'product'); const p2 = entity('product-b', 'Product B', 'product'); const r1 = relation('relation-a', 'offers_product', 'company-a', 'product-a'); const r2 = relation('relation-b', 'offers_product', 'company-b', 'product-b'); const c1 = claim('claim-a', '中巨芯 supports Product A', 'company-a'); const c2 = claim('claim-b', '中巨芯 supports Product B', 'company-b'); const consolidated = consolidateExtractions([extractionFixture('unit-a', [companyA, p1], [r1], [c1]), extractionFixture('unit-b', [companyB, p2], [r2], [c2], 'block-2')]); const company = consolidated.groups.find((item) => item.kind === 'entity' && (item.candidate as EntityCandidate).entityType === 'company')?.candidate as EntityCandidate; const relations = consolidated.groups.filter((item) => item.kind === 'relation').map((item) => item.candidate as RelationCandidate); const claims = consolidated.groups.filter((item) => item.kind === 'claim').map((item) => item.candidate as ClaimCandidate); assert.equal(company.name, '中巨芯'); assert.equal(new Set(relations.map((item) => item.source.candidateRef)).size, 1); assert.equal(new Set(claims.map((item) => item.subjectRefs[0]?.candidateRef)).size, 1); assert.equal(relations.every((item) => item.source.candidateRef === company.candidateId), true); assert.equal(claims.every((item) => item.subjectRefs[0]?.candidateRef === company.candidateId), true) })
 
 test('representative Company identity variants consolidate into three document-local groups', () => { const sh = entity('sh', '上海新阳'); const shDisplay = entity('sh-display', '上海新阳（300236.SZ）'); const jg = entity('jg', '中巨芯'); const jgDisplay = entity('jg-display', '中巨芯(688549.SH)'); const honeywell = entity('honeywell', '霍尼韦尔'); const honeywellDisplay = entity('honeywell-display', '霍尼韦尔（Honeywell）'); const consolidated = consolidateExtractions([extractionFixture('unit-1', [sh, jg, honeywell]), extractionFixture('unit-2', [shDisplay, jgDisplay, honeywellDisplay], [], [], 'block-2')]); const companies = consolidated.groups.filter((item) => item.kind === 'entity').map((item) => item.candidate as EntityCandidate); assert.equal(companies.length, 3); const shMerged = companies.find((item) => item.name === '上海新阳'); const jgMerged = companies.find((item) => item.name === '中巨芯'); const honeywellMerged = companies.find((item) => item.name === '霍尼韦尔'); assert.deepEqual(shMerged?.semanticFields, { exchange: 'SZ', ticker: '300236' }); assert.deepEqual(jgMerged?.semanticFields, { exchange: 'SH', ticker: '688549' }); assert.deepEqual(honeywellMerged?.aliases, ['Honeywell']) })
+
+function allRejectedExtraction(counts: { entity?: number; relation?: number; claim?: number } = { entity: 10 }, codes = ['invalid_reference']): ValidatedExtractKnowledgeResult {
+  const entityCount = counts.entity ?? 0
+  const relationCount = counts.relation ?? 0
+  const claimCount = counts.claim ?? 0
+  const rejection = (kind: 'entity' | 'relation' | 'claim', index: number) => ({ candidateId: `${kind}-${index}`, kind, code: codes[index % codes.length] as ValidatedExtractKnowledgeResult['rejected'][number]['code'], message: 'bounded diagnostic' })
+  const rejected = [...Array.from({ length: entityCount }, (_, index) => rejection('entity', index)), ...Array.from({ length: relationCount }, (_, index) => rejection('relation', index)), ...Array.from({ length: claimCount }, (_, index) => rejection('claim', index))]
+  return { entities: [], relations: [], claims: [], rejected, summary: { inputCounts: { entity: entityCount, relation: relationCount, claim: claimCount }, acceptedCounts: { entity: 0, relation: 0, claim: 0 }, rejectedCounts: { entity: entityCount, relation: relationCount, claim: claimCount }, rejectionCodes: [...new Set(codes)] as ValidatedExtractKnowledgeResult['summary']['rejectionCodes'] } }
+}
+
+function extractionUnit(unitId: string): AcceptedExtractionPlan['units'][number] { return { unitId, proposedUnitId: unitId, topic: 'test', semanticPurpose: 'test', primaryRefs: [], contextRefs: [], primaryBlockIds: [], contextBlockIds: [] } }
+
+test('all-rejected extraction retries and retains only the later valid result', async () => {
+  let calls = 0
+  const unit = extractionUnit('unit-retry')
+  const valid = extractionFixture(unit.unitId, [entity('accepted', 'Accepted')]).result
+  const input = { skill: { extractKnowledge: async () => { calls += 1; return calls === 1 ? allRejectedExtraction() : valid } } } as never
+  const result = await boundedExtract(input, {} as never, {} as never, [unit], 1, { maxExtractionUnits: 64, maxPlanAttempts: 2, maxExtractionAttempts: 2, maxConcurrency: 1 })
+  assert.equal(calls, 2)
+  assert.equal(result.errors.length, 0)
+  assert.equal(result.summaries[0]?.status, 'completed')
+  assert.equal(result.summaries[0]?.attempts, 2)
+  assert.equal(result.summaries[0]?.allRejectedAttempts, 1)
+  assert.deepEqual(result.summaries[0]?.lastRejectionCodeCounts, { invalid_reference: 10 })
+  assert.deepEqual(result.results[0]?.result.entities.map((item) => item.name), ['Accepted'])
+  assert.equal(result.results[0]?.result.rejected.length, 0)
+})
+
+test('persistent all-rejected extraction fails the unit after the bounded budget', async () => {
+  let calls = 0
+  const unit = extractionUnit('unit-fail')
+  const input = { skill: { extractKnowledge: async () => { calls += 1; return allRejectedExtraction({ entity: 2, relation: 1, claim: 1 }, ['invalid_reference', 'invalid_semantics']) } } } as never
+  const result = await boundedExtract(input, {} as never, {} as never, [unit], 1, { maxExtractionUnits: 64, maxPlanAttempts: 2, maxExtractionAttempts: 2, maxConcurrency: 1 })
+  assert.equal(calls, 2)
+  assert.equal(result.results.length, 0)
+  assert.equal(result.summaries[0]?.status, 'failed')
+  assert.equal(result.summaries[0]?.attempts, 2)
+  assert.match(result.summaries[0]?.error ?? '', /exhausted Candidate admissibility after 2 attempt\(s\)/)
+  assert.deepEqual(result.summaries[0]?.lastRejectionCodeCounts, { invalid_reference: 3, invalid_semantics: 1 })
+})
+
+test('persistent all-rejected extraction blocks the workflow before Writer', async () => {
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-all-rejected-gate' })
+  let extractionCalls = 0
+  const skill = {
+    capabilities: () => ({ maxContextTokens: 100_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 4 }),
+    understandAndPlan: async ({ document }: { document: { blocks: readonly { blockId: string }[] } }) => ({ reportMap: { sourceAssessment: { summary: 'fixture', sourceType: 'unknown', reliability: 'unknown' }, researchScope: 'fixture', majorTopics: [], majorEntityMentions: [], majorConclusions: [], sectionSemantics: [], semanticDependencies: [], themeHypotheses: [], uncertainty: [] }, extractionPlanProposal: { units: [{ proposedUnitId: 'all', topic: 'fixture', semanticPurpose: 'fixture', primaryRefs: document.blocks.map((block) => ({ kind: 'block' as const, blockId: block.blockId })), contextRefs: [] }], excludedRefs: [] } }),
+    extractKnowledge: async () => { extractionCalls += 1; return allRejectedExtraction({ entity: 2 }) },
+    resolveSemanticCase: async () => { throw new Error('must not resolve after extraction failure') },
+  }
+  try {
+    const handle = await new KnowledgeBaseRegistry().mount(root)
+    const result = await runRawDocumentKnowledgeIngestion({ handle, documentInput: { type: 'text', text: 'All rejected fixture.', originalFilename: 'all-rejected.txt', mediaType: 'text/plain' }, skill: skill as never, workflowRunId: 'run-all-rejected-gate' })
+    assert.equal(extractionCalls, 2)
+    assert.equal(result.status, 'blocked')
+    assert.equal(result.unitSummaries[0]?.status, 'failed')
+    assert.equal(result.writeStatus, undefined)
+    assert.equal((await readManifest(root)).revision, 0)
+  } finally { await removeKnowledgeBase(root) }
+})
+
+test('empty and partial extraction results do not trigger the all-rejected gate', async () => {
+  const empty = allRejectedExtraction({ entity: 0 })
+  assert.equal(isAllRejectedExtractionAttempt(empty), false)
+  const rejected = allRejectedExtraction({ entity: 9 }).rejected
+  const partial: ValidatedExtractKnowledgeResult = { entities: [entity('accepted', 'Accepted')], relations: [], claims: [], rejected, summary: { inputCounts: { entity: 10, relation: 0, claim: 0 }, acceptedCounts: { entity: 1, relation: 0, claim: 0 }, rejectedCounts: { entity: 9, relation: 0, claim: 0 }, rejectionCodes: ['invalid_reference'] } }
+  assert.equal(isAllRejectedExtractionAttempt(partial), false)
+  let calls = 0
+  const input = { skill: { extractKnowledge: async () => { calls += 1; return partial } } } as never
+  const result = await boundedExtract(input, {} as never, {} as never, [extractionUnit('unit-valid')], 1, { maxExtractionUnits: 64, maxPlanAttempts: 2, maxExtractionAttempts: 3, maxConcurrency: 1 })
+  assert.equal(calls, 1)
+  assert.equal(result.summaries[0]?.attempts, 1)
+  assert.equal(result.summaries[0]?.status, 'completed')
+})
+
+test('all-rejected retries remain unit-local under bounded parallel extraction', async () => {
+  const calls = new Map<string, number>()
+  const units = ['A', 'B', 'C'].map(extractionUnit)
+  const input = { skill: { extractKnowledge: async ({ unit }: { unit: { unitId: string } }) => { const count = (calls.get(unit.unitId) ?? 0) + 1; calls.set(unit.unitId, count); if (unit.unitId === 'B' && count === 1) return allRejectedExtraction({ entity: 1 }); return extractionFixture(unit.unitId, [entity(unit.unitId, unit.unitId)]).result } } } as never
+  const result = await boundedExtract(input, {} as never, {} as never, units, 2, { maxExtractionUnits: 64, maxPlanAttempts: 2, maxExtractionAttempts: 2, maxConcurrency: 2 })
+  assert.equal(calls.get('A'), 1)
+  assert.equal(calls.get('B'), 2)
+  assert.equal(calls.get('C'), 1)
+  assert.equal(result.results.length, 3)
+  assert.ok(result.peak <= 2)
+})

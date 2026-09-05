@@ -4,6 +4,16 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-FIX-EXTRACTION-ALL-REJECTED-GATE-001 — 2026-09-05
+
+**Status:** Implemented / CTO acceptance pending
+
+The Raw Document Knowledge Ingestion Workflow now treats only the unambiguous all-rejected extraction attempt as retryable: the authoritative summary counts must show non-zero input, zero accepted candidates, and rejected count equal to input count. Valid empty and partially valid extraction results remain successful. Retries are bounded by the existing `maxExtractionAttempts` and remain Unit-local under bounded parallel extraction. If all permitted attempts are rejected, the Unit fails and the Workflow blocks before Consolidation, Knowledge Resolution, ChangeSet planning, and Writer. Rejection diagnostics retain only deterministic code counts; superseded attempt candidates and raw model output do not enter final extraction or Review results.
+
+No rejection-rate heuristic, new reasoning operation, prompt, Schema 0.3, Knowledge Resolution, Writer, Company policy, or architecture change was introduced. `RHL-VALIDATION-COMPANY-IDENTITY-CONCURRENCY-001` is recorded as `PASS / CLOSED`, and the temporary Codex Host Runtime Policy `maxConcurrency=4` is accepted.
+
+---
+
 ## RHL-VALIDATION-SEMANTIC-QUALITY-001 — 2026-09-05
 
 **Status:** PASS / CLOSED
@@ -42,7 +52,7 @@ The approved Company consolidation, unkeyed attachment, ambiguity Review, aliase
 
 ## RHL-VALIDATION-COMPANY-IDENTITY-CONCURRENCY-001 — 2026-09-05
 
-**Status:** Executed / SUCCESS / CTO acceptance pending
+**Status:** PASS / CLOSED
 
 The exact frozen 103-page PDF was verified at `3,209,114` bytes with SHA-256 `998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63`. Real Docling `2.116.0` and real Codex CLI `0.152.1` with `gpt-5.6-luna` / `high` were used. Four simultaneous smoke calls passed with peak concurrency `4`; the full workflow used extraction concurrency `4` with peak `4`. The fresh KB primary run completed with review, all `13` ExtractionUnits completed, Writer committed revision `0→1`, canonical validation/reload and provenance passed, and exact replay returned `already_committed` with zero additional reasoning calls and unchanged revision.
 

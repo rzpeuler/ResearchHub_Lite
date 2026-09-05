@@ -29,6 +29,18 @@ function counts(results: readonly ValidatedExtractKnowledgeResult[]): Record<str
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : String(error) }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function positiveSafeInteger(value: unknown): boolean { return Number.isSafeInteger(value) && (value as number) > 0 }
+function countSummaryValues(values: Readonly<Record<string, number>>): number { return (values.entity ?? 0) + (values.relation ?? 0) + (values.claim ?? 0) }
+export function isAllRejectedExtractionAttempt(result: ValidatedExtractKnowledgeResult): boolean {
+  const inputTotal = countSummaryValues(result.summary.inputCounts)
+  const acceptedTotal = countSummaryValues(result.summary.acceptedCounts)
+  const rejectedTotal = countSummaryValues(result.summary.rejectedCounts)
+  return inputTotal > 0 && acceptedTotal === 0 && rejectedTotal === inputTotal
+}
+function rejectionCodeCounts(result: ValidatedExtractKnowledgeResult): Readonly<Record<string, number>> {
+  const counts: Record<string, number> = {}
+  for (const rejection of result.rejected) counts[rejection.code] = (counts[rejection.code] ?? 0) + 1
+  return Object.fromEntries(Object.entries(counts).sort(([left], [right]) => left.localeCompare(right)))
+}
 export function validateIngestionConfig(config: RawDocumentKnowledgeIngestionInput['config']): string[] {
   const errors: string[] = []
   for (const [key, value] of Object.entries(config ?? {})) if (!['maxExtractionUnits', 'maxPlanAttempts', 'maxExtractionAttempts', 'maxConcurrency', 'maxContextTokens', 'maxResolutionAttempts', 'maxResolutionCases', 'maxEntityBindingCandidates'].includes(key) || !positiveSafeInteger(value)) errors.push(key + ' must be a positive safe integer')
@@ -66,17 +78,30 @@ export async function boundedExtract(input: RawDocumentKnowledgeIngestionInput, 
       let lastError = ''
       let result: ValidatedExtractKnowledgeResult | undefined
       let attempts = 0
+      let allRejectedAttempts = 0
+      let lastRejectionCodeCounts: Readonly<Record<string, number>> | undefined
       while (attempts < config.maxExtractionAttempts) {
         attempts += 1
-        try { result = await input.skill.extractKnowledge({ document, reportMap, unit, instructions: input.instructions }); break }
+        try {
+          const attemptResult = await input.skill.extractKnowledge({ document, reportMap, unit, instructions: input.instructions })
+          if (isAllRejectedExtractionAttempt(attemptResult)) {
+            allRejectedAttempts += 1
+            lastRejectionCodeCounts = rejectionCodeCounts(attemptResult)
+            lastError = `Extraction unit ${unit.unitId} all Candidates rejected on attempt ${attempts}`
+            if (attempts >= config.maxExtractionAttempts) lastError = `Extraction unit ${unit.unitId} exhausted Candidate admissibility after ${attempts} attempt(s)`
+            continue
+          }
+          result = attemptResult
+          break
+        }
         catch (error) { lastError = errorMessage(error); if (!retryable(error)) break }
       }
       active -= 1
       if (result) {
         results[index] = { unit, result }
-        summaries[index] = { unitId: unit.unitId, proposedUnitId: unit.proposedUnitId, attempts, status: 'completed', candidateCounts: { entity: result.entities.length, relation: result.relations.length, claim: result.claims.length }, rejectedCount: result.rejected.length }
+        summaries[index] = { unitId: unit.unitId, proposedUnitId: unit.proposedUnitId, attempts, status: 'completed', candidateCounts: { entity: result.entities.length, relation: result.relations.length, claim: result.claims.length }, rejectedCount: result.rejected.length, ...(allRejectedAttempts === 0 ? {} : { allRejectedAttempts, lastRejectionCodeCounts }) }
       } else {
-        summaries[index] = { unitId: unit.unitId, proposedUnitId: unit.proposedUnitId, attempts, status: 'failed', candidateCounts: {}, rejectedCount: 0, error: lastError }
+        summaries[index] = { unitId: unit.unitId, proposedUnitId: unit.proposedUnitId, attempts, status: 'failed', candidateCounts: {}, rejectedCount: 0, ...(allRejectedAttempts === 0 ? {} : { allRejectedAttempts, lastRejectionCodeCounts }), error: lastError }
         errors.push('Extraction unit ' + unit.unitId + ' failed after ' + String(attempts) + ' attempt(s): ' + lastError)
       }
     }

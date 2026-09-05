@@ -58,6 +58,8 @@ export interface ExtractionUnitSummary {
   readonly status: 'completed' | 'failed'
   readonly candidateCounts: Readonly<Record<string, number>>
   readonly rejectedCount: number
+  readonly allRejectedAttempts?: number
+  readonly lastRejectionCodeCounts?: Readonly<Record<string, number>>
   readonly error?: string
 }
 export interface EntityResolution {
