@@ -12,6 +12,14 @@ The validation run used product baseline `a76dab149071eaf804ba191fcd0c9d796010f7
 
 ---
 
+## RHL-VALIDATION-SEMANTIC-QUALITY-001-KB-INSPECTION — 2026-09-05
+
+**Status:** Completed / read-only inspection and export
+
+The persisted `kb-rhl-semantic-quality-001` was inspected without invoking Model, Docling, Workflow, ingestion, Writer, or Replay. Manifest revision `1` contains `522` Entities, `570` Relations, `268` Claims, and `1` Source. The runtime ingestion log records an authoritative Review total of `50` (`33` root and `17` dependency), but persists only `21` bounded `samplesByCategory` records; the export states that a complete Review list is unavailable. The one `potentialNewInvestmentTheme` and the `Relation attributes conflict across extraction units` item are preserved as Review findings; because neither has a durable canonical object or complete candidate payload in runtime data, unavailable names, endpoints, attributes, support details, and conflicting values are reported as unavailable rather than inferred. Entity quality findings separately inspect actual names and do not treat `-item-` durable IDs alone as defects. Outputs are preserved in `tests/validation/evidence/rhl-semantic-quality-001-kb-inspection.json` and `tests/validation/evidence/RHL_SEMANTIC_QUALITY_001_KB_INSPECTION.md`. This inspection introduces no architecture or product decision.
+
+---
+
 ## RHL-FIX-RELATION-ATTRIBUTE-ADMISSIBILITY-001 — 2026-09-05
 
 **Status:** Implemented / CTO acceptance pending
