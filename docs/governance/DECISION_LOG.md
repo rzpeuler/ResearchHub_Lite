@@ -4,6 +4,14 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-VALIDATION-SEMANTIC-QUALITY-001 — 2026-09-05
+
+**Status:** Executed / SUCCESS / CTO acceptance pending
+
+The validation run used product baseline `a76dab149071eaf804ba191fcd0c9d796010f7f7`, the exact frozen 103-page PDF, real Docling `2.116.0`, and real Codex CLI `0.152.1` with `gpt-5.6-luna` / `high`. The accepted 21-unit plan covered all `1,523` blocks with no overlap or uncovered blocks. Primary ingestion completed with review; Candidate validation accepted `585` Relations and rejected `8`, with zero invalid-attribute Relation candidates emitted in this run, and no late Planner Relation-attribute Review. Description/legalName field conflicts caused zero dependency isolation. ChangeSet validation passed, Writer committed revision `0→1`, reload/full validation and provenance passed with zero failures and zero transient-reference leaks, and exact replay returned `already_committed` with zero additional reasoning calls and unchanged revision/counts. ReviewSummary invariants passed; R7 comparison is descriptive only and makes no improvement claim from lower Review counts. Evidence is preserved in `tests/validation/evidence/rhl-validation-semantic-quality-001-real-e2e.json` and `tests/validation/evidence/RHL_VALIDATION_SEMANTIC_QUALITY_001_SUMMARY.md`. No architecture decision was introduced and no production code was modified.
+
+---
+
 ## RHL-FIX-RELATION-ATTRIBUTE-ADMISSIBILITY-001 — 2026-09-05
 
 **Status:** Implemented / CTO acceptance pending
