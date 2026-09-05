@@ -4,9 +4,23 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
-## RHL-ARCH-KNOWLEDGE-PRODUCTION-001 — 2026-09-05
+## RHL-ARCH-REVIEW-GOVERNANCE-001 — 2026-09-06
 
 **Status:** FROZEN / CTO architecture decision
+
+`docs/architecture/REVIEW_GOVERNANCE_V0.1.md` is formally admitted as a normative architecture document without modification. `ReviewSummary` remains execution telemetry and bounded quality observation; `ReviewCase` is durable actionable Knowledge Production operational state. Only unresolved decisions create ReviewCases; non-actionable malformed output, invalid attributes, unsupported fields, invalid references, and deterministic Candidate rejections remain telemetry. ReviewCase is not canonical Knowledge and is KnowledgeBase-scoped and Producer-neutral.
+
+An actionable ReviewCase must durably retain the root Semantic Knowledge Proposal, EvidenceBinding, and bounded relevant existing-Knowledge projection. Raw Document evidence uses `raw_document_block` with `rawRef`, `documentId`, and `blockId`; future Producers may extend EvidenceBinding. Dependency-only issues do not become default independent Inbox items: dependent proposals are retained in a Suspended Proposal Bundle with the root case. Potential new Theme follows a `Build Theme` decision rather than direct creation, while Schema Gaps follow governance.
+
+ReviewCase identity is deterministic and replay-safe within the same Producer Run; cross-run semantic deduplication is not required in v0.1. Any future ReviewDecision must re-resolve against the current KB through Binding → Diff → Resolution → ChangeSet → Validation → Writer and must not replay stale mutation. Review persistence does not add mutation authority: the final path remains `Validated ChangeSet → Writer`. Full ReviewDecision execution, durable ReviewCase/Suspended Proposal persistence, producer-neutral EvidenceBinding implementation, and frontend Review Inbox are deferred.
+
+This freeze does not implement ReviewCase, ReviewDecision, Review Inbox, or a Theme Framework, and does not modify Raw Ingestion, Knowledge Resolution, Schema, ChangeSet, Writer, or existing architecture documents.
+
+---
+
+## RHL-ARCH-KNOWLEDGE-PRODUCTION-001 — 2026-09-05
+
+**Status:** PASS / CLOSED
 
 `docs/architecture/KNOWLEDGE_PRODUCTION_ARCHITECTURE_V0.1.md` is formally admitted as a normative architecture document without modification. The Knowledge Production Workflow is an open set: Raw Document Ingestion, Theme Framework Construction, Industry Deep Research, Company Deep Research, and future Producers are peers rather than a closed list. All Producers target one shared Global KnowledgeBase; Theme-specific, Industry-specific, and Company-specific silos are not introduced. Bottom-up ingestion and top-down research construction are complementary production modes, and InvestmentTheme is a semantic overlay rather than a Knowledge container.
 
