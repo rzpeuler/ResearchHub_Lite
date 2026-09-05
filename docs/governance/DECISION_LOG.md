@@ -22,7 +22,7 @@ The persisted `kb-rhl-semantic-quality-001` was inspected without invoking Model
 
 ## RHL-FIX-COMPANY-IDENTITY-NORMALIZATION-001 — 2026-09-05
 
-**Status:** CHANGES REQUIRED / FIX-001 in progress
+**Status:** PASS / CLOSED
 
 Company Identity Normalization & Document-local Canonicalization v0.1 is implemented behind the existing Candidate validation and consolidation boundaries. Explicit trailing stock-code decorations use deterministic syntax; normalized `ticker` and `exchange` are structured identity fields rather than display-name text. An exact complete `(exchange, ticker)` identity may unify Company Candidates only within the current document, while conflicting complete hard identities cannot be automatically merged. Exact name/alias agreement is a weak document-local signal for attaching an unkeyed Company and creates a blocking Review when it is ambiguous; no fuzzy matching, Levenshtein, embeddings, external company database, or new reasoning case is introduced.
 
@@ -32,11 +32,21 @@ The existing global Knowledge Resolution binding remains conservative and unchan
 
 ## RHL-FIX-COMPANY-IDENTITY-NORMALIZATION-001-FIX-001 — 2026-09-05
 
-**Status:** Implemented / CTO acceptance pending
+**Status:** PASS / CLOSED
 
 Automatic Company securities-decoration parsing now requires exactly six ASCII digits and an explicitly supported exchange token: `SH`, `SSE`, `SZ`, `SZSE`, `BJ`, `BSE`, `NQ`, or `NEEQ`. Unknown or short security-looking suffixes remain part of the display name and do not create deterministic hard identity. Explicit `semanticFields.exchange` values outside this display-parser vocabulary, including `NYSE`, remain supported; recognized parsed/supplied contradictions remain `invalid_semantics`.
 
 The approved Company consolidation, unkeyed attachment, ambiguity Review, aliases, and Relation/Claim local-reference convergence are unchanged. The parallel design spec was removed, governance statuses were reconciled, and representative Shanghai, Zhongjixin, and Honeywell composition regressions were added. Schema 0.3, Writer, durable ID allocation, Knowledge Resolution, reasoning behavior, historical evidence, and historical runtime KB data are unchanged. No real semantic-quality validation was rerun; a fresh run is required after CTO acceptance.
+
+---
+
+## RHL-VALIDATION-COMPANY-IDENTITY-CONCURRENCY-001 — 2026-09-05
+
+**Status:** Executed / SUCCESS / CTO acceptance pending
+
+The exact frozen 103-page PDF was verified at `3,209,114` bytes with SHA-256 `998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63`. Real Docling `2.116.0` and real Codex CLI `0.152.1` with `gpt-5.6-luna` / `high` were used. Four simultaneous smoke calls passed with peak concurrency `4`; the full workflow used extraction concurrency `4` with peak `4`. The fresh KB primary run completed with review, all `13` ExtractionUnits completed, Writer committed revision `0→1`, canonical validation/reload and provenance passed, and exact replay returned `already_committed` with zero additional reasoning calls and unchanged revision.
+
+The fresh KB contains `187` active Companies, `5` with ticker, `6` with exchange, and `5` with complete hard identity; no duplicate complete hard-key groups, planned-reference leaks, or provenance failures were found. The named plain Company forms were each represented by one canonical Company. The decorated/bilingual variants were not all emitted by this stochastic Luna run and are recorded as `targetNotReproduced`; no complete-pair pass is claimed from this run. Relation/Claim endpoint checks passed for the observed target Companies. The persisted Review summary is `106` total (`87` root, `19` dependency). The approximate primary duration was `935,981 ms` versus the `3,402,775 ms` serial reference, or `3.636x` / `72.49%` reduction; this is not attributed solely to concurrency. Evidence is preserved in `tests/validation/evidence/rhl-validation-company-identity-concurrency-001.json` and `tests/validation/evidence/RHL_VALIDATION_COMPANY_IDENTITY_CONCURRENCY_001_SUMMARY.md`. This entry records validation facts only and introduces no architecture decision.
 
 ---
 

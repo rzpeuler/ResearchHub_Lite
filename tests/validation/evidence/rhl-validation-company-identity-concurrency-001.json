@@ -1,0 +1,3671 @@
+{
+  "taskId": "RHL-VALIDATION-COMPANY-IDENTITY-CONCURRENCY-001",
+  "validationTask": "RHL-VALIDATION-COMPANY-IDENTITY-CONCURRENCY-001",
+  "productBaseline": "c0d7a3f9d9ddb8cd646ff13ded7da49cf072df6a",
+  "knowledgeBaseId": "kb-rhl-company-identity-concurrency-001",
+  "workflowRunId": "rhl-company-identity-concurrency-001-primary",
+  "phase": "completed",
+  "phaseTimestamps": {
+    "pdf_verified": {
+      "startedAt": "2026-09-05T09:58:37.661Z",
+      "completedAt": "2026-09-05T09:58:37.666Z",
+      "durationMs": 5,
+      "status": "passed"
+    },
+    "four_way_smoke": {
+      "startedAt": "2026-09-05T09:58:37.666Z",
+      "completedAt": "2026-09-05T09:58:53.605Z",
+      "durationMs": 15939,
+      "status": "passed"
+    },
+    "primary_workflow": {
+      "startedAt": "2026-09-05T10:00:49.811Z",
+      "completedAt": "2026-09-05T10:16:25.792Z",
+      "durationMs": 935981,
+      "status": "passed"
+    },
+    "reload_validation": {
+      "startedAt": "2026-09-05T10:16:25.792Z",
+      "completedAt": "2026-09-05T10:16:26.046Z",
+      "durationMs": 254,
+      "status": "passed"
+    },
+    "replay": {
+      "startedAt": "2026-09-05T10:16:26.051Z",
+      "completedAt": "2026-09-05T10:16:26.219Z",
+      "durationMs": 168,
+      "status": "passed"
+    }
+  },
+  "productionCodeModified": false,
+  "historicalEvidenceModified": false,
+  "historicalRuntimeKbModified": false,
+  "baseline": {
+    "head": "c0d7a3f9d9ddb8cd646ff13ded7da49cf072df6a",
+    "originMain": "c0d7a3f9d9ddb8cd646ff13ded7da49cf072df6a",
+    "productBaseline": "c0d7a3f9d9ddb8cd646ff13ded7da49cf072df6a",
+    "trackedWorkingTreeClean": true,
+    "protectedPdfUntracked": false
+  },
+  "pdf": {
+    "filename": "20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf",
+    "path": "C:\\Users\\Administrator\\Desktop\\ResearchHub_Lite\\20260805-西部证券-AI算力行业：AI算力上游材料产业链研究报告.pdf",
+    "bytes": 3209114,
+    "sha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "expectedBytes": 3209114,
+    "expectedSha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "exactMatch": true
+  },
+  "concurrencySmoke": {
+    "requested": 4,
+    "fourWay": {
+      "requested": 4,
+      "calls": [
+        {
+          "sequence": 1,
+          "startedAt": "2026-09-05T09:58:37.666Z",
+          "status": "passed",
+          "completedAt": "2026-09-05T09:58:53.605Z",
+          "durationMs": 15939
+        },
+        {
+          "sequence": 2,
+          "startedAt": "2026-09-05T09:58:37.666Z",
+          "status": "passed",
+          "completedAt": "2026-09-05T09:58:52.825Z",
+          "durationMs": 15159
+        },
+        {
+          "sequence": 3,
+          "startedAt": "2026-09-05T09:58:37.666Z",
+          "status": "passed",
+          "completedAt": "2026-09-05T09:58:52.688Z",
+          "durationMs": 15022
+        },
+        {
+          "sequence": 4,
+          "startedAt": "2026-09-05T09:58:37.667Z",
+          "status": "passed",
+          "completedAt": "2026-09-05T09:58:52.327Z",
+          "durationMs": 14660
+        }
+      ],
+      "wallClockMs": 15939,
+      "peak": 4,
+      "passed": true
+    },
+    "fallback": {
+      "used": false
+    },
+    "selectedConcurrency": 4,
+    "passed": true
+  },
+  "runtime": {
+    "codexCli": "codex-cli 0.152.1",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "high",
+    "docling": {
+      "parser": {
+        "id": "docling-local",
+        "version": "2.116.0"
+      },
+      "stats": {
+        "pageCount": 103,
+        "sectionCount": 159,
+        "blockCount": 1523,
+        "normalizedCharacters": 97784,
+        "tableCount": 44,
+        "headingCount": 158,
+        "listCount": 27,
+        "captionCount": 63
+      },
+      "warnings": [],
+      "durationMs": 116176,
+      "pythonExecutable": "C:\\Users\\Administrator\\Desktop\\ResearchHub\\.researchhub-document-parser\\venv\\Scripts\\python.exe",
+      "artifactsPath": "C:\\Users\\Administrator\\Desktop\\ResearchHub\\.researchhub-document-parser\\models",
+      "bridgePath": "C:\\Users\\Administrator\\Desktop\\ResearchHub_Lite\\plugins\\document\\docling\\bridge\\docling_bridge.py"
+    },
+    "selectedConcurrency": 4,
+    "configuredCapabilities": {
+      "maxContextTokens": 100000,
+      "maxOutputTokens": 20000,
+      "structuredOutputSupport": true,
+      "maxConcurrency": 4
+    }
+  },
+  "primary": {
+    "status": "completed_with_review",
+    "writeStatus": "committed",
+    "baseRevision": 0,
+    "committedRevision": 1,
+    "acceptedPlanUnits": 13,
+    "unitSummaries": [
+      {
+        "unitId": "unit-001",
+        "proposedUnitId": "unit-01",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 49,
+          "relation": 19,
+          "claim": 10
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-002",
+        "proposedUnitId": "unit-02",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 43,
+          "relation": 26,
+          "claim": 10
+        },
+        "rejectedCount": 2
+      },
+      {
+        "unitId": "unit-003",
+        "proposedUnitId": "unit-03",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 36,
+          "relation": 41,
+          "claim": 21
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-004",
+        "proposedUnitId": "unit-04",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 36,
+          "relation": 30,
+          "claim": 14
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-005",
+        "proposedUnitId": "unit-05",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 24,
+          "relation": 21,
+          "claim": 17
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-006",
+        "proposedUnitId": "unit-06",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 35,
+          "relation": 26,
+          "claim": 15
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-007",
+        "proposedUnitId": "unit-07",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 44,
+          "relation": 30,
+          "claim": 28
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-008",
+        "proposedUnitId": "unit-08",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 0,
+          "relation": 0,
+          "claim": 0
+        },
+        "rejectedCount": 74
+      },
+      {
+        "unitId": "unit-009",
+        "proposedUnitId": "unit-09",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 36,
+          "relation": 56,
+          "claim": 16
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-010",
+        "proposedUnitId": "unit-10",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 35,
+          "relation": 33,
+          "claim": 19
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-011",
+        "proposedUnitId": "unit-11",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 25,
+          "relation": 19,
+          "claim": 17
+        },
+        "rejectedCount": 0
+      },
+      {
+        "unitId": "unit-012",
+        "proposedUnitId": "unit-12",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 69,
+          "relation": 48,
+          "claim": 15
+        },
+        "rejectedCount": 1
+      },
+      {
+        "unitId": "unit-013",
+        "proposedUnitId": "unit-13",
+        "attempts": 1,
+        "status": "completed",
+        "candidateCounts": {
+          "entity": 4,
+          "relation": 0,
+          "claim": 9
+        },
+        "rejectedCount": 0
+      }
+    ],
+    "candidateCounts": {
+      "entity": 436,
+      "relation": 349,
+      "claim": 191,
+      "consolidated": 904,
+      "rejected": 77
+    },
+    "rejectedCandidates": 77,
+    "extractionConcurrency": 4,
+    "peakExtractionConcurrency": 4,
+    "errors": []
+  },
+  "finalKnowledgeBase": {
+    "revision": 1,
+    "counts": {
+      "themeGroups": 0,
+      "entities": 367,
+      "relations": 337,
+      "claims": 179,
+      "sources": 1,
+      "modules": 0
+    },
+    "validation": "passed",
+    "provenanceFailures": 0,
+    "plannedReferenceLeakCount": 0,
+    "companyAudit": {
+      "coverage": {
+        "totalCompanies": 187,
+        "companiesWithTicker": 5,
+        "companiesWithExchange": 6,
+        "companiesWithCompleteHardIdentity": 5
+      },
+      "percentageCompleteHardIdentity": 2.67,
+      "duplicateCompleteHardKeyGroups": [],
+      "exactNameAliasSuspectGroups": [],
+      "approvedSecurityDecorationSuspectGroups": [],
+      "activeCompanyCount": 187
+    },
+    "knownCompanyChecks": {
+      "zhongjixin": {
+        "observedInModelOutput": true,
+        "targetNotReproduced": true,
+        "observedVariants": [
+          "中巨芯"
+        ],
+        "expectedVariants": [
+          "中巨芯",
+          "中巨芯（688549.SH）",
+          "中巨芯(688549.SH)"
+        ],
+        "canonicalCount": 1,
+        "entities": [
+          {
+            "id": "entity:company-item-256b7ad4cb2e2d99",
+            "name": "中巨芯",
+            "aliases": [],
+            "ticker": null,
+            "exchange": null,
+            "legalName": null
+          }
+        ]
+      },
+      "shanghaiXinyang": {
+        "observedInModelOutput": true,
+        "targetNotReproduced": true,
+        "observedVariants": [
+          "上海新阳"
+        ],
+        "expectedVariants": [
+          "上海新阳",
+          "上海新阳（300236.SZ）"
+        ],
+        "canonicalCount": 1,
+        "entities": [
+          {
+            "id": "entity:company-item-e08677b5def4ff07",
+            "name": "上海新阳",
+            "aliases": [],
+            "ticker": null,
+            "exchange": null,
+            "legalName": null
+          }
+        ]
+      },
+      "honeywell": {
+        "observedInModelOutput": true,
+        "targetNotReproduced": true,
+        "observedVariants": [
+          "霍尼韦尔"
+        ],
+        "expectedVariants": [
+          "霍尼韦尔",
+          "霍尼韦尔（Honeywell）",
+          "Honeywell"
+        ],
+        "canonicalCount": 1,
+        "entities": [
+          {
+            "id": "entity:company-item-32dd0b0785782ff9",
+            "name": "霍尼韦尔",
+            "aliases": [],
+            "ticker": null,
+            "exchange": null,
+            "legalName": null
+          }
+        ]
+      }
+    },
+    "relationClaimConvergence": {
+      "passed": true,
+      "relationCount": 3,
+      "claimCount": 0,
+      "relations": [
+        {
+          "confidence": 0.99,
+          "id": "relation:00a8cd165cc5f417",
+          "lifecycle": {
+            "status": "active"
+          },
+          "sourceRef": "entity:company-item-256b7ad4cb2e2d99",
+          "sourceRefs": [
+            "source:doc-1337460d34c4a60b"
+          ],
+          "targetRef": "entity:product-item-0b1e80cfd36bf26e",
+          "type": "offers_product"
+        },
+        {
+          "confidence": 0.97,
+          "id": "relation:1ae02c6a30656d88",
+          "lifecycle": {
+            "status": "active"
+          },
+          "sourceRef": "entity:company-item-32dd0b0785782ff9",
+          "sourceRefs": [
+            "source:doc-1337460d34c4a60b"
+          ],
+          "targetRef": "entity:product-item-9096b0fb9a3f71bb",
+          "type": "offers_product"
+        },
+        {
+          "confidence": 0.99,
+          "id": "relation:a411f69bfcfd9fab",
+          "lifecycle": {
+            "status": "active"
+          },
+          "sourceRef": "entity:company-item-e08677b5def4ff07",
+          "sourceRefs": [
+            "source:doc-1337460d34c4a60b"
+          ],
+          "targetRef": "entity:product-item-f0851524ccd33838",
+          "type": "offers_product"
+        }
+      ],
+      "claims": []
+    },
+    "companyCandidatesObserved": [
+      {
+        "candidateId": "ent-001",
+        "entityType": "investment_theme",
+        "name": "AI算力",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-002",
+        "entityType": "industry",
+        "name": "PCB",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-003",
+        "entityType": "industry",
+        "name": "半导体制造",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-004",
+        "entityType": "industry",
+        "name": "半导体封测",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-005",
+        "entityType": "industry",
+        "name": "光通信",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-006",
+        "entityType": "product",
+        "name": "电子树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-007",
+        "entityType": "product",
+        "name": "玻璃布",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-008",
+        "entityType": "product",
+        "name": "硅微粉",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-009",
+        "entityType": "product",
+        "name": "半导体硅片",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-010",
+        "entityType": "product",
+        "name": "光刻胶",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-011",
+        "entityType": "product",
+        "name": "光刻胶配套材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-012",
+        "entityType": "product",
+        "name": "电子特气",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-013",
+        "entityType": "product",
+        "name": "前驱体材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-014",
+        "entityType": "product",
+        "name": "CMP抛光材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-015",
+        "entityType": "product",
+        "name": "溅射靶材",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-016",
+        "entityType": "product",
+        "name": "湿电子化学品",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-017",
+        "entityType": "product",
+        "name": "封装基板",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-018",
+        "entityType": "product",
+        "name": "引线框架",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-019",
+        "entityType": "product",
+        "name": "磷化铟",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-020",
+        "entityType": "product",
+        "name": "四氯化硅",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-021",
+        "entityType": "product",
+        "name": "MLCC",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-022",
+        "entityType": "product",
+        "name": "氟化工冷却液",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-023",
+        "entityType": "product",
+        "name": "玻璃基板",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-024",
+        "entityType": "technology",
+        "name": "玻璃桥",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-025",
+        "entityType": "product",
+        "name": "PI膜",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-026",
+        "entityType": "company",
+        "name": "西部证券研发中心",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-027",
+        "entityType": "company",
+        "name": "中化国际",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-028",
+        "entityType": "company",
+        "name": "国际复材",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-029",
+        "entityType": "company",
+        "name": "联瑞新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-030",
+        "entityType": "company",
+        "name": "东材科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-031",
+        "entityType": "company",
+        "name": "国瓷材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-032",
+        "entityType": "company",
+        "name": "彤程新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-033",
+        "entityType": "company",
+        "name": "昊华科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-034",
+        "entityType": "company",
+        "name": "鼎龙股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-035",
+        "entityType": "company",
+        "name": "雅克科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-036",
+        "entityType": "company",
+        "name": "华海诚科",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-037",
+        "entityType": "company",
+        "name": "飞凯材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-038",
+        "entityType": "company",
+        "name": "宏昌电子",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-039",
+        "entityType": "company",
+        "name": "三孚股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-040",
+        "entityType": "company",
+        "name": "云南锗业",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-041",
+        "entityType": "company",
+        "name": "兴发集团",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-042",
+        "entityType": "company",
+        "name": "华特气体",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-043",
+        "entityType": "company",
+        "name": "金宏气体",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-044",
+        "entityType": "company",
+        "name": "泰和新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-045",
+        "entityType": "company",
+        "name": "新宙邦",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-046",
+        "entityType": "company",
+        "name": "东岳集团",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-047",
+        "entityType": "company",
+        "name": "巨化股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-048",
+        "entityType": "company",
+        "name": "三美股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-049",
+        "entityType": "company",
+        "name": "双星新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-1",
+        "entityType": "product",
+        "name": "硅微粉",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-2",
+        "entityType": "product",
+        "name": "球形硅微粉",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-3",
+        "entityType": "product",
+        "name": "角形硅微粉",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-4",
+        "entityType": "product",
+        "name": "超细硅微粉",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-5",
+        "entityType": "product",
+        "name": "高纯硅微粉",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-6",
+        "entityType": "product",
+        "name": "改性球形硅微粉",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-7",
+        "entityType": "product",
+        "name": "纳米二氧化硅",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-8",
+        "entityType": "product",
+        "name": "高纯二氧化硅",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-9",
+        "entityType": "product",
+        "name": "球形氧化硅",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-10",
+        "entityType": "product",
+        "name": "HGS系列",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-11",
+        "entityType": "industry",
+        "name": "覆铜板",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-12",
+        "entityType": "industry",
+        "name": "环氧塑封料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-13",
+        "entityType": "industry",
+        "name": "电工绝缘材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-14",
+        "entityType": "industry",
+        "name": "胶粘剂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-15",
+        "entityType": "industry",
+        "name": "蜂窝陶瓷",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-16",
+        "entityType": "industry",
+        "name": "涂料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-17",
+        "entityType": "industry",
+        "name": "高级建材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-18",
+        "entityType": "company",
+        "name": "日本电化株式会社",
+        "aliases": [
+          "Denka"
+        ]
+      },
+      {
+        "candidateId": "entity-19",
+        "entityType": "company",
+        "name": "日本龙森公司",
+        "aliases": [
+          "Tatsumori"
+        ]
+      },
+      {
+        "candidateId": "entity-20",
+        "entityType": "company",
+        "name": "日本雅都玛",
+        "aliases": [
+          "Admatechs"
+        ]
+      },
+      {
+        "candidateId": "entity-21",
+        "entityType": "company",
+        "name": "新日铁住金化学材料",
+        "aliases": [
+          "Nippon Steel Chemical & Material"
+        ]
+      },
+      {
+        "candidateId": "entity-22",
+        "entityType": "company",
+        "name": "联瑞新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-23",
+        "entityType": "company",
+        "name": "华飞电子",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-24",
+        "entityType": "company",
+        "name": "雅克科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-25",
+        "entityType": "company",
+        "name": "锦艺新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-26",
+        "entityType": "company",
+        "name": "江苏辉迈（现属凌玮科技体系）",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-27",
+        "entityType": "company",
+        "name": "国瓷材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-28",
+        "entityType": "company",
+        "name": "壹石通",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-29",
+        "entityType": "company",
+        "name": "江苏圣天新材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-30",
+        "entityType": "company",
+        "name": "连云港利思特电子材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-31",
+        "entityType": "company",
+        "name": "建滔集团",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-32",
+        "entityType": "company",
+        "name": "南亚集团",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-33",
+        "entityType": "company",
+        "name": "联茂集团",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-34",
+        "entityType": "company",
+        "name": "生益科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-35",
+        "entityType": "company",
+        "name": "金安国纪",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-36",
+        "entityType": "company",
+        "name": "超华科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-pcb",
+        "entityType": "industry",
+        "name": "PCB",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-ccl",
+        "entityType": "product",
+        "name": "覆铜板",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-electronic-resin",
+        "entityType": "product",
+        "name": "电子树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-electronic-copper-foil",
+        "entityType": "product",
+        "name": "电子铜箔",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-electronic-cloth",
+        "entityType": "product",
+        "name": "电子布",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-prepreg",
+        "entityType": "product",
+        "name": "半固化片",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-epoxy-resin",
+        "entityType": "product",
+        "name": "环氧树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-phenolic-resin",
+        "entityType": "product",
+        "name": "酚醛树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-benzoxazine-resin",
+        "entityType": "product",
+        "name": "苯并噁嗪树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-maleimide-resin",
+        "entityType": "product",
+        "name": "马来酰亚胺树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-ppo-resin",
+        "entityType": "product",
+        "name": "聚苯醚树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-hdi",
+        "entityType": "technology",
+        "name": "HDI",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-bisphenol-a",
+        "entityType": "product",
+        "name": "双酚A",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-tetrabromobisphenol-a",
+        "entityType": "product",
+        "name": "四溴双酚A",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-epichlorohydrin",
+        "entityType": "product",
+        "name": "环氧氯丙烷",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-liquid-epoxy-resin",
+        "entityType": "product",
+        "name": "基础液态环氧树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-mdi",
+        "entityType": "product",
+        "name": "MDI",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-dopo",
+        "entityType": "product",
+        "name": "DOPO",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-electronic-ppo-ppe",
+        "entityType": "product",
+        "name": "电子级PPO/PPE",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-hydrocarbon-resin",
+        "entityType": "product",
+        "name": "碳氢树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-electronic-phenolic-resin",
+        "entityType": "product",
+        "name": "电子级酚醛树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-furan-resin",
+        "entityType": "product",
+        "name": "呋喃树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-active-ester",
+        "entityType": "product",
+        "name": "活性酯",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-bmi-resin",
+        "entityType": "product",
+        "name": "双马来酰亚胺树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-bpa-phenolic-epoxy",
+        "entityType": "product",
+        "name": "BPA型酚醛环氧树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-functional-epoxy-resin",
+        "entityType": "product",
+        "name": "电子级功能性环氧树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-noryl-sa9000",
+        "entityType": "product",
+        "name": "PPO（Noryl SA9000）",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-xyron-ppo",
+        "entityType": "product",
+        "name": "PPO（XYRON）",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-cariflex-ir",
+        "entityType": "product",
+        "name": "Cariflex IR",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-acrylic-resin",
+        "entityType": "product",
+        "name": "丙烯酸树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-coating-resin",
+        "entityType": "product",
+        "name": "涂料树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-sartomer-resin",
+        "entityType": "product",
+        "name": "Sartomer光固化树脂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-shengquan",
+        "entityType": "company",
+        "name": "圣泉集团",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-dongcai",
+        "entityType": "company",
+        "name": "东材科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-hongchang",
+        "entityType": "company",
+        "name": "宏昌电子",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-tongyu",
+        "entityType": "company",
+        "name": "同宇新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-shiming",
+        "entityType": "company",
+        "name": "世名科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-sinochem-international",
+        "entityType": "company",
+        "name": "中化国际",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "沙特基础工业公司",
+        "aliases": [
+          "SABIC"
+        ]
+      },
+      {
+        "candidateId": "entity-mitsubishi-gas-chemical",
+        "entityType": "company",
+        "name": "三菱瓦斯化学",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-asahi-kasei",
+        "entityType": "company",
+        "name": "旭化成",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-kraton",
+        "entityType": "company",
+        "name": "科腾",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-arkema",
+        "entityType": "company",
+        "name": "阿克玛",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-nippon-soda",
+        "entityType": "company",
+        "name": "日本曹达",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-ai-computing",
+        "entityType": "investment_theme",
+        "name": "AI算力",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-pcb",
+        "entityType": "industry",
+        "name": "PCB",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-electronic-cloth-industry",
+        "entityType": "industry",
+        "name": "电子布行业",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-electronic-yarn-industry",
+        "entityType": "industry",
+        "name": "电子纱行业",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-ccl-industry",
+        "entityType": "industry",
+        "name": "覆铜板行业",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-advanced-packaging-industry",
+        "entityType": "industry",
+        "name": "先进IC封装",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-electronic-cloth",
+        "entityType": "product",
+        "name": "电子布",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-ordinary-electronic-cloth",
+        "entityType": "product",
+        "name": "普通电子布",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-special-electronic-cloth",
+        "entityType": "product",
+        "name": "特种电子布",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-low-dk-df-cloth",
+        "entityType": "product",
+        "name": "低Dk/Df布",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-second-generation-low-dk-df-cloth",
+        "entityType": "product",
+        "name": "二代低Dk/Df布",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-low-cte-cloth",
+        "entityType": "product",
+        "name": "低CTE布",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-quartz-glass-fiber-cloth",
+        "entityType": "product",
+        "name": "石英玻璃纤维布",
+        "aliases": [
+          "石英布",
+          "石英电子布"
+        ]
+      },
+      {
+        "candidateId": "entity-thick-cloth",
+        "entityType": "product",
+        "name": "厚布",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-thin-cloth",
+        "entityType": "product",
+        "name": "薄布",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-ultra-thin-cloth",
+        "entityType": "product",
+        "name": "超薄布",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-extremely-thin-cloth",
+        "entityType": "product",
+        "name": "极薄布",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-electronic-yarn",
+        "entityType": "product",
+        "name": "电子纱",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-d450-electronic-yarn",
+        "entityType": "product",
+        "name": "D450电子纱",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-ccl",
+        "entityType": "product",
+        "name": "覆铜板",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-fine-yarn-drawing",
+        "entityType": "technology",
+        "name": "极细纱拉丝技术",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-precision-weaving",
+        "entityType": "technology",
+        "name": "精密织造技术",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-opening-treatment",
+        "entityType": "technology",
+        "name": "开纤处理技术",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-china-jushi",
+        "entityType": "company",
+        "name": "中国巨石",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-honghe-technology",
+        "entityType": "company",
+        "name": "宏和科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-sinoma-technology",
+        "entityType": "company",
+        "name": "中材科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-international-composites",
+        "entityType": "company",
+        "name": "国际复材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-feilihua",
+        "entityType": "company",
+        "name": "菲利华",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-guangyuan-new-materials",
+        "entityType": "company",
+        "name": "光远新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-kingboard-laminates",
+        "entityType": "company",
+        "name": "建滔积层板",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-taiwan-glass",
+        "entityType": "company",
+        "name": "台玻集团",
+        "aliases": [
+          "Taiwan Glass"
+        ]
+      },
+      {
+        "candidateId": "entity-fulltech",
+        "entityType": "company",
+        "name": "富乔工业",
+        "aliases": [
+          "Fulltech Fiber Glass"
+        ]
+      },
+      {
+        "candidateId": "entity-agy",
+        "entityType": "company",
+        "name": "AGY",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-jps-composite-materials",
+        "entityType": "company",
+        "name": "JPS Composite Materials",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-saint-gobain-quartzel",
+        "entityType": "company",
+        "name": "Saint-Gobain / Quartzel",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-shin-etsu",
+        "entityType": "company",
+        "name": "信越化学",
+        "aliases": [
+          "Shin-Etsu"
+        ]
+      },
+      {
+        "candidateId": "entity-candidate-001",
+        "entityType": "investment_theme",
+        "name": "AI算力",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-002",
+        "entityType": "industry",
+        "name": "半导体制造",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-003",
+        "entityType": "industry",
+        "name": "晶圆制造",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-004",
+        "entityType": "industry",
+        "name": "半导体材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-005",
+        "entityType": "product",
+        "name": "半导体硅片",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-006",
+        "entityType": "product",
+        "name": "光刻材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-007",
+        "entityType": "product",
+        "name": "电子特气",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-008",
+        "entityType": "product",
+        "name": "前驱体材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-009",
+        "entityType": "product",
+        "name": "溅射靶材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-010",
+        "entityType": "product",
+        "name": "湿电子化学品",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-011",
+        "entityType": "product",
+        "name": "12英寸硅片",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-012",
+        "entityType": "product",
+        "name": "HBM",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-013",
+        "entityType": "company",
+        "name": "信越化学",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-014",
+        "entityType": "company",
+        "name": "SUMCO",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-015",
+        "entityType": "company",
+        "name": "环球晶圆",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-016",
+        "entityType": "company",
+        "name": "德国世创",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-017",
+        "entityType": "company",
+        "name": "SK Siltron",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-018",
+        "entityType": "company",
+        "name": "西安奕材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-019",
+        "entityType": "company",
+        "name": "上海新昇",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-020",
+        "entityType": "company",
+        "name": "中环领先",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-021",
+        "entityType": "company",
+        "name": "立昂微",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-022",
+        "entityType": "company",
+        "name": "中欣晶圆",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-023",
+        "entityType": "company",
+        "name": "山东有研艾斯",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-candidate-024",
+        "entityType": "company",
+        "name": "上海超硅",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-001",
+        "entityType": "product",
+        "name": "光刻材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-002",
+        "entityType": "product",
+        "name": "SOC",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-003",
+        "entityType": "product",
+        "name": "抗反射涂层",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-004",
+        "entityType": "product",
+        "name": "BARC",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-005",
+        "entityType": "product",
+        "name": "TARC",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-006",
+        "entityType": "product",
+        "name": "光刻胶",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-007",
+        "entityType": "product",
+        "name": "ArF光刻胶",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-008",
+        "entityType": "product",
+        "name": "KrF光刻胶",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-009",
+        "entityType": "product",
+        "name": "EUV光刻胶",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-010",
+        "entityType": "product",
+        "name": "光敏聚酰亚胺",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-011",
+        "entityType": "technology",
+        "name": "浸没式光刻",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-012",
+        "entityType": "technology",
+        "name": "多重曝光",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-013",
+        "entityType": "technology",
+        "name": "FinFET",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-014",
+        "entityType": "technology",
+        "name": "3D NAND",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-015",
+        "entityType": "industry",
+        "name": "半导体制造",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-016",
+        "entityType": "industry",
+        "name": "半导体封测",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-017",
+        "entityType": "company",
+        "name": "美国杜邦",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-018",
+        "entityType": "company",
+        "name": "日本合成橡胶",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-019",
+        "entityType": "company",
+        "name": "信越化学",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-020",
+        "entityType": "company",
+        "name": "Brewer Science",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-021",
+        "entityType": "company",
+        "name": "东京应化",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-022",
+        "entityType": "company",
+        "name": "富士胶片",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-023",
+        "entityType": "company",
+        "name": "日产化学",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-024",
+        "entityType": "company",
+        "name": "德国默克",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-025",
+        "entityType": "company",
+        "name": "彤程新材（北京科华）",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-026",
+        "entityType": "company",
+        "name": "艾森股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-027",
+        "entityType": "company",
+        "name": "南大光电",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-028",
+        "entityType": "company",
+        "name": "上海新阳",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-029",
+        "entityType": "company",
+        "name": "飞凯材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-030",
+        "entityType": "company",
+        "name": "晶瑞电材（瑞红苏州）",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-031",
+        "entityType": "company",
+        "name": "博康化学科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-032",
+        "entityType": "company",
+        "name": "鼎龙股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-033",
+        "entityType": "company",
+        "name": "艾深斯科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-034",
+        "entityType": "company",
+        "name": "润邦半导体材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-035",
+        "entityType": "company",
+        "name": "恒坤新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-001",
+        "entityType": "industry",
+        "name": "集成电路制造",
+        "aliases": [
+          "集成电路"
+        ]
+      },
+      {
+        "candidateId": "entity-002",
+        "entityType": "industry",
+        "name": "显示面板",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-003",
+        "entityType": "industry",
+        "name": "半导体照明",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-004",
+        "entityType": "industry",
+        "name": "光伏",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-005",
+        "entityType": "product",
+        "name": "电子气体",
+        "aliases": [
+          "电子气体市场"
+        ]
+      },
+      {
+        "candidateId": "entity-006",
+        "entityType": "product",
+        "name": "电子特气",
+        "aliases": [
+          "电子特种气体"
+        ]
+      },
+      {
+        "candidateId": "entity-007",
+        "entityType": "product",
+        "name": "三氟化氮",
+        "aliases": [
+          "NF₃",
+          "NF3"
+        ]
+      },
+      {
+        "candidateId": "entity-008",
+        "entityType": "product",
+        "name": "六氟化钨",
+        "aliases": [
+          "WF₆",
+          "WF6"
+        ]
+      },
+      {
+        "candidateId": "entity-009",
+        "entityType": "product",
+        "name": "前驱体材料",
+        "aliases": [
+          "前驱体"
+        ]
+      },
+      {
+        "candidateId": "entity-010",
+        "entityType": "product",
+        "name": "硅基前驱体",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-011",
+        "entityType": "product",
+        "name": "金属基前驱体",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-012",
+        "entityType": "product",
+        "name": "High-K前驱体",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-013",
+        "entityType": "product",
+        "name": "Low-K前驱体",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-014",
+        "entityType": "technology",
+        "name": "PVD",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-015",
+        "entityType": "technology",
+        "name": "CVD",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-016",
+        "entityType": "technology",
+        "name": "ALD",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-017",
+        "entityType": "company",
+        "name": "SK Materials",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-018",
+        "entityType": "company",
+        "name": "关东电化",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-019",
+        "entityType": "company",
+        "name": "林德",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-020",
+        "entityType": "company",
+        "name": "液化空气",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-021",
+        "entityType": "company",
+        "name": "大阳日酸",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-022",
+        "entityType": "company",
+        "name": "空气化工",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-023",
+        "entityType": "company",
+        "name": "昭和电工",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-024",
+        "entityType": "company",
+        "name": "中船特气",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-025",
+        "entityType": "company",
+        "name": "南大光电",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-026",
+        "entityType": "company",
+        "name": "昊华科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-027",
+        "entityType": "company",
+        "name": "华特气体",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-028",
+        "entityType": "company",
+        "name": "金宏气体",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-029",
+        "entityType": "company",
+        "name": "雅克科技",
+        "aliases": [
+          "UP Chemical"
+        ]
+      },
+      {
+        "candidateId": "entity-030",
+        "entityType": "company",
+        "name": "默克集团",
+        "aliases": [
+          "默克"
+        ]
+      },
+      {
+        "candidateId": "entity-031",
+        "entityType": "company",
+        "name": "Entegris",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-032",
+        "entityType": "company",
+        "name": "Tri Chemical Laboratories",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-033",
+        "entityType": "company",
+        "name": "ADEKA",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-034",
+        "entityType": "company",
+        "name": "Soul Brain",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-035",
+        "entityType": "company",
+        "name": "DNF",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-036",
+        "entityType": "company",
+        "name": "中巨芯",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-037",
+        "entityType": "company",
+        "name": "正帆科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-038",
+        "entityType": "company",
+        "name": "恒坤新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-039",
+        "entityType": "company",
+        "name": "晓星",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-040",
+        "entityType": "company",
+        "name": "厚成化工",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-041",
+        "entityType": "company",
+        "name": "中央硝子",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-042",
+        "entityType": "company",
+        "name": "博瑞电子",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-043",
+        "entityType": "company",
+        "name": "博瑞中硝",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-044",
+        "entityType": "company",
+        "name": "昊华气体",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "technology",
+        "name": "CMP",
+        "aliases": [
+          "化学机械抛光"
+        ]
+      },
+      {
+        "candidateId": null,
+        "entityType": "product",
+        "name": "CMP抛光材料",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "product",
+        "name": "抛光液",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "product",
+        "name": "抛光垫",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "product",
+        "name": "清洗液",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "product",
+        "name": "溅射靶材",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "product",
+        "name": "湿电子化学品",
+        "aliases": [
+          "超净高纯电子化学品"
+        ]
+      },
+      {
+        "candidateId": null,
+        "entityType": "industry",
+        "name": "半导体制造",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "industry",
+        "name": "集成电路",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "industry",
+        "name": "显示面板",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "industry",
+        "name": "太阳能光伏",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "Cabot Microelectronics",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "Fujimi",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "安集科技",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "鼎龙股份",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "上海新阳",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "日矿金属",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "霍尼韦尔",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "东曹",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "普莱克斯",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "有研新材",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "阿石创",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "江丰电子",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "隆华科技",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "欧莱新材",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "巴斯夫",
+        "aliases": [
+          "BASF"
+        ]
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "陶氏杜邦",
+        "aliases": [
+          "DowDuPont"
+        ]
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "住友化学",
+        "aliases": [
+          "Sumitomo"
+        ]
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "三菱化学",
+        "aliases": [
+          "Mitsubishi"
+        ]
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "江化微",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "中巨芯",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "晶瑞电材",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "格林达",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "润玛股份",
+        "aliases": []
+      },
+      {
+        "candidateId": null,
+        "entityType": "company",
+        "name": "达诺尔",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-001",
+        "entityType": "industry",
+        "name": "半导体封装材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-002",
+        "entityType": "industry",
+        "name": "半导体封装",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-003",
+        "entityType": "product",
+        "name": "环氧塑封料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-004",
+        "entityType": "product",
+        "name": "液态环氧封装料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-005",
+        "entityType": "product",
+        "name": "有机硅胶",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-006",
+        "entityType": "product",
+        "name": "酚醛模塑料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-007",
+        "entityType": "product",
+        "name": "导电银胶",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-008",
+        "entityType": "product",
+        "name": "封装基板",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-009",
+        "entityType": "product",
+        "name": "引线框架",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-010",
+        "entityType": "product",
+        "name": "键合丝",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-011",
+        "entityType": "product",
+        "name": "包封材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-012",
+        "entityType": "product",
+        "name": "芯片粘结材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-013",
+        "entityType": "product",
+        "name": "陶瓷基板",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-014",
+        "entityType": "technology",
+        "name": "通孔插装",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-015",
+        "entityType": "technology",
+        "name": "表面贴装",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-016",
+        "entityType": "technology",
+        "name": "面积阵列封装",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-017",
+        "entityType": "technology",
+        "name": "多芯片组装",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-018",
+        "entityType": "technology",
+        "name": "系统级封装",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-019",
+        "entityType": "technology",
+        "name": "三维立体封装",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-020",
+        "entityType": "technology",
+        "name": "凸块制造",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-021",
+        "entityType": "technology",
+        "name": "系统级单芯片封装",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-022",
+        "entityType": "technology",
+        "name": "微电子机械系统封装",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-023",
+        "entityType": "technology",
+        "name": "硅通孔",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-024",
+        "entityType": "technology",
+        "name": "倒装焊封装",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-025",
+        "entityType": "technology",
+        "name": "扇出型封装",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-026",
+        "entityType": "company",
+        "name": "住友电木",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-027",
+        "entityType": "company",
+        "name": "松下",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-028",
+        "entityType": "company",
+        "name": "京瓷",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-029",
+        "entityType": "company",
+        "name": "信越化学",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-030",
+        "entityType": "company",
+        "name": "汉高",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-031",
+        "entityType": "company",
+        "name": "华海诚科",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-032",
+        "entityType": "company",
+        "name": "衡所华威",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-033",
+        "entityType": "company",
+        "name": "中科科化",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-034",
+        "entityType": "company",
+        "name": "凯华材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-035",
+        "entityType": "company",
+        "name": "康美特",
+        "aliases": []
+      },
+      {
+        "candidateId": "ec-036",
+        "entityType": "company",
+        "name": "创达新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-ai-computing",
+        "entityType": "investment_theme",
+        "name": "AI算力",
+        "aliases": []
+      },
+      {
+        "candidateId": "ent-optical-fiber-cable",
+        "entityType": "industry",
+        "name": "光纤光缆",
+        "aliases": []
+      },
+      {
+        "candidateId": "prod-silicon-tetrachloride",
+        "entityType": "product",
+        "name": "四氯化硅",
+        "aliases": [
+          "高纯四氯化硅",
+          "电子级四氯化硅"
+        ]
+      },
+      {
+        "candidateId": "prod-germanium-tetrachloride",
+        "entityType": "product",
+        "name": "四氯化锗",
+        "aliases": []
+      },
+      {
+        "candidateId": "prod-hydrogen",
+        "entityType": "product",
+        "name": "氢气",
+        "aliases": []
+      },
+      {
+        "candidateId": "prod-helium",
+        "entityType": "product",
+        "name": "氦气",
+        "aliases": []
+      },
+      {
+        "candidateId": "prod-fiber-preform",
+        "entityType": "product",
+        "name": "光纤预制棒",
+        "aliases": []
+      },
+      {
+        "candidateId": "prod-para-aramid",
+        "entityType": "product",
+        "name": "对位芳纶",
+        "aliases": [
+          "芳纶1414",
+          "PPTA"
+        ]
+      },
+      {
+        "candidateId": "prod-uv-coating",
+        "entityType": "product",
+        "name": "UV涂覆材料",
+        "aliases": [
+          "UV固化光纤涂覆材料",
+          "紫外固化涂覆材料"
+        ]
+      },
+      {
+        "candidateId": "co-sanfu",
+        "entityType": "company",
+        "name": "三孚股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-xinan",
+        "entityType": "company",
+        "name": "新安股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-yunnan-germanium",
+        "entityType": "company",
+        "name": "云南锗业",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-huate-gas",
+        "entityType": "company",
+        "name": "华特气体",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-jinhong-gas",
+        "entityType": "company",
+        "name": "金宏气体",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-heyuan-gas",
+        "entityType": "company",
+        "name": "和远气体",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-taihe-new-material",
+        "entityType": "company",
+        "name": "泰和新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-sinochem-international",
+        "entityType": "company",
+        "name": "中化国际",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-feikai",
+        "entityType": "company",
+        "name": "飞凯材料",
+        "aliases": [
+          "PhiChem"
+        ]
+      },
+      {
+        "candidateId": "co-huitian-new-material",
+        "entityType": "company",
+        "name": "回天新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-covestro",
+        "entityType": "company",
+        "name": "科思创",
+        "aliases": [
+          "Covestro"
+        ]
+      },
+      {
+        "candidateId": "co-dsm",
+        "entityType": "company",
+        "name": "DSM",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-luvantix-adm",
+        "entityType": "company",
+        "name": "Luvantix ADM",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-my-polymers",
+        "entityType": "company",
+        "name": "MY Polymers",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-yoec",
+        "entityType": "company",
+        "name": "YOEC",
+        "aliases": []
+      },
+      {
+        "candidateId": "co-kriya-materials",
+        "entityType": "company",
+        "name": "Kriya Materials",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-001",
+        "entityType": "company",
+        "name": "西部证券",
+        "aliases": [
+          "西部证券股份有限公司"
+        ]
+      },
+      {
+        "candidateId": "entity-002",
+        "entityType": "industry",
+        "name": "AI产业链",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-003",
+        "entityType": "industry",
+        "name": "AI基础设施",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-004",
+        "entityType": "technology",
+        "name": "AI技术路线",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-inp",
+        "entityType": "product",
+        "name": "磷化铟",
+        "aliases": [
+          "InP"
+        ]
+      },
+      {
+        "candidateId": "entity-inp-substrate",
+        "entityType": "product",
+        "name": "磷化铟衬底",
+        "aliases": [
+          "InP substrate",
+          "磷化铟晶片",
+          "磷化铟晶圆"
+        ]
+      },
+      {
+        "candidateId": "entity-inp-epiwafer",
+        "entityType": "product",
+        "name": "磷化铟外延片",
+        "aliases": [
+          "InP epiwafer"
+        ]
+      },
+      {
+        "candidateId": "entity-optical-module",
+        "entityType": "product",
+        "name": "光模块",
+        "aliases": []
+      },
+      {
+        "candidateId": "industry-semiconductor-materials",
+        "entityType": "industry",
+        "name": "半导体材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "industry-optical-communication",
+        "entityType": "industry",
+        "name": "光通信",
+        "aliases": []
+      },
+      {
+        "candidateId": "industry-sensor-devices",
+        "entityType": "industry",
+        "name": "传感器件",
+        "aliases": []
+      },
+      {
+        "candidateId": "industry-rf-devices",
+        "entityType": "industry",
+        "name": "射频器件",
+        "aliases": []
+      },
+      {
+        "candidateId": "industry-quantum-computing",
+        "entityType": "industry",
+        "name": "量子计算",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-ln-wafer",
+        "entityType": "product",
+        "name": "铌酸锂晶体及晶圆",
+        "aliases": [
+          "铌酸锂",
+          "LN"
+        ]
+      },
+      {
+        "candidateId": "entity-tfln",
+        "entityType": "product",
+        "name": "薄膜铌酸锂",
+        "aliases": [
+          "TFLN",
+          "绝缘体上铌酸锂"
+        ]
+      },
+      {
+        "candidateId": "entity-tfln-wafer",
+        "entityType": "product",
+        "name": "薄膜铌酸锂晶圆",
+        "aliases": [
+          "TFLN wafer",
+          "TFLN bonded wafer"
+        ]
+      },
+      {
+        "candidateId": "technology-ion-slicing",
+        "entityType": "technology",
+        "name": "离子剥离",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-sumitomo-electric",
+        "entityType": "company",
+        "name": "住友电工",
+        "aliases": [
+          "Sumitomo"
+        ]
+      },
+      {
+        "candidateId": "company-jx-advanced-metals",
+        "entityType": "company",
+        "name": "JX Advanced Metals",
+        "aliases": [
+          "日本JX"
+        ]
+      },
+      {
+        "candidateId": "company-axt-beijing-tongmei",
+        "entityType": "company",
+        "name": "AXT / 北京通美",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-vpec",
+        "entityType": "company",
+        "name": "全新光电",
+        "aliases": [
+          "VPEC"
+        ]
+      },
+      {
+        "candidateId": "company-yunnan-germanium",
+        "entityType": "company",
+        "name": "云南锗业",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-yunnan-xinyao",
+        "entityType": "company",
+        "name": "云南鑫耀",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-xian-dao",
+        "entityType": "company",
+        "name": "先导科技集团",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-bojay",
+        "entityType": "company",
+        "name": "博杰股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-dingtai-xinyuan",
+        "entityType": "company",
+        "name": "鼎泰芯源",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-huaxin-jingdian",
+        "entityType": "company",
+        "name": "华芯晶电",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-tiandtong",
+        "entityType": "company",
+        "name": "天通股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-nanzhi-xincai",
+        "entityType": "company",
+        "name": "南智芯材",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-jinan-jingzheng",
+        "entityType": "company",
+        "name": "济南晶正电子",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-shanghai-xingui",
+        "entityType": "company",
+        "name": "上海新硅聚合半导体",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-deqing-huaying",
+        "entityType": "company",
+        "name": "德清华莹",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-hengyuan-optoelectronics",
+        "entityType": "company",
+        "name": "恒元光电",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-sumitomo-metal-mining",
+        "entityType": "company",
+        "name": "住友金属矿业",
+        "aliases": [
+          "Sumitomo Metal Mining"
+        ]
+      },
+      {
+        "candidateId": "company-tdk-epcos",
+        "entityType": "company",
+        "name": "TDK / 爱普科斯",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-korth-kristalle",
+        "entityType": "company",
+        "name": "Korth Kristalle",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-ngk-insulators",
+        "entityType": "company",
+        "name": "NGK Insulators",
+        "aliases": [
+          "日本碍子"
+        ]
+      },
+      {
+        "candidateId": "company-partow-technologies",
+        "entityType": "company",
+        "name": "Partow Technologies",
+        "aliases": []
+      },
+      {
+        "candidateId": "company-srico-scrico",
+        "entityType": "company",
+        "name": "SRICO / SCRICO",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-001",
+        "entityType": "investment_theme",
+        "name": "AI算力",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-002",
+        "entityType": "industry",
+        "name": "氟化工",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-003",
+        "entityType": "industry",
+        "name": "先进封装",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-004",
+        "entityType": "industry",
+        "name": "光通信",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-005",
+        "entityType": "industry",
+        "name": "电子元件",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-006",
+        "entityType": "product",
+        "name": "含氟制冷剂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-007",
+        "entityType": "product",
+        "name": "含氟冷却液",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-008",
+        "entityType": "product",
+        "name": "氟碳化学品",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-009",
+        "entityType": "product",
+        "name": "MLCC",
+        "aliases": [
+          "多层陶瓷电容器"
+        ]
+      },
+      {
+        "candidateId": "entity-010",
+        "entityType": "product",
+        "name": "陶瓷介质粉体",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-011",
+        "entityType": "product",
+        "name": "电极金属粉体",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-012",
+        "entityType": "product",
+        "name": "辅助添加剂",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-013",
+        "entityType": "product",
+        "name": "钛酸钡陶瓷粉体",
+        "aliases": [
+          "钛酸钡粉体",
+          "BaTiO₃陶瓷粉体"
+        ]
+      },
+      {
+        "candidateId": "entity-014",
+        "entityType": "product",
+        "name": "纳米镍粉",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-015",
+        "entityType": "product",
+        "name": "铜粉",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-016",
+        "entityType": "product",
+        "name": "银浆",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-017",
+        "entityType": "product",
+        "name": "PI膜",
+        "aliases": [
+          "聚酰亚胺薄膜",
+          "PIF"
+        ]
+      },
+      {
+        "candidateId": "entity-018",
+        "entityType": "product",
+        "name": "电子级PI膜",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-019",
+        "entityType": "product",
+        "name": "玻璃基板",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-020",
+        "entityType": "product",
+        "name": "ABF基板",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-021",
+        "entityType": "technology",
+        "name": "TGV",
+        "aliases": [
+          "玻璃通孔"
+        ]
+      },
+      {
+        "candidateId": "entity-022",
+        "entityType": "technology",
+        "name": "玻璃桥",
+        "aliases": [
+          "Glass Bridge"
+        ]
+      },
+      {
+        "candidateId": "entity-023",
+        "entityType": "technology",
+        "name": "IOX光波导",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-024",
+        "entityType": "company",
+        "name": "新宙邦",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-025",
+        "entityType": "company",
+        "name": "昊华科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-026",
+        "entityType": "company",
+        "name": "东岳集团",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-027",
+        "entityType": "company",
+        "name": "巨化股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-028",
+        "entityType": "company",
+        "name": "三美股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-029",
+        "entityType": "company",
+        "name": "科慕公司",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-030",
+        "entityType": "company",
+        "name": "大金工业株式会社",
+        "aliases": [
+          "大金公司"
+        ]
+      },
+      {
+        "candidateId": "entity-031",
+        "entityType": "company",
+        "name": "霍尼韦尔",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-032",
+        "entityType": "company",
+        "name": "村田",
+        "aliases": [
+          "Murata"
+        ]
+      },
+      {
+        "candidateId": "entity-033",
+        "entityType": "company",
+        "name": "三星电机",
+        "aliases": [
+          "SEMCO"
+        ]
+      },
+      {
+        "candidateId": "entity-034",
+        "entityType": "company",
+        "name": "太阳诱电",
+        "aliases": [
+          "Taiyo Yuden"
+        ]
+      },
+      {
+        "candidateId": "entity-035",
+        "entityType": "company",
+        "name": "TDK",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-036",
+        "entityType": "company",
+        "name": "国巨",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-037",
+        "entityType": "company",
+        "name": "三环集团",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-038",
+        "entityType": "company",
+        "name": "风华高科",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-039",
+        "entityType": "company",
+        "name": "微容科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-040",
+        "entityType": "company",
+        "name": "国瓷材料",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-041",
+        "entityType": "company",
+        "name": "博迁新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-042",
+        "entityType": "company",
+        "name": "洁美科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-043",
+        "entityType": "company",
+        "name": "堺化学",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-044",
+        "entityType": "company",
+        "name": "Ferro",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-045",
+        "entityType": "company",
+        "name": "日本化学",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-046",
+        "entityType": "company",
+        "name": "日本富士钛",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-047",
+        "entityType": "company",
+        "name": "日本共立",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-048",
+        "entityType": "company",
+        "name": "日本东邦",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-049",
+        "entityType": "company",
+        "name": "日本昭荣化学",
+        "aliases": [
+          "Shoei Chemical"
+        ]
+      },
+      {
+        "candidateId": "entity-050",
+        "entityType": "company",
+        "name": "杜邦",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-051",
+        "entityType": "company",
+        "name": "钟渊化学",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-052",
+        "entityType": "company",
+        "name": "SKPI",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-053",
+        "entityType": "company",
+        "name": "宇部兴产",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-054",
+        "entityType": "company",
+        "name": "达迈科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-055",
+        "entityType": "company",
+        "name": "时代新材",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-056",
+        "entityType": "company",
+        "name": "国风塑业",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-057",
+        "entityType": "company",
+        "name": "丹邦科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-058",
+        "entityType": "company",
+        "name": "瑞华泰",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-059",
+        "entityType": "company",
+        "name": "康宁",
+        "aliases": [
+          "Corning"
+        ]
+      },
+      {
+        "candidateId": "entity-060",
+        "entityType": "company",
+        "name": "旗滨集团",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-061",
+        "entityType": "company",
+        "name": "凯盛科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-062",
+        "entityType": "company",
+        "name": "力诺药包",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-063",
+        "entityType": "company",
+        "name": "彩虹股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-064",
+        "entityType": "company",
+        "name": "戈碧迦",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-065",
+        "entityType": "company",
+        "name": "天承科技",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-066",
+        "entityType": "company",
+        "name": "艾森股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-067",
+        "entityType": "company",
+        "name": "鼎龙股份",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-068",
+        "entityType": "company",
+        "name": "兴福电子",
+        "aliases": []
+      },
+      {
+        "candidateId": "entity-069",
+        "entityType": "company",
+        "name": "容大感光",
+        "aliases": []
+      }
+    ],
+    "relationClaimReview": {
+      "total": 106,
+      "root": 87,
+      "dependency": 19,
+      "byCategory": {
+        "invalid_reference": 40,
+        "invalid_semantics": 1,
+        "relation_cardinality": 0,
+        "schema_gap": 0,
+        "theme_creation": 1,
+        "theme_ambiguity": 0,
+        "reconciliation_review": 20,
+        "other": 44
+      },
+      "byKind": {
+        "entity": 45,
+        "relation": 38,
+        "claim": 23,
+        "workflow_level": 0
+      }
+    }
+  },
+  "reviewSummary": {
+    "total": 106,
+    "root": 87,
+    "dependency": 19,
+    "byCategory": {
+      "invalid_reference": 40,
+      "invalid_semantics": 1,
+      "relation_cardinality": 0,
+      "schema_gap": 0,
+      "theme_creation": 1,
+      "theme_ambiguity": 0,
+      "reconciliation_review": 20,
+      "other": 44
+    },
+    "byKind": {
+      "entity": 45,
+      "relation": 38,
+      "claim": 23,
+      "workflow_level": 0
+    }
+  },
+  "changeset": {
+    "entityCreates": 367,
+    "relationCreates": 337,
+    "claimCreates": 179,
+    "investmentThemeCreates": 0,
+    "themeGroupCreates": 0,
+    "themeGroupUpdates": 0
+  },
+  "writer": {
+    "invocations": 1,
+    "revisionBefore": 0,
+    "revisionAfter": 1,
+    "status": "committed"
+  },
+  "replay": {
+    "status": "completed_with_review",
+    "writeStatus": "already_committed",
+    "additionalReasoningCalls": 0,
+    "revisionBefore": 1,
+    "revisionAfter": 1,
+    "alreadyCommitted": true,
+    "sameStatus": true,
+    "sameReviewSummary": true,
+    "sameChangeSetId": true,
+    "idempotent": true
+  },
+  "performance": {
+    "stages": {
+      "doclingPreflightMs": 116176,
+      "planMs": {
+        "count": 1,
+        "min": 222013,
+        "mean": 222013,
+        "p50": 222013,
+        "p95": 222013,
+        "max": 222013
+      },
+      "extractionWallClockMs": 596834,
+      "postExtractionAndWorkflowOverheadMs": 339147,
+      "primaryWorkflowMs": 935981,
+      "replayMs": 168,
+      "totalWallClockMs": 1068632
+    },
+    "extractionLatencyMs": {
+      "count": 13,
+      "min": 54453,
+      "mean": 158345,
+      "p50": 149895,
+      "p95": 212519,
+      "max": 239004
+    },
+    "reasoningOperations": [
+      {
+        "sequence": 1,
+        "operation": "understandAndPlan",
+        "unitId": null,
+        "startedAt": "2026-09-05T10:02:45.888Z",
+        "inputChars": 619685,
+        "outputBytes": 49294,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:06:27.904Z",
+        "durationMs": 222013
+      },
+      {
+        "sequence": 2,
+        "operation": "extractKnowledge",
+        "unitId": "unit-001",
+        "startedAt": "2026-09-05T10:06:27.975Z",
+        "inputChars": 37146,
+        "outputBytes": 23762,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:08:31.861Z",
+        "durationMs": 123885
+      },
+      {
+        "sequence": 3,
+        "operation": "extractKnowledge",
+        "unitId": "unit-002",
+        "startedAt": "2026-09-05T10:06:27.976Z",
+        "inputChars": 64750,
+        "outputBytes": 26910,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:08:57.872Z",
+        "durationMs": 149895
+      },
+      {
+        "sequence": 4,
+        "operation": "extractKnowledge",
+        "unitId": "unit-003",
+        "startedAt": "2026-09-05T10:06:27.977Z",
+        "inputChars": 68794,
+        "outputBytes": 40321,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:10:00.497Z",
+        "durationMs": 212519
+      },
+      {
+        "sequence": 5,
+        "operation": "extractKnowledge",
+        "unitId": "unit-004",
+        "startedAt": "2026-09-05T10:06:27.979Z",
+        "inputChars": 63612,
+        "outputBytes": 30967,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:08:55.569Z",
+        "durationMs": 147588
+      },
+      {
+        "sequence": 6,
+        "operation": "extractKnowledge",
+        "unitId": "unit-005",
+        "startedAt": "2026-09-05T10:08:31.866Z",
+        "inputChars": 79780,
+        "outputBytes": 24870,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:10:55.112Z",
+        "durationMs": 143244
+      },
+      {
+        "sequence": 7,
+        "operation": "extractKnowledge",
+        "unitId": "unit-006",
+        "startedAt": "2026-09-05T10:08:55.597Z",
+        "inputChars": 72500,
+        "outputBytes": 27202,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:11:28.957Z",
+        "durationMs": 153359
+      },
+      {
+        "sequence": 8,
+        "operation": "extractKnowledge",
+        "unitId": "unit-007",
+        "startedAt": "2026-09-05T10:08:57.880Z",
+        "inputChars": 82470,
+        "outputBytes": 39833,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:12:03.037Z",
+        "durationMs": 185156
+      },
+      {
+        "sequence": 9,
+        "operation": "extractKnowledge",
+        "unitId": "unit-008",
+        "startedAt": "2026-09-05T10:10:00.515Z",
+        "inputChars": 73724,
+        "outputBytes": 28061,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:12:25.800Z",
+        "durationMs": 145284
+      },
+      {
+        "sequence": 10,
+        "operation": "extractKnowledge",
+        "unitId": "unit-009",
+        "startedAt": "2026-09-05T10:10:55.148Z",
+        "inputChars": 46285,
+        "outputBytes": 38661,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:13:43.701Z",
+        "durationMs": 168551
+      },
+      {
+        "sequence": 11,
+        "operation": "extractKnowledge",
+        "unitId": "unit-010",
+        "startedAt": "2026-09-05T10:11:28.994Z",
+        "inputChars": 81767,
+        "outputBytes": 38270,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:14:50.800Z",
+        "durationMs": 201805
+      },
+      {
+        "sequence": 12,
+        "operation": "extractKnowledge",
+        "unitId": "unit-011",
+        "startedAt": "2026-09-05T10:12:03.115Z",
+        "inputChars": 64722,
+        "outputBytes": 26902,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:14:16.861Z",
+        "durationMs": 133745
+      },
+      {
+        "sequence": 13,
+        "operation": "extractKnowledge",
+        "unitId": "unit-012",
+        "startedAt": "2026-09-05T10:12:25.804Z",
+        "inputChars": 85924,
+        "outputBytes": 46387,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:16:24.809Z",
+        "durationMs": 239004
+      },
+      {
+        "sequence": 14,
+        "operation": "extractKnowledge",
+        "unitId": "unit-013",
+        "startedAt": "2026-09-05T10:13:43.731Z",
+        "inputChars": 42906,
+        "outputBytes": 6218,
+        "status": "passed",
+        "completedAt": "2026-09-05T10:14:38.185Z",
+        "durationMs": 54453
+      }
+    ],
+    "concurrency": {
+      "configured": 4,
+      "executorCapability": 4,
+      "actual": 4,
+      "peak": 4
+    },
+    "historicalComparison": {
+      "serialPrimaryMs": 3402775,
+      "currentPrimaryMs": 935981,
+      "approximateSpeedup": 3.636,
+      "approximateTimeReductionPct": 72.49,
+      "caveat": "Approximate only: Luna outputs, ExtractionUnit count, and service latency vary; speedup is not attributed solely to concurrency."
+    }
+  },
+  "validationOutcome": "SUCCESS",
+  "ctoAcceptance": "PENDING",
+  "completedAt": "2026-09-05T10:16:26.220Z"
+}
