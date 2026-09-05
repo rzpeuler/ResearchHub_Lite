@@ -1,7 +1,8 @@
 import { normalizeSemanticText } from '../../knowledge/registry/id-allocation.ts'
 import { canonicalSerialize, hashKnowledgeObject } from '../../knowledge/storage/canonical-hash.ts'
 import type { CandidateEntityRef, ClaimCandidate, EntityCandidate, RelationCandidate, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
-import type { AcceptedExtractionUnit } from './contracts.ts'
+import { consolidationReviewKey } from './review-telemetry.ts'
+import type { AcceptedExtractionUnit, ConsolidationReviewConstraint } from './contracts.ts'
 
 export interface ConsolidatedCandidateSupport {
   readonly supportingCandidateCount: number
@@ -11,7 +12,7 @@ export interface ConsolidatedCandidateSupport {
 
 export interface ConsolidatedExtraction {
   readonly groups: readonly { candidateId: string; kind: 'entity' | 'relation' | 'claim'; candidate: EntityCandidate | RelationCandidate | ClaimCandidate }[]
-  readonly reviewConstraints: readonly { candidateId: string; reason: string; conflictingFields: readonly string[] }[]
+  readonly reviewConstraints: readonly ConsolidationReviewConstraint[]
   readonly rejected: readonly unknown[]
   readonly candidateCounts: Readonly<Record<string, number>>
   readonly candidateAliases: ReadonlyMap<string, string>
@@ -23,7 +24,27 @@ function semanticEntityIdentity(candidate: Pick<EntityCandidate, 'entityType' | 
 function entityKey(candidate: EntityCandidate): string { return canonicalSerialize(semanticEntityIdentity(candidate)) }
 function mergedEntityId(candidate: EntityCandidate): string { return `merged-entity-${hashKnowledgeObject(semanticEntityIdentity(candidate)).slice(7, 23)}` }
 function addUnique(values: readonly string[], additions: readonly string[]): string[] { return [...new Set([...values, ...additions])].sort() }
-function mergeDescription(left: string | null | undefined, right: string | null | undefined): string | null | undefined { if (left === undefined) return right; if (right === undefined || left === right) return left; return undefined }
+function mergeText(left: string | null | undefined, right: string | null | undefined): string | undefined {
+  const values = [left, right].filter((value): value is string => value !== undefined && value !== null)
+  if (values.length === 0) return undefined
+  if (values.length === 1 || normalizeSemanticText(values[0]!) === normalizeSemanticText(values[1]!)) return [...values].sort((a, b) => a.localeCompare(b))[0]
+  return undefined
+}
+function mergeSemanticFields(left: Readonly<Record<string, unknown>> | undefined, right: Readonly<Record<string, unknown>> | undefined, conflicted: Set<string>): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...(left ?? {}) }
+  for (const [key, value] of Object.entries(right ?? {})) {
+    if (value === undefined || value === null) continue
+    if (conflicted.has(key)) { delete merged[key]; continue }
+    const current = merged[key]
+    if (current === undefined || current === null) merged[key] = value
+    else if (normalizeSemanticText(String(current)) === normalizeSemanticText(String(value))) merged[key] = [String(current), String(value)].sort((a, b) => a.localeCompare(b))[0]
+    else if (key === 'legalName' || key === 'ticker' || key === 'exchange') { conflicted.add(key); delete merged[key] }
+  }
+  return merged
+}
+function constraint(candidateId: string, reason: string, fields: readonly string[], blocking: boolean, category: ConsolidationReviewConstraint['category']): ConsolidationReviewConstraint {
+  return { candidateId, reason, conflictingFields: [...new Set(fields)].sort(), blocking, category, reviewKey: consolidationReviewKey(candidateId, reason, fields) }
+}
 function mergeConfidence(left: number | undefined, right: number | undefined): number | undefined { if (left === undefined) return right; if (right === undefined) return left; return Math.min(left, right) }
 function candidateRef(candidateRef: string, mention: string, entityType?: EntityCandidate['entityType']): CandidateEntityRef { return { candidateRef, mention, ...(entityType === undefined ? {} : { entityType }) } }
 function namespaced(unitId: string, id: string): string { return `${unitId}::${id}` }
@@ -36,7 +57,8 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
   const relationInputs: Array<{ unitId: string; candidate: RelationCandidate }> = []
   const claimInputs: Array<{ unitId: string; candidate: ClaimCandidate }> = []
   const rejected: unknown[] = []
-  const reviewConstraints: Array<{ candidateId: string; reason: string; conflictingFields: readonly string[] }> = []
+  const reviewConstraints: ConsolidationReviewConstraint[] = []
+  const conflictedEntityFields = new Map<string, Set<string>>()
   let entityInput = 0
   let relationInput = 0
   let claimInput = 0
@@ -59,9 +81,18 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
         entityByMergedId.set(mergedId, value)
         entityAliases.set(originalId, mergedId)
       } else {
-        const descriptionConflict = current.description !== undefined && current.description !== null && candidate.description !== undefined && candidate.description !== null && current.description !== candidate.description
-        const merged = { ...current, aliases: addUnique(current.aliases ?? [], candidate.aliases ?? []), evidenceBlockRefs: addUnique(current.evidenceBlockRefs, candidate.evidenceBlockRefs), confidence: mergeConfidence(current.confidence, candidate.confidence), description: descriptionConflict ? current.description : mergeDescription(current.description, candidate.description) }
-        if (descriptionConflict) reviewConstraints.push({ candidateId: current.candidateId, reason: 'Entity descriptions conflict across extraction units', conflictingFields: ['description'] })
+        const conflicted = conflictedEntityFields.get(key) ?? new Set<string>()
+        const descriptionConflict = !conflicted.has('description') && current.description !== undefined && current.description !== null && candidate.description !== undefined && candidate.description !== null && normalizeSemanticText(current.description) !== normalizeSemanticText(candidate.description)
+        const currentFields = (current.semanticFields ?? {}) as Readonly<Record<string, unknown>>
+        const candidateFields = (candidate.semanticFields ?? {}) as Readonly<Record<string, unknown>>
+        const hardConflicts = candidate.entityType === 'company' ? ['ticker', 'exchange'].filter((field) => currentFields[field] !== undefined && currentFields[field] !== null && candidateFields[field] !== undefined && candidateFields[field] !== null && normalizeSemanticText(String(currentFields[field])) !== normalizeSemanticText(String(candidateFields[field]))) : []
+        const legalNameConflict = !conflicted.has('legalName') && candidate.entityType === 'company' && currentFields.legalName !== undefined && currentFields.legalName !== null && candidateFields.legalName !== undefined && candidateFields.legalName !== null && normalizeSemanticText(String(currentFields.legalName)) !== normalizeSemanticText(String(candidateFields.legalName))
+        const mergedFields = mergeSemanticFields(currentFields, candidateFields, conflicted)
+        const merged = { ...current, aliases: addUnique(current.aliases ?? [], candidate.aliases ?? []), evidenceBlockRefs: addUnique(current.evidenceBlockRefs, candidate.evidenceBlockRefs), confidence: mergeConfidence(current.confidence, candidate.confidence), semanticFields: mergedFields, description: conflicted.has('description') || descriptionConflict ? undefined : mergeText(current.description, candidate.description) }
+        if (descriptionConflict) { conflicted.add('description'); reviewConstraints.push(constraint(current.candidateId, 'Entity description variants across extraction units; canonical description omitted', ['description'], false, 'other')) }
+        if (legalNameConflict) { conflicted.add('legalName'); reviewConstraints.push(constraint(current.candidateId, 'Entity legalName variants across extraction units; canonical legalName omitted', ['legalName'], false, 'other')) }
+        if (hardConflicts.length > 0) { for (const field of hardConflicts) conflicted.add(field); reviewConstraints.push(constraint(current.candidateId, 'Company hard identity fields conflict across extraction units', hardConflicts, true, 'reconciliation_review')) }
+        conflictedEntityFields.set(key, conflicted)
         entityGroups.set(key, merged)
         entityByMergedId.set(merged.candidateId, merged)
         entityAliases.set(originalId, current.candidateId)
@@ -90,7 +121,7 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
       const right = normalizedCandidate.attributes ?? null
       const conflict = canonicalSerialize(left) !== canonicalSerialize(right)
       const mergedAttributes = !conflict && current.attributes !== undefined ? current.attributes : current.attributes ?? normalizedCandidate.attributes
-      if (conflict) reviewConstraints.push({ candidateId: current.candidateId, reason: 'Relation attributes conflict across extraction units', conflictingFields: [...new Set([...Object.keys((left && typeof left === 'object' ? left : {}) as object), ...Object.keys((right && typeof right === 'object' ? right : {}) as object)])].sort() })
+      if (conflict) reviewConstraints.push(constraint(current.candidateId, 'Relation attributes conflict across extraction units', [...new Set([...Object.keys((left && typeof left === 'object' ? left : {}) as object), ...Object.keys((right && typeof right === 'object' ? right : {}) as object)])].sort(), true, 'reconciliation_review'))
       relations.set(key, { ...current, evidenceBlockRefs: addUnique(current.evidenceBlockRefs, normalizedCandidate.evidenceBlockRefs), confidence: mergeConfidence(current.confidence, normalizedCandidate.confidence), ...(mergedAttributes === undefined ? {} : { attributes: mergedAttributes }) })
     }
   }
@@ -124,5 +155,5 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
     const support = supportByEntityKey.get(key)!
     return [candidate.candidateId, { supportingCandidateCount: support.supportingCandidateCount, supportingUnitIds: [...support.supportingUnitIds].sort(), evidenceBlockRefs: [...support.evidenceBlockRefs].sort() }] as const
   }))
-  return { groups, reviewConstraints: [...new Map(reviewConstraints.map((item) => [item.candidateId, item])).values()].sort((a, b) => a.candidateId.localeCompare(b.candidateId)), rejected, candidateCounts: { entity: entityInput, relation: relationInput, claim: claimInput, consolidated: groups.length, rejected: rejected.length }, candidateAliases: entityAliases, entityCandidates, candidateSupport }
+  return { groups, reviewConstraints: [...new Map(reviewConstraints.map((item) => [item.reviewKey, item])).values()].sort((a, b) => a.reviewKey.localeCompare(b.reviewKey)), rejected, candidateCounts: { entity: entityInput, relation: relationInput, claim: claimInput, consolidated: groups.length, rejected: rejected.length }, candidateAliases: entityAliases, entityCandidates, candidateSupport }
 }

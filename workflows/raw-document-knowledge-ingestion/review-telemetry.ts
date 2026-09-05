@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path'
 import { canonicalSerialize } from '../../knowledge/storage/canonical-hash.ts'
 import { withKnowledgeBaseMutationLock } from '../../knowledge/storage/mutation-lock.ts'
 import type { ResolvedCandidateGroup } from '../../skills/knowledge-curation/contracts.ts'
-import type { ReviewCategory, ReviewItem, ReviewOrigin, ReviewSample, ReviewSummary } from './contracts.ts'
+import type { ConsolidationReviewConstraint, ReviewCategory, ReviewItem, ReviewOrigin, ReviewSample, ReviewSummary } from './contracts.ts'
 
 type Dict = Record<string, unknown>
 type Event = ReviewSample & { readonly dependency: boolean; readonly origin: ReviewOrigin; readonly reviewKey: string }
@@ -41,7 +41,7 @@ export function emptyReviewSummary(): ReviewSummary {
 
 export interface ReviewNormalizationInput {
   readonly extractionRejected?: readonly unknown[]
-  readonly consolidationReviews?: readonly { readonly candidateId: string; readonly reason: string; readonly conflictingFields?: readonly string[] }[]
+  readonly consolidationReviews?: readonly ConsolidationReviewConstraint[]
   readonly resolutionReviews?: readonly ReviewItem[]
   readonly plannerReviewItems?: readonly ReviewItem[]
   readonly candidateGroups?: readonly ResolvedCandidateGroup[]
@@ -60,9 +60,9 @@ export function normalizeReviewSummary(input: ReviewNormalizationInput): ReviewS
     addEvent(events, { ...(candidateId === undefined ? {} : { candidateId }), kind: itemKind, stage: 'extraction', category: categoryForRejection(code), rationale, dependentCandidateIds: [], dependency: false, origin: 'extraction_rejection', reviewKey: ['extraction', candidateId ?? '', code, normalized(rationale)].join('|') })
   }
   for (const item of input.consolidationReviews ?? []) {
-    const reviewKey = consolidationReviewKey(item.candidateId, item.reason, item.conflictingFields ?? [])
+    const reviewKey = item.reviewKey ?? consolidationReviewKey(item.candidateId, item.reason, item.conflictingFields)
     consolidationKeys.set(item.candidateId, [...(consolidationKeys.get(item.candidateId) ?? []), reviewKey])
-    addEvent(events, { candidateId: item.candidateId, kind: kind(groupKinds.get(item.candidateId)), stage: 'consolidation', category: 'other', rationale: item.reason, dependentCandidateIds: [], dependency: false, origin: 'consolidation', reviewKey })
+    addEvent(events, { candidateId: item.candidateId, kind: kind(groupKinds.get(item.candidateId)), stage: 'consolidation', category: item.category, rationale: item.reason, dependentCandidateIds: [], dependency: false, origin: 'consolidation', reviewKey })
   }
   const resolutionKeys = new Map<string, string>()
   for (const item of input.resolutionReviews ?? []) { const reviewKey = item.reviewKey ?? plannerReviewKey(item.candidateId, item.stage ?? 'knowledge_resolution', item.category ?? 'reconciliation_review', item.rationale, item.dependency ?? false); resolutionKeys.set(item.candidateId + '|' + normalized(item.rationale), reviewKey); addEvent(events, { candidateId: item.candidateId, kind: kind(groupKinds.get(item.candidateId)), stage: item.stage ?? 'knowledge_resolution', category: item.category ?? 'reconciliation_review', rationale: item.rationale, dependentCandidateIds: item.dependentCandidateIds, dependency: item.dependency ?? false, origin: item.origin ?? 'knowledge_resolution', reviewKey }) }
@@ -84,7 +84,7 @@ export function normalizeReviewSummary(input: ReviewNormalizationInput): ReviewS
   const ordered = [...events.values()].sort((left, right) => left.reviewKey.localeCompare(right.reviewKey))
   const byCategory = Object.fromEntries(categories.map((value) => [value, ordered.filter((item) => item.category === value).length])) as Record<ReviewCategory, number>
   const byCandidateKind = Object.fromEntries(kinds.map((value) => [value, ordered.filter((item) => item.kind === value).length])) as Record<ReviewSample['kind'], number>
-  const samplesByCategory = Object.fromEntries(categories.map((value) => [value, ordered.filter((item) => item.category === value)])) as unknown as Record<ReviewCategory, readonly ReviewSample[]>
+  const samplesByCategory = Object.fromEntries(categories.map((value) => [value, ordered.filter((item) => item.category === value).slice(0, 5)])) as unknown as Record<ReviewCategory, readonly ReviewSample[]>
   const dependencyCount = ordered.filter((item) => item.dependency).length
   return { total: ordered.length, rootCount: ordered.length - dependencyCount, dependencyCount, byCategory, byCandidateKind, samplesByCategory }
 }

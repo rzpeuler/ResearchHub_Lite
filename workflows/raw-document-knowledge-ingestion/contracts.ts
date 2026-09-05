@@ -88,6 +88,14 @@ export interface PotentialInvestmentThemeAssessment {
 }
 export type ReviewCategory = 'invalid_reference' | 'invalid_semantics' | 'relation_cardinality' | 'schema_gap' | 'theme_creation' | 'theme_ambiguity' | 'reconciliation_review' | 'other'
 export type ReviewOrigin = 'extraction_rejection' | 'consolidation' | 'consolidation_mirror' | 'knowledge_resolution' | 'semantic_case' | 'planner' | 'dependency_isolation'
+export interface ConsolidationReviewConstraint {
+  readonly candidateId: string
+  readonly reason: string
+  readonly conflictingFields: readonly string[]
+  readonly blocking: boolean
+  readonly category: ReviewCategory
+  readonly reviewKey: string
+}
 export interface ReviewItem { readonly candidateId: string; readonly kind: string; readonly rationale: string; readonly dependentCandidateIds: readonly string[]; readonly stage?: string; readonly category?: ReviewCategory; readonly dependency?: boolean; readonly origin?: ReviewOrigin; readonly reviewKey?: string }
 export interface ReviewSample { readonly candidateId?: string; readonly kind: 'entity' | 'relation' | 'claim' | 'workflow_level'; readonly stage: string; readonly category: ReviewCategory; readonly rationale: string; readonly dependentCandidateIds: readonly string[]; readonly dependency?: boolean; readonly origin?: ReviewOrigin; readonly reviewKey?: string }
 export interface ReviewSummary { readonly total: number; readonly rootCount: number; readonly dependencyCount: number; readonly byCategory: Readonly<Record<ReviewCategory, number>>; readonly byCandidateKind: Readonly<Record<'entity' | 'relation' | 'claim' | 'workflow_level', number>>; readonly samplesByCategory: Readonly<Record<ReviewCategory, readonly ReviewSample[]>> }

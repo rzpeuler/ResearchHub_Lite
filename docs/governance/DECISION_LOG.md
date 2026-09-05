@@ -4,6 +4,18 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-FIX-CONSOLIDATION-REVIEW-SCOPE-001 — 2026-09-05
+
+**Status:** Implemented / CTO acceptance pending
+
+Optional Entity field uncertainty does not automatically imply Entity identity uncertainty. Consolidation now compares descriptions and Company `legalName` using existing semantic text normalization. Formatting-equivalent values retain one deterministic value; materially different descriptions or legal names are omitted from the consolidated Candidate and produce one non-blocking field-level Review. The omission is sticky and no semantic synthesis or new reasoning case is introduced.
+
+Company `ticker` and `exchange` remain identity-critical: missing values are safely enriched, normalized-equivalent values are retained, and conflicting populated values create one blocking Consolidation Review. Only blocking Consolidation constraints make Entity Resolution `Unresolved`; description-only conflicts therefore do not isolate dependent Relations or Claims. InvestmentTheme policy remains unchanged and continues after description-only conflict handling.
+
+Consolidation, Resolution, Planner, and Workflow telemetry now preserve source/stage semantics and reuse a stable review key so one underlying issue is counted once. ReviewSummary counts remain complete while `samplesByCategory` is bounded to five entries per category, and validation invariants include the sample-bound invariant. Schema 0.3, Writer, frozen architecture, historical R1-R7 evidence, and the reasoning operation vocabulary are unchanged. The separate Relation attribute admissibility gap remains for the next task after CTO acceptance.
+
+---
+
 ## RHL-VALIDATION-001-R7-EVIDENCE-FIX-001 — 2026-09-05
 
 **Status:** Implemented / CTO acceptance pending

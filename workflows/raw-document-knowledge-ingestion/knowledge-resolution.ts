@@ -7,7 +7,7 @@ import type { StructuredDocument } from '../../plugins/document/contracts.ts'
 import type { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
 import type { ClaimCandidate, EntityCandidate, IncomingSourceContext, RelationCandidate, ReportMap, ResolutionCase, ResolutionOutcome, ResolvedCandidateGroup, SemanticCaseEvidence, SemanticResolutionResult, SemanticSourceProjection } from '../../skills/knowledge-curation/contracts.ts'
 import { semanticOutcomeVocabulary } from '../../skills/knowledge-curation/validation.ts'
-import type { AcceptedExtractionPlan, PotentialInvestmentThemeAssessment, ReviewCategory, ReviewItem } from './contracts.ts'
+import type { AcceptedExtractionPlan, ConsolidationReviewConstraint, PotentialInvestmentThemeAssessment, ReviewCategory, ReviewItem } from './contracts.ts'
 import { assessPotentialNewInvestmentTheme } from './investment-theme-policy.ts'
 import type { ConsolidatedCandidateSupport } from './consolidation.ts'
 
@@ -50,7 +50,7 @@ export interface KnowledgeResolutionInput {
   readonly maxResolutionCases?: number
   readonly maxEntityBindingCandidates?: number
   readonly maxContextTokens?: number
-  readonly consolidationReviews?: readonly { readonly candidateId: string; readonly reason: string; readonly conflictingFields?: readonly string[] }[]
+  readonly consolidationReviews?: readonly ConsolidationReviewConstraint[]
   readonly candidateSupport?: ReadonlyMap<string, ConsolidatedCandidateSupport>
 }
 export interface KnowledgeResolutionResult {
@@ -146,6 +146,7 @@ function intent(group: ResolvedCandidateGroup, disposition: ResolutionDispositio
   return { candidateRef: group.candidateId, candidateKind: group.kind, disposition, ...(targetRef === undefined ? {} : { targetRef }), semanticBasis: { rationale, ...basis }, evidenceRefs: evidence(group.candidate as EntityCandidate | RelationCandidate | ClaimCandidate), ...(dependencies.length === 0 ? {} : { reviewDependencyRefs: unique(dependencies) }) }
 }
 function bindingReview(group: ResolvedCandidateGroup, rationale: string, dependencies: readonly string[] = []): { intent: ResolutionIntent; review: ReviewItem } { return { intent: intent(group, 'review', rationale, undefined, {}, dependencies), review: review(group.candidateId, group.kind, rationale, dependencies.length > 0, dependencies, dependencies.length > 0 ? 'knowledge_resolution' : 'knowledge_resolution') } }
+function consolidationReview(group: ResolvedCandidateGroup, constraint: ConsolidationReviewConstraint): ReviewItem { return { ...review(group.candidateId, group.kind, constraint.reason), stage: 'consolidation', category: constraint.category, origin: 'consolidation', reviewKey: constraint.reviewKey } }
 function fieldConflict(candidate: EntityCandidate, existing: KnowledgeEntityV03): string | undefined {
   const fields = dict(candidate.semanticFields)
   const pairs: Array<[string, unknown, unknown]> = [['description', candidate.description, existing.description]]
@@ -227,7 +228,8 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
   const entityGroups = groups.filter((group) => group.kind === 'entity')
   const maxEntityBindingCandidates = input.maxEntityBindingCandidates ?? 8
   const sourceContext: IncomingSourceContext = input.incomingSourceContext ?? { sourceType: (input.reportMap.sourceAssessment.sourceType as IncomingSourceContext['sourceType']) ?? null, reliability: input.reportMap.sourceAssessment.reliability ?? null }
-  const consolidationReviews = new Map(input.consolidationReviews?.map((item) => [item.candidateId, item.reason] as const) ?? [])
+  const consolidationReviews = new Map<string, ConsolidationReviewConstraint[]>()
+  for (const item of input.consolidationReviews ?? []) consolidationReviews.set(item.candidateId, [...(consolidationReviews.get(item.candidateId) ?? []), item])
   const addEntityResult = (group: ResolvedCandidateGroup, binding: EntityBinding, disposition: ResolutionDisposition, rationale: string, targetRef?: string, basis: Partial<SemanticBasis> = {}): void => { bindings.set(group.candidateId, binding); intents.push(intent(group, disposition, rationale, targetRef ?? binding.ref ?? binding.plannedRef, basis)); if (disposition === 'review') reviews.push(review(group.candidateId, group.kind, rationale, false, [], basis.caseKind === 'EntityBindingCase' ? 'semantic_case' : 'knowledge_resolution')) }
   const addThemeReview = (group: ResolvedCandidateGroup, rationale: string, category: ReviewCategory, plausibleMatches: readonly string[] = [], basis: Partial<SemanticBasis> = {}): void => {
     bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches })
@@ -277,8 +279,8 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
   }
   for (const group of entityGroups) {
     const candidate = group.candidate as EntityCandidate
-    const constraint = consolidationReviews.get(group.candidateId)
-    if (constraint) { const result = bindingReview(group, constraint); bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: [] }); intents.push(result.intent); reviews.push(result.review); continue }
+    const constraint = consolidationReviews.get(group.candidateId)?.find((item) => item.blocking)
+    if (constraint) { const result = bindingReview(group, constraint.reason); bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: [] }); intents.push(result.intent); reviews.push(consolidationReview(group, constraint)); continue }
     const key = hardKey(candidate)
     const hardMatches = key === undefined ? [] : [...index.entities.values()].filter((entity) => entityHardKey(entity) === key && active(entity))
     if (hardMatches.length > 1) { const rationale = `Knowledge integrity defect: hard Company key ${key} matches multiple canonical Entities`; bindings.set(group.candidateId, { candidateId: group.candidateId, state: 'Unresolved', plausibleMatches: hardMatches.map((item) => item.id) }); intents.push(intent(group, 'review', rationale, undefined)); reviews.push(review(group.candidateId, group.kind, rationale)); errors.push(rationale); continue }
@@ -311,7 +313,8 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
   const dependentReview = (group: ResolvedCandidateGroup, dependencies: string[], rationale: string): void => { intents.push(intent(group, 'review', rationale, undefined, {}, dependencies)); reviews.push(review(group.candidateId, group.kind, rationale, true, dependencies)); reviewOrReject.add(group.candidateId) }
   for (const group of groups.filter((item) => item.kind === 'relation')) {
     const candidate = group.candidate as RelationCandidate
-    if (consolidationReviews.has(group.candidateId)) { const rationale = consolidationReviews.get(group.candidateId)!; intents.push(intent(group, 'review', rationale, undefined)); reviews.push(review(group.candidateId, group.kind, rationale)); continue }
+    const constraint = consolidationReviews.get(group.candidateId)?.find((item) => item.blocking)
+    if (constraint) { intents.push(intent(group, 'review', constraint.reason, undefined)); reviews.push(consolidationReview(group, constraint)); continue }
     const dependencies = [candidate.source.candidateRef, candidate.target.candidateRef].filter((ref) => reviewOrReject.has(ref) || entityRef(ref) === undefined)
     if (dependencies.length > 0) { dependentReview(group, dependencies, `Relation depends on unresolved Entity binding: ${dependencies.join(', ')}`); continue }
     const source = entityRef(candidate.source.candidateRef)!; const target = entityRef(candidate.target.candidateRef)!; const matches = relationMatches(index, candidate, source, target)
@@ -336,7 +339,8 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
   }
   for (const group of groups.filter((item) => item.kind === 'claim')) {
     const candidate = group.candidate as ClaimCandidate
-    if (consolidationReviews.has(group.candidateId)) { const rationale = consolidationReviews.get(group.candidateId)!; intents.push(intent(group, 'review', rationale, undefined)); reviews.push(review(group.candidateId, group.kind, rationale)); continue }
+    const constraint = consolidationReviews.get(group.candidateId)?.find((item) => item.blocking)
+    if (constraint) { intents.push(intent(group, 'review', constraint.reason, undefined)); reviews.push(consolidationReview(group, constraint)); continue }
     const dependencies = candidate.subjectRefs.map((subject) => subject.candidateRef).filter((ref) => reviewOrReject.has(ref) || entityRef(ref) === undefined)
     if (dependencies.length > 0) { dependentReview(group, dependencies, `Claim depends on unresolved Entity binding: ${dependencies.join(', ')}`); continue }
     const subjects = candidate.subjectRefs.map((subject) => entityRef(subject.candidateRef)!).sort(); const matches = claimMatches(index, candidate, subjects)

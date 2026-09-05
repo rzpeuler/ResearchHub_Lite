@@ -19,7 +19,7 @@ export interface ChangeSetPlanningInput {
   readonly documentId: string; readonly document: { readonly metadata: { readonly originalFilename: string | null; readonly title?: string | null } }
   readonly reportMap: ReportMap; readonly plan: AcceptedExtractionPlan; readonly groups: readonly ResolvedCandidateGroup[]
   readonly intents: readonly ResolutionIntent[]; readonly bindings: ReadonlyMap<string, EntityBinding>; readonly assets: KnowledgeAssetCollectionV03
-  readonly resolutionReviews?: readonly ReviewItem[]; readonly consolidationReviews?: readonly { readonly candidateId: string; readonly reason: string; readonly conflictingFields: readonly string[] }[]
+  readonly resolutionReviews?: readonly ReviewItem[]
 }
 export interface ChangeSetPlanningResult { readonly changeSet?: KnowledgeChangeSetV03; readonly reviewItems: readonly ReviewItem[]; readonly safeOperationCount: number; readonly summary: Readonly<Record<string, number>>; readonly entityResolutions: readonly EntityResolution[]; readonly blocked?: boolean; readonly errors?: readonly string[] }
 
@@ -42,8 +42,8 @@ function patchClaim(input: ChangeSetPlanningInput, existing: KnowledgeClaimV03, 
 function addReview(reviews: Map<string, ReviewItem>, group: ResolvedCandidateGroup, rationale: string, dependency = false, refs: readonly string[] = [], stage = 'knowledge_resolution', origin: ReviewOrigin = dependency ? 'dependency_isolation' : stage === 'planner' ? 'planner' : 'knowledge_resolution', categoryOverride?: ReviewCategory): void { const category = categoryOverride ?? categoryForRationale(rationale); const reviewKey = plannerReviewKey(group.candidateId, stage, category, rationale, dependency); if (!reviews.has(reviewKey)) reviews.set(reviewKey, { candidateId: group.candidateId, kind: group.kind, rationale, dependentCandidateIds: unique(refs), stage, category, origin, dependency, reviewKey }) }
 
 export function planKnowledgeChangeSet(input: ChangeSetPlanningInput): ChangeSetPlanningResult {
-  const index = KnowledgeIndexV03.fromAssets(input.assets); const groups = new Map(input.groups.map((group) => [group.candidateId, group])); const intents = new Map(input.intents.map((item) => [item.candidateRef, item])); const barrier = resolveResolutionIntentBarrier(input.groups, input.intents, input.bindings)
-  const reviews = new Map<string, ReviewItem>((input.resolutionReviews ?? []).map((item) => [item.reviewKey ?? `${item.candidateId}|${item.rationale}`, item])); for (const constraint of input.consolidationReviews ?? []) { const group = groups.get(constraint.candidateId); if (group) addReview(reviews, group, constraint.reason, false, [], 'consolidation') }
+  const index = KnowledgeIndexV03.fromAssets(input.assets); const intents = new Map(input.intents.map((item) => [item.candidateRef, item])); const barrier = resolveResolutionIntentBarrier(input.groups, input.intents, input.bindings)
+  const reviews = new Map<string, ReviewItem>((input.resolutionReviews ?? []).map((item) => [item.reviewKey ?? `${item.candidateId}|${item.rationale}`, item]))
   if (!barrier.valid) return { reviewItems: [...reviews.values()], safeOperationCount: 0, summary: { sourceOperations: 0, knowledgeCreates: 0, reviewItems: reviews.size, blockedDependencies: 0, noChanges: 1 }, entityResolutions: [], blocked: true, errors: barrier.errors }
   const plannedEntityIds = new Map<string, string>(); const entityResolutions: EntityResolution[] = []; const knowledgeOperations: KnowledgeOperationV03[] = []; let sequence = 1
   const sourceId = allocateSourceId({ sourceUrl: input.rawManifest.suppliedMetadata.sourceUrl, publishedAt: input.rawManifest.suppliedMetadata.publishedAt, title: input.rawManifest.suppliedMetadata.title ?? input.document.metadata.title ?? input.rawManifest.originalFilename, rawRef: input.rawRef })

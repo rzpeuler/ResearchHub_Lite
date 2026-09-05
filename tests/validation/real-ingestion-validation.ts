@@ -233,7 +233,7 @@ function reviewInvariants(summary: ReviewSummary): Dict {
   const categoryTotal = sum(Object.values(summary.byCategory))
   const kindTotal = sum(Object.values(summary.byCandidateKind))
   const sampleLimits = Object.values(summary.samplesByCategory).every((items) => items.length <= 5)
-  return { totalEqualsRootPlusDependency: summary.total === summary.rootCount + summary.dependencyCount, categoryTotalEqualsTotal: categoryTotal === summary.total, candidateKindTotalEqualsTotal: kindTotal === summary.total, samplesBoundedToFive: sampleLimits, allHold: summary.total === summary.rootCount + summary.dependencyCount && categoryTotal === summary.total && kindTotal === summary.total }
+  return { totalEqualsRootPlusDependency: summary.total === summary.rootCount + summary.dependencyCount, categoryTotalEqualsTotal: categoryTotal === summary.total, candidateKindTotalEqualsTotal: kindTotal === summary.total, samplesBoundedToFive: sampleLimits, allHold: summary.total === summary.rootCount + summary.dependencyCount && categoryTotal === summary.total && kindTotal === summary.total && sampleLimits }
 }
 
 function collectionCounts(assets: Awaited<ReturnType<KnowledgeBaseLoaderV03['load']>>): Dict {
