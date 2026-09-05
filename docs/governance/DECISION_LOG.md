@@ -4,9 +4,23 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-ARCH-KNOWLEDGE-PRODUCTION-001 — 2026-09-05
+
+**Status:** FROZEN / CTO architecture decision
+
+`docs/architecture/KNOWLEDGE_PRODUCTION_ARCHITECTURE_V0.1.md` is formally admitted as a normative architecture document without modification. The Knowledge Production Workflow is an open set: Raw Document Ingestion, Theme Framework Construction, Industry Deep Research, Company Deep Research, and future Producers are peers rather than a closed list. All Producers target one shared Global KnowledgeBase; Theme-specific, Industry-specific, and Company-specific silos are not introduced. Bottom-up ingestion and top-down research construction are complementary production modes, and InvestmentTheme is a semantic overlay rather than a Knowledge container.
+
+Producer-facing interaction is directed toward one coherent Knowledge boundary / Gateway, but the single external boundary does not collapse internal authority separation. Active Schema remains centrally governed and is projected to each Producer through a scoped Production Schema Profile. Schema vocabulary and constraints should be projection-driven; additive Schema extensions must be isolated from unrelated Producers, and governed evolution may add future canonical kinds. Producer and Skill implementations must not autonomously extend Schema.
+
+Reasoning-driven Producers emit Semantic Knowledge Proposals and EvidenceBinding information, not canonical mutation authority. The shared integrity path remains `Proposal → Resolution → ChangeSet → Validation → Writer`, with a stable validated ChangeSet-to-Writer boundary. User Curation may express explicit mutation intent, but it also uses ChangeSet, Validation, and Writer. Review remains a shared durable governance capability across Knowledge Production Workflows.
+
+This freeze does not implement the Knowledge Production Gateway, Theme Framework, Industry Deep Research, Company Deep Research, a Producer-neutral Semantic Proposal / EvidenceBinding framework, or a speculative generic `KnowledgeProducer` framework. The stable Raw Ingestion implementation is not refactored for future Producers at this stage; a materially different second Producer must first be used to validate the eventual shared interface.
+
+---
+
 ## RHL-FIX-EXTRACTION-ALL-REJECTED-GATE-001 — 2026-09-05
 
-**Status:** Implemented / CTO acceptance pending
+**Status:** PASS / CLOSED
 
 The Raw Document Knowledge Ingestion Workflow now treats only the unambiguous all-rejected extraction attempt as retryable: the authoritative summary counts must show non-zero input, zero accepted candidates, and rejected count equal to input count. Valid empty and partially valid extraction results remain successful. Retries are bounded by the existing `maxExtractionAttempts` and remain Unit-local under bounded parallel extraction. If all permitted attempts are rejected, the Unit fails and the Workflow blocks before Consolidation, Knowledge Resolution, ChangeSet planning, and Writer. Rejection diagnostics retain only deterministic code counts; superseded attempt candidates and raw model output do not enter final extraction or Review results.
 
