@@ -7,6 +7,8 @@ import type { KnowledgeWriteResult } from '../../knowledge/schema/mutation.ts'
 import type { ReviewCase } from '../../knowledge/review/contracts.ts'
 import type { ReviewCaseActionability } from '../../knowledge/review/contracts.ts'
 
+export type KnowledgeBaseWriter = typeof import('../../knowledge/writer/writer-v03.ts')['writeKnowledgeBaseV03']
+
 export interface IngestionWorkflowConfig {
   readonly maxExtractionUnits?: number
   readonly maxPlanAttempts?: number
@@ -40,6 +42,7 @@ export interface RawDocumentKnowledgeIngestionInput {
   readonly sourceMetadata?: { title?: string | null; institution?: string | null; author?: string | null; publishedAt?: string | null; sourceUrl?: string | null }
   readonly config?: IngestionWorkflowConfig
   readonly clock?: () => string
+  readonly writer?: KnowledgeBaseWriter
 }
 
 export type IngestionWorkflowStatus = 'completed' | 'completed_with_review' | 'blocked'

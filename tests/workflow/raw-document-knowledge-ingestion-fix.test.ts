@@ -396,6 +396,7 @@ async function assertDurableReviewReplay(input: {
   readonly seedDuplicateHardKey?: boolean
   readonly firstStatus: 'blocked' | 'completed_with_review'
   readonly firstWriteStatus?: 'no_changes' | 'committed'
+  readonly expectedWriterCalls: number
 }): Promise<void> {
   const root = await createKnowledgeBase({ knowledgeBaseId: input.knowledgeBaseId })
   try {
@@ -403,17 +404,24 @@ async function assertDurableReviewReplay(input: {
     const registry = new KnowledgeBaseRegistry()
     const executor = durableReplayExecutor(input.entities)
     const skill = new KnowledgeCurationSkill({ executor })
+    let writerCallCount = 0
+    const writerSpy: typeof writeKnowledgeBaseV03 = async (...args) => {
+      writerCallCount += 1
+      return writeKnowledgeBaseV03(...args)
+    }
     const workflowInput = {
       handle: await registry.mount(root),
       documentInput: { type: 'text' as const, text: input.text, originalFilename: `${input.workflowRunId}.txt`, mediaType: 'text/plain' },
       skill,
       workflowRunId: input.workflowRunId,
       clock: durableReplayClock,
+      writer: writerSpy,
     }
 
     const first = await runRawDocumentKnowledgeIngestion(workflowInput)
     assert.equal(first.status, input.firstStatus)
     assert.equal(first.writeStatus, input.firstWriteStatus)
+    assert.equal(writerCallCount, input.expectedWriterCalls)
     assert.ok(first.reviewCases && first.reviewCases.length > 0, 'first run must produce at least one durable actionable ReviewCase')
     assert.ok(first.reviewCases.every((reviewCase) => ['knowledge_decision', 'research_followup', 'schema_design'].includes(reviewCase.classification.actionability)))
 
@@ -430,7 +438,6 @@ async function assertDurableReviewReplay(input: {
     assert.deepEqual(firstContext.reviewCases, firstCases)
     assert.deepEqual(firstContext.reviewCaseIds, firstCaseIds)
     assert.equal(firstContext.reviewCaseSetHash, hashKnowledgeObject(firstCases))
-    assert.equal(firstContext.reviewCaseSetHash, hashKnowledgeObject(firstCases))
     assert.equal(firstLog?.status, input.firstStatus)
 
     const firstRevision = (await readManifest(root)).revision
@@ -445,6 +452,7 @@ async function assertDurableReviewReplay(input: {
     const replay = await runRawDocumentKnowledgeIngestion({ ...workflowInput, handle: await registry.mount(root) })
     assert.equal(replay.status, input.firstStatus)
     assert.equal(replay.writeStatus, 'already_committed')
+    assert.equal(writerCallCount, input.expectedWriterCalls)
     assert.deepEqual(replay.reviewCases, firstCases)
     assert.deepEqual(reasoningCallCounts(executor), firstReasoningCounts)
     assert.equal(reasoningCallCounts(executor).reasoning, firstReasoningCounts.reasoning)
@@ -475,6 +483,7 @@ test('durable ReviewCase replay acceptance: blocked run recovers from authoritat
     entities: [{ candidateId: 'duplicate', entityType: 'company', name: 'Incoming Duplicate', semanticFields: { exchange: 'NYSE', ticker: 'DUP' }, evidenceBlockRefs: ['block-000001'], reason: 'Fixture duplicate hard key' }],
     seedDuplicateHardKey: true,
     firstStatus: 'blocked',
+    expectedWriterCalls: 0,
   })
 })
 
@@ -486,6 +495,7 @@ test('durable ReviewCase replay acceptance: no-change run rebuilds ReviewCase st
     entities: [{ candidateId: 'theme', entityType: 'investment_theme', name: 'Quantum Cooling', evidenceBlockRefs: ['block-000001'], reason: 'Fixture potential new theme' }],
     firstStatus: 'completed_with_review',
     firstWriteStatus: 'no_changes',
+    expectedWriterCalls: 0,
   })
 })
 
@@ -500,5 +510,6 @@ test('durable ReviewCase replay acceptance: Writer success preserves safe mutati
     ],
     firstStatus: 'completed_with_review',
     firstWriteStatus: 'committed',
+    expectedWriterCalls: 1,
   })
 })
