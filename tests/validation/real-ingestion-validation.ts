@@ -63,6 +63,7 @@ class RecordingExecutor implements ReasoningExecutor {
   readonly acceptedEvidenceBlockIds = new Set<string>()
   readonly semanticCaseTelemetry: Array<Dict> = []
   readonly extractionCandidateTelemetry: Array<Dict> = []
+  extractionCallsWithParseableCandidateArrays = 0
   private sequence = 0
 
   constructor(private readonly inner: CodexReasoningExecutor) {}
@@ -116,7 +117,9 @@ class RecordingExecutor implements ReasoningExecutor {
         }
       }
       if (request.operation === 'extractKnowledge' && isDict(result.output)) for (const kind of ['entities', 'relations', 'claims']) {
-        const candidates = result.output[kind]
+        const output = result.output
+        const candidates = output[kind]
+        if (['entities', 'relations', 'claims'].every((candidateKind) => Array.isArray(output[candidateKind]))) this.extractionCallsWithParseableCandidateArrays += 1
         if (Array.isArray(candidates)) for (const candidate of candidates) if (isDict(candidate)) {
           this.extractionCandidateTelemetry.push({ kind, candidateId: candidate.candidateId, entityType: typeof candidate.entityType === 'string' ? candidate.entityType : undefined, name: typeof candidate.name === 'string' ? candidate.name : undefined, aliases: Array.isArray(candidate.aliases) ? candidate.aliases.slice(0, 12) : [], source: isDict(candidate.source) ? { candidateRef: candidate.source.candidateRef, mention: candidate.source.mention } : undefined, target: isDict(candidate.target) ? { candidateRef: candidate.target.candidateRef, mention: candidate.target.mention } : undefined, subjectRefs: Array.isArray(candidate.subjectRefs) ? candidate.subjectRefs.slice(0, 12).map((subject) => isDict(subject) ? subject.candidateRef : undefined) : [], evidenceBlockRefs: Array.isArray(candidate.evidenceBlockRefs) ? candidate.evidenceBlockRefs.slice(0, 24) : [], ...(kind === 'claims' ? { temporalPresence: candidate.temporal === undefined ? 'omitted' : candidate.temporal === null ? 'null' : 'object' } : {}) })
           if (Array.isArray(candidate.evidenceBlockRefs)) for (const blockId of candidate.evidenceBlockRefs) if (typeof blockId === 'string') this.acceptedEvidenceBlockIds.add(blockId)
@@ -279,35 +282,22 @@ function primarySummary(result: IngestionWorkflowResult): Dict {
   }
 }
 
-function resolutionEvidence(result: IngestionWorkflowResult, recorder: RecordingExecutor, assets: Awaited<ReturnType<KnowledgeBaseLoaderV03['load']>>): Dict {
+function resolutionEvidence(result: IngestionWorkflowResult, recorder: RecordingExecutor): Dict {
   const summary = result.resolutionSummary ?? result.reconciliationSummary ?? {}
-  const candidates = result.candidateCounts
-  const entityCount = assets.entities.length
-  const relationCount = assets.relations.length
-  const claimCount = assets.claims.length
-  const reviewSummary = result.reviewSummary
-  const caseKinds = countByValues(recorder.semanticCaseTelemetry.map((item) => String(item.caseKind ?? 'unknown')))
-  const intentDispositionCounts = {
-    create: entityCount + relationCount + claimCount,
-    enrich_existing: 0,
-    merge_evidence: 0,
-    replace_state: 0,
-    supersede: 0,
-    no_op: 0,
-    reject: 0,
-    review: reviewSummary.total,
-  }
-  const consolidatedCandidateCount = Number(candidates.consolidated ?? entityCount + relationCount + claimCount)
+  const semanticCaseCount = Number(summary.semanticCases ?? recorder.semanticCaseTelemetry.length)
+  const semanticCaseCalls = Number(summary.semanticCaseCalls ?? recorder.semanticCaseTelemetry.length)
   return {
-    entityBindings: { PlannedNew: entityCount, BoundExisting: 0, Unresolved: reviewSummary.byCandidateKind.entity },
-    plausibleRetrieval: { zeroPlausibleMatches: entityCount, requiringEntityBindingCase: recorder.semanticCaseTelemetry.filter((item) => item.caseKind === 'EntityBindingCase').length, overflowReview: reviewSummary.byCandidateKind.entity },
-    semanticCaseCount: Number(summary.semanticCases ?? recorder.semanticCaseTelemetry.length),
-    semanticCaseCalls: Number(summary.semanticCaseCalls ?? recorder.semanticCaseTelemetry.length),
-    casesByKind: caseKinds,
-    semanticCaseRatioPercentage: percentage(Number(summary.semanticCases ?? recorder.semanticCaseTelemetry.length), consolidatedCandidateCount),
-    semanticCaseAcceptanceTarget: 'approximately 0% for fresh KB; >5% is an architectural-quality concern',
+    totalResolutionIntents: Number(summary.intents ?? 0),
+    resolutionReviewItems: Number(summary.reviews ?? 0),
+    semanticCaseCount,
+    semanticCaseCalls,
+    investmentThemes: Number(summary.investmentThemes ?? 0),
+    potentialNewInvestmentThemes: Number(summary.potentialNewInvestmentThemes ?? 0),
+    recommendedNewInvestmentThemes: Number(summary.recommendedNewInvestmentThemes ?? 0),
+    resolutionIntentDispositionCounts: null,
+    resolutionIntentDispositionCountsAvailable: false,
     semanticCaseTelemetry: recorder.semanticCaseTelemetry,
-    intents: { totalCandidates: consolidatedCandidateCount, totalResolutionIntents: consolidatedCandidateCount - reviewSummary.byCandidateKind.workflow_level, dispositions: intentDispositionCounts, missingIntentCount: 0, duplicateIntentCount: 0, unresolvedRefLeakCount: 0, plannedRefIntegrityFailures: 0, dependencyIsolationFailures: 0, derivedFromFreshCommittedAssets: true },
+    source: 'IngestionWorkflowResult.resolutionSummary',
     summary,
   }
 }
@@ -370,7 +360,7 @@ function knowledgeCoverage(document: Awaited<ReturnType<DocumentInputResolver['p
   const candidateEvidence = [...recorder.acceptedEvidenceBlockIds].filter((blockId) => primary.has(blockId))
   const canonicalCandidateCount = assets.entities.length + assets.relations.length + assets.claims.length
   const candidateCounts = result.candidateCounts
-  return { acceptedCandidates: canonicalCandidateCount, workflowCandidateCounts: candidateCounts, candidatesPer100PrimaryBlocks: percentage(canonicalCandidateCount, primary.size), primaryBlocksWithAcceptedCandidateEvidence: candidateEvidence.length, primaryBlockEvidenceCoveragePercentage: percentage(candidateEvidence.length, primary.size), primaryBlockCount: primary.size, documentBlockCount: document.blocks.length, entitySubtypeDistribution: countByValues(assets.entities.map((asset) => String((asset.value as unknown as Dict).type ?? 'unknown'))), relationTypeDistribution: countByValues(assets.relations.map((asset) => String((asset.value as unknown as Dict).type ?? 'unknown'))), claimTypeDistribution: countByValues(assets.claims.map((asset) => String((asset.value as unknown as Dict).claimType ?? 'unknown'))), semanticSparsityWarning: canonicalCandidateCount === 0 ? 'SEMANTIC_QUALITY_WARNING: no canonical Entity, Relation, or Claim objects were produced' : null }
+  return { persistedCanonicalKnowledgeCount: canonicalCandidateCount, workflowCandidateCounts: candidateCounts, candidatesPer100PrimaryBlocks: percentage(canonicalCandidateCount, primary.size), primaryBlocksWithAcceptedCandidateEvidence: candidateEvidence.length, primaryBlockEvidenceCoveragePercentage: percentage(candidateEvidence.length, primary.size), primaryBlockCount: primary.size, documentBlockCount: document.blocks.length, entitySubtypeDistribution: countByValues(assets.entities.map((asset) => String((asset.value as unknown as Dict).type ?? 'unknown'))), relationTypeDistribution: countByValues(assets.relations.map((asset) => String((asset.value as unknown as Dict).type ?? 'unknown'))), claimTypeDistribution: countByValues(assets.claims.map((asset) => String((asset.value as unknown as Dict).claimType ?? 'unknown'))), semanticSparsityWarning: canonicalCandidateCount === 0 ? 'SEMANTIC_QUALITY_WARNING: no canonical Entity, Relation, or Claim objects were produced' : null }
 }
 
 function countByValues(values: readonly string[]): Dict { return Object.fromEntries([...new Set(values)].sort().map((value) => [value, values.filter((item) => item === value).length])) }
@@ -381,13 +371,17 @@ function themeObservation(result: IngestionWorkflowResult, recorder: RecordingEx
   const potential = result.potentialNewInvestmentThemes ?? []
   const recommended = result.recommendedNewInvestmentThemes ?? []
   return {
-    rawInvestmentThemeCandidateCount: themeCandidates.length,
+    rawInvestmentThemeCandidateCount: null,
+    rawInvestmentThemeCandidateCountAvailable: false,
+    recorderObservedInvestmentThemeCandidates: themeCandidates.length,
     consolidatedInvestmentThemeCandidateCount: Number(result.resolutionSummary?.investmentThemes ?? 0),
-    coverageCases: coverageCases.length,
+    coverageCases: null,
+    coverageCasesAvailable: false,
+    recorderObservedCoverageCases: coverageCases.length,
     coverageOutcomes: {
-      matches_existing: coverageCases.filter((item) => item.outcome === 'matches_existing').length,
-      ambiguous_existing: coverageCases.filter((item) => item.outcome === 'ambiguous_existing').length,
-      potential_new: potential.length,
+      matches_existing: null,
+      ambiguous_existing: null,
+      potential_new: null,
     },
     potentialNewInvestmentThemes: potential,
     recommendedNewInvestmentThemes: recommended,
@@ -424,9 +418,23 @@ function changeSetOperationObservation(log: Dict): Dict {
   }
 }
 
+function modelOutputCandidateObservation(recorder: RecordingExecutor): Dict {
+  const extractionCalls = recorder.calls.filter((call) => call.operation === 'extractKnowledge').length
+  const captured = (kind: string): number => recorder.extractionCandidateTelemetry.filter((item) => item.kind === kind).length
+  return {
+    capturedEntityCandidates: captured('entities'),
+    capturedRelationCandidates: captured('relations'),
+    capturedClaimCandidates: captured('claims'),
+    expectedExtractionCalls: extractionCalls,
+    extractionCallsWithParseableCandidateArrays: recorder.extractionCallsWithParseableCandidateArrays,
+    complete: false,
+    limitationReason: 'RecordingExecutor observes host result.output only; it cannot demonstrate complete capture of the validated extraction result consumed by Workflow.',
+  }
+}
+
 async function main(): Promise<void> {
   const stages: Record<string, Stage> = {}
-  const evidence: Dict = { taskId: 'RHL-VALIDATION-001-R7', validationTask: 'RHL-VALIDATION-001-R7', validationProductBaseline: productBaseline, startedAt: now(), phase: 'executing', phaseTimestamps: stages, architectureDocumentsModified: false, mockReasoningCalls: 0, realReasoningExecutor: 'CodexReasoningExecutor via RecordingExecutor' }
+  const evidence: Dict = { taskId: 'RHL-VALIDATION-001-R7', validationTask: 'RHL-VALIDATION-001-R7', validationProductBaseline: productBaseline, startedAt: now(), phase: 'executing', phaseTimestamps: stages, architectureDocumentsModified: false, mockReasoningCalls: 0, realReasoningExecutor: 'CodexReasoningExecutor via RecordingExecutor', evidenceIntegrity: { evidenceRevision: 2, correctsCommit: null, realWorkflowRerun: true, realReasoningRerun: true, writerRerun: true, replayRerun: true, productOutcomeChanged: null, corrections: [] } }
   const checkpoint = async (): Promise<void> => { await writeEvidence(evidence, 'IN_PROGRESS') }
   let pdfPath: string | undefined
   let kbRoot: string | undefined
@@ -518,7 +526,7 @@ async function main(): Promise<void> {
       evidence.extractionPlanDetails = { units: primary.acceptedPlan.units.map((unit) => ({ unitId: unit.unitId, proposedUnitId: unit.proposedUnitId, primaryBlockCount: unit.primaryBlockIds.length, contextBlockCount: unit.contextBlockIds.length, estimatedContextTokens: primary.acceptedPlan?.estimatedContextTokens[unit.unitId] ?? null, topic: unit.topic, semanticPurpose: unit.semanticPurpose, extractionFocus: unit.extractionFocus })), exclusionQuality: exclusionQuality(document, primary) }
     }
     const unitCandidateCounts = primary.unitSummaries.reduce((totals, unit) => ({ entity: totals.entity + Number(unit.candidateCounts.entity ?? 0), relation: totals.relation + Number(unit.candidateCounts.relation ?? 0), claim: totals.claim + Number(unit.candidateCounts.claim ?? 0), rejected: totals.rejected + unit.rejectedCount }), { entity: 0, relation: 0, claim: 0, rejected: 0 })
-    evidence.candidates = { rawEntityCandidates: unitCandidateCounts.entity, rawRelationCandidates: unitCandidateCounts.relation, rawClaimCandidates: unitCandidateCounts.claim, rejectedCandidates: unitCandidateCounts.rejected, unitCandidateCounts }
+    evidence.extractionAcceptedCandidates = { entity: unitCandidateCounts.entity, relation: unitCandidateCounts.relation, claim: unitCandidateCounts.claim, rejected: unitCandidateCounts.rejected, source: 'IngestionWorkflowResult.unitSummaries' }
     const reasoningRecorder = recorder!
     evidence.reasoningCalls = { total: reasoningRecorder.calls.length, byOperation: Object.fromEntries([...new Set(reasoningRecorder.calls.map((call) => call.operation as string))].sort().map((operation) => [operation, reasoningRecorder.calls.filter((call) => call.operation === operation).length])), maxOutputBytes: Math.max(0, ...reasoningRecorder.calls.map((call) => Number(call.outputBytes ?? 0))), calls: reasoningRecorder.calls }
     await checkpoint()
@@ -545,11 +553,10 @@ async function main(): Promise<void> {
       assertCondition(plannedReferenceLeakCount === 0, `Persisted canonical Knowledge contains ${String(plannedReferenceLeakCount)} planned-reference leaks`)
       evidence.provenance = provenanceMetrics(loaded, primary.rawRef ?? '')
       evidence.knowledgeCoverage = knowledgeCoverage(document, primary, recorder!, loaded)
-      const claimTelemetry = recorder!.extractionCandidateTelemetry.filter((item) => item.kind === 'claims')
       const temporalRejections = primary.rejectedCandidates.filter((item) => isDict(item) && item.kind === 'claim' && item.code === 'invalid_semantics' && typeof item.message === 'string' && /temporal/i.test(item.message))
       const persistedTemporalClaims = loaded.claims.filter((asset) => isDict(asset.value) && 'temporal' in asset.value).length
       const temporalValidationErrors = (primary.validationSummary?.errors ?? []).filter((item) => item.code === 'V03_TEMPORAL_INVALID' || /Claim temporal/i.test(item.message)).length
-      evidence.claimTemporalObservation = { extractedClaims: claimTelemetry.length, claimsWithTemporalOmitted: claimTelemetry.filter((item) => item.temporalPresence === 'omitted').length, claimsWithTemporalNull: claimTelemetry.filter((item) => item.temporalPresence === 'null').length, claimsWithTemporalObject: claimTelemetry.filter((item) => item.temporalPresence === 'object').length, candidateTemporalRejectedCount: temporalRejections.length, temporalRejectionSamples: temporalRejections.slice(0, 20), temporalClaimsReachingChangeSet: persistedTemporalClaims, changeSetTemporalValidationErrorCount: temporalValidationErrors, admittedTemporalLaterRejected: temporalValidationErrors > 0 }
+      evidence.claimTemporalObservation = { acceptedClaimCandidateCount: Number(primary.candidateCounts.claim ?? 0), claimsWithTemporalOmitted: null, claimsWithTemporalNull: null, claimsWithTemporalObject: null, rawTemporalDistributionAvailable: false, unavailableReason: 'R7 v1 RecordingExecutor did not capture complete extraction Candidate outputs.', candidateTemporalRejectedCount: temporalRejections.length, temporalRejectionSamples: temporalRejections.slice(0, 20), temporalClaimsPersisted: persistedTemporalClaims, temporalClaimsReachingChangeSet: persistedTemporalClaims, changeSetTemporalValidationErrorCount: temporalValidationErrors, admittedTemporalLaterRejected: temporalValidationErrors > 0 }
       evidence.semanticSamples = { entitiesByType: groupedSamples(loaded.entities.map((asset) => asset.value as unknown as Dict), 'type', 10), relationsByType: groupedSamples(loaded.relations.map((asset) => asset.value as unknown as Dict), 'type', 10), claimsByType: groupedSamples(loaded.claims.map((asset) => asset.value as unknown as Dict), 'claimType', 10) }
       assertCondition((evidence.provenance as Dict).allClaimsHaveSourceRefs === true, 'Not all claims have source references')
       assertCondition((evidence.provenance as Dict).allClaimsHaveExactRawProvenance === true, 'Not all claims have exact Raw provenance')
@@ -557,13 +564,12 @@ async function main(): Promise<void> {
     })
 
     evidence.themeObservation = themeObservation(primary, reasoningRecorder, assets)
-    const extractedIds = reasoningRecorder.extractionCandidateTelemetry.map((item) => String(item.candidateId ?? ''))
-    const extractedIdCounts = countByValues(extractedIds)
-    const rawRelationItems = reasoningRecorder.extractionCandidateTelemetry.filter((item) => item.kind === 'relations')
-    const rawClaimItems = reasoningRecorder.extractionCandidateTelemetry.filter((item) => item.kind === 'claims')
-    evidence.consolidation = { consolidatedEntityCount: Number(primary.candidateCounts.entity ?? 0), consolidatedRelationCount: Number(primary.candidateCounts.relation ?? 0), consolidatedClaimCount: Number(primary.candidateCounts.claim ?? 0), totalConsolidatedCandidateCount: Number(primary.candidateCounts.consolidated ?? 0), uniqueCandidateIdsByKind: { entity: new Set(reasoningRecorder.extractionCandidateTelemetry.filter((item) => item.kind === 'entities').map((item) => String(item.candidateId ?? ''))).size, relation: new Set(rawRelationItems.map((item) => String(item.candidateId ?? ''))).size, claim: new Set(rawClaimItems.map((item) => String(item.candidateId ?? ''))).size }, rawDuplicateCandidateIdCount: Object.values(extractedIdCounts).filter((count) => Number(count) > 1).length, duplicateCandidateIdCount: 0, candidateAliasesCount: reasoningRecorder.extractionCandidateTelemetry.reduce((total, item) => total + (Array.isArray(item.aliases) ? item.aliases.length : 0), 0), aliasTargetUniqueness: 'validated by deterministic consolidation; no duplicate consolidated candidate IDs', relationSelfEndpointAnomalyCount: rawRelationItems.filter((item) => isDict(item.source) && isDict(item.target) && item.source.candidateRef === item.target.candidateRef).length, claimMultiSubjectCount: rawClaimItems.filter((item) => Array.isArray(item.subjectRefs) && item.subjectRefs.length > 1).length, claimDuplicateSubjectNormalizationAnomalies: rawClaimItems.filter((item) => Array.isArray(item.subjectRefs) && new Set(item.subjectRefs).size !== item.subjectRefs.length).length, unicodeMixedScriptCandidateIdSamples: extractedIds.filter((id) => /[^\x00-\x7F]/.test(id)).slice(0, 12), mergedEntityCompanyCollisionPattern: extractedIds.filter((id) => id === 'merged-entity-company').length, reviewConstraints: primary.reviewItems.filter((item) => item.origin === 'consolidation' || item.origin === 'consolidation_mirror').length }
-    evidence.resolution = resolutionEvidence(primary, reasoningRecorder, assets)
-    evidence.reviewSummary = { summary: primary.reviewSummary, invariants: reviewInvariants(primary.reviewSummary) }
+    const postConsolidation = { entity: Number(primary.resolutionSummary?.entities ?? 0), relation: Number(primary.resolutionSummary?.relations ?? 0), claim: Number(primary.resolutionSummary?.claims ?? 0), total: Number(primary.resolutionSummary?.intents ?? 0) }
+    assertCondition(postConsolidation.entity + postConsolidation.relation + postConsolidation.claim === postConsolidation.total, 'Post-consolidation candidate totals are inconsistent')
+    evidence.consolidation = { postConsolidationCandidates: postConsolidation, reconciliationInvariant: true, source: 'IngestionWorkflowResult.resolutionSummary' }
+    evidence.modelOutputCandidateObservation = modelOutputCandidateObservation(reasoningRecorder)
+    evidence.resolution = resolutionEvidence(primary, reasoningRecorder)
+    evidence.finalNormalizedReviewSummary = { summary: primary.reviewSummary, invariants: reviewInvariants(primary.reviewSummary), source: 'IngestionWorkflowResult.reviewSummary' }
     evidence.reasoningCalls = { total: reasoningRecorder.calls.length, byOperation: Object.fromEntries([...new Set(reasoningRecorder.calls.map((call) => call.operation as string))].sort().map((operation) => [operation, reasoningRecorder.calls.filter((call) => call.operation === operation).length])), maxOutputBytes: Math.max(0, ...reasoningRecorder.calls.map((call) => Number(call.outputBytes ?? 0))), calls: reasoningRecorder.calls }
     evidence.historicalComparison = await (async () => {
       const r1 = JSON.parse(await readFile(r1EvidencePath, 'utf8')) as Dict
@@ -580,7 +586,7 @@ async function main(): Promise<void> {
     const changeSetChanges = isDict(parsedLog.changes) ? parsedLog.changes : {}
     evidence.finalChangeSetValidation = { status: primary.validationSummary?.status ?? 'passed', errors: primary.validationSummary?.errors ?? [], warnings: primary.validationSummary?.warnings ?? [] }
     const operationObservation = changeSetOperationObservation(parsedLog)
-    evidence.changeSet = { changeSetId: primary.changeSetId, baseRevision: primary.baseRevision, validatedByWorkflow: true, writerStatus: primary.writeStatus, safeOperationCount: Number(operationObservation.knowledgeCreates) + Number(operationObservation.knowledgeUpdates) + Number(operationObservation.knowledgeSupersedes) + Number((operationObservation.sourceOperations as Dict).created) + Number((operationObservation.sourceOperations as Dict).merged), ...operationObservation, canonicalEntityRefsResolved: true, canonicalRelationEndpointsResolved: true, canonicalClaimSubjectsResolved: true, plannedReferenceLeak: /planned-(?:entity|relation|claim)-/.test(JSON.stringify(changeSetChanges)), logKeys: isDict(log) ? Object.keys(log).sort() : [] }
+    evidence.changeSetObservation = { changeSetId: primary.changeSetId, baseRevision: primary.baseRevision, validatedByWorkflow: true, writerStatus: primary.writeStatus, safeOperationCount: Number(operationObservation.knowledgeCreates) + Number(operationObservation.knowledgeUpdates) + Number(operationObservation.knowledgeSupersedes) + Number((operationObservation.sourceOperations as Dict).created) + Number((operationObservation.sourceOperations as Dict).merged), ...operationObservation, canonicalEntityRefsResolved: true, canonicalRelationEndpointsResolved: true, canonicalClaimSubjectsResolved: true, plannedReferenceLeak: /planned-(?:entity|relation|claim)-/.test(JSON.stringify(changeSetChanges)), logKeys: isDict(log) ? Object.keys(log).sort() : [], source: 'persisted ingestion log / ChangeSet' }
     const observedTheme = evidence.themeObservation as Dict
     assertCondition(Number(observedTheme.persistedInvestmentThemeCount) === 0, 'R7 persisted a new InvestmentTheme')
     assertCondition(Number(observedTheme.persistedThemeGroupCount) === 0, 'R7 created or retained an unexpected ThemeGroup in the fresh KB')
@@ -662,9 +668,169 @@ async function writeEvidence(evidence: Dict, outcome: string): Promise<void> {
   const plan = isDict(evidence.extractionPlan) ? evidence.extractionPlan : {}
   const exclusion = isDict(evidence.extractionPlanDetails) && isDict(evidence.extractionPlanDetails.exclusionQuality) ? evidence.extractionPlanDetails.exclusionQuality : {}
   const doclingStats = isDict(evidence.docling) && isDict(evidence.docling.stats) ? evidence.docling.stats : {}
-  const candidateTotals = isDict(evidence.candidates) ? evidence.candidates : {}
-  const summary = ['# RHL-VALIDATION-001-R7 Real E2E Validation', '', `- Outcome: ${outcome}`, `- Failure stage: ${String(evidence.failureStage ?? 'n/a')}`, `- Classification reason: ${String(evidence.classificationReason ?? 'n/a')}`, `- Product baseline: ${String(evidence.validationProductBaseline)}`, `- CTO acceptance: ${String(evidence.ctoAcceptance ?? 'pending')}`, `- PDF: ${String((evidence.pdf as Dict | undefined)?.filename ?? 'not verified')} (${String((evidence.pdf as Dict | undefined)?.bytes ?? 'n/a')} bytes; ${String((evidence.pdf as Dict | undefined)?.sha256 ?? 'n/a')})`, `- Docling: ${String((evidence.docling as Dict | undefined)?.parser ? JSON.stringify((evidence.docling as Dict).parser) : 'not executed')}`, `- StructuredDocument: ${String(doclingStats.pageCount ?? 'n/a')} pages, ${String(doclingStats.sectionCount ?? 'n/a')} sections, ${String(doclingStats.blockCount ?? 'n/a')} blocks, ${String(doclingStats.normalizedCharacters ?? 'n/a')} characters, ${String(doclingStats.tableCount ?? 'n/a')} tables, ${String(doclingStats.headingCount ?? 'n/a')} headings, ${String(doclingStats.listCount ?? 'n/a')} lists, ${String(doclingStats.captionCount ?? 'n/a')} captions, ${String(evidence.docling && isDict(evidence.docling) ? evidence.docling.warningCount ?? 'n/a' : 'n/a')} warnings`, `- Raw archive: ${JSON.stringify(evidence.rawArchive ?? {})}`, `- Primary status / Writer: ${String(primary.status ?? 'not executed')} / ${String(primary.writeStatus ?? 'not executed')}`, `- Plan attempts: ${JSON.stringify(planAttempts)}`, `- Accepted plan: ${JSON.stringify({ unitCount: plan.unitCount, primaryCoveredBlockCount: plan.primaryCoveredBlockCount, excludedBlockCount: plan.excludedBlockCount, primaryCoveragePercentage: plan.primaryCoveragePercentage, excludedPercentage: plan.excludedPercentage, contextRefCount: plan.contextRefCount, contextBlockCount: plan.contextBlockCount, coverageInvariant: plan.coverageInvariant, primaryExcludedDisjoint: plan.primaryExcludedDisjoint })}`, `- Exclusion quality: ${JSON.stringify({ excludedPercentage: exclusion.excludedPercentage, semanticQualityWarning: exclusion.semanticQualityWarning })}`, `- Extraction: ${String(primary.unitCount ?? 'n/a')} units; raw Entity ${String(candidateTotals.rawEntityCandidates ?? 'n/a')}, Relation ${String(candidateTotals.rawRelationCandidates ?? 'n/a')}, Claim ${String(candidateTotals.rawClaimCandidates ?? 'n/a')}, rejected ${String(candidateTotals.rejectedCandidates ?? 'n/a')}`, `- Claim temporal: ${JSON.stringify(evidence.claimTemporalObservation ?? {})}`, `- InvestmentTheme: ${JSON.stringify(evidence.themeObservation ?? {})}`, `- Knowledge Resolution: ${JSON.stringify(evidence.resolution ?? {})}`, `- Consolidation: ${JSON.stringify(evidence.consolidation ?? {})}`, `- Final KB counts: ${JSON.stringify(finalKb.counts ?? {})}`, `- ReviewSummary: ${JSON.stringify(primary.reviewSummary ?? {})}`, `- ChangeSet: ${JSON.stringify(evidence.changeSet ?? {})}`, `- Final ChangeSet validation: ${JSON.stringify(evidence.finalChangeSetValidation ?? {})}`, `- Writer: ${JSON.stringify(evidence.writer ?? {})}`, `- Reload: ${JSON.stringify(evidence.finalKnowledgeBase ?? {})}`, `- Provenance: ${JSON.stringify(evidence.provenance ?? {})}`, `- Replay: ${JSON.stringify(replay)}`, '', 'The JSON evidence contains bounded telemetry only; prompts, model output bodies, chain-of-thought, credentials, and runtime artifacts are excluded. Historical raw counts are comparison-only and do not establish semantic quality.']
+  const extraction = isDict(evidence.extractionAcceptedCandidates) ? evidence.extractionAcceptedCandidates : {}
+  const normalizedReview = isDict(evidence.finalNormalizedReviewSummary) ? evidence.finalNormalizedReviewSummary : {}
+  const reviewSummary = isDict(normalizedReview.summary) ? normalizedReview.summary : {}
+  const reviewCounts = { total: reviewSummary.total, rootCount: reviewSummary.rootCount, dependencyCount: reviewSummary.dependencyCount, byCategory: reviewSummary.byCategory, byCandidateKind: reviewSummary.byCandidateKind }
+  const changeSet = isDict(evidence.changeSetObservation) ? evidence.changeSetObservation : {}
+  const changeSetCounts = Object.fromEntries(['changeSetId', 'baseRevision', 'validatedByWorkflow', 'writerStatus', 'safeOperationCount', 'sourceOperations', 'knowledgeCreates', 'knowledgeUpdates', 'knowledgeSupersedes', 'entityCreates', 'relationCreates', 'claimCreates', 'investmentThemeCreates', 'themeGroupCreates', 'themeGroupUpdates', 'canonicalEntityRefsResolved', 'canonicalRelationEndpointsResolved', 'canonicalClaimSubjectsResolved', 'plannedReferenceLeak', 'source'].filter((key) => key in changeSet).map((key) => [key, changeSet[key]]))
+  const replayCounts = Object.fromEntries(['status', 'writeStatus', 'changeSetId', 'additionalRealReasoningCalls', 'callDeltasByOperation', 'doclingParseDelta', 'writerInvocationCount', 'revisionBefore', 'revisionAfter', 'sameStatus', 'sameReviewSummary', 'sameChangeSetId', 'revisionUnchanged', 'alreadyCommitted'].filter((key) => key in replay).map((key) => [key, replay[key]]))
+  const summary = [
+    '# RHL-VALIDATION-001-R7 Real E2E Validation',
+    '',
+    `- Outcome: ${outcome}`,
+    `- Failure stage: ${String(evidence.failureStage ?? 'n/a')}`,
+    `- Classification reason: ${String(evidence.classificationReason ?? 'n/a')}`,
+    `- Product baseline: ${String(evidence.validationProductBaseline)}`,
+    `- CTO acceptance: ${String(evidence.ctoAcceptance ?? 'pending')}`,
+    `- Evidence integrity: ${JSON.stringify(evidence.evidenceIntegrity ?? {})}`,
+    `- PDF: ${String((evidence.pdf as Dict | undefined)?.filename ?? 'not verified')} (${String((evidence.pdf as Dict | undefined)?.bytes ?? 'n/a')} bytes; ${String((evidence.pdf as Dict | undefined)?.sha256 ?? 'n/a')})`,
+    `- Docling: ${String((evidence.docling as Dict | undefined)?.parser ? JSON.stringify((evidence.docling as Dict).parser) : 'not executed')}`,
+    `- StructuredDocument: ${String(doclingStats.pageCount ?? 'n/a')} pages, ${String(doclingStats.sectionCount ?? 'n/a')} sections, ${String(doclingStats.blockCount ?? 'n/a')} blocks, ${String(doclingStats.normalizedCharacters ?? 'n/a')} characters, ${String(doclingStats.tableCount ?? 'n/a')} tables, ${String(doclingStats.headingCount ?? 'n/a')} headings, ${String(doclingStats.listCount ?? 'n/a')} lists, ${String(doclingStats.captionCount ?? 'n/a')} captions, ${String(evidence.docling && isDict(evidence.docling) ? evidence.docling.warningCount ?? 'n/a' : 'n/a')} warnings`,
+    `- Raw archive: ${JSON.stringify(evidence.rawArchive ?? {})}`,
+    `- Primary status / Writer: ${String(primary.status ?? 'not executed')} / ${String(primary.writeStatus ?? 'not executed')}`,
+    `- Plan attempts: ${JSON.stringify(planAttempts)}`,
+    `- Accepted plan: ${JSON.stringify({ unitCount: plan.unitCount, primaryCoveredBlockCount: plan.primaryCoveredBlockCount, excludedBlockCount: plan.excludedBlockCount, primaryCoveragePercentage: plan.primaryCoveragePercentage, excludedPercentage: plan.excludedPercentage, contextRefCount: plan.contextRefCount, contextBlockCount: plan.contextBlockCount, coverageInvariant: plan.coverageInvariant, primaryExcludedDisjoint: plan.primaryExcludedDisjoint })}`,
+    `- Exclusion quality: ${JSON.stringify({ excludedPercentage: exclusion.excludedPercentage, semanticQualityWarning: exclusion.semanticQualityWarning })}`,
+    `- Extraction accepted candidates: ${JSON.stringify({ unitCount: primary.unitCount, ...extraction })}`,
+    `- Model-output candidate observation: ${JSON.stringify(evidence.modelOutputCandidateObservation ?? {})}`,
+    `- Claim temporal: ${JSON.stringify(evidence.claimTemporalObservation ?? {})}`,
+    `- InvestmentTheme: ${JSON.stringify(evidence.themeObservation ?? {})}`,
+    `- Post-consolidation candidates: ${JSON.stringify(evidence.consolidation ?? {})}`,
+    `- Knowledge Resolution: ${JSON.stringify(evidence.resolution ?? {})}`,
+    `- Final normalized ReviewSummary: ${JSON.stringify({ summary: reviewCounts, invariants: normalizedReview.invariants ?? {}, source: normalizedReview.source ?? null })}`,
+    `- Final KB counts: ${JSON.stringify(finalKb.counts ?? {})}`,
+    `- ChangeSet observation: ${JSON.stringify(changeSetCounts)}`,
+    `- Final ChangeSet validation: ${JSON.stringify(evidence.finalChangeSetValidation ?? {})}`,
+    `- Writer: ${JSON.stringify(evidence.writer ?? {})}`,
+    `- Reload: ${JSON.stringify(evidence.finalKnowledgeBase ?? {})}`,
+    `- Provenance: ${JSON.stringify(evidence.provenance ?? {})}`,
+    `- Replay: ${JSON.stringify(replayCounts)}`,
+    '',
+    'No real R7 workflow, reasoning, Docling, Writer, or Replay rerun occurred during evidence correction. The JSON evidence contains bounded telemetry only; prompts, model output bodies, chain-of-thought, credentials, and runtime artifacts are excluded. Historical raw counts are comparison-only and do not establish semantic quality.',
+  ]
   await writeFile(r7SummaryPath, summary.join('\n') + '\n')
 }
 
-await main()
+function numberValue(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+async function correctCommittedR7Evidence(): Promise<void> {
+  const evidence = JSON.parse(await readFile(r7EvidencePath, 'utf8')) as Dict
+  assertCondition(evidence.validationOutcome === 'SUCCESS', 'Committed R7 evidence is not a successful product outcome')
+  assertCondition(evidence.phase === 'completed', 'Committed R7 evidence is not completed')
+  const primary = isDict(evidence.primary) ? evidence.primary : {}
+  const primaryCounts = isDict(primary.candidateCounts) ? primary.candidateCounts : {}
+  const resolutionSummary = isDict(primary.resolutionSummary) ? primary.resolutionSummary : {}
+  const unitSummaries = Array.isArray(primary.unitSummaries) ? primary.unitSummaries.filter(isDict) : []
+  const accepted = { entity: 0, relation: 0, claim: 0, rejected: 0 }
+  for (const unit of unitSummaries) {
+    const counts = isDict(unit.candidateCounts) ? unit.candidateCounts : {}
+    accepted.entity += numberValue(counts.entity)
+    accepted.relation += numberValue(counts.relation)
+    accepted.claim += numberValue(counts.claim)
+    accepted.rejected += numberValue(unit.rejectedCount)
+  }
+  assertCondition(accepted.entity === numberValue(primaryCounts.entity) && accepted.relation === numberValue(primaryCounts.relation) && accepted.claim === numberValue(primaryCounts.claim), 'Unit extraction counts do not match the committed R7 primary candidate counts')
+  assertCondition(accepted.rejected === numberValue(primaryCounts.rejected), 'Unit rejection counts do not match the committed R7 primary rejection count')
+  const postConsolidation = { entity: numberValue(resolutionSummary.entities), relation: numberValue(resolutionSummary.relations), claim: numberValue(resolutionSummary.claims), total: numberValue(resolutionSummary.intents) }
+  assertCondition(postConsolidation.entity + postConsolidation.relation + postConsolidation.claim === postConsolidation.total, 'Committed R7 post-consolidation counts are inconsistent')
+
+  const oldTemporal = isDict(evidence.claimTemporalObservation) ? evidence.claimTemporalObservation : {}
+  const oldTheme = isDict(evidence.themeObservation) ? evidence.themeObservation : {}
+  const oldResolution = isDict(evidence.resolution) ? evidence.resolution : {}
+  const oldChangeSet = isDict(evidence.changeSetObservation) ? evidence.changeSetObservation : isDict(evidence.changeSet) ? evidence.changeSet : {}
+  const oldReasoning = isDict(evidence.reasoningCalls) ? evidence.reasoningCalls : {}
+  const reasoningByOperation = isDict(oldReasoning.byOperation) ? oldReasoning.byOperation : {}
+  const oldKnowledgeCoverage = isDict(evidence.knowledgeCoverage) ? evidence.knowledgeCoverage : {}
+  const primaryReviewSummary = isDict(primary.reviewSummary) ? primary.reviewSummary : {}
+  const oldReviewInvariants = isDict(evidence.reviewSummary) && isDict(evidence.reviewSummary.invariants) ? evidence.reviewSummary.invariants : reviewInvariants(primary.reviewSummary as ReviewSummary)
+
+  evidence.evidenceIntegrity = {
+    evidenceRevision: 2,
+    correctsCommit: 'bcbff33b712317403fdf800d157e90ad041bc0cf',
+    realWorkflowRerun: false,
+    realReasoningRerun: false,
+    writerRerun: false,
+    replayRerun: false,
+    productOutcomeChanged: false,
+    corrections: [
+      'Raw extraction candidate counts are sourced from primary unitSummaries and labeled as extraction accepted candidates.',
+      'Post-consolidation candidate counts are sourced from IngestionWorkflowResult.resolutionSummary.',
+      'Raw claim temporal distribution is unavailable because the v1 RecordingExecutor did not capture complete extraction Candidate outputs.',
+      'Raw InvestmentTheme candidate count and coverage outcomes are unavailable because the v1 recorder telemetry is not authoritative.',
+      'Resolution intent disposition counts are unavailable; fabricated v1 entity binding and disposition totals were removed.',
+      'ChangeSet and normalized ReviewSummary are labeled by their persisted/workflow sources.',
+    ],
+  }
+  evidence.extractionAcceptedCandidates = { ...accepted, source: 'IngestionWorkflowResult.unitSummaries' }
+  evidence.modelOutputCandidateObservation = {
+    capturedEntityCandidates: 0,
+    capturedRelationCandidates: 0,
+    capturedClaimCandidates: 0,
+    expectedExtractionCalls: numberValue(reasoningByOperation.extractKnowledge),
+    extractionCallsWithParseableCandidateArrays: 0,
+    complete: false,
+    limitationReason: 'RecordingExecutor observes host result.output only; it cannot demonstrate complete capture of the validated extraction result consumed by Workflow.',
+  }
+  evidence.consolidation = { postConsolidationCandidates: postConsolidation, reconciliationInvariant: true, source: 'IngestionWorkflowResult.resolutionSummary' }
+  delete evidence.candidates
+  evidence.knowledgeCoverage = { ...oldKnowledgeCoverage, persistedCanonicalKnowledgeCount: numberValue(oldKnowledgeCoverage.persistedCanonicalKnowledgeCount ?? oldKnowledgeCoverage.acceptedCandidates), source: oldKnowledgeCoverage.source ?? 'reloaded KnowledgeBase canonical collections' }
+  delete (evidence.knowledgeCoverage as Dict).acceptedCandidates
+  evidence.claimTemporalObservation = {
+    acceptedClaimCandidateCount: accepted.claim,
+    claimsWithTemporalOmitted: null,
+    claimsWithTemporalNull: null,
+    claimsWithTemporalObject: null,
+    rawTemporalDistributionAvailable: false,
+    unavailableReason: 'R7 v1 RecordingExecutor did not capture complete extraction Candidate outputs.',
+    candidateTemporalRejectedCount: numberValue(oldTemporal.candidateTemporalRejectedCount),
+    temporalRejectionSamples: Array.isArray(oldTemporal.temporalRejectionSamples) ? oldTemporal.temporalRejectionSamples.slice(0, 20) : [],
+    temporalClaimsPersisted: numberValue(oldTemporal.temporalClaimsPersisted ?? oldTemporal.temporalClaimsReachingChangeSet),
+    temporalClaimsReachingChangeSet: numberValue(oldTemporal.temporalClaimsReachingChangeSet),
+    changeSetTemporalValidationErrorCount: numberValue(oldTemporal.changeSetTemporalValidationErrorCount),
+    admittedTemporalLaterRejected: oldTemporal.admittedTemporalLaterRejected === true,
+  }
+  evidence.themeObservation = {
+    rawInvestmentThemeCandidateCount: null,
+    rawInvestmentThemeCandidateCountAvailable: false,
+    recorderObservedInvestmentThemeCandidates: numberValue(oldTheme.recorderObservedInvestmentThemeCandidates ?? oldTheme.rawInvestmentThemeCandidateCount),
+    consolidatedInvestmentThemeCandidateCount: numberValue(oldTheme.consolidatedInvestmentThemeCandidateCount ?? resolutionSummary.investmentThemes),
+    coverageCases: null,
+    coverageCasesAvailable: false,
+    recorderObservedCoverageCases: numberValue(oldTheme.recorderObservedCoverageCases ?? oldTheme.coverageCases),
+    coverageOutcomes: { matches_existing: null, ambiguous_existing: null, potential_new: null },
+    potentialNewInvestmentThemes: Array.isArray(oldTheme.potentialNewInvestmentThemes) ? oldTheme.potentialNewInvestmentThemes : [],
+    recommendedNewInvestmentThemes: Array.isArray(oldTheme.recommendedNewInvestmentThemes) ? oldTheme.recommendedNewInvestmentThemes : [],
+    potentialNewInvestmentThemesCount: numberValue(oldTheme.potentialNewInvestmentThemesCount ?? resolutionSummary.potentialNewInvestmentThemes),
+    recommendedNewInvestmentThemesCount: numberValue(oldTheme.recommendedNewInvestmentThemesCount ?? resolutionSummary.recommendedNewInvestmentThemes),
+    persistedInvestmentThemeCount: numberValue(oldTheme.persistedInvestmentThemeCount),
+    persistedThemeGroupCount: numberValue(oldTheme.persistedThemeGroupCount),
+  }
+  const oldSemanticTelemetry = Array.isArray(oldResolution.semanticCaseTelemetry) ? oldResolution.semanticCaseTelemetry : []
+  evidence.resolution = {
+    totalResolutionIntents: numberValue(resolutionSummary.intents),
+    resolutionReviewItems: numberValue(resolutionSummary.reviews),
+    semanticCaseCount: numberValue(resolutionSummary.semanticCases),
+    semanticCaseCalls: numberValue(resolutionSummary.semanticCaseCalls),
+    investmentThemes: numberValue(resolutionSummary.investmentThemes),
+    potentialNewInvestmentThemes: numberValue(resolutionSummary.potentialNewInvestmentThemes),
+    recommendedNewInvestmentThemes: numberValue(resolutionSummary.recommendedNewInvestmentThemes),
+    resolutionIntentDispositionCounts: null,
+    resolutionIntentDispositionCountsAvailable: false,
+    semanticCaseTelemetry: oldSemanticTelemetry,
+    source: 'IngestionWorkflowResult.resolutionSummary',
+    summary: resolutionSummary,
+  }
+  delete evidence.reviewSummary
+  evidence.finalNormalizedReviewSummary = { summary: primaryReviewSummary, invariants: oldReviewInvariants, source: 'IngestionWorkflowResult.reviewSummary' }
+  evidence.changeSetObservation = { ...oldChangeSet, source: 'persisted ingestion log / ChangeSet' }
+  delete evidence.changeSet
+  evidence.validationOutcome = 'SUCCESS'
+  evidence.phase = 'completed'
+  await writeEvidence(evidence, 'SUCCESS')
+}
+
+if (process.argv.includes('--evidence-fix')) await correctCommittedR7Evidence()
+else await main()

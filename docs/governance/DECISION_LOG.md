@@ -4,6 +4,16 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-VALIDATION-001-R7-EVIDENCE-FIX-001 — 2026-09-05
+
+**Status:** Implemented / CTO acceptance pending
+
+R7 product E2E remains `SUCCESS`; this task corrected the committed v1 evidence offline and did not rerun the real Workflow, Reasoning, Docling, Writer, or Replay. Extraction accepted candidates are sourced from `IngestionWorkflowResult.unitSummaries`, post-consolidation candidates and Resolution totals from `IngestionWorkflowResult.resolutionSummary`, normalized ReviewSummary from `IngestionWorkflowResult.reviewSummary`, and ChangeSet observations from the persisted ingestion log. Raw Claim temporal distribution and raw InvestmentTheme candidate/coverage outcomes are explicitly unavailable because the v1 recorder did not provide authoritative complete extraction output telemetry. Fabricated v1 Resolution intent binding/disposition totals were removed. No product outcome, architecture decision, Schema, Writer behavior, or historical evidence changed.
+
+The corrected evidence records the unchanged R7 facts: revision `0→1`, `801` safe canonical creates, final counts `389/272/140` for Entity/Relation/Claim, full validation passed, zero planned-reference leaks, complete provenance, and exact replay `already_committed` with zero additional reasoning calls. Historical R1-R6 and timeout-smoke evidence remain immutable. CTO independent acceptance remains pending.
+
+---
+
 ## RHL-VALIDATION-001-R7 — 2026-09-05
 
 **Status:** Executed / SUCCESS / CTO acceptance pending
