@@ -4,7 +4,7 @@ import { createKnowledgeBase, removeKnowledgeBase } from './helpers.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { validateKnowledgeBaseV03 } from '../../knowledge/validation/v03-validator.ts'
 import { validateKnowledgeChangeSetV03 } from '../../knowledge/validation/v03-change-set-validator.ts'
-import { validateV03CanonicalObject } from '../../knowledge/validation/v03-validation-core.ts'
+import { validateV03CanonicalObject, validateRelationAttributesV03 } from '../../knowledge/validation/v03-validation-core.ts'
 import type { ValidationDiagnostic } from '../../knowledge/validation/types.ts'
 
 test('deterministic v0.3 validator accepts an empty fixture and rejects undeclared ChangeSet objects', async () => {
@@ -60,6 +60,25 @@ test('Schema 0.3 validation locks financial contribution and Module/Claim shapes
     { object: { id: 'claim:bad-metric', claimType: 'fact', statement: 'x', subjectRefs: [company.id], sourceRefs: [], structuredValue: { metric: '', value: 1, unit: 'USD', comparator: null }, lifecycle: { status: 'active' } }, code: 'V03_STRUCTURED_VALUE_INVALID' },
   ] as const
   for (const item of cases) { const diagnostics: ValidationDiagnostic[] = []; validateV03CanonicalObject({ kind: item.object.id.startsWith('relation:') ? 'relation' : item.object.id.startsWith('module:') ? 'module' : 'claim', object: item.object }, coreContext([company, industry]), diagnostics); assert.ok(diagnostics.some((diagnostic) => diagnostic.code === item.code)) }
+})
+
+test('shared Relation attribute authority stays in parity with canonical validation', () => {
+  const company = { id: 'entity:company', type: 'company', name: 'Company', lifecycle: { status: 'active' } }
+  const industry = { id: 'entity:industry', type: 'industry', name: 'Industry', lifecycle: { status: 'active' } }
+  const cases = [
+    { type: 'theme_exposure', attributes: { importance: 'core' }, valid: true },
+    { type: 'theme_exposure', attributes: { importance: 'important' }, valid: false },
+    { type: 'offers_product', attributes: { importance: 'core' }, valid: false },
+    { type: 'business_exposure', attributes: { financialContribution: { revenueShare: 0.5 } }, valid: true },
+    { type: 'business_exposure', attributes: { financialContribution: { revenueShare: 2 } }, valid: false },
+  ] as const
+  for (const item of cases) {
+    const shared = validateRelationAttributesV03(item.type, item.attributes)
+    assert.equal(shared.valid, item.valid)
+    const diagnostics: ValidationDiagnostic[] = []
+    validateV03CanonicalObject({ kind: 'relation', object: { id: `relation:${item.type}-${item.valid}`, type: item.type, sourceRef: company.id, targetRef: industry.id, attributes: item.attributes, lifecycle: { status: 'active' } } }, coreContext([company, industry]), diagnostics)
+    assert.equal(diagnostics.some((diagnostic) => diagnostic.code === 'V03_RELATION_ATTRIBUTE_INVALID' || diagnostic.code === 'V03_NUMERIC_CONSTRAINT'), !item.valid)
+  }
 })
 
 test('commit validation rejects an inactive Knowledge Base and duplicate mutation targets', async () => {

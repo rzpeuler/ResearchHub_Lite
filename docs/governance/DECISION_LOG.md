@@ -4,6 +4,18 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-FIX-RELATION-ATTRIBUTE-ADMISSIBILITY-001 — 2026-09-05
+
+**Status:** Implemented / CTO acceptance pending
+
+Relation Candidate producer admissibility must be at least as strict as the frozen Schema 0.3 consumer contract. The pure `validateRelationAttributesV03` authority derives declared Relation attribute keys and nested fields from the executable Schema and owns the existing enum, type, and numeric-range semantics. Candidate validation, Planner defense-in-depth, and canonical Relation validation all use this authority; no independent Planner rule copy remains.
+
+Knowledge Curation Schema Context now projects each Relation's executable attribute contract, including the no-custom-attributes representation. Extraction instructions require declared keys, nested fields, enum/range values, and evidence-supported optional attributes only. Invalid Relation attributes are isolated at Candidate validation as `invalid_semantics`, while valid Entity/Relation/Claim candidates in the same response continue. Planner bypass validation remains active and preserves unrelated safe operations.
+
+Schema 0.3 vocabulary, numeric constraints, endpoint contracts, Storage Format 1, Writer, Workflow orchestration, reasoning operation vocabulary, Theme policy, and historical R1-R7 plus timeout-smoke evidence are unchanged.
+
+---
+
 ## RHL-FIX-CONSOLIDATION-REVIEW-SCOPE-001 — 2026-09-05
 
 **Status:** Implemented / CTO acceptance pending

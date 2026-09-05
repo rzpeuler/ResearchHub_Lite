@@ -28,6 +28,21 @@ test('Schema Context exposes only active slices and derives relation constraints
   assert.deepEqual(context.entityTypes, ['investment_theme', 'industry', 'company', 'product', 'technology'])
   const substitute = context.relationContracts.find((item) => item.relationType === 'substitutes_for')
   assert.equal(substitute?.endpointConstraint, 'same_entity_type_on_both_sides')
+  assert.deepEqual(context.relationContracts.find((item) => item.relationType === 'theme_exposure')?.attributes, {
+    importance: ['core', 'material', 'adjacent'],
+    chainPosition: ['upstream', 'midstream', 'downstream', 'infrastructure', 'cross_chain', 'unknown'],
+  })
+  assert.deepEqual(context.relationContracts.find((item) => item.relationType === 'business_exposure')?.attributes, {
+    exposureBasis: ['direct_operation', 'controlled_subsidiary', 'non_controlling_investment', 'joint_venture', 'project_investment', 'strategic_cooperation', 'announced_transaction', 'other', 'unknown'],
+    realizationStage: ['announced', 'transaction_pending', 'pre_revenue', 'commercialized', 'reported', 'unknown'],
+    materiality: ['core', 'material', 'minor', 'immaterial', 'unknown'],
+    financialContribution: { nullable: true, fields: ['period', 'revenueAmount', 'revenueShare', 'profitAmount', 'profitShare', 'currency', 'separatelyReported'] },
+  })
+  assert.deepEqual(context.relationContracts.find((item) => item.relationType === 'owns_stake_in')?.attributes, {
+    ownershipPct: 'number_0_to_1_or_null',
+    controlType: ['controlling', 'significant_influence', 'minority', 'unknown'],
+  })
+  assert.equal(context.relationContracts.find((item) => item.relationType === 'offers_product')?.attributes, undefined)
   assert.throws(() => buildCurationSchemaContext('schema_gap' as never))
 })
 
@@ -195,6 +210,70 @@ test('relations outside Schema 0.3 and relations with invalid endpoint types rem
   assert.equal(result.relations.length, 0)
   assert.equal(result.rejected.filter((item) => item.kind === 'relation').length, 2)
   assert.ok(result.rejected.every((item) => item.code === 'invalid_semantics'))
+})
+
+test('Relation attribute validation is early, selective, and preserves valid candidates', async () => {
+  const relationEntities = [
+    { candidateId: 'theme', entityType: 'investment_theme', name: 'Theme', evidenceBlockRefs: ['block-1'], reason: 'named' },
+    { candidateId: 'company', entityType: 'company', name: 'Company', evidenceBlockRefs: ['block-1'], reason: 'named' },
+    { candidateId: 'other-company', entityType: 'company', name: 'Other Company', evidenceBlockRefs: ['block-1'], reason: 'named' },
+    { candidateId: 'industry', entityType: 'industry', name: 'Industry', evidenceBlockRefs: ['block-1'], reason: 'named' },
+    { candidateId: 'product', entityType: 'product', name: 'Product', evidenceBlockRefs: ['block-1'], reason: 'named' },
+  ]
+  const relation = (candidateId: string, relationType: string, source: string, target: string, attributes?: unknown) => ({ candidateId, relationType, source: { candidateRef: source, mention: source }, target: { candidateRef: target, mention: target }, ...(attributes === undefined ? {} : { attributes }), evidenceBlockRefs: ['block-1'], reason: 'supported' })
+  const run = async (relations: readonly unknown[]) => {
+    const executor = new MockReasoningExecutor({ capabilities, responses: { extractKnowledge: { entities: relationEntities, relations, claims: [] } } })
+    return new KnowledgeCurationSkill({ executor }).extractKnowledge({ document, reportMap, unit })
+  }
+
+  const validTheme = await run([relation('theme-relation', 'theme_exposure', 'theme', 'industry', { importance: 'core', chainPosition: 'upstream' })])
+  assert.equal(validTheme.relations.length, 1)
+  const invalidEnum = await run([relation('bad-enum', 'theme_exposure', 'theme', 'industry', { importance: 'important' })])
+  assert.equal(invalidEnum.relations.length, 0)
+  assert.equal(invalidEnum.rejected[0]?.code, 'invalid_semantics')
+  assert.match(invalidEnum.rejected[0]?.message ?? '', /relations\[0\]\.importance/)
+  const undeclared = await run([relation('bad-key', 'offers_product', 'company', 'product', { importance: 'core' })])
+  assert.equal(undeclared.relations.length, 0)
+  assert.equal(undeclared.rejected[0]?.code, 'invalid_semantics')
+  const validOwnership = await run([relation('owns', 'owns_stake_in', 'company', 'other-company', { ownershipPct: 0.5, controlType: 'minority' })])
+  assert.equal(validOwnership.relations.length, 1)
+  for (const value of [0, 1, null]) {
+    const valid = await run([relation(`valid-ownership-${String(value)}`, 'owns_stake_in', 'company', 'other-company', { ownershipPct: value })])
+    assert.equal(valid.relations.length, 1)
+  }
+  const invalidControlType = await run([relation('bad-control', 'owns_stake_in', 'company', 'other-company', { controlType: 'controlled' })])
+  assert.equal(invalidControlType.relations.length, 0)
+  assert.equal(invalidControlType.rejected[0]?.code, 'invalid_semantics')
+  for (const value of [-0.01, 1.01, '0.5']) {
+    const invalid = await run([relation(`bad-ownership-${String(value)}`, 'owns_stake_in', 'company', 'other-company', { ownershipPct: value })])
+    assert.equal(invalid.relations.length, 0)
+    assert.equal(invalid.rejected[0]?.code, 'invalid_semantics')
+  }
+  const validBusiness = await run([relation('business', 'business_exposure', 'company', 'industry', { exposureBasis: 'direct_operation', realizationStage: 'reported', materiality: 'material', financialContribution: { period: 'FY2025', revenueAmount: 10, revenueShare: 0.2, profitAmount: null, profitShare: 0, currency: 'USD', separatelyReported: true } })])
+  assert.equal(validBusiness.relations.length, 1)
+  for (const attributes of [{ materiality: 'important' }, { financialContribution: { unknown: true } }, { financialContribution: { revenueShare: 1.1 } }, { financialContribution: { revenueAmount: '10' } }, { financialContribution: { separatelyReported: 'yes' } }]) {
+    const invalid = await run([relation('bad-business', 'business_exposure', 'company', 'industry', attributes)])
+    assert.equal(invalid.relations.length, 0)
+    assert.equal(invalid.rejected[0]?.code, 'invalid_semantics')
+  }
+})
+
+test('Invalid Relation attributes do not fail the whole extraction response', async () => {
+  const executor = new MockReasoningExecutor({ capabilities, responses: { extractKnowledge: {
+    entities: [
+      { candidateId: 'company', entityType: 'company', name: 'Company', evidenceBlockRefs: ['block-1'], reason: 'named' },
+      { candidateId: 'product', entityType: 'product', name: 'Product', evidenceBlockRefs: ['block-1'], reason: 'named' },
+    ],
+    relations: [
+      { candidateId: 'valid-relation', relationType: 'offers_product', source: { candidateRef: 'company', mention: 'Company' }, target: { candidateRef: 'product', mention: 'Product' }, evidenceBlockRefs: ['block-1'], reason: 'supported' },
+      { candidateId: 'invalid-relation', relationType: 'offers_product', source: { candidateRef: 'company', mention: 'Company' }, target: { candidateRef: 'product', mention: 'Product' }, attributes: { importance: 'core' }, evidenceBlockRefs: ['block-1'], reason: 'invalid attribute' },
+    ],
+    claims: [{ candidateId: 'claim', claimType: 'fact', statement: 'Company offers Product.', subjectRefs: [{ candidateRef: 'company', mention: 'Company' }], evidenceBlockRefs: ['block-1'], reason: 'supported' }],
+  } } })
+  const result = await new KnowledgeCurationSkill({ executor }).extractKnowledge({ document, reportMap, unit })
+  assert.deepEqual(result.relations.map((item) => item.candidateId), ['valid-relation'])
+  assert.equal(result.claims.length, 1)
+  assert.deepEqual(result.rejected.map((item) => [item.candidateId, item.code]), [['invalid-relation', 'invalid_semantics']])
 })
 
 test('structured output contracts fully describe nested objects and Schema 0.3 vocabularies', () => {

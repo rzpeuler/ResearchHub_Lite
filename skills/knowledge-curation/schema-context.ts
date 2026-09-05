@@ -5,13 +5,14 @@ import type { CurationSchemaContext, CurationSchemaContextSlice, RelationSchemaC
 export function buildCurationSchemaContext(slice: CurationSchemaContextSlice): CurationSchemaContext {
   const schema = KNOWLEDGE_SCHEMA_V03
   const relationContracts = schema.relation.types.map((relationType) => {
-    const definition = schema.relation.definitions[relationType] as { directionality: string; sourceTypes: readonly EntityTypeV03[]; targetTypes: readonly EntityTypeV03[]; endpointConstraint?: string }
+    const definition = schema.relation.definitions[relationType] as { directionality: string; sourceTypes: readonly EntityTypeV03[]; targetTypes: readonly EntityTypeV03[]; endpointConstraint?: string; attributes?: Readonly<Record<string, unknown>> }
     const result: RelationSchemaContract = {
       relationType,
       allowedSourceTypes: definition.sourceTypes,
       allowedTargetTypes: definition.targetTypes,
       directionality: definition.directionality,
       ...(definition.endpointConstraint === undefined ? {} : { endpointConstraint: definition.endpointConstraint }),
+      ...(definition.attributes === undefined ? {} : { attributes: structuredClone(definition.attributes) }),
     }
     return result
   })

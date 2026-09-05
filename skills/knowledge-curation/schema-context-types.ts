@@ -8,6 +8,7 @@ export interface RelationSchemaContract {
   readonly allowedTargetTypes: readonly EntityTypeV03[]
   readonly directionality: string
   readonly endpointConstraint?: string
+  readonly attributes?: Readonly<Record<string, unknown>>
 }
 
 export interface CurationSchemaContext {
