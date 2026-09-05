@@ -5,6 +5,7 @@ import type { ReportMap, ProposedExtractionUnit, ValidatedExtractKnowledgeResult
 import type { ValidationReport } from '../../knowledge/validation/types.ts'
 import type { KnowledgeWriteResult } from '../../knowledge/schema/mutation.ts'
 import type { ReviewCase } from '../../knowledge/review/contracts.ts'
+import type { ReviewCaseActionability } from '../../knowledge/review/contracts.ts'
 
 export interface IngestionWorkflowConfig {
   readonly maxExtractionUnits?: number
@@ -91,6 +92,8 @@ export interface PotentialInvestmentThemeAssessment {
 }
 export type ReviewCategory = 'invalid_reference' | 'invalid_semantics' | 'relation_cardinality' | 'schema_gap' | 'theme_creation' | 'theme_ambiguity' | 'reconciliation_review' | 'other'
 export type ReviewOrigin = 'extraction_rejection' | 'consolidation' | 'consolidation_mirror' | 'knowledge_resolution' | 'semantic_case' | 'planner' | 'dependency_isolation'
+export type ReviewItemActionability = ReviewCaseActionability | 'telemetry_only'
+export type ReviewDependencyDirection = 'blocked_by' | 'blocks_dependents'
 export interface ConsolidationReviewConstraint {
   readonly candidateId: string
   readonly reason: string
@@ -100,7 +103,7 @@ export interface ConsolidationReviewConstraint {
   readonly reviewKey: string
   readonly conflictValues?: { readonly left: Readonly<Record<string, unknown>>; readonly right: Readonly<Record<string, unknown>> }
 }
-export interface ReviewItem { readonly candidateId: string; readonly kind: string; readonly rationale: string; readonly dependentCandidateIds: readonly string[]; readonly stage?: string; readonly category?: ReviewCategory; readonly dependency?: boolean; readonly origin?: ReviewOrigin; readonly reviewKey?: string }
+export interface ReviewItem { readonly candidateId: string; readonly kind: string; readonly rationale: string; readonly dependentCandidateIds: readonly string[]; readonly stage?: string; readonly category?: ReviewCategory; readonly actionability?: ReviewItemActionability; readonly dependency?: boolean; readonly dependencyDirection?: ReviewDependencyDirection; readonly origin?: ReviewOrigin; readonly reviewKey?: string }
 export interface ReviewSample { readonly candidateId?: string; readonly kind: 'entity' | 'relation' | 'claim' | 'workflow_level'; readonly stage: string; readonly category: ReviewCategory; readonly rationale: string; readonly dependentCandidateIds: readonly string[]; readonly dependency?: boolean; readonly origin?: ReviewOrigin; readonly reviewKey?: string }
 export interface ReviewSummary { readonly total: number; readonly rootCount: number; readonly dependencyCount: number; readonly byCategory: Readonly<Record<ReviewCategory, number>>; readonly byCandidateKind: Readonly<Record<'entity' | 'relation' | 'claim' | 'workflow_level', number>>; readonly samplesByCategory: Readonly<Record<ReviewCategory, readonly ReviewSample[]>> }
 export interface IngestionWorkflowResult {

@@ -7,7 +7,7 @@ import type { StructuredDocument } from '../../plugins/document/contracts.ts'
 import type { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
 import type { ClaimCandidate, EntityCandidate, IncomingSourceContext, RelationCandidate, ReportMap, ResolutionCase, ResolutionOutcome, ResolvedCandidateGroup, SemanticCaseEvidence, SemanticResolutionResult, SemanticSourceProjection } from '../../skills/knowledge-curation/contracts.ts'
 import { semanticOutcomeVocabulary } from '../../skills/knowledge-curation/validation.ts'
-import type { AcceptedExtractionPlan, ConsolidationReviewConstraint, PotentialInvestmentThemeAssessment, ReviewCategory, ReviewItem } from './contracts.ts'
+import type { AcceptedExtractionPlan, ConsolidationReviewConstraint, PotentialInvestmentThemeAssessment, ReviewCategory, ReviewItem, ReviewItemActionability } from './contracts.ts'
 import { assessPotentialNewInvestmentTheme } from './investment-theme-policy.ts'
 import type { ConsolidatedCandidateSupport } from './consolidation.ts'
 
@@ -35,6 +35,7 @@ export interface ResolutionIntent {
   readonly semanticBasis: SemanticBasis
   readonly evidenceRefs: readonly string[]
   readonly reviewDependencyRefs?: readonly string[]
+  readonly reviewExistingKnowledgeRefs?: readonly string[]
 }
 export interface KnowledgeResolutionInput {
   readonly assets: KnowledgeAssetCollectionV03
@@ -139,11 +140,19 @@ function caseInput(caseId: string, caseKind: ResolutionCase['caseKind'], candida
   const evidenceProjection = caseEvidence(candidate, plan, document)
   return { resolutionCase: { caseId, caseKind, candidateProjection: candidateProjection(candidate), existingProjections: existing, evidence: evidenceProjection.evidence, sourceContext, schemaContextSlice: { caseKind, allowedOutcomes }, allowedOutcomes }, missingBlockIds: evidenceProjection.missingBlockIds }
 }
-function review(candidateId: string, kind: ReviewItem['kind'], rationale: string, dependency = false, refs: readonly string[] = [], origin: 'knowledge_resolution' | 'semantic_case' = 'knowledge_resolution', category: ReviewCategory = 'reconciliation_review'): ReviewItem {
-  return { candidateId, kind, rationale, dependentCandidateIds: [...refs].sort(), stage: dependency ? 'knowledge_resolution_dependency' : origin === 'semantic_case' ? 'semantic_case' : 'knowledge_resolution', category, origin, dependency, reviewKey: ['knowledge-resolution', candidateId, dependency ? 'dependency' : 'root', category, rationale, ...refs].join('|') }
+function actionabilityForReview(category: ReviewCategory, dependency: boolean): ReviewItemActionability {
+  if (dependency || category === 'invalid_reference' || category === 'invalid_semantics') return 'telemetry_only'
+  if (category === 'theme_creation') return 'research_followup'
+  if (category === 'schema_gap') return 'schema_design'
+  if (category === 'theme_ambiguity' || category === 'reconciliation_review' || category === 'relation_cardinality') return 'knowledge_decision'
+  return 'telemetry_only'
 }
-function intent(group: ResolvedCandidateGroup, disposition: ResolutionDisposition, rationale: string, targetRef: string | undefined, basis: Partial<SemanticBasis> = {}, dependencies: readonly string[] = []): ResolutionIntent {
-  return { candidateRef: group.candidateId, candidateKind: group.kind, disposition, ...(targetRef === undefined ? {} : { targetRef }), semanticBasis: { rationale, ...basis }, evidenceRefs: evidence(group.candidate as EntityCandidate | RelationCandidate | ClaimCandidate), ...(dependencies.length === 0 ? {} : { reviewDependencyRefs: unique(dependencies) }) }
+function boundedExistingKnowledgeRefs(refs: readonly string[]): readonly string[] { return refs.length <= 8 ? unique(refs) : [] }
+function review(candidateId: string, kind: ReviewItem['kind'], rationale: string, dependency = false, refs: readonly string[] = [], origin: 'knowledge_resolution' | 'semantic_case' = 'knowledge_resolution', category: ReviewCategory = 'reconciliation_review'): ReviewItem {
+  return { candidateId, kind, rationale, dependentCandidateIds: [...refs].sort(), stage: dependency ? 'knowledge_resolution_dependency' : origin === 'semantic_case' ? 'semantic_case' : 'knowledge_resolution', category, actionability: actionabilityForReview(category, dependency), origin, dependency, reviewKey: ['knowledge-resolution', candidateId, dependency ? 'dependency' : 'root', category, rationale, ...refs].join('|') }
+}
+function intent(group: ResolvedCandidateGroup, disposition: ResolutionDisposition, rationale: string, targetRef: string | undefined, basis: Partial<SemanticBasis> = {}, dependencies: readonly string[] = [], existingKnowledgeRefs: readonly string[] = []): ResolutionIntent {
+  return { candidateRef: group.candidateId, candidateKind: group.kind, disposition, ...(targetRef === undefined ? {} : { targetRef }), semanticBasis: { rationale, ...basis }, evidenceRefs: evidence(group.candidate as EntityCandidate | RelationCandidate | ClaimCandidate), ...(dependencies.length === 0 ? {} : { reviewDependencyRefs: unique(dependencies) }), ...(existingKnowledgeRefs.length === 0 ? {} : { reviewExistingKnowledgeRefs: unique(existingKnowledgeRefs) }) }
 }
 function bindingReview(group: ResolvedCandidateGroup, rationale: string, dependencies: readonly string[] = []): { intent: ResolutionIntent; review: ReviewItem } { return { intent: intent(group, 'review', rationale, undefined, {}, dependencies), review: review(group.candidateId, group.kind, rationale, dependencies.length > 0, dependencies, dependencies.length > 0 ? 'knowledge_resolution' : 'knowledge_resolution') } }
 function consolidationReview(group: ResolvedCandidateGroup, constraint: ConsolidationReviewConstraint): ReviewItem { return { ...review(group.candidateId, group.kind, constraint.reason), stage: 'consolidation', category: constraint.category, origin: 'consolidation', reviewKey: constraint.reviewKey } }
@@ -318,7 +327,7 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
     const dependencies = [candidate.source.candidateRef, candidate.target.candidateRef].filter((ref) => reviewOrReject.has(ref) || entityRef(ref) === undefined)
     if (dependencies.length > 0) { dependentReview(group, dependencies, `Relation depends on unresolved Entity binding: ${dependencies.join(', ')}`); continue }
     const source = entityRef(candidate.source.candidateRef)!; const target = entityRef(candidate.target.candidateRef)!; const matches = relationMatches(index, candidate, source, target)
-    if (matches.length > 1) { const rationale = 'Knowledge integrity defect: multiple active canonical Relations share the resolved identity'; intents.push(intent(group, 'review', rationale, undefined)); reviews.push(review(group.candidateId, group.kind, rationale)); errors.push(rationale); continue }
+    if (matches.length > 1) { const rationale = 'Knowledge integrity defect: multiple active canonical Relations share the resolved identity'; intents.push(intent(group, 'review', rationale, undefined, {}, [], boundedExistingKnowledgeRefs(matches.map((item) => item.id)))); reviews.push(review(group.candidateId, group.kind, rationale)); errors.push(rationale); continue }
     if (matches.length === 0) { intents.push(intent(group, 'create', 'No canonical Relation matches the resolved endpoint identity', `planned-relation-${hashKnowledgeObject({ type: candidate.relationType, source, target }).slice(7, 23)}`)); continue }
     const existing = matches[0]!; const diff = attributeDiff(candidate, existing)
     if (diff === 'additive') { intents.push(intent(group, 'enrich_existing', 'Relation has only safely additive attributes', existing.id)); continue }
@@ -326,7 +335,7 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
     const alias = 'existing-001'; const caseId = `semantic-case-${hashKnowledgeObject({ kind: 'RelationConflictCase', candidateId: group.candidateId, existing: existing.id }).slice(7, 23)}`
     const preparedCase = caseInput(caseId, 'RelationConflictCase', candidate, [{ alias, projection: { type: existing.type, source: 'source', target: 'target', attributes: existing.attributes ?? null, sources: existingSourceProjections(index, existing.sourceRefs) } }], input.plan, input.document, sourceContext, semanticOutcomeVocabulary('RelationConflictCase'))
     const resolutionCase = preparedCase.resolutionCase
-    if (preparedCase.missingBlockIds.length > 0 || !isCapacitySafe(resolutionCase, input.maxContextTokens) || semanticCaseCount >= maxCases) { const rationale = preparedCase.missingBlockIds.length > 0 ? `semantic_case_missing_evidence_block: ${preparedCase.missingBlockIds.join(', ')}` : !isCapacitySafe(resolutionCase, input.maxContextTokens) ? `semantic_case_capacity_exceeded: ${caseId} exceeds configured context capacity` : `Semantic resolution case limit ${maxCases} exceeded`; intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'RelationConflictCase' })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
+    if (preparedCase.missingBlockIds.length > 0 || !isCapacitySafe(resolutionCase, input.maxContextTokens) || semanticCaseCount >= maxCases) { const rationale = preparedCase.missingBlockIds.length > 0 ? `semantic_case_missing_evidence_block: ${preparedCase.missingBlockIds.join(', ')}` : !isCapacitySafe(resolutionCase, input.maxContextTokens) ? `semantic_case_capacity_exceeded: ${caseId} exceeds configured context capacity` : `Semantic resolution case limit ${maxCases} exceeded`; intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'RelationConflictCase' }, [], [existing.id])); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
     semanticCaseCount += 1
     let result: SemanticResolutionResult | undefined
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) { semanticCaseCalls += 1; try { result = await input.skill.resolveSemanticCase({ resolutionCase, instructions: input.instructions }); break } catch { /* final failure is represented as an auditable Review, not a workflow-wide block */ } }
@@ -335,7 +344,7 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
     if (outcome === 'equivalent') intents.push(intent(group, 'merge_evidence', result!.rationale, existing.id, basis))
     else if (outcome === 'state_changed') intents.push(intent(group, 'replace_state', result!.rationale, existing.id, basis))
     else if (outcome === 'invalid') intents.push(intent(group, 'reject', result!.rationale, undefined, basis))
-    else { const rationale = result?.rationale ?? `Semantic case ${caseId} failed after bounded retries`; intents.push(intent(group, 'review', rationale, undefined, basis)); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')) }
+    else { const rationale = result?.rationale ?? `Semantic case ${caseId} failed after bounded retries`; intents.push(intent(group, 'review', rationale, undefined, basis, [], [existing.id])); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')) }
   }
   for (const group of groups.filter((item) => item.kind === 'claim')) {
     const candidate = group.candidate as ClaimCandidate
@@ -344,7 +353,7 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
     const dependencies = candidate.subjectRefs.map((subject) => subject.candidateRef).filter((ref) => reviewOrReject.has(ref) || entityRef(ref) === undefined)
     if (dependencies.length > 0) { dependentReview(group, dependencies, `Claim depends on unresolved Entity binding: ${dependencies.join(', ')}`); continue }
     const subjects = candidate.subjectRefs.map((subject) => entityRef(subject.candidateRef)!).sort(); const matches = claimMatches(index, candidate, subjects)
-    if (matches.exact.length > 1) { const rationale = 'Knowledge integrity defect: multiple exact canonical Claims share the same identity'; intents.push(intent(group, 'review', rationale, undefined)); reviews.push(review(group.candidateId, group.kind, rationale)); errors.push(rationale); continue }
+    if (matches.exact.length > 1) { const rationale = 'Knowledge integrity defect: multiple exact canonical Claims share the same identity'; intents.push(intent(group, 'review', rationale, undefined, {}, [], boundedExistingKnowledgeRefs(matches.exact.map((item) => item.id)))); reviews.push(review(group.candidateId, group.kind, rationale)); errors.push(rationale); continue }
     if (matches.exact.length === 1) { intents.push(intent(group, 'merge_evidence', 'Claim exact identity matched deterministically; evidence will be merged', matches.exact[0]!.id)); continue }
     if (matches.plausible.length === 0) { intents.push(intent(group, 'create', 'No plausible Claim conflict was retrieved', `planned-claim-${hashKnowledgeObject({ candidateId: group.candidateId, identity: claimIdentity({ claimType: candidate.claimType, statement: candidate.statement, subjectRefs: subjects, temporal: candidate.temporal, structuredValue: candidate.structuredValue }) }).slice(7, 23)}`)); continue }
     if (matches.plausible.length > 8) { const rationale = `Claim conflict retrieval overflow: ${matches.plausible.length} compatible candidates exceed bound 8`; intents.push(intent(group, 'review', rationale, undefined)); reviews.push(review(group.candidateId, group.kind, rationale)); continue }
@@ -352,7 +361,7 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
     const caseId = `semantic-case-${hashKnowledgeObject({ kind: 'ClaimConflictCase', candidateId: group.candidateId, existing: existing.map((item) => item.alias) }).slice(7, 23)}`
     const preparedCase = caseInput(caseId, 'ClaimConflictCase', candidate, existing, input.plan, input.document, sourceContext, semanticOutcomeVocabulary('ClaimConflictCase'))
     const resolutionCase = preparedCase.resolutionCase
-    if (preparedCase.missingBlockIds.length > 0 || !isCapacitySafe(resolutionCase, input.maxContextTokens) || semanticCaseCount >= maxCases) { const rationale = preparedCase.missingBlockIds.length > 0 ? `semantic_case_missing_evidence_block: ${preparedCase.missingBlockIds.join(', ')}` : !isCapacitySafe(resolutionCase, input.maxContextTokens) ? `semantic_case_capacity_exceeded: ${caseId} exceeds configured context capacity` : `Semantic resolution case limit ${maxCases} exceeded`; intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'ClaimConflictCase' })); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
+    if (preparedCase.missingBlockIds.length > 0 || !isCapacitySafe(resolutionCase, input.maxContextTokens) || semanticCaseCount >= maxCases) { const rationale = preparedCase.missingBlockIds.length > 0 ? `semantic_case_missing_evidence_block: ${preparedCase.missingBlockIds.join(', ')}` : !isCapacitySafe(resolutionCase, input.maxContextTokens) ? `semantic_case_capacity_exceeded: ${caseId} exceeds configured context capacity` : `Semantic resolution case limit ${maxCases} exceeded`; intents.push(intent(group, 'review', rationale, undefined, { caseId, caseKind: 'ClaimConflictCase' }, [], matches.plausible.map((item) => item.id))); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')); continue }
     semanticCaseCount += 1
     let result: SemanticResolutionResult | undefined
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) { semanticCaseCalls += 1; try { result = await input.skill.resolveSemanticCase({ resolutionCase, instructions: input.instructions }); break } catch { /* final failure is represented as an auditable Review, not a workflow-wide block */ } }
@@ -362,7 +371,7 @@ export async function resolveKnowledge(input: KnowledgeResolutionInput): Promise
     else if (outcome === 'supersedes' && target) intents.push(intent(group, 'supersede', result!.rationale, target, basis))
     else if (outcome === 'coexists' || (outcome === 'contradicts' && (candidate.claimType === 'forecast' || candidate.claimType === 'viewpoint'))) intents.push(intent(group, 'create', result!.rationale, `planned-claim-${hashKnowledgeObject({ candidateId: group.candidateId, coexist: true }).slice(7, 23)}`, basis))
     else if (outcome === 'invalid') intents.push(intent(group, 'reject', result!.rationale, undefined, basis))
-    else { const rationale = result?.rationale ?? `Semantic case ${caseId} failed after bounded retries`; intents.push(intent(group, 'review', rationale, undefined, basis)); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')) }
+    else { const rationale = result?.rationale ?? `Semantic case ${caseId} failed after bounded retries`; intents.push(intent(group, 'review', rationale, undefined, basis, [], matches.plausible.map((item) => item.id))); reviews.push(review(group.candidateId, group.kind, rationale, false, [], 'semantic_case')) }
   }
   const barrier = resolveResolutionIntentBarrier(groups, intents, bindings)
   if (!barrier.valid) errors.push(...barrier.errors)

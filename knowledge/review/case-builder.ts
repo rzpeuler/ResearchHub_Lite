@@ -45,6 +45,12 @@ function makeProposal(group: ResolvedCandidateGroup, input: BuildReviewCasesInpu
   const dependencyRefs = [...new Set([...candidateDependencies(group), ...extraDependencies].filter((ref) => input.groups.some((item) => item.candidateId === ref)))].sort()
   return { proposalId: group.candidateId, proposalKind: proposalKind(group), semanticType: semanticType(group) as ReviewSemanticProposal['semanticType'], semanticPayload: candidate, evidenceBindings: bindingsFor(candidate, input.rawRef, input.documentId), dependencyRefs }
 }
+function reviewPrerequisites(item: ReviewItem | undefined, input: BuildReviewCasesInput): readonly string[] {
+  if (!item) return []
+  const refs = item.dependency === true ? item.dependentCandidateIds : []
+  const intent = input.intents?.find((candidate) => candidate.candidateRef === item.candidateId)
+  return [...new Set([...refs, ...(intent?.reviewDependencyRefs ?? [])])].sort()
+}
 function entityProjection(entity: KnowledgeEntityV03): ExistingKnowledgeProjection {
   const payload: ExistingKnowledgeProjectionPayload = { kind: 'entity', type: entity.type, name: entity.name, aliases: [...(entity.aliases ?? [])].sort(), ...(entity.description == null ? {} : { description: entity.description }), ...(entity.type === 'company' ? { ticker: entity.ticker ?? null, exchange: entity.exchange ?? null, legalName: entity.legalName ?? null } : {}), ...(entity.type === 'investment_theme' ? { definition: entity.definition ?? null, inclusionCriteria: [...(entity.inclusionCriteria ?? [])].sort(), exclusionCriteria: [...(entity.exclusionCriteria ?? [])].sort() } : {}) }
   return { canonicalRef: entity.id, kind: 'entity', semanticType: entity.type, payload }
@@ -52,12 +58,18 @@ function entityProjection(entity: KnowledgeEntityV03): ExistingKnowledgeProjecti
 function relationProjection(relation: KnowledgeRelationV03): ExistingKnowledgeProjection { return { canonicalRef: relation.id, kind: 'relation', semanticType: relation.type, payload: { kind: 'relation', type: relation.type, sourceRef: relation.sourceRef, targetRef: relation.targetRef, attributes: relation.attributes == null ? null : structuredClone(relation.attributes) as Readonly<Record<string, unknown>> } } }
 function claimProjection(claim: KnowledgeClaimV03): ExistingKnowledgeProjection { return { canonicalRef: claim.id, kind: 'claim', semanticType: claim.claimType, payload: { kind: 'claim', claimType: claim.claimType, statement: claim.statement, subjectRefs: [...claim.subjectRefs].sort(), temporal: claim.temporal ?? null, structuredValue: claim.structuredValue == null ? null : structuredClone(claim.structuredValue) as unknown as Readonly<Record<string, unknown>> } } }
 function rootKey(item: ReviewItem, constraint?: ConsolidationReviewConstraint): string { return item.reviewKey ?? constraint?.reviewKey ?? [item.candidateId, item.stage ?? '', item.category ?? 'other', normalized(item.rationale)].join('|') }
-function actionability(category: ReviewCategory): ReviewCaseActionability { return category === 'theme_creation' || category === 'theme_ambiguity' ? 'research_followup' : category === 'schema_gap' ? 'schema_design' : 'knowledge_decision' }
+function actionability(category: ReviewCategory, item?: ReviewItem): ReviewCaseActionability | undefined {
+  if (item?.actionability === 'telemetry_only') return undefined
+  if (category === 'invalid_reference' || category === 'invalid_semantics') return undefined
+  if (category === 'theme_creation') return 'research_followup'
+  if (category === 'schema_gap') return 'schema_design'
+  if (category === 'theme_ambiguity' || category === 'reconciliation_review' || category === 'relation_cardinality') return 'knowledge_decision'
+  return item?.actionability
+}
 function origin(item: ReviewItem): ReviewOrigin { return item.origin ?? 'planner' }
 function isActionableRoot(item: ReviewItem): boolean {
   if (item.dependency === true || origin(item) === 'extraction_rejection' || origin(item) === 'consolidation_mirror' || origin(item) === 'dependency_isolation' || item.category === undefined) return false
-  if (item.category === 'invalid_semantics' && /relation attributes are not schema 0\.3 valid|claim temporal is not schema 0\.3 admissible/i.test(item.rationale)) return false
-  return true
+  return actionability(item.category, item) !== undefined
 }
 function findRoots(input: BuildReviewCasesInput): RootReview[] {
   const groups = new Map(input.groups.map((group) => [group.candidateId, group]))
@@ -67,7 +79,7 @@ function findRoots(input: BuildReviewCasesInput): RootReview[] {
   for (const constraint of constraints.values()) {
     const group = groups.get(constraint.candidateId); if (!group) continue
     const item: ReviewItem = { candidateId: group.candidateId, kind: group.kind, rationale: constraint.reason, dependentCandidateIds: [], stage: 'consolidation', category: constraint.category, origin: 'consolidation', dependency: false, reviewKey: constraint.reviewKey }
-    roots.set(constraint.reviewKey, { key: constraint.reviewKey, item, constraint })
+    if (isActionableRoot(item)) roots.set(constraint.reviewKey, { key: constraint.reviewKey, item, constraint })
   }
   for (const item of input.reviewItems) if (groups.has(item.candidateId) && isActionableRoot(item)) roots.set(rootKey(item), { key: rootKey(item), item })
   for (const assessment of input.potentialNewInvestmentThemes ?? []) {
@@ -82,7 +94,9 @@ function findRoots(input: BuildReviewCasesInput): RootReview[] {
 function existingProjections(root: RootReview, group: ResolvedCandidateGroup, input: BuildReviewCasesInput, index: KnowledgeIndexV03): readonly Projection[] {
   const refs = new Set<string>()
   for (const ref of input.bindings?.get(group.candidateId)?.plausibleMatches ?? []) refs.add(ref)
-  const target = input.intents?.find((intent) => intent.candidateRef === group.candidateId)?.targetRef
+  const resolutionIntent = input.intents?.find((intent) => intent.candidateRef === group.candidateId)
+  for (const ref of resolutionIntent?.reviewExistingKnowledgeRefs ?? []) refs.add(ref)
+  const target = resolutionIntent?.targetRef
   if (target && !target.startsWith('planned-')) refs.add(target)
   if (root.constraint?.conflictingFields.length) {
     for (const ref of input.bindings?.get(group.candidateId)?.plausibleMatches ?? []) refs.add(ref)
@@ -91,22 +105,29 @@ function existingProjections(root: RootReview, group: ResolvedCandidateGroup, in
   for (const ref of [...refs].sort()) {
     const value = index.entities.get(ref) ?? index.relations.get(ref) ?? index.claims.get(ref)
     if (!value) continue
-    if ('entityType' in (group.candidate as Candidate) && index.entities.has(ref)) result.push(entityProjection(value as KnowledgeEntityV03))
-    else if (index.relations.has(ref)) result.push(relationProjection(value as KnowledgeRelationV03))
-    else if (index.claims.has(ref)) result.push(claimProjection(value as KnowledgeClaimV03))
+    if (group.kind === 'entity' && index.entities.has(ref)) result.push(entityProjection(value as KnowledgeEntityV03))
+    else if (group.kind === 'relation' && index.relations.has(ref)) result.push(relationProjection(value as KnowledgeRelationV03))
+    else if (group.kind === 'claim' && index.claims.has(ref)) result.push(claimProjection(value as KnowledgeClaimV03))
   }
   return result
 }
-function reverseDependents(input: BuildReviewCasesInput): Map<string, string[]> {
-  const result = new Map<string, string[]>()
-  for (const item of input.reviewItems) for (const dependency of item.dependentCandidateIds) result.set(dependency, [...(result.get(dependency) ?? []), item.candidateId])
-  return result
+function addDependencyEdge(graph: Map<string, Set<string>>, blocker: string, blocked: string): void {
+  if (blocker === blocked) return
+  graph.set(blocker, new Set([...(graph.get(blocker) ?? []), blocked]))
+}
+function blockedDependencyGraph(input: BuildReviewCasesInput): Map<string, Set<string>> {
+  const graph = new Map<string, Set<string>>()
+  for (const intent of input.intents ?? []) if (intent.disposition === 'review') for (const blocker of intent.reviewDependencyRefs ?? []) addDependencyEdge(graph, blocker, intent.candidateRef)
+  for (const item of input.reviewItems) {
+    if (item.dependency === true) for (const blocker of item.dependentCandidateIds) addDependencyEdge(graph, blocker, item.candidateId)
+    else if (item.dependencyDirection === 'blocks_dependents') for (const blocked of item.dependentCandidateIds) addDependencyEdge(graph, item.candidateId, blocked)
+  }
+  return graph
 }
 function closure(root: RootReview, input: BuildReviewCasesInput): string[] {
-  const groups = new Map(input.groups.map((group) => [group.candidateId, group])); const itemByCandidate = new Map(input.reviewItems.map((item) => [item.candidateId, item])); const reverse = reverseDependents(input); const seen = new Set<string>([root.item.candidateId]); const queue = [root.item.candidateId]
+  const groups = new Map(input.groups.map((group) => [group.candidateId, group])); const graph = blockedDependencyGraph(input); const seen = new Set<string>([root.item.candidateId]); const queue = [root.item.candidateId]
   while (queue.length > 0) {
-    const current = queue.shift()!; const group = groups.get(current); if (!group) continue
-    const next = [...candidateDependencies(group), ...(itemByCandidate.get(current)?.dependentCandidateIds ?? []), ...(reverse.get(current) ?? [])]
+    const current = queue.shift()!; const next = [...(graph.get(current) ?? [])]
     for (const ref of next) if (groups.has(ref) && !seen.has(ref)) { seen.add(ref); queue.push(ref) }
   }
   return [...seen].filter((id) => id !== root.item.candidateId).sort()
@@ -125,9 +146,11 @@ export function buildReviewCases(input: BuildReviewCasesInput): readonly ReviewC
   const groups = new Map(input.groups.map((group) => [group.candidateId, group])); const index = KnowledgeIndexV03.fromAssets(input.assets); const cases: ReviewCase[] = []
   for (const root of findRoots(input)) {
     const rootGroup = groups.get(root.item.candidateId); if (!rootGroup) continue
-    const dependentIds = closure(root, input); const rootProposal = makeProposal(rootGroup, input, root.item.dependentCandidateIds); const dependentProposals = dependentIds.map((id) => makeProposal(groups.get(id)!, input, input.reviewItems.find((item) => item.candidateId === id)?.dependentCandidateIds ?? []))
+    const dependentIds = closure(root, input); const rootProposal = makeProposal(rootGroup, input, reviewPrerequisites(root.item, input)); const dependentProposals = dependentIds.map((id) => makeProposal(groups.get(id)!, input, reviewPrerequisites(input.reviewItems.find((item) => item.candidateId === id), input)))
     const assessment = assessmentFor(rootGroup, input)
-    const classification: ReviewCaseClassification = { category: root.item.category!, actionability: actionability(root.item.category!), origin: origin(root.item), stage: root.item.stage ?? 'review', rationale: root.item.rationale }
+    const caseActionability = actionability(root.item.category!, root.item)
+    if (caseActionability === undefined) continue
+    const classification: ReviewCaseClassification = { category: root.item.category!, actionability: caseActionability, origin: origin(root.item), stage: root.item.stage ?? 'review', rationale: root.item.rationale }
     const reviewCaseId = `review-case-${hashKnowledgeObject({ knowledgeBaseId: input.knowledgeBaseId, producerRunId: input.producerRunId, normalizedReviewKey: normalized(root.key) }).slice(7)}`
     cases.push({ version: '0.1', reviewCaseId, knowledgeBaseId: input.knowledgeBaseId, producerType: input.producerType ?? 'raw_document_knowledge_ingestion', producerRunId: input.producerRunId, createdAt: input.createdAt, classification, rootProposal, suspendedProposalBundle: { dependentProposals }, resolutionContext: { existingKnowledgeProjections: existingProjections(root, rootGroup, input, index), schemaVersionAtCreation: '0.3', knowledgeBaseRevisionAtCreation: input.knowledgeBaseRevisionAtCreation, context: { reviewKey: root.key, candidateId: root.item.candidateId, bindingState: input.bindings?.get(root.item.candidateId)?.state ?? 'none', plausibleMatchCount: input.bindings?.get(root.item.candidateId)?.plausibleMatches.length ?? 0 } }, impact: { dependentProposalCount: dependentProposals.length, affectedProposalRefs: dependentIds }, ...(advisory(root, assessment) === undefined ? {} : { advisory: advisory(root, assessment) }), state: { status: 'open' } })
   }
