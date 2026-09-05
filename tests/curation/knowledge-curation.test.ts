@@ -8,6 +8,7 @@ import { EXTRACT_KNOWLEDGE_PROMPT } from '../../skills/knowledge-curation/prompt
 import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
 import { KnowledgeCurationError } from '../../skills/knowledge-curation/errors.ts'
 import { MockReasoningExecutor } from '../../plugins/reasoning/mock/executor.ts'
+import { normalizeCompanyCandidateIdentity } from '../../skills/knowledge-curation/company-identity.ts'
 
 const capabilities = { maxContextTokens: 1000, maxOutputTokens: 500, structuredOutputSupport: true, maxConcurrency: 1 }
 const document: StructuredDocument = {
@@ -303,4 +304,54 @@ test('structured output contracts fully describe nested objects and Schema 0.3 v
   const semanticSchema = semantic.schema.properties as Record<string, { enum?: readonly string[]; additionalProperties?: boolean }>
   assert.deepEqual(semanticSchema.outcome.enum, ['equivalent', 'supersedes', 'coexists', 'contradicts', 'invalid', 'uncertain'])
   assert.equal(semanticSchema.caseKind.additionalProperties, undefined)
+})
+
+test('Curation Schema Context projects Company identity fields from Schema 0.3', () => {
+  const context = buildCurationSchemaContext('knowledge_extraction')
+  assert.deepEqual(context.entityContracts.find((item) => item.entityType === 'company')?.semanticFields, ['ticker', 'exchange', 'legalName'])
+  assert.equal(context.entityContracts.find((item) => item.entityType === 'product')?.semanticFields, undefined)
+})
+
+test('Company identity normalizer parses securities decorations and preserves safe labels', () => {
+  const candidate = (name: string, semanticFields?: Record<string, unknown>) => ({ candidateId: name, entityType: 'company' as const, name, ...(semanticFields === undefined ? {} : { semanticFields }), evidenceBlockRefs: ['block-1'], reason: 'test' })
+  const sh = normalizeCompanyCandidateIdentity(candidate('上海新阳（300236.SZ）'))
+  assert.equal(sh.diagnostics.length, 0)
+  assert.equal(sh.candidate.name, '上海新阳')
+  assert.deepEqual(sh.candidate.semanticFields, { ticker: '300236', exchange: 'SZ' })
+  const half = normalizeCompanyCandidateIdentity(candidate('中巨芯(688549.sh)', { ticker: '688549', exchange: 'SH' }))
+  assert.equal(half.diagnostics.length, 0)
+  assert.equal(half.candidate.name, '中巨芯')
+  assert.deepEqual(half.candidate.semanticFields, { ticker: '688549', exchange: 'SH' })
+  assert.deepEqual(normalizeCompanyCandidateIdentity(candidate('达诺尔（833189.NQ）')).candidate.semanticFields, { ticker: '833189', exchange: 'NQ' })
+  const bilingual = normalizeCompanyCandidateIdentity(candidate('霍尼韦尔（Honeywell）'))
+  assert.equal(bilingual.candidate.name, '霍尼韦尔')
+  assert.deepEqual(bilingual.candidate.aliases, ['Honeywell'])
+  assert.equal(normalizeCompanyCandidateIdentity(candidate('彤程新材（北京科华）')).candidate.name, '彤程新材（北京科华）')
+  assert.equal(normalizeCompanyCandidateIdentity(candidate('AXT / 北京通美')).candidate.name, 'AXT / 北京通美')
+})
+
+test('Company identity normalizer rejects disagreement and cleans semantic fields', () => {
+  const candidate = (name: string, semanticFields: Record<string, unknown>) => ({ candidateId: 'c', entityType: 'company' as const, name, semanticFields, evidenceBlockRefs: ['block-1'], reason: 'test' })
+  const disagreement = normalizeCompanyCandidateIdentity(candidate('中巨芯（688549.SH）', { ticker: '300236', exchange: 'SZ' }))
+  assert.deepEqual(disagreement.diagnostics.map((item) => item.code), ['invalid_semantics', 'invalid_semantics'])
+  const empty = normalizeCompanyCandidateIdentity(candidate('Acme', { ticker: ' ', exchange: '', legalName: ' Acme Corporation ' }))
+  assert.deepEqual(empty.candidate.semanticFields, { legalName: 'Acme Corporation' })
+  const unsupported = normalizeCompanyCandidateIdentity(candidate('Acme', { ticker: '1', foo: 'bar' }))
+  assert.equal(unsupported.diagnostics[0]?.code, 'invalid_semantics')
+})
+
+test('Company Candidate validation applies normalization and rejects non-company identity fields', async () => {
+  const run = async (entity: unknown) => {
+    const executor = new MockReasoningExecutor({ capabilities, responses: { extractKnowledge: { entities: [entity], relations: [], claims: [] } } })
+    return new KnowledgeCurationSkill({ executor }).extractKnowledge({ document, reportMap, unit })
+  }
+  const accepted = await run({ candidateId: 'company', entityType: 'company', name: '中巨芯（688549.SH）', evidenceBlockRefs: ['block-1'], reason: 'named' })
+  assert.equal(accepted.entities[0]?.name, '中巨芯')
+  assert.deepEqual(accepted.entities[0]?.semanticFields, { ticker: '688549', exchange: 'SH' })
+  const nonCompany = await run({ candidateId: 'industry', entityType: 'industry', name: 'Industry', semanticFields: { ticker: '688549' }, evidenceBlockRefs: ['block-1'], reason: 'bad' })
+  assert.equal(nonCompany.entities.length, 0)
+  assert.equal(nonCompany.rejected[0]?.code, 'invalid_semantics')
+  const badType = await run({ candidateId: 'bad-type', entityType: 'company', name: 'Acme', semanticFields: { ticker: 300236 }, evidenceBlockRefs: ['block-1'], reason: 'bad' })
+  assert.equal(badType.entities.length, 0)
+  assert.equal(badType.rejected[0]?.code, 'invalid_semantics')
 })

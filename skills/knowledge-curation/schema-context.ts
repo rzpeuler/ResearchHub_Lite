@@ -1,9 +1,15 @@
 import { KNOWLEDGE_SCHEMA_V03 } from '../../knowledge/schema/executable-schema.ts'
 import type { ClaimComparatorV03, ClaimTemporalScopeTypeV03, ClaimTypeV03, EntityTypeV03, RelationTypeV03, SourceReliabilityV03, SourceTypeV03 } from '../../knowledge/schema/domain.ts'
-import type { CurationSchemaContext, CurationSchemaContextSlice, RelationSchemaContract } from './schema-context-types.ts'
+import type { CurationSchemaContext, CurationSchemaContextSlice, EntitySchemaContract, RelationSchemaContract } from './schema-context-types.ts'
 
 export function buildCurationSchemaContext(slice: CurationSchemaContextSlice): CurationSchemaContext {
   const schema = KNOWLEDGE_SCHEMA_V03
+  const entityDefinitions = schema.entity as unknown as Readonly<Record<string, { optionalFields?: readonly string[] }>>
+  const entityContracts = schema.entity.types.map((entityType) => {
+    const definition = entityDefinitions[entityType]
+    const result: EntitySchemaContract = { entityType: entityType as EntityTypeV03, ...(definition?.optionalFields === undefined ? {} : { semanticFields: [...definition.optionalFields] }) }
+    return result
+  })
   const relationContracts = schema.relation.types.map((relationType) => {
     const definition = schema.relation.definitions[relationType] as { directionality: string; sourceTypes: readonly EntityTypeV03[]; targetTypes: readonly EntityTypeV03[]; endpointConstraint?: string; attributes?: Readonly<Record<string, unknown>> }
     const result: RelationSchemaContract = {
@@ -28,6 +34,7 @@ export function buildCurationSchemaContext(slice: CurationSchemaContextSlice): C
     claimComparators: [...schema.claim.comparators] as ClaimComparatorV03[],
     sourceTypes: [...schema.source.types] as SourceTypeV03[],
     sourceReliabilities: [...schema.source.reliabilities] as SourceReliabilityV03[],
+    entityContracts: Object.freeze(entityContracts),
     relationContracts: Object.freeze(relationContracts),
     numericConstraints: structuredClone(schema.numericConstraints),
   })

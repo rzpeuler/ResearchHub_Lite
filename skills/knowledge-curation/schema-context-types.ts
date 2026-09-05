@@ -11,6 +11,11 @@ export interface RelationSchemaContract {
   readonly attributes?: Readonly<Record<string, unknown>>
 }
 
+export interface EntitySchemaContract {
+  readonly entityType: EntityTypeV03
+  readonly semanticFields?: readonly string[]
+}
+
 export interface CurationSchemaContext {
   readonly schemaVersion: '0.3'
   readonly storageFormatVersion: '1'
@@ -22,6 +27,7 @@ export interface CurationSchemaContext {
   readonly claimComparators: readonly ClaimComparatorV03[]
   readonly sourceTypes: readonly SourceTypeV03[]
   readonly sourceReliabilities: readonly SourceReliabilityV03[]
+  readonly entityContracts: readonly EntitySchemaContract[]
   readonly relationContracts: readonly RelationSchemaContract[]
   readonly numericConstraints: Readonly<Record<string, unknown>>
 }

@@ -1,6 +1,6 @@
 import type { DocumentBlock, DocumentSection, StructuredDocument } from '../../plugins/document/contracts.ts'
 import type { ClaimTemporalV03, ClaimTypeV03, EntityTypeV03, RelationTypeV03, SourceReliabilityV03, SourceTypeV03 } from '../../knowledge/schema/domain.ts'
-export type { CurationSchemaContext, CurationSchemaContextSlice, RelationSchemaContract } from './schema-context-types.ts'
+export type { CurationSchemaContext, CurationSchemaContextSlice, EntitySchemaContract, RelationSchemaContract } from './schema-context-types.ts'
 export type { DocumentBlock, DocumentSection, StructuredDocument }
 
 export type CurationOperation = 'understandAndPlan' | 'extractKnowledge' | 'resolveSemanticCase'

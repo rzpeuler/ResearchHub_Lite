@@ -1,6 +1,7 @@
 import { normalizeSemanticText } from '../../knowledge/registry/id-allocation.ts'
 import { canonicalSerialize, hashKnowledgeObject } from '../../knowledge/storage/canonical-hash.ts'
 import type { CandidateEntityRef, ClaimCandidate, EntityCandidate, RelationCandidate, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
+import { normalizeCompanyCandidateIdentity } from '../../skills/knowledge-curation/company-identity.ts'
 import { consolidationReviewKey } from './review-telemetry.ts'
 import type { AcceptedExtractionUnit, ConsolidationReviewConstraint } from './contracts.ts'
 
@@ -22,43 +23,90 @@ export interface ConsolidatedExtraction {
 
 function semanticEntityIdentity(candidate: Pick<EntityCandidate, 'entityType' | 'name'>) { return { entityType: candidate.entityType, normalizedSemanticName: normalizeSemanticText(candidate.name) } }
 function entityKey(candidate: EntityCandidate): string { return canonicalSerialize(semanticEntityIdentity(candidate)) }
-function mergedEntityId(candidate: EntityCandidate): string { return `merged-entity-${hashKnowledgeObject(semanticEntityIdentity(candidate)).slice(7, 23)}` }
+function companyHardKey(candidate: EntityCandidate): string | undefined {
+  if (candidate.entityType !== 'company') return undefined
+  const fields = candidate.semanticFields ?? {}
+  const ticker = typeof fields.ticker === 'string' ? normalizeSemanticText(fields.ticker) : ''
+  const exchange = typeof fields.exchange === 'string' ? normalizeSemanticText(fields.exchange) : ''
+  return ticker !== '' && exchange !== '' ? canonicalSerialize({ exchange, ticker }) : undefined
+}
+function labelSet(candidate: EntityCandidate): Set<string> { return new Set([candidate.name, ...(candidate.aliases ?? [])].map(normalizeSemanticText).filter(Boolean)) }
+function intersects(left: Set<string>, right: Set<string>): boolean { for (const value of left) if (right.has(value)) return true; return false }
+function displayName(candidate: EntityCandidate): string { return candidate.name.trim().replace(/\s+/gu, ' ') }
+function canonicalCompanyName(candidates: readonly EntityCandidate[]): string {
+  return [...candidates].map(displayName).sort((left, right) => [...left].length - [...right].length || normalizeSemanticText(left).localeCompare(normalizeSemanticText(right)) || left.localeCompare(right))[0]!
+}
+function mergedEntityId(candidates: readonly EntityCandidate[], hardKey: string | undefined): string {
+  const candidate = candidates[0]!
+  const identity = hardKey !== undefined ? { entityType: candidate.entityType, companyHardKey: hardKey } : candidate.entityType === 'company' ? { ...semanticEntityIdentity({ ...candidate, name: canonicalCompanyName(candidates) }), names: candidates.map((item) => normalizeSemanticText(item.name)).sort() } : semanticEntityIdentity(candidate)
+  return `merged-entity-${hashKnowledgeObject(identity).slice(7, 23)}`
+}
 function addUnique(values: readonly string[], additions: readonly string[]): string[] { return [...new Set([...values, ...additions])].sort() }
-function mergeText(left: string | null | undefined, right: string | null | undefined): string | undefined {
-  const values = [left, right].filter((value): value is string => value !== undefined && value !== null)
-  if (values.length === 0) return undefined
-  if (values.length === 1 || normalizeSemanticText(values[0]!) === normalizeSemanticText(values[1]!)) return [...values].sort((a, b) => a.localeCompare(b))[0]
-  return undefined
-}
-function mergeSemanticFields(left: Readonly<Record<string, unknown>> | undefined, right: Readonly<Record<string, unknown>> | undefined, conflicted: Set<string>): Record<string, unknown> {
-  const merged: Record<string, unknown> = { ...(left ?? {}) }
-  for (const [key, value] of Object.entries(right ?? {})) {
-    if (value === undefined || value === null) continue
-    if (conflicted.has(key)) { delete merged[key]; continue }
-    const current = merged[key]
-    if (current === undefined || current === null) merged[key] = value
-    else if (normalizeSemanticText(String(current)) === normalizeSemanticText(String(value))) merged[key] = [String(current), String(value)].sort((a, b) => a.localeCompare(b))[0]
-    else if (key === 'legalName' || key === 'ticker' || key === 'exchange') { conflicted.add(key); delete merged[key] }
-  }
-  return merged
-}
 function constraint(candidateId: string, reason: string, fields: readonly string[], blocking: boolean, category: ConsolidationReviewConstraint['category']): ConsolidationReviewConstraint {
   return { candidateId, reason, conflictingFields: [...new Set(fields)].sort(), blocking, category, reviewKey: consolidationReviewKey(candidateId, reason, fields) }
 }
 function mergeConfidence(left: number | undefined, right: number | undefined): number | undefined { if (left === undefined) return right; if (right === undefined) return left; return Math.min(left, right) }
 function candidateRef(candidateRef: string, mention: string, entityType?: EntityCandidate['entityType']): CandidateEntityRef { return { candidateRef, mention, ...(entityType === undefined ? {} : { entityType }) } }
 function namespaced(unitId: string, id: string): string { return `${unitId}::${id}` }
+function mergeGenericSemanticFields(candidates: readonly EntityCandidate[]): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...(candidates[0]?.semanticFields ?? {}) }
+  const conflicted = new Set<string>()
+  for (const candidate of candidates.slice(1)) {
+    for (const [key, value] of Object.entries(candidate.semanticFields ?? {})) {
+      if (value === undefined || value === null || conflicted.has(key)) continue
+      const current = merged[key]
+      if (current === undefined || current === null) merged[key] = value
+      else if (normalizeSemanticText(String(current)) === normalizeSemanticText(String(value))) merged[key] = [String(current), String(value)].sort((left, right) => left.localeCompare(right))[0]
+      else if (key === 'legalName' || key === 'ticker' || key === 'exchange') { conflicted.add(key); delete merged[key] }
+    }
+  }
+  return merged
+}
+
+interface EntityInput { readonly unitId: string; readonly originalId: string; readonly candidate: EntityCandidate }
+interface EntityGroupState { readonly groupKey: string; readonly hardKey?: string; readonly inputs: EntityInput[]; readonly blockingReason?: string }
+
+function mergeEntityCandidates(inputs: readonly EntityInput[], hardKey: string | undefined): { candidate: EntityCandidate; conflicts: readonly { reason: string; fields: readonly string[]; blocking: boolean; category: ConsolidationReviewConstraint['category'] }[] } {
+  const candidates = inputs.map((input) => input.candidate)
+  const first = candidates[0]!
+  const name = first.entityType === 'company' ? canonicalCompanyName(candidates) : displayName(first)
+  const namesAndAliases = candidates.flatMap((candidate) => first.entityType === 'company' ? [candidate.name, ...(candidate.aliases ?? [])] : (candidate.aliases ?? [])).map((value) => value.trim().replace(/\s+/gu, ' ')).filter(Boolean)
+  const mergedAliases = first.entityType === 'company'
+    ? [...new Map(namesAndAliases.map((value) => [normalizeSemanticText(value), value])).values()].filter((value) => normalizeSemanticText(value) !== normalizeSemanticText(name)).sort((left, right) => normalizeSemanticText(left).localeCompare(normalizeSemanticText(right)) || left.localeCompare(right))
+    : [...new Set(namesAndAliases)].sort((left, right) => normalizeSemanticText(left).localeCompare(normalizeSemanticText(right)) || left.localeCompare(right))
+  const conflicts: Array<{ reason: string; fields: readonly string[]; blocking: boolean; category: ConsolidationReviewConstraint['category'] }> = []
+  const descriptions = candidates.map((candidate) => candidate.description).filter((value): value is string => value !== undefined && value !== null)
+  const description = descriptions.length === 0 ? undefined : new Set(descriptions.map(normalizeSemanticText)).size === 1 ? [...descriptions].sort((left, right) => left.localeCompare(right))[0] : undefined
+  if (descriptions.length > 1 && new Set(descriptions.map(normalizeSemanticText)).size > 1) conflicts.push({ reason: 'Entity description variants across extraction units; canonical description omitted', fields: ['description'], blocking: false, category: 'other' })
+  const fieldValues = (field: string): string[] => candidates.map((candidate) => candidate.semanticFields?.[field]).filter((value): value is string => typeof value === 'string' && value.trim() !== '').map((value) => value.trim())
+  const semanticFields: Record<string, unknown> = first.entityType === 'company' ? {} : mergeGenericSemanticFields(candidates)
+  for (const field of ['ticker', 'exchange', 'legalName']) {
+    const values = fieldValues(field)
+    if (values.length === 0) continue
+    const normalizedValues = new Set(values.map(normalizeSemanticText))
+    if (normalizedValues.size === 1) semanticFields[field] = [...values].sort((left, right) => left.localeCompare(right))[0]
+    else {
+      delete semanticFields[field]
+      const blocking = field === 'ticker' || field === 'exchange'
+      conflicts.push({ reason: blocking ? 'Company hard identity fields conflict across extraction units' : 'Entity legalName variants across extraction units; canonical legalName omitted', fields: [field], blocking, category: blocking ? 'reconciliation_review' : 'other' })
+    }
+  }
+  const evidenceBlockRefs = [...new Set(inputs.flatMap((input) => input.candidate.evidenceBlockRefs))].sort()
+  const confidence = inputs.map((input) => input.candidate.confidence).reduce((left, right) => mergeConfidence(left, right), undefined)
+  const candidate: EntityCandidate = { ...structuredClone(first), candidateId: mergedEntityId(candidates, hardKey), name, ...(mergedAliases.length === 0 ? { aliases: undefined } : { aliases: mergedAliases }), description, ...(Object.keys(semanticFields).length === 0 ? { semanticFields: undefined } : { semanticFields }), evidenceBlockRefs, ...(confidence === undefined ? {} : { confidence }) }
+  return { candidate, conflicts }
+}
 
 export function consolidateExtractions(extractions: readonly { unit: AcceptedExtractionUnit; result: ValidatedExtractKnowledgeResult }[]): ConsolidatedExtraction {
   const entityGroups = new Map<string, EntityCandidate>()
   const entityByMergedId = new Map<string, EntityCandidate>()
   const entityAliases = new Map<string, string>()
   const supportByEntityKey = new Map<string, { supportingCandidateCount: number; supportingUnitIds: Set<string>; evidenceBlockRefs: Set<string> }>()
+  const entityInputs: EntityInput[] = []
   const relationInputs: Array<{ unitId: string; candidate: RelationCandidate }> = []
   const claimInputs: Array<{ unitId: string; candidate: ClaimCandidate }> = []
   const rejected: unknown[] = []
   const reviewConstraints: ConsolidationReviewConstraint[] = []
-  const conflictedEntityFields = new Map<string, Set<string>>()
   let entityInput = 0
   let relationInput = 0
   let claimInput = 0
@@ -67,40 +115,56 @@ export function consolidateExtractions(extractions: readonly { unit: AcceptedExt
     for (const candidate of entities) {
       entityInput += 1
       const originalId = namespaced(extraction.unit.unitId, candidate.candidateId)
-      const key = entityKey(candidate)
-      const support = supportByEntityKey.get(key) ?? { supportingCandidateCount: 0, supportingUnitIds: new Set<string>(), evidenceBlockRefs: new Set<string>() }
-      support.supportingCandidateCount += 1
-      support.supportingUnitIds.add(extraction.unit.unitId)
-      for (const blockId of candidate.evidenceBlockRefs) support.evidenceBlockRefs.add(blockId)
-      supportByEntityKey.set(key, support)
-      const current = entityGroups.get(key)
-      if (!current) {
-        const mergedId = mergedEntityId(candidate)
-        const value = { ...structuredClone(candidate), candidateId: mergedId, aliases: candidate.aliases === undefined ? undefined : [...new Set(candidate.aliases)].sort(), evidenceBlockRefs: [...new Set(candidate.evidenceBlockRefs)].sort() }
-        entityGroups.set(key, value)
-        entityByMergedId.set(mergedId, value)
-        entityAliases.set(originalId, mergedId)
-      } else {
-        const conflicted = conflictedEntityFields.get(key) ?? new Set<string>()
-        const descriptionConflict = !conflicted.has('description') && current.description !== undefined && current.description !== null && candidate.description !== undefined && candidate.description !== null && normalizeSemanticText(current.description) !== normalizeSemanticText(candidate.description)
-        const currentFields = (current.semanticFields ?? {}) as Readonly<Record<string, unknown>>
-        const candidateFields = (candidate.semanticFields ?? {}) as Readonly<Record<string, unknown>>
-        const hardConflicts = candidate.entityType === 'company' ? ['ticker', 'exchange'].filter((field) => currentFields[field] !== undefined && currentFields[field] !== null && candidateFields[field] !== undefined && candidateFields[field] !== null && normalizeSemanticText(String(currentFields[field])) !== normalizeSemanticText(String(candidateFields[field]))) : []
-        const legalNameConflict = !conflicted.has('legalName') && candidate.entityType === 'company' && currentFields.legalName !== undefined && currentFields.legalName !== null && candidateFields.legalName !== undefined && candidateFields.legalName !== null && normalizeSemanticText(String(currentFields.legalName)) !== normalizeSemanticText(String(candidateFields.legalName))
-        const mergedFields = mergeSemanticFields(currentFields, candidateFields, conflicted)
-        const merged = { ...current, aliases: addUnique(current.aliases ?? [], candidate.aliases ?? []), evidenceBlockRefs: addUnique(current.evidenceBlockRefs, candidate.evidenceBlockRefs), confidence: mergeConfidence(current.confidence, candidate.confidence), semanticFields: mergedFields, description: conflicted.has('description') || descriptionConflict ? undefined : mergeText(current.description, candidate.description) }
-        if (descriptionConflict) { conflicted.add('description'); reviewConstraints.push(constraint(current.candidateId, 'Entity description variants across extraction units; canonical description omitted', ['description'], false, 'other')) }
-        if (legalNameConflict) { conflicted.add('legalName'); reviewConstraints.push(constraint(current.candidateId, 'Entity legalName variants across extraction units; canonical legalName omitted', ['legalName'], false, 'other')) }
-        if (hardConflicts.length > 0) { for (const field of hardConflicts) conflicted.add(field); reviewConstraints.push(constraint(current.candidateId, 'Company hard identity fields conflict across extraction units', hardConflicts, true, 'reconciliation_review')) }
-        conflictedEntityFields.set(key, conflicted)
-        entityGroups.set(key, merged)
-        entityByMergedId.set(merged.candidateId, merged)
-        entityAliases.set(originalId, current.candidateId)
-      }
+      const normalized = normalizeCompanyCandidateIdentity(candidate)
+      if (normalized.diagnostics.length > 0) { rejected.push({ candidateId: candidate.candidateId, kind: 'entity', code: 'invalid_semantics', message: normalized.diagnostics[0]!.message }); continue }
+      entityInputs.push({ unitId: extraction.unit.unitId, originalId, candidate: normalized.candidate })
     }
     for (const candidate of [...extraction.result.relations].sort((a, b) => a.candidateId.localeCompare(b.candidateId))) { relationInput += 1; relationInputs.push({ unitId: extraction.unit.unitId, candidate }) }
     for (const candidate of [...extraction.result.claims].sort((a, b) => a.candidateId.localeCompare(b.candidateId))) { claimInput += 1; claimInputs.push({ unitId: extraction.unit.unitId, candidate }) }
     rejected.push(...extraction.result.rejected)
+  }
+  const hardGroups = new Map<string, EntityInput[]>()
+  const unkeyed = [] as EntityInput[]
+  const genericGroups = new Map<string, EntityInput[]>()
+  for (const input of entityInputs) {
+    if (input.candidate.entityType !== 'company') {
+      const key = entityKey(input.candidate)
+      genericGroups.set(key, [...(genericGroups.get(key) ?? []), input])
+      continue
+    }
+    const hardKey = companyHardKey(input.candidate)
+    if (hardKey === undefined) unkeyed.push(input)
+    else hardGroups.set(hardKey, [...(hardGroups.get(hardKey) ?? []), input])
+  }
+  const states: EntityGroupState[] = [...genericGroups.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([groupKey, inputs]) => ({ groupKey, inputs }))
+  const hardStates: EntityGroupState[] = [...hardGroups.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([hardKey, inputs]) => ({ groupKey: `company-hard:${hardKey}`, hardKey, inputs }))
+  states.push(...hardStates)
+  const addToState = (state: EntityGroupState, input: EntityInput): void => { state.inputs.push(input) }
+  for (const input of unkeyed.sort((left, right) => left.originalId.localeCompare(right.originalId))) {
+    const labels = labelSet(input.candidate)
+    const matches = hardStates.filter((state) => intersects(labels, new Set(state.inputs.flatMap((item) => [...labelSet(item.candidate)]))))
+    if (matches.length === 1) { addToState(matches[0]!, input); continue }
+    if (matches.length > 1) {
+      states.push({ groupKey: `company-ambiguous:${input.originalId}`, inputs: [input], blockingReason: 'Unkeyed Company candidate ambiguously matches multiple hard-identity groups' })
+      continue
+    }
+    const unkeyedStates = states.filter((state) => state.hardKey === undefined && state.groupKey.startsWith('company-unkeyed:'))
+    const exactMatches = unkeyedStates.filter((state) => intersects(labels, new Set(state.inputs.flatMap((item) => [...labelSet(item.candidate)]))))
+    if (exactMatches.length === 1) addToState(exactMatches[0]!, input)
+    else if (exactMatches.length > 1) states.push({ groupKey: `company-ambiguous-unkeyed:${input.originalId}`, inputs: [input], blockingReason: 'Unkeyed Company candidate ambiguously matches multiple exact Company groups' })
+    else states.push({ groupKey: `company-unkeyed:${input.originalId}`, inputs: [input] })
+  }
+  for (const state of states.sort((left, right) => left.groupKey.localeCompare(right.groupKey))) {
+    const hardKey = state.hardKey
+    const merged = mergeEntityCandidates(state.inputs, hardKey)
+    const candidate = merged.candidate
+    entityGroups.set(state.groupKey, candidate)
+    entityByMergedId.set(candidate.candidateId, candidate)
+    for (const input of state.inputs) entityAliases.set(input.originalId, candidate.candidateId)
+    const support = { supportingCandidateCount: state.inputs.length, supportingUnitIds: new Set(state.inputs.map((input) => input.unitId)), evidenceBlockRefs: new Set(state.inputs.flatMap((input) => input.candidate.evidenceBlockRefs)) }
+    supportByEntityKey.set(state.groupKey, support)
+    for (const item of merged.conflicts) reviewConstraints.push(constraint(candidate.candidateId, item.reason, item.fields, item.blocking, item.category))
+    if (state.blockingReason !== undefined) reviewConstraints.push(constraint(candidate.candidateId, state.blockingReason, [], true, 'reconciliation_review'))
   }
   const relations = new Map<string, RelationCandidate>()
   for (const { unitId, candidate } of relationInputs) {

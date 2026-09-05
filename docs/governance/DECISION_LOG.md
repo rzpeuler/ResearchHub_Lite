@@ -20,6 +20,16 @@ The persisted `kb-rhl-semantic-quality-001` was inspected without invoking Model
 
 ---
 
+## RHL-FIX-COMPANY-IDENTITY-NORMALIZATION-001 — 2026-09-05
+
+**Status:** Implemented / CTO acceptance pending
+
+Company Identity Normalization & Document-local Canonicalization v0.1 is implemented behind the existing Candidate validation and consolidation boundaries. Explicit trailing stock-code decorations use deterministic syntax; normalized `ticker` and `exchange` are structured identity fields rather than display-name text. An exact complete `(exchange, ticker)` identity may unify Company Candidates only within the current document, while conflicting complete hard identities cannot be automatically merged. Exact name/alias agreement is a weak document-local signal for attaching an unkeyed Company and creates a blocking Review when it is ambiguous; no fuzzy matching, Levenshtein, embeddings, external company database, or new reasoning case is introduced.
+
+The existing global Knowledge Resolution binding remains conservative and unchanged. Schema 0.3, Storage Format 1, Writer behavior, durable ID allocation, reasoning-host integration, historical KB/runtime data, and historical evidence are unchanged. This task has no real semantic-quality validation conclusion; a fresh real ingestion is required before measuring product impact.
+
+---
+
 ## RHL-FIX-RELATION-ATTRIBUTE-ADMISSIBILITY-001 — 2026-09-05
 
 **Status:** Implemented / CTO acceptance pending
