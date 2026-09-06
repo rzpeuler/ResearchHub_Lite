@@ -12,7 +12,7 @@ This log records only architecture/product decisions that materially constrain f
 
 The primary interaction taxonomy is **Free Research**, **Knowledge Query**, and **Knowledge Production**. Review is downstream Knowledge Production governance, not a fourth research mode. Free Research is non-persistent by default, and canonical persistence requires explicit Knowledge Production intent. Upload is not ingestion: workspace/attachment handling remains distinct from formal canonical Raw/Source ingestion.
 
-Application Tools expose product-level actions and must not expose mutation primitives such as `create_entity`, `create_relation`, `create_claim`, `create_changeset`, `commit_changeset`, or `write_registry`. The next engineering direction is a thin `app/services/` layer shared by Pi tools and future UI/API; Query, Workflow status/cancel, and Review read APIs are targets, not completed implementations. The frontend framework and transport remain unfrozen.
+Application Tools expose product-level actions and must not expose mutation primitives such as `create_entity`, `create_relation`, `create_claim`, `create_changeset`, `commit_changeset`, or `write_registry`. The implemented `app/services/` layer is shared by Pi tools and future UI/API, with bounded Knowledge query, Workflow status/cancel, and Review read APIs. The subsequent Runtime/Client architecture is frozen separately by RHL-ARCH-APPLICATION-RUNTIME-CLIENT-001.
 
 `WorkflowRun` and `ReviewCase` are Application-observable states. Workflow owns the deterministic lifecycle and authoritative progress; ReviewCase is downstream actionable governance while ReviewSummary is telemetry. Agent context and Workflow semantic context remain separate. `ReasoningExecutor` remains the Workflow semantic-operation boundary and deterministic testing seam, not a portability architecture.
 
@@ -447,3 +447,25 @@ RHL-PI-HOST-001 establishes Pi Coding Agent as the canonical ResearchHub applica
 This decision supersedes the product requirement implied by RHL-ADR-007 that the application host itself remain portable. `ReasoningExecutor` is retained as the portable semantic boundary owned by Workflow, and Pi provides the production adapter plus deterministic test injection. Pi conversation context, project `AGENTS.md`, and Pi Skills must not be passed into Workflow semantic calls. The canonical Knowledge Base remains Writer/Workflow-owned; Pi tool interception is enforcement, not authorization to bypass Writer.
 
 The initial host slice deliberately reports `BASH_ISOLATION_GAP`: explicit canonical paths are rejected, but unrestricted shell execution can construct paths indirectly. A restricted process/sandbox, separate workspace, or Writer-mediated permission boundary is required before unrestricted bash can be described as fully hard-protected.
+
+---
+
+## RHL-ARCH-APPLICATION-RUNTIME-CLIENT-001 — 2026-09-06
+
+**Status:** FROZEN / CTO architecture decision
+
+Normative document: `docs/architecture/RESEARCHHUB_APPLICATION_RUNTIME_CLIENT_ARCHITECTURE_V0.1.md`.
+
+This decision supersedes older frontend/transport uncertainty in frozen summary material. `docs/governance/ARCHITECTURE.md` is intentionally not rewritten in this task; the normative Runtime/Client document and this decision record govern the current direction until a later CTO consolidated replacement.
+
+ResearchHub v0.1 is local-first, single-user, and centered on one local Node.js / TypeScript Application Runtime process. The Runtime directly embeds the Pi SDK and owns Pi ModelRuntime, Pi AgentSessionRuntime, Application Services, WorkflowService, AttachmentService, HTTP API, SSE, and client static assets. Pi RPC subprocess integration, microservices, remote/LAN/cloud access, and multi-user deployment are not v0.1 capabilities.
+
+Pi AgentSessionRuntime owns conversation lifecycle, including new/resume/switch/fork/replacement, and Pi session infrastructure owns conversation persistence. ResearchHub must not create a second conversation database or transcript store. Only one active Pi conversation runtime is supported at a time, while WorkflowRun lifetime remains independent from conversation lifetime; switching conversations must not implicitly cancel a running Workflow.
+
+The browser client is a React + TypeScript + Vite SPA. HTTP JSON carries commands and queries, while SSE carries normalized safe Agent/lifecycle events. WebSocket is not required in v0.1. Active WorkflowRun state is observed through HTTP polling; progress must remain authoritative and no Workflow push/event architecture is introduced solely for UI animation.
+
+Browser Product APIs and Pi Application Tools share the existing Application Services. Browser access to filesystem, canonical Knowledge, and Writer is forbidden. Upload creates an `AttachmentRef` in controlled workspace storage; upload is not canonical ingestion, and browser APIs use attachment IDs rather than arbitrary filesystem paths. Canonical Knowledge files must never be statically served.
+
+The Runtime binds to `127.0.0.1` by default, uses same-origin protections and a runtime nonce/token for mutating browser APIs, and validates Host/Origin where practical. This is local application protection, not a v0.1 login/RBAC/JWT or user identity system. Raw Pi event objects, hidden model reasoning, system prompts, credentials, raw stacks, and unrestricted internal tool payloads must not be streamed to the browser.
+
+The next implementation phases are `RHL-IMPLEMENT-APPLICATION-RUNTIME-001`, followed by `RHL-IMPLEMENT-HOMEPAGE-SHELL-001`. Runtime, AttachmentService, HTTP/SSE transport, and React client remain unimplemented until those tasks are explicitly authorized.

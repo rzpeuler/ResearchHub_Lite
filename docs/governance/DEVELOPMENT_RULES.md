@@ -83,15 +83,34 @@ These rules are mandatory unless explicitly superseded by a recorded architectur
 ## 9. Scope Control
 
 55. Do not add Graph DB, Vector DB, or RAG without architecture approval.
-56. Frontend is not categorically prohibited, but its framework and transport require a separate decision; do not implement either by assumption.
+56. Frontend implementation is not yet authorized, but the frozen v0.1 client technology is React + TypeScript + Vite and the frozen transport is HTTP JSON + SSE; do not implement either until the Runtime/Homeshell tasks are authorized.
 57. Keep dependencies minimal.
 
-## 10. Governance and Git
+## 10. Application Runtime and Client
 
-58. `CURRENT_STATUS.md` is a compact current snapshot, not an append-only history.
-59. Record only material architecture/product decisions in `DECISION_LOG.md`.
-60. Update governance when the architecture or implementation state materially changes.
-61. Every completed engineering task must be committed and pushed.
-62. Return the exact commit hash in the engineering report.
-63. A clean working tree is required at task completion.
-64. Engineering completion does not equal CTO/System Architect acceptance.
+65. Runtime v0.1 remains local-first, single-user, and loopback-bound by default.
+66. Use one Node.js / TypeScript Application Runtime process; do not introduce microservices, Redis, queues, or worker clusters.
+67. Embed Pi through the SDK; do not integrate Pi through an RPC subprocess.
+68. Do not build ResearchHub conversation persistence; use Pi session infrastructure.
+69. Use Pi AgentSessionRuntime for conversation lifecycle, with at most one active conversation runtime in v0.1.
+70. Browser client technology is React + TypeScript + Vite.
+71. Browser code must not access the filesystem, canonical Knowledge storage, or Writer directly.
+72. Browser Product APIs must use the existing shared Application Services.
+73. HTTP JSON + SSE is the current v0.1 transport; do not add WebSocket without a new architecture decision.
+74. Do not stream raw model hidden reasoning, system prompts, credentials, raw stacks, or unrestricted internal tool payloads.
+75. Upload creates an AttachmentRef only; upload is not canonical ingestion.
+76. Browser-facing file identifiers must be attachment IDs, never arbitrary host filesystem paths.
+77. Canonical Knowledge files must never be statically served.
+78. Runtime mutation APIs require same-origin protection and a runtime nonce/token; do not add login, RBAC, JWT, or multi-user identity in v0.1.
+79. Do not create a generic Event Bus or Workflow Engine for client streaming or observation.
+80. Workflow progress must remain authoritative; Workflow polling is the current v0.1 observation design.
+
+## 11. Governance and Git
+
+81. `CURRENT_STATUS.md` is a compact current snapshot, not an append-only history.
+82. Record only material architecture/product decisions in `DECISION_LOG.md`.
+83. Update governance when the architecture or implementation state materially changes.
+84. Every completed engineering task must be committed and pushed.
+85. Return the exact commit hash in the engineering report.
+86. A clean working tree is required at task completion.
+87. Engineering completion does not equal CTO/System Architect acceptance.

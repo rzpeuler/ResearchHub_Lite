@@ -16,7 +16,8 @@ Before making any engineering change, read these documents in order:
 5. `docs/governance/DEVELOPMENT_RULES.md`
 6. `docs/governance/MIGRATION_MANIFEST.md`
 7. `docs/architecture/RESEARCHHUB_APPLICATION_INTERACTION_ARCHITECTURE_V0.1.md`
-8. The relevant document under `docs/architecture/`
+8. `docs/architecture/RESEARCHHUB_APPLICATION_RUNTIME_CLIENT_ARCHITECTURE_V0.1.md`
+9. The relevant document under `docs/architecture/`
 
 ## Non-negotiable boundaries
 
@@ -28,6 +29,9 @@ Before making any engineering change, read these documents in order:
 - Pi Coding Agent is the canonical application host; Agent-host portability is not a product requirement.
 - `ReasoningExecutor` is the Workflow semantic-operation boundary and deterministic testing seam, not host-portability architecture.
 - Pi-specific application integration belongs under `app/pi/`; business semantics remain under Workflow, Skill, Plugin, and Knowledge.
+- Application Runtime/client architecture is frozen; Runtime implementation is the next engineering phase.
+- Runtime v0.1 is local-first with one Node process, direct Pi SDK embedding, React + TypeScript + Vite, HTTP JSON + SSE, and no WebSocket.
+- Do not introduce Pi RPC subprocess integration, direct browser filesystem/Knowledge access, arbitrary frontend canonical writes, or Next.js as the backend runtime.
 - Canonical Knowledge mutation is allowed only through the ResearchHub Knowledge Production path, validated ChangeSet, and Writer.
 - Pi Agent Skills under `.pi/skills/` and ResearchHub Skills under `skills/` are distinct; their contexts must not be conflated.
 - Knowledge Base runtime data is not source code.

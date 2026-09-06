@@ -39,7 +39,7 @@ The following remain deferred unless separately approved:
 - generic Workflow Engine;
 - Memory, Evaluation, and Research Artifact systems.
 
-Frontend development is no longer categorically excluded. The frontend framework and transport are not yet frozen and require a separate decision.
+The Application Runtime and Client architecture is now frozen in `docs/architecture/RESEARCHHUB_APPLICATION_RUNTIME_CLIENT_ARCHITECTURE_V0.1.md`: local-first single-user Node.js runtime, direct Pi SDK embedding, React + TypeScript + Vite browser client, and HTTP JSON + SSE. The runtime/client are not yet implemented.
 
 ## 4. Execution and Application Layers
 
@@ -51,7 +51,11 @@ Pi owns the user-facing Agent experience and directly supplies the model/provide
 
 ### Application Services
 
-The next engineering phase is a thin `app/services/` direction shared by Pi Application Tools and future UI/API surfaces. Services must coordinate existing domain capabilities without becoming a generic service framework. Query, Workflow status/cancel, and Review read APIs should be exposed through this direction and then through Pi tools; those capabilities are not implemented by this overview update.
+The implemented thin `app/services/` layer is shared by Pi Application Tools and the future Runtime/browser Product API. Services coordinate existing domain capabilities without becoming a generic service framework.
+
+### Next Product Layer
+
+The next phase is the local Application Runtime, followed by the Homepage Shell. The Runtime will own Pi session lifecycle, HTTP JSON, SSE, attachments, and local runtime security; the browser will consume Product APIs and shared Application Services rather than accessing filesystem or Knowledge storage directly.
 
 ### Application Tools
 

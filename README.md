@@ -32,6 +32,8 @@ ResearchHub owns the product semantics:
 
 `app/services/` now provides the thin Application Service layer shared by Pi Application Tools and future UI/API surfaces. The implemented v0.1 surface is bounded Knowledge query, explicit document ingestion, process-scoped Workflow status/cancel, and read-only durable Review access. It is not a generic service framework.
 
+The next architecture layer is the local Node.js Application Runtime and React + TypeScript + Vite browser client. The frozen v0.1 transport is HTTP JSON + SSE; Runtime and frontend implementation are not yet available. See [Application Runtime & Client Architecture v0.1](docs/architecture/RESEARCHHUB_APPLICATION_RUNTIME_CLIENT_ARCHITECTURE_V0.1.md).
+
 `ReasoningExecutor` remains the Workflow semantic-operation boundary and deterministic testing seam. It is not a product-level host-portability architecture. Conversation context and Workflow semantic context remain separate even when they share Pi `ModelRuntime`.
 
 Application Tools expose product actions such as query, ingestion, workflow status/cancel, and Review reads. They must not expose Knowledge mutation primitives such as `create_entity`, `create_relation`, `create_claim`, `create_changeset`, `commit_changeset`, or `write_registry`.
