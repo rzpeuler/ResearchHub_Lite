@@ -2,159 +2,112 @@
 
 ## 1. Project Positioning
 
-ResearchHub_Lite is a lightweight research knowledge application focused on transforming raw research material into durable, canonical investment knowledge.
+ResearchHub_Lite is the active clean foundation for the ResearchHub Agent-first investment research application. It preserves the useful Knowledge architecture and deterministic integrity of the Lite workstream without restoring the runtime and product complexity of the original ResearchHub.
 
-The project is intentionally narrower than the original ResearchHub.
+Pi Coding Agent is the canonical application host. ResearchHub directly reuses Pi's Agent loop, ModelRuntime, settings, authentication, provider/model catalog, Skills/Extensions, and session/runtime facilities. Agent-host portability is not a current product requirement.
 
-The original repository proved a full Knowledge v0.3 ingestion and persistence pipeline, but accumulated additional runtime, orchestration, compatibility, and product concerns. ResearchHub_Lite separates the valuable Knowledge assets from that surrounding complexity.
+## 2. Product Interaction Model
 
-## 2. v0.1 Product Goal
+The primary user interactions are:
 
-ResearchHub_Lite v0.1 has exactly two primary product goals:
+1. **Free Research** — exploratory analysis, non-persistent by default.
+2. **Knowledge Query** — read-only access to bounded canonical Knowledge projections or references.
+3. **Knowledge Production** — explicit durable research that may change canonical Knowledge through the governed production path.
 
-### Goal A — Raw Document → Canonical Knowledge Base
+Review is downstream Knowledge Production governance, not a fourth research mode. Canonical persistence requires explicit Knowledge Production intent. Upload and attachment handling are separate from formal canonical ingestion.
 
-A user or application provides a research document.
+## 3. Product Boundaries and Deferred Work
 
-The system must:
+The Lite simplification remains intentional:
 
-1. resolve and archive the raw material;
-2. parse it into a structured document;
-3. understand the report and plan semantic extraction;
-4. extract candidate knowledge;
-5. validate and consolidate candidates;
-6. retrieve relevant existing knowledge;
-7. reconcile new and existing knowledge;
-8. create one semantic ChangeSet;
-9. validate that ChangeSet and the staged next state;
-10. atomically write the Knowledge Base;
-11. reload and verify the committed result.
+- no custom Agent Runtime;
+- no DSH / DeepSeek Harness;
+- no generic Capability, Provider, Planner, ResearchManager, or Agent/Candidate framework layers;
+- no host-portability abstraction;
+- deterministic Knowledge integrity through ChangeSet, Validation, and Writer.
 
-### Goal B — Knowledge Architecture
+The following remain deferred unless separately approved:
 
-The project must maintain a portable and deterministic Knowledge domain covering:
-
-- Schema;
-- canonical IDs;
-- Raw identity and archive;
-- Source and provenance;
-- Registry;
-- canonical loading;
-- querying/indexing;
-- ChangeSet;
-- validation;
-- mutation locking;
-- atomic persistence;
-- ingestion logs;
-- revision and idempotency semantics.
-
-## 3. Product Non-Goals
-
-The following are explicitly outside v0.1 scope unless separately approved:
-
-- custom Agent Runtime;
-- DSH / DeepSeek Harness runtime;
-- ResearchManager;
-- Planner layer;
-- Capability layer;
-- Provider layer;
-- multi-agent orchestration;
-- broad equity/company/industry research workflows;
-- financial/news/market provider integration;
-- frontend application;
-- Research Artifact system;
-- Memory;
-- Evaluation;
+- Theme Framework implementation;
+- Industry Deep Research;
+- Company Deep Research;
+- ReviewDecision;
 - Graph Database;
 - Vector Database;
 - RAG;
-- automatic Knowledge schema migration;
-- legacy Knowledge v0.2 compatibility;
-- large historical product-validation harnesses.
+- multi-agent orchestration;
+- generic Workflow Engine;
+- Memory, Evaluation, and Research Artifact systems.
 
-## 4. Execution Model
+Frontend development is no longer categorically excluded. The frontend framework and transport are not yet frozen and require a separate decision.
 
-ResearchHub_Lite keeps the Workflow / Skill / Plugin logical separation.
+## 4. Execution and Application Layers
+
+ResearchHub keeps the Workflow / Skill / Plugin / Knowledge separation.
+
+### Pi Application Host
+
+Pi owns the user-facing Agent experience and directly supplies the model/provider/auth/settings runtime and normal coding-agent capabilities. Pi-specific application integration belongs under `app/pi/`.
+
+### Application Services
+
+The next engineering phase is a thin `app/services/` direction shared by Pi Application Tools and future UI/API surfaces. Services must coordinate existing domain capabilities without becoming a generic service framework. Query, Workflow status/cancel, and Review read APIs should be exposed through this direction and then through Pi tools; those capabilities are not implemented by this overview update.
+
+### Application Tools
+
+Agent-facing tools express product actions, not low-level canonical mutation primitives. They may query Knowledge, start approved production, observe or cancel a Workflow, and read Review state. They must not expose operations such as `create_entity`, `create_relation`, `create_claim`, `create_changeset`, `commit_changeset`, or `write_registry`.
 
 ### Workflow
 
-Workflow owns execution order, conditional routing, retries, blocking, parallel scheduling, write authorization, and completion.
+Workflow owns execution order, conditional routing, retries, blocking, bounded parallel scheduling, authoritative `WorkflowRun` state, validation, write authorization, and completion.
 
 ### Skill
 
-Skill owns professional semantic methodology, such as:
-
-- report understanding;
-- semantic decomposition;
-- candidate extraction;
-- knowledge reconciliation.
+Skill owns professional semantic methodology such as report understanding, semantic decomposition, candidate extraction, and reconciliation. ResearchHub Skills under `skills/` are distinct from Pi Agent Skills under `.pi/skills/`. Agent context and Workflow semantic context remain separate.
 
 ### Plugin
 
-Plugin owns external capabilities and host-specific integration, including:
-
-- document parsing;
-- filesystem/external I/O;
-- reasoning host integration.
+Plugin owns external capabilities and host-specific integration, including document parsing, filesystem/external I/O, and the Pi reasoning integration.
 
 ### Knowledge Domain
 
-Knowledge is not an execution layer.
+Knowledge owns deterministic domain rules and persistence integrity. Canonical mutation remains inside the Knowledge Production path:
 
-It owns deterministic domain rules and persistence integrity.
+```text
+Knowledge Production → Workflow → ChangeSet → Validation → Writer
+```
 
-## 5. Reasoning Host Strategy
+`ReasoningExecutor` remains the Workflow semantic-operation boundary and deterministic testing seam. It is not a host-portability architecture.
 
-Codex is the first active reasoning host.
-
-ResearchHub_Lite must not assume that Codex is permanent.
-
-Workflow and Skill must not import Codex-specific implementation details.
-
-Reasoning-host differences are isolated behind a narrow `ReasoningExecutor` contract.
-
-`ReasoningExecutor` is an Agent Execution abstraction, not an HTTP model API abstraction.
-
-A host implementation may use:
-
-- an authenticated coding agent;
-- CLI execution;
-- an SDK;
-- an app server;
-- another programmatically invokable agent surface;
-- a direct model API only if explicitly chosen later.
-
-## 6. Initial Knowledge Baseline
+## 5. Knowledge Baseline and Runtime Boundary
 
 ResearchHub_Lite starts from:
 
-- Knowledge Schema: `0.3`
-- Storage Format: `1`
+- Knowledge Schema: `0.3`;
+- Storage Format: `1`.
 
-This baseline comes from the accepted Knowledge v0.3 work in the original ResearchHub.
-
-ResearchHub_Lite does not initially carry historical schema migration requirements.
-
-## 7. Runtime Data Boundary
-
-Knowledge Base instance data is runtime data.
-
-It must be separated from source code.
-
-Conceptual default:
+Knowledge Base instance data is runtime data and must remain separate from source code. The conceptual default is:
 
 ```text
 runtime-data/
 └── knowledge-bases/
 ```
 
-Runtime Knowledge Base data should be Git-ignored by default.
+Application Context should store bounded references and lightweight execution state, not the entire Knowledge Base or large Knowledge payloads. Detailed Knowledge is retrieved through bounded query capabilities.
 
-## 8. Source Baseline
+Formal ingestion starts only after explicit Knowledge Production intent:
+
+```text
+workspace/uploads/<file> → AttachmentRef → ingest_document → Raw Archive → Ingestion Workflow
+```
+
+Upload is not ingestion, and Free Research output is not canonical Evidence without formal provenance.
+
+## 6. Source Baseline
 
 Initial migration reference:
 
-- Original repository: `https://github.com/rzpeuler/ResearchHub`
-- Baseline commit: `4c141172d6ba4123e909f0d8b9481072912e3ef2`
+- Original repository: `https://github.com/rzpeuler/ResearchHub`;
+- Baseline commit: `4c141172d6ba4123e909f0d8b9481072912e3ef2`.
 
-The migration policy is selective reuse, not repository cloning.
+Migration remains selective reuse, not repository cloning. Historical migration governance remains in `docs/governance/MIGRATION_MANIFEST.md`.

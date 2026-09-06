@@ -2,15 +2,28 @@
 
 ## Phase
 
-**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion + Pi Application Host Implemented — RHL-PI-HOST-001 implemented / final corrective acceptance pending**
+**Application Interaction Architecture frozen — Pi Host Foundation PASS / CLOSED — next phase: Application Service v0.1**
+
+## Current Snapshot
+
+- ResearchHub_Lite is the active clean foundation of the ResearchHub Agent-first investment research application.
+- Pi Coding Agent is the canonical application host; Pi ModelRuntime, settings, authentication, and provider/model infrastructure are reused directly. Agent-host portability is not a product requirement.
+- Primary interactions are Free Research, Knowledge Query, and Knowledge Production. Review is downstream Knowledge Production governance, not a fourth mode.
+- Free Research is non-persistent by default. Canonical persistence requires explicit Knowledge Production intent; upload and attachment handling are distinct from ingestion.
+- Application Tools expose product-level actions. Thin Application Services are the next engineering direction and are not implemented by this snapshot.
+- Current implementation direction: Knowledge Query Application API, Workflow status/cancel Application API, and Review read-only Application API exposed through Pi Application Tools. These are architecture targets, not completed implementations.
+- `RHL-PI-HOST-001`: PASS / CLOSED.
+- `RHL-PI-HOST-001-FIX-001`: PASS / CLOSED.
+- `RHL-PI-HOST-001-FIX-002`: PASS / CLOSED.
+- `RHL-ARCH-APPLICATION-INTERACTION-001`: FROZEN / CTO architecture decision.
 
 ## Completed
 
 - Lite v0.1 product scope frozen.
 - Workflow / Skill / Plugin boundaries frozen.
 - Knowledge Domain boundary frozen.
-- Historical validation entries may mention Codex; the Pi Coding Agent is the current canonical application host under RHL-ADR-020, rather than the Workflow owner.
-- `ReasoningExecutor` portability seam frozen.
+- Historical validation entries may mention Codex; those references remain historical evidence only.
+- `ReasoningExecutor` semantic-operation boundary and deterministic testing seam frozen; it is not host-portability architecture.
 - Raw Document → Canonical Knowledge ingestion Workflow v0.1 frozen.
 - `StructuredDocument → Understand + Plan → ExtractionPlan` direction frozen.
 - Fixed `chunk → batch → extraction` architecture retired.
@@ -58,10 +71,10 @@
 - `RHL-IMPLEMENT-DURABLE-REVIEW-CASE-001-FIX-001` is implemented pending CTO acceptance: Suspended Proposal closure is directional and transitive, actionability is explicit typed metadata with telemetry-only exclusion, relation/claim conflict cases retain bounded canonical projections, terminal execution records remain authoritative before ReviewCase persistence, blocked/no-change replay can recover missing ReviewCases without reasoning, and blocked-log writes are atomic and idempotent. Runtime contract/manifest validation and offline regressions cover these boundaries; the parent task is not marked PASS.
 - `RHL-IMPLEMENT-DURABLE-REVIEW-CASE-001-FIX-002` is implemented pending CTO acceptance: Workflow-level blocked, no-change, and Writer exact replay tests delete only the dedicated ReviewCase store, recover it from the authoritative execution log, preserve ReviewCase identity and canonical state, and prove zero additional plan, extraction, semantic, or Writer calls during replay. Offline coverage uses only deterministic MockReasoningExecutor fixtures; no external runtime or historical evidence was touched.
 - Historical Codex Reasoning Runtime Policy: prior validations requested Codex model `gpt-5.6-luna` with reasoning effort `high`. RHL-PI-HOST-001 supersedes this as the current application-host policy; the historical configuration remains evidence only and is not a Knowledge architecture dependency.
-- `RHL-PI-HOST-001` is implemented / final corrective acceptance pending: Pi Coding Agent is the canonical ResearchHub application host, Pi `ModelRuntime` is the single model/provider/auth/thinking runtime, and `app/pi/` exposes a programmatic session plus ResearchHub status and controlled ingestion tools. Pi coding-agent capabilities remain available; canonical Knowledge Base mutation is guarded by runtime tool interception and Writer/Workflow authority.
-- `RHL-PI-HOST-001-FIX-001` is implementation complete / pending parent acceptance: Pi capabilities derive four-way extraction concurrency, the session uses Pi's official global agent directory by default with explicit test/deployment override, and canonical nested Knowledge Base path interception covers absolute and cwd-relative write/edit/bash references without claiming complete shell isolation.
-- `RHL-PI-HOST-001-FIX-002` is implemented / CTO acceptance pending: the default Pi session now uses Pi's official file-backed `SettingsManager.create(cwd, agentDir, { projectTrusted: true })`, reusing global and trusted project-local settings while preserving explicit settings-manager injection and isolated offline regressions.
-- Agent-host portability is no longer a product requirement. The existing `ReasoningExecutor` boundary remains the semantic Workflow boundary, while Pi owns application conversation and model-runtime infrastructure. ResearchHub `skills/` and Pi Skills remain separate; Workflow semantic requests do not receive Pi conversation, project-agent, or skill context.
+- `RHL-PI-HOST-001` is PASS / CLOSED: Pi Coding Agent is the canonical ResearchHub application host, Pi `ModelRuntime` is the single model/provider/auth/thinking runtime, and `app/pi/` exposes the accepted programmatic session and ResearchHub tools. Canonical Knowledge Base mutation remains guarded by Workflow and Writer authority.
+- `RHL-PI-HOST-001-FIX-001` is PASS / CLOSED: Pi capabilities derive four-way extraction concurrency, the session uses Pi's official global agent directory by default, and canonical nested Knowledge Base path interception covers absolute and cwd-relative references without claiming complete shell isolation.
+- `RHL-PI-HOST-001-FIX-002` is PASS / CLOSED: the default Pi session uses Pi's official file-backed `SettingsManager.create(cwd, agentDir, { projectTrusted: true })`, reusing global and trusted project-local settings while preserving explicit settings-manager injection.
+- Agent context and Workflow semantic context remain separate. ResearchHub `skills/` and Pi Skills remain distinct; Workflow semantic requests do not receive Pi conversation, project-agent, or skill context.
 
 ## Current Limitations
 
@@ -93,12 +106,12 @@
 
 ## RHL-PI-HOST-001 — Pi Is the Canonical Application Host
 
-**Status:** Implemented; final corrective acceptance pending
+**Status:** PASS / CLOSED
 
 Pi Coding Agent is the canonical ResearchHub application host. Pi ModelRuntime owns provider, model, authentication, OAuth, catalog, and thinking configuration; Pi's file-backed SettingsManager owns global and trusted project-local session settings; ResearchHub does not introduce a parallel registry. ResearchHub custom tools enter the existing Core/Workflow boundary, and canonical `runtime-data/knowledge-bases/**` mutation remains owned by Workflow and Writer. The Pi conversation session is intentionally separate from Workflow semantic executor context.
 
 Pi's standard coding tools remain available. Write/edit calls naming the mounted canonical KB are blocked by the Pi tool-call boundary. The current shell interception blocks explicit canonical paths but cannot prove arbitrary path construction inside an unrestricted child shell; this limitation is reported as `BASH_ISOLATION_GAP` and requires process/sandbox isolation before claiming complete bash hardening.
 
-## Next Pending After CTO Acceptance
+## Historical Validation Notes and Deferred Work
 
 `RHL-VALIDATION-SEMANTIC-QUALITY-001` and its KB inspection are `PASS / CLOSED` by CTO decision. `RHL-FIX-COMPANY-IDENTITY-NORMALIZATION-001` and `RHL-FIX-COMPANY-IDENTITY-NORMALIZATION-001-FIX-001` are `PASS / CLOSED`. `RHL-VALIDATION-COMPANY-IDENTITY-CONCURRENCY-001` is `PASS / CLOSED`; its evidence still records that all named variants were not reproduced in one stochastic run. Do not claim global Company entity-resolution problems are solved. `RHL-FIX-EXTRACTION-ALL-REJECTED-GATE-001` is `PASS / CLOSED`. `RHL-ARCH-KNOWLEDGE-PRODUCTION-001` is `PASS / CLOSED` with its architecture artifact remaining frozen; its Gateway and future Producer directions are not implementations. `RHL-ARCH-REVIEW-GOVERNANCE-001` is `FROZEN / CTO architecture decision`; ReviewCase Phase 1 is implemented pending CTO acceptance, while ReviewDecision, Curation execution, Theme Workflow, and frontend Review Inbox remain deferred. R7 is `PASS / CLOSED`; R7 evidence is unchanged. Do not treat R5 or R6 as successful. Do not start another performance benchmark automatically.

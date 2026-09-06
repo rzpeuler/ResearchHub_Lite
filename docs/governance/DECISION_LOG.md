@@ -4,6 +4,22 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-ARCH-APPLICATION-INTERACTION-001 — 2026-09-06
+
+**Status:** FROZEN / CTO architecture decision
+
+`docs/architecture/RESEARCHHUB_APPLICATION_INTERACTION_ARCHITECTURE_V0.1.md` is admitted byte-for-byte as the normative Application Interaction Architecture document. ResearchHub_Lite is the active clean foundation of the ResearchHub Agent-first investment research application, with Pi Coding Agent as the primary user interaction entrypoint and canonical application host. Pi ModelRuntime, file-backed settings, authentication, and provider/model infrastructure are reused directly; Agent-host portability is not a current product requirement.
+
+The primary interaction taxonomy is **Free Research**, **Knowledge Query**, and **Knowledge Production**. Review is downstream Knowledge Production governance, not a fourth research mode. Free Research is non-persistent by default, and canonical persistence requires explicit Knowledge Production intent. Upload is not ingestion: workspace/attachment handling remains distinct from formal canonical Raw/Source ingestion.
+
+Application Tools expose product-level actions and must not expose mutation primitives such as `create_entity`, `create_relation`, `create_claim`, `create_changeset`, `commit_changeset`, or `write_registry`. The next engineering direction is a thin `app/services/` layer shared by Pi tools and future UI/API; Query, Workflow status/cancel, and Review read APIs are targets, not completed implementations. The frontend framework and transport remain unfrozen.
+
+`WorkflowRun` and `ReviewCase` are Application-observable states. Workflow owns the deterministic lifecycle and authoritative progress; ReviewCase is downstream actionable governance while ReviewSummary is telemetry. Agent context and Workflow semantic context remain separate. `ReasoningExecutor` remains the Workflow semantic-operation boundary and deterministic testing seam, not a portability architecture.
+
+This decision does not implement Application Services, frontend, Query/Workflow/Review APIs, or new Application Tools. It preserves canonical mutation authority in the ResearchHub Knowledge Production path and declares no DSH, generic Agent runtime, Host portability abstraction, Provider Registry, Schema, Writer, or Workflow behavior change.
+
+---
+
 ## RHL-ARCH-REVIEW-GOVERNANCE-001 — 2026-09-06
 
 **Status:** FROZEN / CTO architecture decision
