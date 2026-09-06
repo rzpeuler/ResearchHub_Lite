@@ -30,7 +30,7 @@ ResearchHub owns the product semantics:
 - `runtime-data/` — runtime Knowledge Base data;
 - `tests/` — deterministic and integration regressions.
 
-The next engineering direction is `app/services/`, a thin Application Service layer shared by Pi Application Tools and future UI/API surfaces. It is not implemented by this documentation task.
+`app/services/` now provides the thin Application Service layer shared by Pi Application Tools and future UI/API surfaces. The implemented v0.1 surface is bounded Knowledge query, explicit document ingestion, process-scoped Workflow status/cancel, and read-only durable Review access. It is not a generic service framework.
 
 `ReasoningExecutor` remains the Workflow semantic-operation boundary and deterministic testing seam. It is not a product-level host-portability architecture. Conversation context and Workflow semantic context remain separate even when they share Pi `ModelRuntime`.
 

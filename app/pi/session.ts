@@ -4,6 +4,10 @@ import type { Model, Api } from '@earendil-works/pi-ai'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import { PiReasoningExecutor } from '../../plugins/reasoning/pi/executor.ts'
 import { createResearchHubTools } from './tools.ts'
+import { KnowledgeService } from '../services/knowledge-service.ts'
+import { ProductionService } from '../services/production-service.ts'
+import { ReviewService } from '../services/review-service.ts'
+import { WorkflowService } from '../services/workflow-service.ts'
 import { BASH_ISOLATION_GAP, commandReferencesCanonicalKnowledgeBase, isCanonicalKnowledgeBasePath, isCanonicalKnowledgeBasePathSecure, protectedPathError } from './security.ts'
 import { RESEARCHHUB_PI_SYSTEM_PROMPT } from './system-prompt.ts'
 
@@ -12,6 +16,7 @@ export interface ResearchHubPiSessionOptions {
   /** Explicit override for tests or isolated deployments; omitted means Pi's official global agent directory. */
   readonly agentDir?: string
   readonly mountedKnowledgeBaseRoot?: string
+  readonly workspaceRoot?: string
   readonly reasoningExecutor?: ReasoningExecutor
   readonly modelRuntime?: ModelRuntime
   readonly model?: Model<Api>
@@ -26,6 +31,11 @@ export interface ResearchHubPiSession {
   readonly agentDir: string
   readonly customTools: readonly ToolDefinition[]
   readonly bashIsolation: typeof BASH_ISOLATION_GAP | 'intercepted-explicit-paths'
+  readonly knowledgeService: KnowledgeService
+  readonly productionService: ProductionService
+  readonly reviewService: ReviewService
+  readonly workflowService: WorkflowService
+  readonly workspaceRoot: string
 }
 
 function protectionExtension(root: string, cwd: string): ExtensionFactory {
@@ -50,7 +60,11 @@ export async function createResearchHubPiSession(options: ResearchHubPiSessionOp
   const agentDir = resolve(options.agentDir ?? getAgentDir())
   const modelRuntime = options.modelRuntime ?? await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: join(agentDir, 'models.json'), allowModelNetwork: false, refreshOnCreate: false })
   const reasoningExecutor = options.reasoningExecutor ?? new PiReasoningExecutor({ modelRuntime, model: options.model })
-  const customTools = createResearchHubTools({ mountedKnowledgeBaseRoot, reasoningExecutor })
+  const knowledgeService = new KnowledgeService(mountedKnowledgeBaseRoot)
+  const reviewService = new ReviewService(mountedKnowledgeBaseRoot)
+  const workflowService = new WorkflowService()
+  const productionService = new ProductionService({ mountedKnowledgeBaseRoot, workspaceRoot: resolve(options.workspaceRoot ?? join(options.cwd, 'workspace')), cwd: options.cwd, reasoningExecutor, workflowService })
+  const customTools = createResearchHubTools({ knowledgeService, productionService, reviewService, workflowService })
   const settingsManager = options.settingsManager ?? SettingsManager.create(options.cwd, agentDir, { projectTrusted: true })
   const loader = options.resourceLoader ?? new DefaultResourceLoader({ cwd: options.cwd, agentDir, settingsManager, systemPrompt: RESEARCHHUB_PI_SYSTEM_PROMPT, extensionFactories: mountedKnowledgeBaseRoot ? [protectionExtension(mountedKnowledgeBaseRoot, options.cwd)] : [] })
   if (!options.resourceLoader) await loader.reload()
@@ -64,7 +78,7 @@ export async function createResearchHubPiSession(options: ResearchHubPiSessionOp
     sessionManager: options.sessionManager ?? SessionManager.inMemory(options.cwd),
     settingsManager,
   })
-  return { session: result.session, modelRuntime, agentDir, customTools, bashIsolation: mountedKnowledgeBaseRoot ? BASH_ISOLATION_GAP : 'intercepted-explicit-paths' }
+  return { session: result.session, modelRuntime, agentDir, customTools, knowledgeService, productionService, reviewService, workflowService, workspaceRoot: resolve(options.workspaceRoot ?? join(options.cwd, 'workspace')), bashIsolation: mountedKnowledgeBaseRoot ? BASH_ISOLATION_GAP : 'intercepted-explicit-paths' }
 }
 
 export { BASH_ISOLATION_GAP }

@@ -8,6 +8,10 @@ import { ModelRuntime } from '@earendil-works/pi-coding-agent'
 import { createResearchHubPiSession } from '../../app/pi/session.ts'
 import { BASH_ISOLATION_GAP, createProtectedBashOperations, createProtectedEditOperations, createProtectedWriteOperations } from '../../app/pi/security.ts'
 import { createResearchHubTools } from '../../app/pi/tools.ts'
+import { KnowledgeService } from '../../app/services/knowledge-service.ts'
+import { ProductionService } from '../../app/services/production-service.ts'
+import { ReviewService } from '../../app/services/review-service.ts'
+import { WorkflowService } from '../../app/services/workflow-service.ts'
 import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../plugins/reasoning/contracts.ts'
 import { PiReasoningExecutor } from '../../plugins/reasoning/pi/executor.ts'
 import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
@@ -32,7 +36,8 @@ test('ResearchHub custom tool enters the real Workflow/Core boundary', async () 
   const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-pi-tool' })
   try {
     const executor = new FixtureExecutor()
-    const tool = createResearchHubTools({ mountedKnowledgeBaseRoot: root, reasoningExecutor: executor }).find((item) => item.name === 'researchhub_ingest_text')!
+    const workflowService = new WorkflowService()
+    const tool = createResearchHubTools({ knowledgeService: new KnowledgeService(root), reviewService: new ReviewService(root), workflowService, productionService: new ProductionService({ mountedKnowledgeBaseRoot: root, workspaceRoot: join(root, 'workspace'), reasoningExecutor: executor, workflowService }) }).find((item) => item.name === 'ingest_document')!
     const result = await tool.execute('call-1', { text: 'Fixture text', workflowRunId: 'pi-tool-run' }, undefined, undefined, {} as never)
     assert.equal(result.content.length > 0, true)
     assert.equal(executor.calls.some((call) => call.operation === 'understandAndPlan'), true)
@@ -49,7 +54,7 @@ test('programmatic Pi session streams a model-selected ResearchHub tool call', a
     const runtime = await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
     runtime.registerNativeProvider(faux.provider)
     faux.setResponses([
-      fauxAssistantMessage(fauxToolCall('researchhub_status', { rootRef: root }, { id: 'status-call' })),
+      fauxAssistantMessage(fauxToolCall('researchhub_status', {}, { id: 'status-call' })),
       fauxAssistantMessage('ResearchHub status was read.'),
     ])
     session = await createResearchHubPiSession({ cwd: root, agentDir, mountedKnowledgeBaseRoot: root, reasoningExecutor: new FixtureExecutor(), modelRuntime: runtime, model: faux.getModel() })
@@ -99,7 +104,7 @@ test('Pi session reuses isolated global and trusted project settings for model, 
     assert.equal(created.session.getActiveToolNames().includes('edit'), false)
     assert.equal(created.session.getActiveToolNames().includes('write'), false)
     assert.equal(created.session.getActiveToolNames().includes('researchhub_status'), true)
-    assert.equal(created.session.getActiveToolNames().includes('researchhub_ingest_text'), true)
+    assert.equal(created.session.getActiveToolNames().includes('ingest_document'), true)
   } finally {
     created?.session.dispose()
     if (agentDir !== undefined) await rm(agentDir, { recursive: true, force: true })
@@ -122,20 +127,20 @@ test('canonical mutation wrappers block write/edit and honestly identify bash is
   }
 })
 
-test('ResearchHub tools do not allow root override or cancelled Workflow start', async () => {
+test('ResearchHub tools reject duplicate input sources and cancelled Workflow start', async () => {
   const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-pi-boundary' })
-  const other = await createKnowledgeBase({ knowledgeBaseId: 'kb-pi-other' })
   try {
     const executor = new FixtureExecutor()
-    const tools = createResearchHubTools({ mountedKnowledgeBaseRoot: root, reasoningExecutor: executor })
-    const ingest = tools.find((item) => item.name === 'researchhub_ingest_text')!
-    await assert.rejects(() => ingest.execute('override', { text: 'x', workflowRunId: 'safe-run', rootRef: other }, undefined, undefined, {} as never), /cannot override/)
+    const workflowService = new WorkflowService()
+    const ingest = createResearchHubTools({ knowledgeService: new KnowledgeService(root), reviewService: new ReviewService(root), workflowService, productionService: new ProductionService({ mountedKnowledgeBaseRoot: root, workspaceRoot: join(root, 'workspace'), reasoningExecutor: executor, workflowService }) }).find((item) => item.name === 'ingest_document')!
+    const invalid = await ingest.execute('duplicate', { text: 'x', workspaceFile: 'x', workflowRunId: 'safe-run' }, undefined, undefined, {} as never)
+    assert.equal(invalid.content.length > 0, true)
     const controller = new AbortController()
     controller.abort()
-    const result = await ingest.execute('cancelled', { text: 'x', workflowRunId: 'safe-run' }, controller.signal, undefined, {} as never)
+    const result = await ingest.execute('cancelled', { text: 'x', workflowRunId: 'safe-run-2' }, controller.signal, undefined, {} as never)
     assert.equal(result.content.length > 0, true)
     assert.equal(executor.calls.length, 0)
-  } finally { await removeKnowledgeBase(root); await removeKnowledgeBase(other) }
+  } finally { await removeKnowledgeBase(root) }
 })
 
 test('Pi tool-call boundary rejects direct write, edit, and explicit-path bash mutation attempts', async () => {

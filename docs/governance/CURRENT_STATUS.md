@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Application Interaction Architecture frozen — Pi Host Foundation PASS / CLOSED — next phase: Application Service v0.1**
+**Application Service v0.1 implemented — CTO acceptance pending**
 
 ## Current Snapshot
 
@@ -10,12 +10,13 @@
 - Pi Coding Agent is the canonical application host; Pi ModelRuntime, settings, authentication, and provider/model infrastructure are reused directly. Agent-host portability is not a product requirement.
 - Primary interactions are Free Research, Knowledge Query, and Knowledge Production. Review is downstream Knowledge Production governance, not a fourth mode.
 - Free Research is non-persistent by default. Canonical persistence requires explicit Knowledge Production intent; upload and attachment handling are distinct from ingestion.
-- Application Tools expose product-level actions. Thin Application Services are the next engineering direction and are not implemented by this snapshot.
-- Current implementation direction: Knowledge Query Application API, Workflow status/cancel Application API, and Review read-only Application API exposed through Pi Application Tools. These are architecture targets, not completed implementations.
+- Application Tools expose product-level actions through thin Application Services; low-level canonical mutation tools remain forbidden.
+- Implemented Application Service v0.1 capabilities: bounded Knowledge search/object reads, text/workspace-file ingestion, process-scoped Workflow status/cancel, and read-only durable Review list/detail.
 - `RHL-PI-HOST-001`: PASS / CLOSED.
 - `RHL-PI-HOST-001-FIX-001`: PASS / CLOSED.
 - `RHL-PI-HOST-001-FIX-002`: PASS / CLOSED.
-- `RHL-ARCH-APPLICATION-INTERACTION-001`: FROZEN / CTO architecture decision.
+- `RHL-ARCH-APPLICATION-INTERACTION-001`: PASS / CLOSED.
+- `RHL-IMPLEMENT-APPLICATION-SERVICE-001`: implemented / CTO acceptance pending.
 
 ## Completed
 

@@ -1,98 +1,49 @@
 import { Type } from '@earendil-works/pi-ai'
 import { defineTool, type ToolDefinition } from '@earendil-works/pi-coding-agent'
-import { resolve } from 'node:path'
-import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
-import { KnowledgeBaseLoaderV03 } from '../../knowledge/storage/loader.ts'
-import { listOpenReviewCases } from '../../knowledge/review/store.ts'
-import { KnowledgeCurationSkill } from '../../skills/knowledge-curation/skill.ts'
-import { runRawDocumentKnowledgeIngestion } from '../../workflows/raw-document-knowledge-ingestion/workflow.ts'
-import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
-
-const safeWorkflowId = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
-const MAX_PROMPT_TEXT_BYTES = 2_000_000
+import { ApplicationServiceError, type IngestDocumentInput, type ReviewCaseListInput } from '../services/contracts.ts'
+import type { KnowledgeService } from '../services/knowledge-service.ts'
+import type { ProductionService } from '../services/production-service.ts'
+import type { ReviewService } from '../services/review-service.ts'
+import type { WorkflowService } from '../services/workflow-service.ts'
 
 export interface ResearchHubPiToolContext {
-  readonly mountedKnowledgeBaseRoot?: string
-  readonly reasoningExecutor: ReasoningExecutor
+  readonly knowledgeService: KnowledgeService
+  readonly productionService: ProductionService
+  readonly reviewService: ReviewService
+  readonly workflowService: WorkflowService
 }
 
-function textResult(value: unknown, isError = false) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(value) }], details: undefined, isError }
+function textResult(value: unknown, isError = false) { return { content: [{ type: 'text' as const, text: JSON.stringify(value) }], details: undefined, isError } }
+function formatError(error: unknown): { readonly error: string; readonly code: string } {
+  if (error instanceof ApplicationServiceError) return { error: error.message, code: error.code }
+  return { error: 'ResearchHub application operation failed', code: 'failed' }
 }
-
-function resolveMountedRoot(context: ResearchHubPiToolContext, requestedRoot: string | undefined): string | undefined {
-  if (context.mountedKnowledgeBaseRoot !== undefined) {
-    if (requestedRoot !== undefined && resolve(requestedRoot) !== resolve(context.mountedKnowledgeBaseRoot)) throw new Error('A Pi session cannot override its mounted Knowledge Base root')
-    return context.mountedKnowledgeBaseRoot
-  }
-  return undefined
+async function invoke<T>(operation: () => Promise<T>, signal?: AbortSignal) {
+  try { if (signal?.aborted) return textResult({ error: 'ResearchHub operation cancelled', code: 'cancelled' }, true); return textResult(await operation()) }
+  catch (error) { return textResult(formatError(error), true) }
 }
-
-function assertWorkflowInput(text: string, workflowRunId: string): void {
-  if (text.trim().length === 0 || Buffer.byteLength(text, 'utf8') > MAX_PROMPT_TEXT_BYTES) throw new Error('text must be non-empty and at most 2 MB')
-  if (!safeWorkflowId.test(workflowRunId)) throw new Error('workflowRunId must be a safe deterministic identifier')
-}
+function integerParam(value: number | undefined, name: string): void { if (value !== undefined && (!Number.isInteger(value) || value < 1)) throw new ApplicationServiceError('invalid_input', `${name} must be a positive integer`) }
 
 export function createResearchHubTools(context: ResearchHubPiToolContext): ToolDefinition[] {
   const status = defineTool({
-    name: 'researchhub_status',
-    label: 'ResearchHub status',
-    description: 'Read mounted ResearchHub Knowledge Base identity, revision, canonical asset counts, metadata, and open ReviewCase count. This tool never mutates data.',
-    promptSnippet: 'Inspect ResearchHub canonical Knowledge Base status',
-    parameters: Type.Object({ rootRef: Type.Optional(Type.String()) }),
-    execute: async (_toolCallId, params) => {
-      const rootRef = resolveMountedRoot(context, params.rootRef)
-      if (!rootRef) return textResult({ error: 'No Knowledge Base is mounted' }, true)
-      const registry = new KnowledgeBaseRegistry()
-      const handle = await registry.mount(rootRef)
-      const assets = await new KnowledgeBaseLoaderV03(registry).readAssets(handle)
-      const openReviewCases = await listOpenReviewCases(handle.rootRef)
-      return textResult({
-        knowledgeBase: { id: handle.knowledgeBaseId, rootRef: handle.rootRef, revision: handle.revision, status: handle.status, schemaVersion: handle.schemaVersion, storageFormatVersion: handle.storageFormatVersion },
-        counts: { themeGroups: assets.themeGroups.length, entities: assets.entities.length, relations: assets.relations.length, claims: assets.claims.length, sources: assets.sources.length, modules: assets.modules.length },
-        metadata: { assetCount: assets.themeGroups.length + assets.entities.length + assets.relations.length + assets.claims.length + assets.sources.length + assets.modules.length },
-        openReviewCases: openReviewCases.length,
-      })
-    },
+    name: 'researchhub_status', label: 'ResearchHub status', description: 'Read bounded canonical ResearchHub status. This tool never mutates data.', promptSnippet: 'Inspect ResearchHub status', parameters: Type.Object({}),
+    execute: async () => invoke(async () => ({ knowledgeBase: await context.knowledgeService.status(), openReviewCases: await context.reviewService.countOpenReviewCases() })),
   })
-
+  const search = defineTool({
+    name: 'search_knowledge', label: 'Search Knowledge', description: 'Deterministically search bounded canonical Knowledge by exact reference or Entity name, alias, and ID.', promptSnippet: 'Search canonical Knowledge', parameters: Type.Object({ query: Type.String(), entityType: Type.Optional(Type.String()), limit: Type.Optional(Type.Number()) }),
+    execute: async (_toolCallId, params) => invoke(async () => { integerParam(params.limit, 'limit'); return context.knowledgeService.searchKnowledge({ query: params.query, ...(params.entityType === undefined ? {} : { entityType: params.entityType as never }), limit: params.limit }) }),
+  })
+  const object = defineTool({
+    name: 'get_knowledge_object', label: 'Get Knowledge object', description: 'Read one bounded canonical Knowledge object and related projections.', promptSnippet: 'Read a canonical Knowledge object', parameters: Type.Object({ ref: Type.String(), relatedLimit: Type.Optional(Type.Number()) }),
+    execute: async (_toolCallId, params) => invoke(async () => { integerParam(params.relatedLimit, 'relatedLimit'); return context.knowledgeService.getKnowledgeObject(params.ref, params.relatedLimit) }),
+  })
   const ingest = defineTool({
-    name: 'researchhub_ingest_text',
-    label: 'ResearchHub ingest text',
-    description: 'Run the bounded deterministic Raw Document to Knowledge Base ingestion workflow for supplied text. This is the controlled ResearchHub operation; it is not arbitrary code or file execution.',
-    promptSnippet: 'Ingest supplied research text through ResearchHub Workflow',
-    parameters: Type.Object({
-      text: Type.String(),
-      originalFilename: Type.Optional(Type.String()),
-      workflowRunId: Type.String(),
-      rootRef: Type.Optional(Type.String()),
-    }),
-    execute: async (_toolCallId, params, signal) => {
-      const rootRef = resolveMountedRoot(context, params.rootRef)
-      if (!rootRef) return textResult({ error: 'No Knowledge Base is mounted' }, true)
-      assertWorkflowInput(params.text, params.workflowRunId)
-      if (signal?.aborted) return textResult({ error: 'ResearchHub operation cancelled before Workflow start' }, true)
-      const handle = await new KnowledgeBaseRegistry().mount(rootRef)
-      const executor: ReasoningExecutor = {
-        capabilities: () => context.reasoningExecutor.capabilities(),
-        execute: async (request) => {
-          if (signal?.aborted) throw new Error('ResearchHub Workflow cancelled')
-          const signalAware = context.reasoningExecutor as ReasoningExecutor & { execute(request: Parameters<ReasoningExecutor['execute']>[0], signal?: AbortSignal): ReturnType<ReasoningExecutor['execute']> }
-          const result = await signalAware.execute(request, signal)
-          if (signal?.aborted) throw new Error('ResearchHub Workflow cancelled')
-          return result
-        },
-      }
-      const result = await runRawDocumentKnowledgeIngestion({
-        handle,
-        documentInput: { type: 'text', text: params.text, originalFilename: params.originalFilename ?? 'researchhub-prompt.txt', mediaType: 'text/plain' },
-        skill: new KnowledgeCurationSkill({ executor }),
-        workflowRunId: params.workflowRunId,
-        signal,
-      })
-      if (signal?.aborted) return textResult({ error: 'ResearchHub Workflow was cancelled' }, true)
-      return textResult(result)
-    },
+    name: 'ingest_document', label: 'Ingest document', description: 'Explicitly ingest text or an existing workspace file through the governed Knowledge Production Workflow.', promptSnippet: 'Ingest a document through Knowledge Production', parameters: Type.Object({ workflowRunId: Type.String(), text: Type.Optional(Type.String()), workspaceFile: Type.Optional(Type.String()), originalFilename: Type.Optional(Type.String()), mediaType: Type.Optional(Type.String()), instructions: Type.Optional(Type.String()), sourceMetadata: Type.Optional(Type.Object({ title: Type.Optional(Type.String()), institution: Type.Optional(Type.String()), author: Type.Optional(Type.String()), publishedAt: Type.Optional(Type.String()), sourceUrl: Type.Optional(Type.String()) })) }),
+    execute: async (_toolCallId, params, signal) => invoke(() => context.productionService.ingestDocument(params as IngestDocumentInput, signal), signal),
   })
-  return [status, ingest]
+  const workflowStatus = defineTool({ name: 'get_workflow_status', label: 'Get Workflow status', description: 'Read authoritative application Workflow state.', promptSnippet: 'Inspect Workflow status', parameters: Type.Object({ runId: Type.String() }), execute: async (_toolCallId, params) => invoke(async () => { const result = context.workflowService.getWorkflowStatus(params.runId); if (!result) throw new ApplicationServiceError('not_found', `Workflow run not found: ${params.runId}`); return result }) })
+  const cancel = defineTool({ name: 'cancel_workflow', label: 'Cancel Workflow', description: 'Request cancellation of an active Knowledge Production Workflow.', promptSnippet: 'Cancel an active Workflow', parameters: Type.Object({ runId: Type.String() }), execute: async (_toolCallId, params) => invoke(async () => context.workflowService.cancelWorkflow(params.runId)) })
+  const reviewList = defineTool({ name: 'list_review_cases', label: 'List ReviewCases', description: 'Read bounded open durable ReviewCase summaries.', promptSnippet: 'List open ReviewCases', parameters: Type.Object({ limit: Type.Optional(Type.Number()), actionability: Type.Optional(Type.String()), category: Type.Optional(Type.String()), producerRunId: Type.Optional(Type.String()) }), execute: async (_toolCallId, params) => invoke(async () => { integerParam(params.limit, 'limit'); return context.reviewService.listOpenReviewCases(params as ReviewCaseListInput) }) })
+  const reviewGet = defineTool({ name: 'get_review_case', label: 'Get ReviewCase', description: 'Read one safe bounded durable ReviewCase detail without mutation.', promptSnippet: 'Inspect a ReviewCase', parameters: Type.Object({ reviewCaseId: Type.String(), dependentLimit: Type.Optional(Type.Number()) }), execute: async (_toolCallId, params) => invoke(async () => { integerParam(params.dependentLimit, 'dependentLimit'); return context.reviewService.getReviewCase(params.reviewCaseId, params.dependentLimit) }) })
+  return [status, search, object, ingest, workflowStatus, cancel, reviewList, reviewGet]
 }
