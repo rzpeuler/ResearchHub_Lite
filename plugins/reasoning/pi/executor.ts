@@ -17,7 +17,7 @@ const DEFAULT_CAPABILITIES: ReasoningCapabilities = Object.freeze({
   maxContextTokens: 128_000,
   maxOutputTokens: 16_384,
   structuredOutputSupport: true,
-  maxConcurrency: 1,
+  maxConcurrency: 4,
 })
 
 export interface PiCompletionOptions {
@@ -291,7 +291,7 @@ function capabilitiesFromModel(model: Model<Api>): ReasoningCapabilities {
     maxContextTokens: model.contextWindow,
     maxOutputTokens: model.maxTokens,
     structuredOutputSupport: true,
-    maxConcurrency: 1,
+    maxConcurrency: 4,
   })
 }
 

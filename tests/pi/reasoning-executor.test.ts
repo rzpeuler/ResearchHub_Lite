@@ -6,6 +6,15 @@ import { ReasoningExecutorError } from '../../plugins/reasoning/errors.ts'
 
 const capabilities = { maxContextTokens: 4_000, maxOutputTokens: 1_000, structuredOutputSupport: true, maxConcurrency: 1 }
 
+test('PiReasoningExecutor defaults and model-derived capabilities allow four-way extraction', async () => {
+  const defaultExecutor = new PiReasoningExecutor({ completion: async () => '{"ok":true}' })
+  assert.equal(defaultExecutor.capabilities().maxConcurrency, 4)
+
+  const model = fixtureModel()
+  const derivedExecutor = new PiReasoningExecutor({ model, completion: async () => '{"ok":true}' })
+  assert.equal(derivedExecutor.capabilities().maxConcurrency, 4)
+})
+
 test('PiReasoningExecutor completes an isolated semantic call and preserves metadata', async () => {
   const observed: Array<{ systemPrompt?: string; message: string; metadata: Record<string, unknown> }> = []
   const executor = new PiReasoningExecutor({
@@ -144,4 +153,8 @@ function assistantMessage(text: string): AssistantMessage {
     stopReason: 'stop',
     timestamp: Date.now(),
   } as AssistantMessage
+}
+
+function fixtureModel(): Model<Api> {
+  return { id: 'fixture-model', name: 'Fixture Model', provider: 'fixture', api: 'fixture-api', baseUrl: 'fixture://model', reasoning: false, input: ['text'], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 8_000, maxTokens: 500 } as unknown as Model<Api>
 }

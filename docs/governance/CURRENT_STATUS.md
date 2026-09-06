@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion + Pi Application Host Implemented — RHL-PI-HOST-001 Implemented / CTO Acceptance Pending**
+**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion + Pi Application Host Implemented — RHL-PI-HOST-001 implemented / corrective acceptance pending**
 
 ## Completed
 
@@ -58,7 +58,8 @@
 - `RHL-IMPLEMENT-DURABLE-REVIEW-CASE-001-FIX-001` is implemented pending CTO acceptance: Suspended Proposal closure is directional and transitive, actionability is explicit typed metadata with telemetry-only exclusion, relation/claim conflict cases retain bounded canonical projections, terminal execution records remain authoritative before ReviewCase persistence, blocked/no-change replay can recover missing ReviewCases without reasoning, and blocked-log writes are atomic and idempotent. Runtime contract/manifest validation and offline regressions cover these boundaries; the parent task is not marked PASS.
 - `RHL-IMPLEMENT-DURABLE-REVIEW-CASE-001-FIX-002` is implemented pending CTO acceptance: Workflow-level blocked, no-change, and Writer exact replay tests delete only the dedicated ReviewCase store, recover it from the authoritative execution log, preserve ReviewCase identity and canonical state, and prove zero additional plan, extraction, semantic, or Writer calls during replay. Offline coverage uses only deterministic MockReasoningExecutor fixtures; no external runtime or historical evidence was touched.
 - Historical Codex Reasoning Runtime Policy: prior validations requested Codex model `gpt-5.6-luna` with reasoning effort `high`. RHL-PI-HOST-001 supersedes this as the current application-host policy; the historical configuration remains evidence only and is not a Knowledge architecture dependency.
-- `RHL-PI-HOST-001` is implemented pending CTO acceptance: Pi Coding Agent is the canonical ResearchHub application host, Pi `ModelRuntime` is the single model/provider/auth/thinking runtime, and `app/pi/` exposes a programmatic session plus ResearchHub status and controlled ingestion tools. Pi coding-agent capabilities remain available; canonical Knowledge Base mutation is guarded by runtime tool interception and Writer/Workflow authority.
+- `RHL-PI-HOST-001` is implemented / corrective acceptance pending: Pi Coding Agent is the canonical ResearchHub application host, Pi `ModelRuntime` is the single model/provider/auth/thinking runtime, and `app/pi/` exposes a programmatic session plus ResearchHub status and controlled ingestion tools. Pi coding-agent capabilities remain available; canonical Knowledge Base mutation is guarded by runtime tool interception and Writer/Workflow authority.
+- `RHL-PI-HOST-001-FIX-001` is implemented / CTO acceptance pending: Pi capabilities derive four-way extraction concurrency, the session uses Pi's official global agent directory by default with explicit test/deployment override, and canonical nested Knowledge Base path interception covers absolute and cwd-relative write/edit/bash references without claiming complete shell isolation.
 - Agent-host portability is no longer a product requirement. The existing `ReasoningExecutor` boundary remains the semantic Workflow boundary, while Pi owns application conversation and model-runtime infrastructure. ResearchHub `skills/` and Pi Skills remain separate; Workflow semantic requests do not receive Pi conversation, project-agent, or skill context.
 
 ## Current Limitations
