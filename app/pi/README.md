@@ -1,6 +1,6 @@
 # ResearchHub Pi host
 
-`createResearchHubPiSession()` is the programmatic application-host entrypoint. It creates one Pi `ModelRuntime` for the session and, when no executor is supplied, injects that same runtime into `PiReasoningExecutor`. By default it uses Pi's official global `getAgentDir()` for auth/models; callers may pass an explicit `agentDir` for tests or isolated deployments. Tests may inject a deterministic `ReasoningExecutor`, model, or completion.
+`createResearchHubPiSession()` is the programmatic application-host entrypoint. It creates one Pi `ModelRuntime` for the session and, when no executor is supplied, injects that same runtime into `PiReasoningExecutor`. By default it uses Pi's official global `getAgentDir()` for auth, models, and file-backed settings; `SettingsManager.create(cwd, agentDir, { projectTrusted: true })` loads global `<agentDir>/settings.json` together with trusted project-local `<cwd>/.pi/settings.json`. Callers may pass an explicit `agentDir` for tests or isolated deployments, or an explicit `settingsManager` when they own configuration. Tests may inject a deterministic `ReasoningExecutor`, model, or completion.
 
 The session registers only ResearchHub application tools for Knowledge Production: `researchhub_status` is read-only and `researchhub_ingest_text` enters the existing Raw Document Knowledge Ingestion Workflow. A mounted Knowledge Base root is fixed for the session; callers cannot override it through tool parameters.
 

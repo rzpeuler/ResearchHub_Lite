@@ -51,7 +51,7 @@ export async function createResearchHubPiSession(options: ResearchHubPiSessionOp
   const modelRuntime = options.modelRuntime ?? await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: join(agentDir, 'models.json'), allowModelNetwork: false, refreshOnCreate: false })
   const reasoningExecutor = options.reasoningExecutor ?? new PiReasoningExecutor({ modelRuntime, model: options.model })
   const customTools = createResearchHubTools({ mountedKnowledgeBaseRoot, reasoningExecutor })
-  const settingsManager = options.settingsManager ?? SettingsManager.inMemory({ defaultProjectTrust: 'always' }, { projectTrusted: true })
+  const settingsManager = options.settingsManager ?? SettingsManager.create(options.cwd, agentDir, { projectTrusted: true })
   const loader = options.resourceLoader ?? new DefaultResourceLoader({ cwd: options.cwd, agentDir, settingsManager, systemPrompt: RESEARCHHUB_PI_SYSTEM_PROMPT, extensionFactories: mountedKnowledgeBaseRoot ? [protectionExtension(mountedKnowledgeBaseRoot, options.cwd)] : [] })
   if (!options.resourceLoader) await loader.reload()
   const result = await createAgentSession({

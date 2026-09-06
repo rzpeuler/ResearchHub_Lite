@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, rename, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from '@earendil-works/pi-ai'
@@ -41,16 +41,18 @@ test('ResearchHub custom tool enters the real Workflow/Core boundary', async () 
 
 test('programmatic Pi session streams a model-selected ResearchHub tool call', async () => {
   const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-pi-session' })
-  const faux = fauxProvider({ provider: 'researchhub-faux', models: [{ id: 'fixture-model' }] })
-  const runtime = await ModelRuntime.create({ modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
-  runtime.registerNativeProvider(faux.provider)
-  faux.setResponses([
-    fauxAssistantMessage(fauxToolCall('researchhub_status', { rootRef: root }, { id: 'status-call' })),
-    fauxAssistantMessage('ResearchHub status was read.'),
-  ])
+  let agentDir: string | undefined
+  let session: Awaited<ReturnType<typeof createResearchHubPiSession>> | undefined
   try {
-    const agentDir = await mkdtemp(join(tmpdir(), 'researchhub-pi-agent-'))
-    const session = await createResearchHubPiSession({ cwd: root, agentDir, mountedKnowledgeBaseRoot: root, reasoningExecutor: new FixtureExecutor(), modelRuntime: runtime, model: faux.getModel() })
+    const faux = fauxProvider({ provider: 'researchhub-faux', models: [{ id: 'fixture-model' }] })
+    agentDir = await mkdtemp(join(tmpdir(), 'researchhub-pi-agent-'))
+    const runtime = await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
+    runtime.registerNativeProvider(faux.provider)
+    faux.setResponses([
+      fauxAssistantMessage(fauxToolCall('researchhub_status', { rootRef: root }, { id: 'status-call' })),
+      fauxAssistantMessage('ResearchHub status was read.'),
+    ])
+    session = await createResearchHubPiSession({ cwd: root, agentDir, mountedKnowledgeBaseRoot: root, reasoningExecutor: new FixtureExecutor(), modelRuntime: runtime, model: faux.getModel() })
     const events: string[] = []
     session.session.subscribe((event) => { events.push(event.type) })
     await session.session.prompt('Check the mounted Knowledge Base status.')
@@ -59,18 +61,65 @@ test('programmatic Pi session streams a model-selected ResearchHub tool call', a
     assert.equal(session.session.state.messages.some((message) => message.role === 'toolResult' && message.toolCallId === 'status-call'), true)
     assert.equal(session.agentDir, agentDir)
     assert.notEqual(session.agentDir, join(root, '.pi', 'agent'))
-    session.session.dispose()
-    await rm(agentDir, { recursive: true, force: true })
-  } finally { await removeKnowledgeBase(root) }
+  } finally {
+    session?.session.dispose()
+    await removeKnowledgeBase(root)
+    if (agentDir !== undefined) await rm(agentDir, { recursive: true, force: true })
+  }
+})
+
+test('Pi session reuses isolated global and trusted project settings for model, thinking, and tools', async () => {
+  let project: string | undefined
+  let agentDir: string | undefined
+  let created: Awaited<ReturnType<typeof createResearchHubPiSession>> | undefined
+  try {
+    project = await mkdtemp(join(tmpdir(), 'researchhub-pi-settings-project-'))
+    agentDir = await mkdtemp(join(tmpdir(), 'researchhub-pi-settings-agent-'))
+    const projectPi = join(project, '.pi')
+    await mkdir(projectPi, { recursive: true })
+    await writeFile(join(agentDir, 'settings.json'), JSON.stringify({
+      defaultProvider: 'researchhub-settings-faux',
+      defaultModel: 'settings-model',
+      defaultThinkingLevel: 'low',
+    }))
+    await writeFile(join(projectPi, 'settings.json'), JSON.stringify({
+      defaultThinkingLevel: 'high',
+      defaultTools: ['read'],
+    }))
+    const faux = fauxProvider({ provider: 'researchhub-settings-faux', models: [{ id: 'settings-model', reasoning: true }] })
+    const runtime = await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
+    runtime.registerNativeProvider(faux.provider)
+    await runtime.refresh({ allowNetwork: false })
+    created = await createResearchHubPiSession({ cwd: project, agentDir, modelRuntime: runtime, reasoningExecutor: new FixtureExecutor() })
+    assert.equal(created.session.state.model?.provider, 'researchhub-settings-faux')
+    assert.equal(created.session.state.model?.id, 'settings-model')
+    assert.equal(created.session.state.thinkingLevel, 'high')
+    assert.equal(created.session.getActiveToolNames().includes('read'), true)
+    assert.equal(created.session.getActiveToolNames().includes('bash'), false)
+    assert.equal(created.session.getActiveToolNames().includes('edit'), false)
+    assert.equal(created.session.getActiveToolNames().includes('write'), false)
+    assert.equal(created.session.getActiveToolNames().includes('researchhub_status'), true)
+    assert.equal(created.session.getActiveToolNames().includes('researchhub_ingest_text'), true)
+  } finally {
+    created?.session.dispose()
+    if (agentDir !== undefined) await rm(agentDir, { recursive: true, force: true })
+    if (project !== undefined) await rm(project, { recursive: true, force: true })
+  }
 })
 
 test('canonical mutation wrappers block write/edit and honestly identify bash isolation gap', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'researchhub-pi-security-'))
-  const write = createProtectedWriteOperations(root, { writeFile: async () => undefined, mkdir: async () => undefined })
-  await assert.rejects(() => write.writeFile(join(root, 'manifest.yaml'), 'manual'), /Canonical Knowledge Base is protected/)
-  const edit = createProtectedEditOperations(root, { readFile: async () => Buffer.from('old'), access: async () => undefined, writeFile: async () => undefined })
-  await assert.rejects(() => edit.writeFile(join(root, 'manifest.yaml'), 'manual'), /Canonical Knowledge Base is protected/)
-  assert.equal(BASH_ISOLATION_GAP, 'BASH_ISOLATION_GAP')
+  let root: string | undefined
+  try {
+    const rootPath = await mkdtemp(join(tmpdir(), 'researchhub-pi-security-'))
+    root = rootPath
+    const write = createProtectedWriteOperations(rootPath, { writeFile: async () => undefined, mkdir: async () => undefined })
+    await assert.rejects(() => write.writeFile(join(rootPath, 'manifest.yaml'), 'manual'), /Canonical Knowledge Base is protected/)
+    const edit = createProtectedEditOperations(rootPath, { readFile: async () => Buffer.from('old'), access: async () => undefined, writeFile: async () => undefined })
+    await assert.rejects(() => edit.writeFile(join(rootPath, 'manifest.yaml'), 'manual'), /Canonical Knowledge Base is protected/)
+    assert.equal(BASH_ISOLATION_GAP, 'BASH_ISOLATION_GAP')
+  } finally {
+    if (root !== undefined) await rm(root, { recursive: true, force: true })
+  }
 })
 
 test('ResearchHub tools do not allow root override or cancelled Workflow start', async () => {
@@ -101,18 +150,23 @@ test('Pi tool-call boundary rejects direct write, edit, and explicit-path bash m
       { name: 'bash', arguments: { command: 'echo manual > manifest.yaml' } },
     ]
     for (const [index, attempt] of attempts.entries()) {
-      const faux = fauxProvider({ provider: `researchhub-protected-${index}`, models: [{ id: 'fixture-model' }] })
-      const runtime = await ModelRuntime.create({ modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
-      runtime.registerNativeProvider(faux.provider)
-      faux.setResponses([fauxAssistantMessage(fauxToolCall(attempt.name, attempt.arguments, { id: `blocked-${index}` })), fauxAssistantMessage('blocked')])
-      const agentDir = await mkdtemp(join(tmpdir(), 'researchhub-pi-agent-'))
-      const created = await createResearchHubPiSession({ cwd: root, agentDir, mountedKnowledgeBaseRoot: root, reasoningExecutor: new FixtureExecutor(), modelRuntime: runtime, model: faux.getModel() })
-      await created.session.prompt('Attempt the requested operation.')
-      const blocked = created.session.state.messages.find((message) => message.role === 'toolResult' && message.toolCallId === `blocked-${index}`)
-      assert.equal(blocked?.role, 'toolResult', `${attempt.name} must produce a tool result`)
-      if (blocked?.role === 'toolResult') assert.equal(blocked.isError, true, `${attempt.name} must fail before canonical mutation`)
-      created.session.dispose()
-      await rm(agentDir, { recursive: true, force: true })
+      let agentDir: string | undefined
+      let created: Awaited<ReturnType<typeof createResearchHubPiSession>> | undefined
+      try {
+        const faux = fauxProvider({ provider: `researchhub-protected-${index}`, models: [{ id: 'fixture-model' }] })
+        agentDir = await mkdtemp(join(tmpdir(), 'researchhub-pi-agent-'))
+        const runtime = await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
+        runtime.registerNativeProvider(faux.provider)
+        faux.setResponses([fauxAssistantMessage(fauxToolCall(attempt.name, attempt.arguments, { id: `blocked-${index}` })), fauxAssistantMessage('blocked')])
+        created = await createResearchHubPiSession({ cwd: root, agentDir, mountedKnowledgeBaseRoot: root, reasoningExecutor: new FixtureExecutor(), modelRuntime: runtime, model: faux.getModel() })
+        await created.session.prompt('Attempt the requested operation.')
+        const blocked = created.session.state.messages.find((message) => message.role === 'toolResult' && message.toolCallId === `blocked-${index}`)
+        assert.equal(blocked?.role, 'toolResult', `${attempt.name} must produce a tool result`)
+        if (blocked?.role === 'toolResult') assert.equal(blocked.isError, true, `${attempt.name} must fail before canonical mutation`)
+      } finally {
+        created?.session.dispose()
+        if (agentDir !== undefined) await rm(agentDir, { recursive: true, force: true })
+      }
     }
   } finally { await removeKnowledgeBase(root) }
 })
@@ -157,37 +211,43 @@ test('Pi-backed deterministic ingestion derives four-way ExtractionUnit concurre
 })
 
 test('nested canonical Knowledge Base blocks absolute and cwd-relative write/edit/bash paths', async () => {
-  const projectRoot = await mkdtemp(join(tmpdir(), 'researchhub-pi-project-'))
-  const temporaryRoot = await createKnowledgeBase({ knowledgeBaseId: 'kb-test' })
-  const knowledgeBaseRoot = join(projectRoot, 'runtime-data', 'knowledge-bases', 'kb-test')
-  const agentDir = await mkdtemp(join(tmpdir(), 'researchhub-pi-agent-'))
+  let projectRoot: string | undefined
+  let temporaryRoot: string | undefined
+  let agentDir: string | undefined
   try {
+    const projectRootPath = await mkdtemp(join(tmpdir(), 'researchhub-pi-project-'))
+    projectRoot = projectRootPath
+    const temporaryRootPath = await createKnowledgeBase({ knowledgeBaseId: 'kb-test' })
+    temporaryRoot = temporaryRootPath
+    const knowledgeBaseRoot = join(projectRootPath, 'runtime-data', 'knowledge-bases', 'kb-test')
+    const agentDirPath = await mkdtemp(join(tmpdir(), 'researchhub-pi-agent-'))
+    agentDir = agentDirPath
     await mkdir(dirname(knowledgeBaseRoot), { recursive: true })
-    await rename(temporaryRoot, knowledgeBaseRoot)
-    const relativeManifest = relative(projectRoot, join(knowledgeBaseRoot, 'manifest.yaml'))
+    await rename(temporaryRootPath, knowledgeBaseRoot)
+    const relativeManifest = relative(projectRootPath, join(knowledgeBaseRoot, 'manifest.yaml'))
 
-    const write = createProtectedWriteOperations(knowledgeBaseRoot, { writeFile: async () => undefined, mkdir: async () => undefined }, projectRoot)
+    const write = createProtectedWriteOperations(knowledgeBaseRoot, { writeFile: async () => undefined, mkdir: async () => undefined }, projectRootPath)
     await assert.rejects(() => write.writeFile(join(knowledgeBaseRoot, 'manifest.yaml'), 'manual'), /Canonical Knowledge Base is protected/)
     await assert.rejects(() => write.writeFile(relativeManifest, 'manual'), /Canonical Knowledge Base is protected/)
 
-    const edit = createProtectedEditOperations(knowledgeBaseRoot, { readFile: async () => Buffer.from('old'), access: async () => undefined, writeFile: async () => undefined }, projectRoot)
+    const edit = createProtectedEditOperations(knowledgeBaseRoot, { readFile: async () => Buffer.from('old'), access: async () => undefined, writeFile: async () => undefined }, projectRootPath)
     await assert.rejects(() => edit.writeFile(join(knowledgeBaseRoot, 'manifest.yaml'), 'manual'), /Canonical Knowledge Base is protected/)
     await assert.rejects(() => edit.writeFile(relativeManifest, 'manual'), /Canonical Knowledge Base is protected/)
 
     const bashCalls: string[] = []
     const bash = createProtectedBashOperations(knowledgeBaseRoot, { exec: async (command) => { bashCalls.push(command); return { exitCode: 0 } } })
     const options = { onData: () => undefined }
-    await assert.rejects(() => bash.exec(`echo manual > "${join(knowledgeBaseRoot, 'manifest.yaml')}"`, projectRoot, options), /Canonical Knowledge Base is protected/)
-    await assert.rejects(() => bash.exec(`echo manual > "${relativeManifest}"`, projectRoot, options), /Canonical Knowledge Base is protected/)
-    await bash.exec('echo harmless', projectRoot, options)
-    const archivePath = join(projectRoot, 'runtime-data', 'knowledge-bases', 'kb-test-archive', 'manifest.yaml')
-    const archiveRelativePath = relative(projectRoot, archivePath)
-    await bash.exec(`echo harmless > "${archivePath}"`, projectRoot, options)
-    await bash.exec(`echo harmless > "${archiveRelativePath}"`, projectRoot, options)
+    await assert.rejects(() => bash.exec(`echo manual > "${join(knowledgeBaseRoot, 'manifest.yaml')}"`, projectRootPath, options), /Canonical Knowledge Base is protected/)
+    await assert.rejects(() => bash.exec(`echo manual > "${relativeManifest}"`, projectRootPath, options), /Canonical Knowledge Base is protected/)
+    await bash.exec('echo harmless', projectRootPath, options)
+    const archivePath = join(projectRootPath, 'runtime-data', 'knowledge-bases', 'kb-test-archive', 'manifest.yaml')
+    const archiveRelativePath = relative(projectRootPath, archivePath)
+    await bash.exec(`echo harmless > "${archivePath}"`, projectRootPath, options)
+    await bash.exec(`echo harmless > "${archiveRelativePath}"`, projectRootPath, options)
     assert.deepEqual(bashCalls, ['echo harmless', `echo harmless > "${archivePath}"`, `echo harmless > "${archiveRelativePath}"`])
 
     const faux = fauxProvider({ provider: 'researchhub-nested-protected', models: [{ id: 'fixture-model' }] })
-    const runtime = await ModelRuntime.create({ modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
+    const runtime = await ModelRuntime.create({ authPath: join(agentDirPath, 'auth.json'), modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
     runtime.registerNativeProvider(faux.provider)
     const attempts: Array<{ name: string; arguments: Record<string, unknown> }> = [
       { name: 'write', arguments: { path: join(knowledgeBaseRoot, 'manifest.yaml'), content: 'manual' } },
@@ -199,16 +259,20 @@ test('nested canonical Knowledge Base blocks absolute and cwd-relative write/edi
     ]
     for (const [index, attempt] of attempts.entries()) {
       faux.setResponses([fauxAssistantMessage(fauxToolCall(attempt.name, attempt.arguments, { id: `nested-blocked-${index}` })), fauxAssistantMessage('blocked')])
-      const created = await createResearchHubPiSession({ cwd: projectRoot, agentDir, mountedKnowledgeBaseRoot: knowledgeBaseRoot, reasoningExecutor: new FixtureExecutor(), modelRuntime: runtime, model: faux.getModel() })
-      await created.session.prompt('Attempt the requested operation.')
-      const blocked = created.session.state.messages.find((message) => message.role === 'toolResult' && message.toolCallId === `nested-blocked-${index}`)
-      assert.equal(blocked?.role, 'toolResult')
-      if (blocked?.role === 'toolResult') assert.equal(blocked.isError, true)
-      created.session.dispose()
+      let created: Awaited<ReturnType<typeof createResearchHubPiSession>> | undefined
+      try {
+        created = await createResearchHubPiSession({ cwd: projectRootPath, agentDir: agentDirPath, mountedKnowledgeBaseRoot: knowledgeBaseRoot, reasoningExecutor: new FixtureExecutor(), modelRuntime: runtime, model: faux.getModel() })
+        await created.session.prompt('Attempt the requested operation.')
+        const blocked = created.session.state.messages.find((message) => message.role === 'toolResult' && message.toolCallId === `nested-blocked-${index}`)
+        assert.equal(blocked?.role, 'toolResult')
+        if (blocked?.role === 'toolResult') assert.equal(blocked.isError, true)
+      } finally {
+        created?.session.dispose()
+      }
     }
   } finally {
-    await rm(agentDir, { recursive: true, force: true })
-    await rm(projectRoot, { recursive: true, force: true })
-    await rm(temporaryRoot, { recursive: true, force: true })
+    if (agentDir !== undefined) await rm(agentDir, { recursive: true, force: true })
+    if (projectRoot !== undefined) await rm(projectRoot, { recursive: true, force: true })
+    if (temporaryRoot !== undefined) await rm(temporaryRoot, { recursive: true, force: true })
   }
 })
