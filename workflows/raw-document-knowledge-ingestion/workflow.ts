@@ -30,6 +30,7 @@ export type EffectiveConfig = { maxExtractionUnits: number; maxPlanAttempts: num
 function emptyResult(input: RawDocumentKnowledgeIngestionInput, errors: readonly string[] = [], planAttempts: readonly PlanAttemptSummary[] = []): IngestionWorkflowResult { return { workflowRunId: input.workflowRunId, knowledgeBaseId: input.handle.knowledgeBaseId, status: 'blocked', unitSummaries: [], candidateCounts: {}, rejectedCandidates: [], reviewItems: [], reviewSummary: emptyReviewSummary(), reviewCases: [], planAttempts, errors } }
 function counts(results: readonly ValidatedExtractKnowledgeResult[]): Record<string, number> { return { entity: results.reduce((sum, result) => sum + result.entities.length, 0), relation: results.reduce((sum, result) => sum + result.relations.length, 0), claim: results.reduce((sum, result) => sum + result.claims.length, 0), rejected: results.reduce((sum, result) => sum + result.rejected.length, 0) } }
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : String(error) }
+function assertNotAborted(input: RawDocumentKnowledgeIngestionInput): void { if (input.signal?.aborted) throw new Error('ResearchHub Workflow cancelled') }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function positiveSafeInteger(value: unknown): boolean { return Number.isSafeInteger(value) && (value as number) > 0 }
 function countSummaryValues(values: Readonly<Record<string, number>>): number { return (values.entity ?? 0) + (values.relation ?? 0) + (values.claim ?? 0) }
@@ -85,6 +86,7 @@ export async function boundedExtract(input: RawDocumentKnowledgeIngestionInput, 
       let lastRejectionCodeCounts: Readonly<Record<string, number>> | undefined
       while (attempts < config.maxExtractionAttempts) {
         attempts += 1
+        assertNotAborted(input)
         try {
           const attemptResult = await input.skill.extractKnowledge({ document, reportMap, unit, instructions: input.instructions })
           if (isAllRejectedExtractionAttempt(attemptResult)) {
@@ -134,6 +136,7 @@ export async function runRawDocumentKnowledgeIngestion(input: RawDocumentKnowled
   let unitSummaries: ExtractionUnitSummary[] = []
   const planAttempts: PlanAttemptSummary[] = []
   try {
+    assertNotAborted(input)
     handle = await registry.mount(input.handle.rootRef)
     const acquired = await resolver.acquire(input.documentInput)
     const suppliedMetadata = normalizedMetadata({ title: input.sourceMetadata?.title ?? acquired.filename, institution: input.sourceMetadata?.institution ?? null, author: input.sourceMetadata?.author ?? null, publishedAt: input.sourceMetadata?.publishedAt ?? null, sourceUrl: input.sourceMetadata?.sourceUrl ?? null })
@@ -159,11 +162,13 @@ export async function runRawDocumentKnowledgeIngestion(input: RawDocumentKnowled
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     }
     const document = await resolver.parse(acquired)
+    assertNotAborted(input)
     documentId = document.documentId
     const capabilities = input.skill.capabilities()
     let planned: Awaited<ReturnType<typeof input.skill.understandAndPlan>> | undefined
     let planRepair: Parameters<typeof input.skill.understandAndPlan>[0]['planRepair'] | undefined
     for (let attempt = 1; attempt <= config.maxPlanAttempts; attempt += 1) {
+      assertNotAborted(input)
       planAttempts.push({ attempt, status: 'proposed' })
       const proposal = await input.skill.understandAndPlan({ document, instructions: input.instructions, ...(planRepair === undefined ? {} : { planRepair }) })
       planned = proposal
@@ -183,6 +188,7 @@ export async function runRawDocumentKnowledgeIngestion(input: RawDocumentKnowled
     const extractionConcurrency = Math.min(config.maxConcurrency, capabilities.maxConcurrency, acceptedPlan.units.length)
     if (!Number.isSafeInteger(extractionConcurrency) || extractionConcurrency <= 0) return { ...emptyResult(input, ['maxConcurrency or accepted extraction capacity prevents execution'], planAttempts), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, planAttempts }
     const extraction = await boundedExtract(input, document, planned.reportMap, acceptedPlan.units, extractionConcurrency, config)
+    assertNotAborted(input)
     unitSummaries = extraction.summaries
     if (extraction.errors.length > 0) return { ...emptyResult(input, extraction.errors, planAttempts), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, planAttempts, unitSummaries, extractionConcurrency, peakExtractionConcurrency: extraction.peak, candidateCounts: counts(extraction.results.map((item) => item.result)) }
     const consolidated = consolidateExtractions(extraction.results)
@@ -193,6 +199,7 @@ export async function runRawDocumentKnowledgeIngestion(input: RawDocumentKnowled
       candidateIds.add(group.candidateId)
     }
     const resolution = await resolveKnowledge({ assets, document, groups: consolidated.groups, reportMap: planned.reportMap, incomingSourceContext: { title: archived.manifest.suppliedMetadata.title, institution: archived.manifest.suppliedMetadata.institution, author: archived.manifest.suppliedMetadata.author, publishedAt: archived.manifest.suppliedMetadata.publishedAt, sourceType: planned.reportMap.sourceAssessment.sourceType as IncomingSourceContext['sourceType'], reliability: planned.reportMap.sourceAssessment.reliability ?? null }, plan: acceptedPlan, rawRef, skill: input.skill, instructions: input.instructions, maxResolutionAttempts: config.maxResolutionAttempts, maxResolutionCases: config.maxResolutionCases, maxEntityBindingCandidates: config.maxEntityBindingCandidates, maxContextTokens: config.maxContextTokens, consolidationReviews: consolidated.reviewConstraints, candidateSupport: consolidated.candidateSupport })
+    assertNotAborted(input)
     const planning = planKnowledgeChangeSet({ knowledgeBaseId: handle.knowledgeBaseId, baseRevision: handle.revision, workflowRunId: input.workflowRunId, rawRef, rawManifest: archived.manifest, documentId: document.documentId, document: { metadata: document.metadata }, reportMap: planned.reportMap, plan: acceptedPlan, groups: consolidated.groups, intents: resolution.intents, bindings: resolution.bindings, assets, resolutionReviews: resolution.reviewItems })
     const reviewSummary = normalizeReviewSummary({ extractionRejected: extraction.results.flatMap((item) => item.result.rejected), consolidationReviews: consolidated.reviewConstraints, resolutionReviews: resolution.reviewItems, plannerReviewItems: planning.reviewItems, candidateGroups: consolidated.groups })
     const reviewCasesCreatedAt = clock()
@@ -222,7 +229,9 @@ export async function runRawDocumentKnowledgeIngestion(input: RawDocumentKnowled
     }
     const changeSet = { ...planning.changeSet, ingestionContext: { ...(planning.changeSet.ingestionContext ?? {}), workflowInputFingerprint: fingerprint, workflowStatusHint: reviewSummary.total > 0 ? 'completed_with_review' as const : 'completed' as const, reviewSummary, ...reviewCaseContext } }
     const changeSetValidation = await validateKnowledgeChangeSetV03(handle, changeSet, { mode: 'commit' })
+    assertNotAborted(input)
     if (!changeSetValidation.validatedChangeSet) { const errors = changeSetValidation.report.errors.map((item) => item.message); await persistBlockedReviewCases(errors); return { ...emptyResult(input, errors, planAttempts), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, planAttempts, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary, reviewCases, potentialNewInvestmentThemes: resolution.potentialNewInvestmentThemes, recommendedNewInvestmentThemes: resolution.recommendedNewInvestmentThemes, validationSummary: changeSetValidation.report, extractionConcurrency, peakExtractionConcurrency: extraction.peak } }
+    assertNotAborted(input)
     const write = await (input.writer ?? writeKnowledgeBaseV03)(handle, { receipt: changeSetValidation.validatedChangeSet, registry, clock, stagedStateValidator: async (rootRef) => { const staged = await validateKnowledgeBaseV03(rootRef); if (staged.status === 'failed') throw new Error(staged.errors.map((item) => item.message).join('; ')) } })
     if (write.status === 'rejected' || write.status === 'failed') { const errors = [write.error?.message ?? 'Writer ' + write.status]; await persistBlockedReviewCases(errors); return { ...emptyResult(input, errors, planAttempts), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, planAttempts, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary, reviewCases, potentialNewInvestmentThemes: resolution.potentialNewInvestmentThemes, recommendedNewInvestmentThemes: resolution.recommendedNewInvestmentThemes, changeSetId: changeSet.changeSetId, writeStatus: write.status, baseRevision: write.baseRevision, committedRevision: write.committedRevision, validationSummary: changeSetValidation.report, extractionConcurrency, peakExtractionConcurrency: extraction.peak } }
     if (reviewCases.length > 0) { const persistedCases = await persistReviewCases({ rootRef: handle.rootRef, knowledgeBaseId: handle.knowledgeBaseId, producerRunId: input.workflowRunId, cases: reviewCases, createdAt: reviewCasesCreatedAt, knowledgeBaseRevisionAtCreation: handle.revision }); if (persistedCases.kind === 'conflict') return { ...emptyResult(input, [persistedCases.message ?? 'ReviewCase persistence conflict'], planAttempts), knowledgeBaseId: handle.knowledgeBaseId, rawRef, documentId, acceptedPlan, planAttempts, unitSummaries, candidateCounts: consolidated.candidateCounts, rejectedCandidates: consolidated.rejected, reviewItems: planning.reviewItems, reviewSummary, reviewCases, changeSetId: changeSet.changeSetId, writeStatus: write.status, baseRevision: write.baseRevision, committedRevision: write.committedRevision, validationSummary: changeSetValidation.report, extractionConcurrency, peakExtractionConcurrency: extraction.peak } }

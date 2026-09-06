@@ -7,7 +7,7 @@ These rules are mandatory unless explicitly superseded by a recorded architectur
 1. Do not build a custom Agent Runtime.
 2. Do not add DSH / DeepSeek Harness dependencies.
 3. Do not recreate Capability, Provider, Planner, or ResearchManager layers.
-4. Codex is the current reasoning host, not the Workflow control plane.
+4. The Pi Coding Agent is the current canonical application host, not the Workflow control plane. Historical Codex adapters remain only for validation provenance.
 5. `ReasoningExecutor` must allow coding-agent execution and must not require direct model API integration.
 
 ## 2. Workflow
@@ -15,7 +15,7 @@ These rules are mandatory unless explicitly superseded by a recorded architectur
 6. Workflow owns routing.
 7. The reasoning host must not choose arbitrary next nodes.
 8. Workflow must not bypass deterministic validation.
-9. Workflow must not import Codex-specific code.
+9. Workflow must not import application-host-specific code, including Pi- or Codex-specific code.
 10. Retry must be bounded and explicit.
 11. Parallel extraction must be bounded and explicit.
 12. All required ExtractionUnits must meet at a consolidation barrier before canonical resolution.
@@ -23,7 +23,7 @@ These rules are mandatory unless explicitly superseded by a recorded architectur
 ## 3. Skill
 
 13. Skill owns professional semantic methodology.
-14. Skill must not import Codex-specific code.
+14. Skill must not import application-host-specific code, including Pi- or Codex-specific code.
 15. Knowledge Curation Skill must not write canonical Knowledge.
 16. Skill may propose semantic decomposition, but may not authorize its own execution path.
 17. Semantic repair after deterministic rejection must be bounded.

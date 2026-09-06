@@ -2,14 +2,14 @@
 
 ## Phase
 
-**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion Implemented — RHL-REFACTOR-KNOWLEDGE-RESOLUTION-001 Complete / CTO Acceptance Pending**
+**Knowledge Core + Document + Reasoning/Curation + Deterministic Ingestion + Pi Application Host Implemented — RHL-PI-HOST-001 Implemented / CTO Acceptance Pending**
 
 ## Completed
 
 - Lite v0.1 product scope frozen.
 - Workflow / Skill / Plugin boundaries frozen.
 - Knowledge Domain boundary frozen.
-- Codex defined as current reasoning host rather than Workflow owner.
+- Historical validation entries may mention Codex; the Pi Coding Agent is the current canonical application host under RHL-ADR-020, rather than the Workflow owner.
 - `ReasoningExecutor` portability seam frozen.
 - Raw Document → Canonical Knowledge ingestion Workflow v0.1 frozen.
 - `StructuredDocument → Understand + Plan → ExtractionPlan` direction frozen.
@@ -57,7 +57,9 @@
 - `RHL-IMPLEMENT-DURABLE-REVIEW-CASE-001` is implemented pending CTO acceptance: Phase 1 typed durable ReviewCase construction, candidate-local dependency closure, RawDocumentBlockEvidenceBinding, bounded ExistingKnowledgeProjection, atomic filesystem persistence, execution-log recovery, and replay-safe list/load APIs are integrated for Raw Document Knowledge Ingestion. ReviewDecision, Curation execution, Theme Workflow, and frontend Review Inbox remain out of scope.
 - `RHL-IMPLEMENT-DURABLE-REVIEW-CASE-001-FIX-001` is implemented pending CTO acceptance: Suspended Proposal closure is directional and transitive, actionability is explicit typed metadata with telemetry-only exclusion, relation/claim conflict cases retain bounded canonical projections, terminal execution records remain authoritative before ReviewCase persistence, blocked/no-change replay can recover missing ReviewCases without reasoning, and blocked-log writes are atomic and idempotent. Runtime contract/manifest validation and offline regressions cover these boundaries; the parent task is not marked PASS.
 - `RHL-IMPLEMENT-DURABLE-REVIEW-CASE-001-FIX-002` is implemented pending CTO acceptance: Workflow-level blocked, no-change, and Writer exact replay tests delete only the dedicated ReviewCase store, recover it from the authoritative execution log, preserve ReviewCase identity and canonical state, and prove zero additional plan, extraction, semantic, or Writer calls during replay. Offline coverage uses only deterministic MockReasoningExecutor fixtures; no external runtime or historical evidence was touched.
-- Temporary Reasoning Runtime Policy: ResearchHub_Lite currently requests Codex model `gpt-5.6-luna` with reasoning effort `high`. This is host-specific runtime configuration, not a frozen Knowledge architecture dependency; future hosts/models remain replaceable through `ReasoningExecutor` configuration.
+- Historical Codex Reasoning Runtime Policy: prior validations requested Codex model `gpt-5.6-luna` with reasoning effort `high`. RHL-PI-HOST-001 supersedes this as the current application-host policy; the historical configuration remains evidence only and is not a Knowledge architecture dependency.
+- `RHL-PI-HOST-001` is implemented pending CTO acceptance: Pi Coding Agent is the canonical ResearchHub application host, Pi `ModelRuntime` is the single model/provider/auth/thinking runtime, and `app/pi/` exposes a programmatic session plus ResearchHub status and controlled ingestion tools. Pi coding-agent capabilities remain available; canonical Knowledge Base mutation is guarded by runtime tool interception and Writer/Workflow authority.
+- Agent-host portability is no longer a product requirement. The existing `ReasoningExecutor` boundary remains the semantic Workflow boundary, while Pi owns application conversation and model-runtime infrastructure. ResearchHub `skills/` and Pi Skills remain separate; Workflow semantic requests do not receive Pi conversation, project-agent, or skill context.
 
 ## Current Limitations
 
@@ -77,12 +79,23 @@
 - Knowledge Schema: 0.3
 - Storage Format: 1
 - Knowledge Production Architecture: `v0.1` frozen; Gateway direction is architectural and not implemented
-- Current reasoning host: Codex
+- Current application/reasoning host: Pi Coding Agent with Pi ModelRuntime
+- Workflow semantic boundary: `ReasoningExecutor` (Pi adapter and deterministic injection)
 - Custom Agent Runtime: none
 - DSH/Harness dependency: none
 - Knowledge Core runtime dependency on LLM/Agent/PDF/network: none
 - Historical 157-review result does not authorize canonical Schema expansion.
 - Review-reduction direction remains Candidate/Resolution-first rather than ontology-first.
+
+---
+
+## RHL-PI-HOST-001 — Pi Is the Canonical Application Host
+
+**Status:** Implemented; CTO acceptance pending
+
+Pi Coding Agent is the canonical ResearchHub application host. Pi ModelRuntime owns provider, model, authentication, OAuth, catalog, and thinking configuration; ResearchHub does not introduce a parallel registry. ResearchHub custom tools enter the existing Core/Workflow boundary, and canonical `runtime-data/knowledge-bases/**` mutation remains owned by Workflow and Writer. The Pi conversation session is intentionally separate from Workflow semantic executor context.
+
+Pi's standard coding tools remain available. Write/edit calls naming the mounted canonical KB are blocked by the Pi tool-call boundary. The current shell interception blocks explicit canonical paths but cannot prove arbitrary path construction inside an unrestricted child shell; this limitation is reported as `BASH_ISOLATION_GAP` and requires process/sandbox isolation before claiming complete bash hardening.
 
 ## Next Pending After CTO Acceptance
 

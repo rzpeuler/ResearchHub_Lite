@@ -43,6 +43,7 @@ export interface RawDocumentKnowledgeIngestionInput {
   readonly config?: IngestionWorkflowConfig
   readonly clock?: () => string
   readonly writer?: KnowledgeBaseWriter
+  readonly signal?: AbortSignal
 }
 
 export type IngestionWorkflowStatus = 'completed' | 'completed_with_review' | 'blocked'

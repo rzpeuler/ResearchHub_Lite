@@ -176,14 +176,16 @@ The run stopped before Writer at deterministic Schema 0.3 ChangeSet validation b
 
 ---
 
-## Temporary Reasoning Runtime Policy — 2026-09-04
+## Historical Codex Reasoning Runtime Policy — 2026-09-04
 
-ResearchHub_Lite currently requests the Codex host configuration:
+**Status:** Superseded by RHL-ADR-020; retained for historical validation provenance
+
+Earlier ResearchHub_Lite validation runs requested the Codex host configuration:
 
 - Model: `gpt-5.6-luna`
 - Reasoning effort: `high`
 
-This is a temporary host-specific runtime policy. It is not a frozen Knowledge architecture dependency and must not be copied into Workflow, Knowledge Resolution, Knowledge Schema, or Skill semantic contracts. Future model or reasoning-host changes remain supported through `CodexReasoningExecutor` options and the runtime-neutral `ReasoningExecutor` boundary.
+This was a host-specific runtime policy, not a frozen Knowledge architecture dependency. It must not be treated as the current application-host policy or copied into Workflow, Knowledge Resolution, Knowledge Schema, or Skill semantic contracts. The current host policy is recorded by RHL-ADR-020; historical runs remain supported through their existing `CodexReasoningExecutor` provenance.
 
 The policy is passed explicitly on each Codex CLI invocation rather than inherited from `config.toml`.
 
@@ -213,7 +215,7 @@ The accepted temporary runtime policy remains explicit `gpt-5.6-luna` with reaso
 
 **Status:** Accepted
 
-Codex is the current execution/reasoning host.
+This historical ADR recorded Codex as the execution/reasoning host. Its current-host implication is superseded by RHL-ADR-020, which establishes the Pi Coding Agent as the canonical application host.
 
 ResearchHub_Lite does not build or migrate a custom Agent Runtime.
 
@@ -274,11 +276,11 @@ It represents a programmatically invokable reasoning host.
 
 **Status:** Accepted
 
-Workflow and Skill remain host-neutral.
+Workflow and Skill remain semantically host-neutral; this is a boundary rule, not a current multi-host product requirement.
 
-Codex-specific code is isolated behind a ReasoningExecutor implementation.
+Pi-specific code is isolated behind the ReasoningExecutor Plugin boundary. Historical Codex-specific code remains isolated in the same way.
 
-Future reasoning hosts should normally require only a replacement Plugin implementation.
+Future reasoning hosts are not a current product requirement; if introduced later, they should normally require only a replacement Plugin implementation.
 
 ---
 
@@ -417,3 +419,15 @@ Reasoning receives case-local existing aliases rather than durable canonical IDs
 **Status: Implementation complete; CTO acceptance pending**
 
 Semantic Resolution Cases use deterministic excerpts from the already-parsed StructuredDocument and bounded incoming/existing Source metadata. Entity plausible retrieval computes complete membership before applying `maxEntityBindingCandidates`; overflow is isolated to Review. `semanticCaseCount` is independent from retry `semanticCaseCalls`, and model output rejects embedded durable canonical and RawRef tokens recursively. The mixed fresh-KB Entity/Relation/Claim regression remains zero-call and zero-Review; Schema 0.3 and Writer remain unchanged.
+
+---
+
+## RHL-ADR-020 — Pi Coding Agent Is the Canonical ResearchHub Host
+
+**Status:** Implemented; CTO acceptance pending
+
+RHL-PI-HOST-001 establishes Pi Coding Agent as the canonical ResearchHub application host. Pi ModelRuntime is the authoritative model/provider/auth/OAuth/catalog/thinking runtime; ResearchHub must not add a parallel model profile or provider registry. Pi retains general coding-agent tools and Skills, while ResearchHub custom tools are the only application path into Core and Workflow for Knowledge Production.
+
+This decision supersedes the product requirement implied by RHL-ADR-007 that the application host itself remain portable. `ReasoningExecutor` is retained as the portable semantic boundary owned by Workflow, and Pi provides the production adapter plus deterministic test injection. Pi conversation context, project `AGENTS.md`, and Pi Skills must not be passed into Workflow semantic calls. The canonical Knowledge Base remains Writer/Workflow-owned; Pi tool interception is enforcement, not authorization to bypass Writer.
+
+The initial host slice deliberately reports `BASH_ISOLATION_GAP`: explicit canonical paths are rejected, but unrestricted shell execution can construct paths indirectly. A restricted process/sandbox, separate workspace, or Writer-mediated permission boundary is required before unrestricted bash can be described as fully hard-protected.

@@ -6,7 +6,7 @@ Its purpose is deliberately narrow:
 
 - ingest raw research documents;
 - understand and extract durable investment knowledge;
-- reconcile that knowledge with an existing Knowledge Base;
+- resolve that knowledge against an existing Knowledge Base;
 - validate provenance and canonical integrity;
 - perform one safe atomic semantic write.
 
@@ -29,14 +29,14 @@ Execution logic keeps three explicit responsibilities:
 
 Knowledge itself is a domain/infrastructure concern rather than a fourth execution layer.
 
-The current reasoning host is Codex. ResearchHub_Lite does not build a custom Agent Runtime and does not bind its Workflow or Skill assets to Codex.
+The canonical application host is Pi Coding Agent. Pi ModelRuntime owns model, provider, authentication, catalog, and thinking configuration. ResearchHub_Lite does not build a custom Agent Runtime; Workflow semantic calls remain behind the `ReasoningExecutor` boundary.
 
 The portability seam is `ReasoningExecutor`:
 
 ```text
 Workflow
    |
-   +--> Skill --> ReasoningExecutor --> Codex / future agent
+   +--> Skill --> ReasoningExecutor --> Pi ModelRuntime
    |
    +--> Plugin
    |
@@ -61,8 +61,8 @@ Bounded Parallel Extraction + Per-Unit Validation
 Candidate Consolidation
         ↓
 Retrieve Existing Knowledge
-        ↓
-Reconcile
+         ↓
+Deterministic Knowledge Resolution + bounded Semantic Cases
         ↓
 Resolve References + Plan ChangeSet
         ↓
