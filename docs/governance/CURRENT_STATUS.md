@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Homepage Shell v0.1 implemented — CTO acceptance pending**
+**Knowledge Graph Projection + Graph Page v0.1 implemented — CTO acceptance pending**
 
 ## Current Snapshot
 
@@ -20,9 +20,10 @@
 - `RHL-ARCH-APPLICATION-RUNTIME-CLIENT-001`: PASS / CLOSED.
 - `RHL-IMPLEMENT-APPLICATION-RUNTIME-001`: PASS / CLOSED.
 - `RHL-IMPLEMENT-APPLICATION-RUNTIME-001-FIX-001`: PASS / CLOSED.
-- `RHL-IMPLEMENT-HOMEPAGE-SHELL-001`: implemented / CTO acceptance pending; Research is the default page, Knowledge Graph is a placeholder at `/graph`, and Reviews is a separate read-only page at `/reviews`.
+- `RHL-IMPLEMENT-HOMEPAGE-SHELL-001`: implemented / CTO acceptance pending; Research is the default page, Knowledge Graph is delivered by the follow-up Graph Page task at `/graph`, and Reviews is a separate read-only page at `/reviews`.
 - `RHL-IMPLEMENT-HOMEPAGE-SHELL-001-FIX-001`: implemented / CTO acceptance pending; Workflow polling is bounded to one non-overlapping request per approximately one-second interval, terminal states stop polling, and old-run responses are ignored after replacement.
-- Next recommended phase after acceptance: `RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001`; Production E2E validation follows Graph Page acceptance. Neither phase is started.
+- `RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001`: implemented / CTO acceptance pending; the frozen Graph Projection Architecture is admitted byte-for-byte, Directory and rooted read-only graph APIs are available, and `/graph` provides Directory, Search, React Flow canvas, Dagre layout, filters, focus/re-root, depth, and canonical Inspector reads.
+- Next recommended phase after Graph Page acceptance: Production E2E validation. Graph Page v0.1 remains pending independent CTO acceptance.
 - `docs/governance/ARCHITECTURE.md` remains a frozen CTO-generated summary and is intentionally not rewritten by this admission task; where its older frontend/transport wording conflicts, the normative Runtime/Client architecture and this decision record supersede it until a consolidated replacement is issued.
 
 ## Completed
@@ -123,4 +124,4 @@ Pi's standard coding tools remain available. Write/edit calls naming the mounted
 
 ## Historical Validation Notes and Deferred Work
 
-`RHL-VALIDATION-SEMANTIC-QUALITY-001` and its KB inspection are `PASS / CLOSED` by CTO decision. `RHL-FIX-COMPANY-IDENTITY-NORMALIZATION-001` and `RHL-FIX-COMPANY-IDENTITY-NORMALIZATION-001-FIX-001` are `PASS / CLOSED`. `RHL-VALIDATION-COMPANY-IDENTITY-CONCURRENCY-001` is `PASS / CLOSED`; its evidence still records that all named variants were not reproduced in one stochastic run. Do not claim global Company entity-resolution problems are solved. `RHL-FIX-EXTRACTION-ALL-REJECTED-GATE-001` is `PASS / CLOSED`. `RHL-ARCH-KNOWLEDGE-PRODUCTION-001` is `PASS / CLOSED` with its architecture artifact remaining frozen; its Gateway and future Producer directions are not implementations. `RHL-ARCH-REVIEW-GOVERNANCE-001` is `FROZEN / CTO architecture decision`; ReviewCase Phase 1 and the frontend read-only Review Inbox are implemented pending CTO acceptance, while ReviewDecision, Curation execution, and Theme Workflow remain deferred. The frontend Knowledge Graph remains a placeholder pending `RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001`. R7 is `PASS / CLOSED`; R7 evidence is unchanged. Do not treat R5 or R6 as successful. Do not start another performance benchmark automatically.
+`RHL-VALIDATION-SEMANTIC-QUALITY-001` and its KB inspection are `PASS / CLOSED` by CTO decision. `RHL-FIX-COMPANY-IDENTITY-NORMALIZATION-001` and `RHL-FIX-COMPANY-IDENTITY-NORMALIZATION-001-FIX-001` are `PASS / CLOSED`. `RHL-VALIDATION-COMPANY-IDENTITY-CONCURRENCY-001` is `PASS / CLOSED`; its evidence still records that all named variants were not reproduced in one stochastic run. Do not claim global Company entity-resolution problems are solved. `RHL-FIX-EXTRACTION-ALL-REJECTED-GATE-001` is `PASS / CLOSED`. `RHL-ARCH-KNOWLEDGE-PRODUCTION-001` is `PASS / CLOSED` with its architecture artifact remaining frozen; its Gateway and future Producer directions are not implementations. `RHL-ARCH-REVIEW-GOVERNANCE-001` is `FROZEN / CTO architecture decision`; ReviewCase Phase 1 and the frontend read-only Review Inbox are implemented pending CTO acceptance, while ReviewDecision, Curation execution, and Theme Workflow remain deferred. `RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001` is implemented pending CTO acceptance; the Graph Projection Architecture v0.1 remains frozen and the Graph is read-only. R7 is `PASS / CLOSED`; R7 evidence is unchanged. Do not treat R5 or R6 as successful. Do not start another performance benchmark automatically.

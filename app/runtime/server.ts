@@ -4,7 +4,7 @@ import { pipeline } from 'node:stream/promises'
 import { createReadStream } from 'node:fs'
 import { lstat, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve } from 'node:path'
-import { ApplicationServiceError, type IngestDocumentInput, type KnowledgeSearchInput, type ReviewCaseListInput } from '../services/contracts.ts'
+import { ApplicationServiceError, type IngestDocumentInput, type KnowledgeGraphProjectionInput, type KnowledgeSearchInput, type ReviewCaseListInput } from '../services/contracts.ts'
 import { createResearchHubApplicationRuntime, ResearchHubApplicationRuntime } from './application-runtime.ts'
 import { AttachmentService, DEFAULT_MAX_ATTACHMENT_BYTES } from './attachment-service.ts'
 import { ClientEventStream } from './event-stream.ts'
@@ -363,6 +363,13 @@ export class ResearchHubRuntimeServer {
     if (method === 'GET' && (path === '/api/researchhub/status' || path === '/api/status')) { await this.sendJson(response, 200, await this.status()) ; return }
     if ((method === 'GET' || method === 'POST') && (path === '/api/knowledge/search' || path === '/api/search-knowledge')) { const input = (method === 'GET' ? this.searchInputFromQuery(url) : await this.readJson(request)) as KnowledgeSearchInput; await this.sendJson(response, 200, await this.runtime!.knowledgeService.searchKnowledge(input)); return }
     if (method === 'GET' && (path === '/api/knowledge/object' || path === '/api/knowledge/get')) { await this.sendJson(response, 200, await this.runtime!.knowledgeService.getKnowledgeObject(url.searchParams.get('ref') ?? '', positiveInteger(url.searchParams.get('relatedLimit')))); return }
+    if (method === 'GET' && path === '/api/knowledge/directory') { await this.sendJson(response, 200, await this.runtime!.knowledgeGraphService.getDirectoryProjection(positiveInteger(url.searchParams.get('limit')))); return }
+    if (method === 'GET' && path === '/api/knowledge/graph') {
+      const depthValue = url.searchParams.get('depth')
+      const depth = depthValue === null ? undefined : depthValue === '1' || depthValue === '2' ? Number(depthValue) as 1 | 2 : Number.NaN
+      const input: KnowledgeGraphProjectionInput = { rootRef: url.searchParams.get('rootRef') ?? url.searchParams.get('root') ?? '', ...(depth === undefined ? {} : { depth: depth as 1 | 2 }), ...(url.searchParams.has('maxNodes') ? { maxNodes: positiveInteger(url.searchParams.get('maxNodes')) } : {}), ...(url.searchParams.has('maxEdges') ? { maxEdges: positiveInteger(url.searchParams.get('maxEdges')) } : {}) }
+      await this.sendJson(response, 200, await this.runtime!.knowledgeGraphService.getGraphProjection(input)); return
+    }
     if (method === 'POST' && path === '/api/knowledge/object') { const input = await this.readJson(request); await this.sendJson(response, 200, await this.runtime!.knowledgeService.getKnowledgeObject(this.stringField(input, 'ref'), this.optionalPositive(input, 'relatedLimit'))); return }
     if (method === 'GET' && path.startsWith('/api/workflows/')) { const runId = decodeSegment(path.split('/')[3] ?? ''); const value = this.runtime!.workflowService.getWorkflowStatus(runId); if (!value) throw new ApplicationServiceError('not_found', 'Workflow run not found'); await this.sendJson(response, 200, value); return }
     if (method === 'POST' && (path === '/api/workflows/cancel' || /^\/api\/workflows\/[^/]+\/cancel$/.test(path))) { const body = await this.readJson(request); const runId = path === '/api/workflows/cancel' ? this.stringField(body, 'runId') : decodeSegment(path.split('/')[3]!); await this.sendJson(response, 200, this.runtime!.workflowService.cancelWorkflow(runId)); return }

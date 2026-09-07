@@ -4,6 +4,18 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001 — 2026-09-07
+
+**Status:** implemented / CTO acceptance pending
+
+The frozen `docs/architecture/KNOWLEDGE_GRAPH_PROJECTION_ARCHITECTURE_V0.1.md` is admitted byte-for-byte. The implementation adds a narrow read-only `KnowledgeGraphService` over the mounted Schema 0.3 / Storage Format 1 Knowledge index, with bounded deterministic Directory and contextual rooted graph projections. Graph topology contains only active supported canonical Entities and Relations, preserves canonical relation direction, keeps ThemeGroup as Directory taxonomy, and excludes Claims, Sources, Modules, ReviewCases, and proposals from topology. No Graph DB, alternate Knowledge store, Writer authority, or mutation route is introduced.
+
+The Application Runtime exposes GET `/api/knowledge/directory` and GET `/api/knowledge/graph`; the browser client consumes those contracts and reuses `getKnowledgeObject` / `searchKnowledge` for Inspector and Directory search. `/graph` uses React Flow for transient canvas interaction and Dagre for transient left-to-right layout. Filters, depth, focus/re-root, and URL state are view concerns only. Graph Page v0.1 is implemented pending independent CTO acceptance; Production E2E validation remains the next recommended phase after acceptance.
+
+This engineering entry does not modify Knowledge Schema, Writer, Review Governance, Workflow lifecycle, or Pi Host authority.
+
+---
+
 ## RHL-ARCH-APPLICATION-INTERACTION-001 — 2026-09-06
 
 **Status:** FROZEN / CTO architecture decision

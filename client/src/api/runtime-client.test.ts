@@ -42,4 +42,14 @@ describe('RuntimeClient', () => {
     await expect(unauthorized.bootstrap()).rejects.toBeInstanceOf(RuntimeClientError)
     await expect(unauthorized.bootstrap()).rejects.toMatchObject({ message: 'ResearchHub Runtime authorization expired. Reload the page.' })
   })
+
+  it('encodes Graph read contracts and never adds a mutation token', async () => {
+    const paths: string[] = []; const headers: Headers[] = []
+    const client = new RuntimeClient(async (input, init) => { paths.push(String(input)); headers.push(new Headers(init?.headers)); return json({ themeGroups: [], industries: { items: [], total: 0, limit: 30, truncated: false }, companies: { items: [], total: 0, limit: 30, truncated: false }, products: { items: [], total: 0, limit: 30, truncated: false }, technologies: { items: [], total: 0, limit: 30, truncated: false } }) })
+    await client.getKnowledgeDirectory()
+    await client.getKnowledgeGraph({ rootRef: 'entity:company/acme', depth: 2, maxNodes: 10, maxEdges: 20 })
+    expect(paths[0]).toBe('/api/knowledge/directory')
+    expect(paths[1]).toBe('/api/knowledge/graph?rootRef=entity%3Acompany%2Facme&depth=2&maxNodes=10&maxEdges=20')
+    expect(headers.every((value) => value.has('X-ResearchHub-Runtime-Token') === false)).toBe(true)
+  })
 })

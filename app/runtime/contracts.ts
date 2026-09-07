@@ -1,6 +1,7 @@
 import type { ModelRuntime, SessionManager, SettingsManager, DefaultResourceLoader } from '@earendil-works/pi-coding-agent'
 import type { Api, Model } from '@earendil-works/pi-ai'
 import type { KnowledgeService } from '../services/knowledge-service.ts'
+import type { KnowledgeGraphService } from '../services/knowledge-graph-service.ts'
 import type { ProductionService } from '../services/production-service.ts'
 import type { ReviewService } from '../services/review-service.ts'
 import type { WorkflowService } from '../services/workflow-service.ts'
@@ -34,6 +35,7 @@ export interface CurrentSessionState {
 
 export interface ResearchHubApplicationServices {
   readonly knowledgeService: KnowledgeService
+  readonly knowledgeGraphService: KnowledgeGraphService
   readonly reviewService: ReviewService
   readonly workflowService: WorkflowService
   readonly productionService: ProductionService

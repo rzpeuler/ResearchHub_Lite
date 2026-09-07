@@ -38,14 +38,14 @@ describe('Homepage shell', () => {
     expect(screen.queryByText('Reject')).toBeNull()
   })
 
-  it('exposes the three product destinations and keeps Knowledge Graph as a placeholder', async () => {
+  it('exposes the three product destinations and keeps Knowledge Graph safe in no-KB mode', async () => {
     render(<App />)
     await waitFor(() => expect(screen.getByRole('link', { name: 'Research' }).getAttribute('aria-current')).toBe('page'))
     expect(screen.getByRole('link', { name: 'Knowledge Graph' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Reviews' })).toBeTruthy()
     fireEvent.click(screen.getByRole('link', { name: 'Knowledge Graph' }))
     expect(await screen.findByRole('heading', { name: 'Knowledge Graph' })).toBeTruthy()
-    expect(screen.getByText('Knowledge Graph visualization will be enabled in the next phase.')).toBeTruthy()
+    expect(screen.getByText('Mount a canonical Knowledge Base to browse the Directory and explore a rooted graph.')).toBeTruthy()
     expect(screen.queryByRole('canvas')).toBeNull()
     expect(screen.queryByText('Search Knowledge')).toBeNull()
   })
