@@ -2,11 +2,12 @@
 
 ## Phase
 
-**Restart/Review persistence validation stopped at a real Review contract defect — CTO acceptance pending**
+**Production Baseline v1 established — Knowledge Production / Knowledge Architecture iteration**
 
 ## Current Snapshot
 
 - ResearchHub_Lite is the active clean foundation of the ResearchHub Agent-first investment research application.
+- Production Baseline v1 is established by CTO decision. Product implementation baseline: `5319d130952f4c784f5829890591b64dcd5f72a4`; latest repository/governance baseline: `3d6f0212b7500b11d806b444dadbf550af1e80de`.
 - Pi Coding Agent is the canonical application host; Pi ModelRuntime, settings, authentication, and provider/model infrastructure are reused directly. Agent-host portability is not a product requirement.
 - Primary interactions are Free Research, Knowledge Query, and Knowledge Production. Review is downstream Knowledge Production governance, not a fourth mode.
 - Free Research is non-persistent by default. Canonical persistence requires explicit Knowledge Production intent; upload and attachment handling are distinct from ingestion.
@@ -35,8 +36,8 @@
 - Targeted real reproduction passed the path boundary and completed with review using real `zhipu-openapi/glm-5.3-flash`, PiReasoningExecutor, and Docling 2.116.0. It produced Raw archive state, ingestion log, canonical revision 1, and no new authoritative failure.
 - `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-003`: `VALIDATION_HARNESS_DEFECT / CTO reviewed`; the real Production path through browser smoke succeeded, but its purported replay stayed in the same Runtime and executed a second Production workflow, proving duplicate-ingestion stability rather than Runtime restart persistence. Review UI visibility passed, but Review API list/detail had no independent evidence. RERUN-003 raw evidence remains immutable.
 - `RHL-VALIDATE-RESTART-REVIEW-PERSISTENCE-001`: `PRODUCT_DEFECT / CTO reviewed`; two fresh real fixtures were attempted as permitted. The second real Workflow returned `completed_with_review` with `reviewCount=0`; `GET /api/reviews` returned HTTP 200 but no ReviewCase for the current producer run. The task stopped before Runtime B restart per the defect boundary; no Production implementation was modified. Evidence is preserved in `tests/validation/evidence/rhl-restart-review-persistence-001.json` and `tests/validation/evidence/RHL_RESTART_REVIEW_PERSISTENCE_001_SUMMARY.md`.
-- `RHL-VALIDATE-RUNTIME-RESTART-PERSISTENCE-001`: executed; CTO acceptance is pending. Runtime A used a real `zhipu-openapi/glm-5.3-flash` Production fixture and passed canonical/raw/Knowledge API/Graph snapshots; because the real run completed with `reviewCount=0`, a separate deterministic Workflow fixture created one actionable durable ReviewCase through the real builder/store/log and Review API. After hard close, Runtime B cold reads passed canonical, Raw, Knowledge API, Graph, and Review persistence with unchanged revision and no post-restart writes. Evidence is preserved in `tests/validation/evidence/rhl-runtime-restart-persistence-001.json` and `tests/validation/evidence/RHL_RUNTIME_RESTART_PERSISTENCE_001_SUMMARY.md`; no full Production E2E or Free Research was run.
-- Next recommended phase: CTO acceptance review of the Runtime restart persistence evidence; do not start another development task automatically.
+- `RHL-VALIDATE-RUNTIME-RESTART-PERSISTENCE-001`: PASS / CLOSED by CTO decision. Runtime A used a real `zhipu-openapi/glm-5.3-flash` Production fixture and passed canonical/raw/Knowledge API/Graph snapshots; because the real run completed with `reviewCount=0`, a separate deterministic Workflow fixture created one actionable durable ReviewCase through the real builder/store/log and Review API. After hard close, Runtime B cold reads passed canonical, Raw, Knowledge API, Graph, and Review persistence with unchanged revision and no post-restart writes. Evidence is preserved in `tests/validation/evidence/rhl-runtime-restart-persistence-001.json` and `tests/validation/evidence/RHL_RUNTIME_RESTART_PERSISTENCE_001_SUMMARY.md`; no full Production E2E or Free Research was run.
+- Production stabilization is closed for Baseline v1. Next phase: Knowledge Production / Knowledge Architecture iteration. Do not automatically start Production E2E reruns, provider architecture work, Runtime refactors, or harness expansion; resume those areas only for a real new defect.
 - `docs/governance/ARCHITECTURE.md` remains a frozen CTO-generated summary and is intentionally not rewritten by this admission task; where its older frontend/transport wording conflicts, the normative Runtime/Client architecture and this decision record supersede it until a consolidated replacement is issued.
 
 ## Completed

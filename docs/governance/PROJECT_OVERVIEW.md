@@ -6,6 +6,8 @@ ResearchHub_Lite is the active clean foundation for the ResearchHub Agent-first 
 
 Pi Coding Agent is the canonical application host. ResearchHub directly reuses Pi's Agent loop, ModelRuntime, settings, authentication, provider/model catalog, Skills/Extensions, and session/runtime facilities. Agent-host portability is not a current product requirement.
 
+Production Baseline v1 is established by CTO decision. The accepted compositional baseline is recorded in `docs/governance/PRODUCTION_BASELINE_V1.md`; its product implementation baseline is `5319d130952f4c784f5829890591b64dcd5f72a4`, and its latest repository/governance baseline is `3d6f0212b7500b11d806b444dadbf550af1e80de`.
+
 ## 2. Product Interaction Model
 
 The primary user interactions are:
@@ -39,7 +41,7 @@ The following remain deferred unless separately approved:
 - generic Workflow Engine;
 - Memory, Evaluation, and Research Artifact systems.
 
-The Application Runtime and Client architecture is now frozen in `docs/architecture/RESEARCHHUB_APPLICATION_RUNTIME_CLIENT_ARCHITECTURE_V0.1.md`: local-first single-user Node.js runtime, direct Pi SDK embedding, React + TypeScript + Vite browser client, and HTTP JSON + SSE. The runtime/client are not yet implemented.
+The Application Runtime and Client architecture remains frozen in `docs/architecture/RESEARCHHUB_APPLICATION_RUNTIME_CLIENT_ARCHITECTURE_V0.1.md`: local-first single-user Node.js runtime, direct Pi SDK embedding, React + TypeScript + Vite browser client, and HTTP JSON + SSE. The implemented Runtime, Homepage, Knowledge Graph, and read-only Review surfaces are part of Production Baseline v1.
 
 ## 4. Execution and Application Layers
 
@@ -53,9 +55,11 @@ Pi owns the user-facing Agent experience and directly supplies the model/provide
 
 The implemented thin `app/services/` layer is shared by Pi Application Tools and the future Runtime/browser Product API. Services coordinate existing domain capabilities without becoming a generic service framework.
 
-### Next Product Layer
+### Current Product Layer
 
-The next phase is the local Application Runtime, followed by the Homepage Shell. The Runtime will own Pi session lifecycle, HTTP JSON, SSE, attachments, and local runtime security; the browser will consume Product APIs and shared Application Services rather than accessing filesystem or Knowledge storage directly.
+The local Application Runtime, Homepage Shell, read-only Knowledge Graph, and read-only Review surface are implemented under the frozen architecture. The Runtime owns Pi session lifecycle, HTTP JSON, SSE, attachments, and local runtime security; the browser consumes Product APIs and shared Application Services rather than accessing filesystem or Knowledge storage directly.
+
+The next phase is Knowledge Production / Knowledge Architecture iteration. Production stabilization is complete for Baseline v1; do not automatically start Production E2E reruns, provider architecture work, Runtime refactors, or harness expansion.
 
 ### Application Tools
 
