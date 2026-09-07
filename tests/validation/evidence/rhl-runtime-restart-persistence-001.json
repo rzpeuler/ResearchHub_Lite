@@ -1,0 +1,407 @@
+{
+  "taskId": "RHL-VALIDATE-RUNTIME-RESTART-PERSISTENCE-001",
+  "currentRun": "SUCCESS",
+  "startedAt": "2026-09-07T16:16:14.996Z",
+  "phase": "completed",
+  "phaseTimestamps": {
+    "baseline": {
+      "startedAt": "2026-09-07T16:16:14.997Z",
+      "completedAt": "2026-09-07T16:16:16.702Z",
+      "durationMs": 1705,
+      "status": "passed"
+    },
+    "docling_preflight": {
+      "startedAt": "2026-09-07T16:16:16.707Z",
+      "completedAt": "2026-09-07T16:16:16.707Z",
+      "durationMs": 0,
+      "status": "passed"
+    },
+    "docling_parse": {
+      "startedAt": "2026-09-07T16:16:16.707Z",
+      "completedAt": "2026-09-07T16:16:23.929Z",
+      "durationMs": 7222,
+      "status": "passed"
+    },
+    "provider_setup_a": {
+      "startedAt": "2026-09-07T16:16:23.929Z",
+      "completedAt": "2026-09-07T16:16:23.939Z",
+      "durationMs": 10,
+      "status": "passed"
+    },
+    "runtime_a_create": {
+      "startedAt": "2026-09-07T16:16:23.941Z",
+      "completedAt": "2026-09-07T16:16:23.997Z",
+      "durationMs": 56,
+      "status": "passed"
+    },
+    "server_a_create": {
+      "startedAt": "2026-09-07T16:16:23.997Z",
+      "completedAt": "2026-09-07T16:16:24.007Z",
+      "durationMs": 10,
+      "status": "passed"
+    },
+    "production_poll": {
+      "startedAt": "2026-09-07T16:16:24.107Z",
+      "completedAt": "2026-09-07T16:22:21.526Z",
+      "durationMs": 357419,
+      "status": "passed"
+    },
+    "hard_close_runtime_a": {
+      "startedAt": "2026-09-07T16:22:21.594Z",
+      "completedAt": "2026-09-07T16:22:21.597Z",
+      "durationMs": 3,
+      "status": "passed"
+    },
+    "provider_setup_b": {
+      "startedAt": "2026-09-07T16:22:21.597Z",
+      "completedAt": "2026-09-07T16:22:21.599Z",
+      "durationMs": 2,
+      "status": "passed"
+    },
+    "runtime_b_create": {
+      "startedAt": "2026-09-07T16:22:21.599Z",
+      "completedAt": "2026-09-07T16:22:21.626Z",
+      "durationMs": 27,
+      "status": "passed"
+    },
+    "server_b_create": {
+      "startedAt": "2026-09-07T16:22:21.626Z",
+      "completedAt": "2026-09-07T16:22:21.628Z",
+      "durationMs": 2,
+      "status": "passed"
+    },
+    "hard_close_runtime_b": {
+      "startedAt": "2026-09-07T16:22:21.710Z",
+      "completedAt": "2026-09-07T16:22:21.711Z",
+      "durationMs": 1,
+      "status": "passed"
+    }
+  },
+  "noFullE2E": true,
+  "noFreeResearch": true,
+  "noProductionReplayOnB": true,
+  "secretsIncluded": false,
+  "hiddenReasoningIncluded": false,
+  "rawModelOutputIncluded": false,
+  "baseline": {
+    "expected": "5319d130952f4c784f5829890591b64dcd5f72a4",
+    "head": "5319d130952f4c784f5829890591b64dcd5f72a4",
+    "originMain": "5319d130952f4c784f5829890591b64dcd5f72a4",
+    "workingTreeValidationOnly": true,
+    "status": [
+      "?? \"20260805-\\350\\245\\277\\351\\203\\250\\350\\257\\201\\345\\210\\270-AI\\347\\256\\227\\345\\212\\233\\350\\241\\214\\344\\270\\232\\357\\274\\232AI\\347\\256\\227\\345\\212\\233\\344\\270\\212\\346\\270\\270\\346\\235\\220\\346\\226\\231\\344\\272\\247\\344\\270\\232\\351\\223\\276\\347\\240\\224\\347\\251\\266\\346\\212\\245\\345\\221\\212.pdf\"",
+      "?? tests/validation/runtime-restart-persistence.ts"
+    ],
+    "protectedPdf": {
+      "size": 3209114,
+      "sha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+      "modified": false,
+      "tracked": false
+    }
+  },
+  "realProviderFixture": {
+    "parser": {
+      "id": "docling-local",
+      "version": "2.116.0"
+    },
+    "document": {
+      "size": 892,
+      "sha256": "843266f93699845b12aff6abc1830fbb3e368c1b98781ca0799fef6e8eae4cb9",
+      "stats": {
+        "pageCount": 1,
+        "sectionCount": 1,
+        "blockCount": 2,
+        "normalizedCharacters": 256,
+        "tableCount": 0,
+        "headingCount": 0,
+        "listCount": 0,
+        "captionCount": 0
+      }
+    },
+    "provider": "zhipu-openapi",
+    "model": "glm-5.3-flash",
+    "real": true,
+    "fauxOrMock": false,
+    "runId": "e6fa8682-f38b-4620-9391-8dd5d2b32b04",
+    "terminal": "completed",
+    "reviewCount": 0,
+    "reasoningCalls": 3,
+    "reasoningSuccesses": 3,
+    "reasoningFailures": 0,
+    "realReasoning": true
+  },
+  "canonicalA": {
+    "revision": 1,
+    "counts": {
+      "themeGroups": 0,
+      "entities": 5,
+      "relations": 1,
+      "claims": 1,
+      "sources": 1,
+      "modules": 0
+    },
+    "refs": [
+      "claim:2026340b4e17f446",
+      "entity:company-validation-company",
+      "entity:industry-validation-industry",
+      "entity:product-validation-product",
+      "entity:technology-rhl-runtime",
+      "entity:technology-validation-technology",
+      "relation:fc464cc167aad1fc",
+      "source:doc-149aa753a4e4e66c"
+    ],
+    "refHash": "48553b0027d1a1f1d39893c28f169d2f3761f354e358239493491a860b6c9e38",
+    "validation": "PASS"
+  },
+  "rawA": {
+    "rawRef": "raw-sha256-843266f93699845b12aff6abc1830fbb3e368c1b98781ca0799fef6e8eae4cb9",
+    "size": 892,
+    "sizeBytes": 892,
+    "contentHash": "sha256:843266f93699845b12aff6abc1830fbb3e368c1b98781ca0799fef6e8eae4cb9",
+    "integrity": true,
+    "storageManifestRead": true
+  },
+  "knowledgeApiA": {
+    "searchHttp": 200,
+    "objectHttp": 200,
+    "directoryHttp": 200,
+    "rootRef": "entity:company-validation-company",
+    "rootObjectKind": "Entity",
+    "searchRefHash": "9b27eb178b46c90d02ea04bb216d9376ccf53117b84cea992b4e03d811d1ad54",
+    "directoryContainsRoot": true
+  },
+  "graphA": {
+    "depthOne": {
+      "rootRef": "entity:company-validation-company",
+      "nodes": [
+        "entity:company-validation-company",
+        "entity:industry-validation-industry"
+      ],
+      "edges": [
+        {
+          "ref": "relation:fc464cc167aad1fc",
+          "sourceRef": "entity:company-validation-company",
+          "targetRef": "entity:industry-validation-industry"
+        }
+      ],
+      "nodeRefHash": "e6d5f9b1f395ef4ee9c3fc90b9f065377d122b6e97a47983cf156977fa4c9719",
+      "edgeRefHash": "2474a296f97cb901546965ad34ca46db5f015359f197dbb44d28ba138424eeb9"
+    },
+    "depthTwo": {
+      "rootRef": "entity:company-validation-company",
+      "nodes": [
+        "entity:company-validation-company",
+        "entity:industry-validation-industry"
+      ],
+      "edges": [
+        {
+          "ref": "relation:fc464cc167aad1fc",
+          "sourceRef": "entity:company-validation-company",
+          "targetRef": "entity:industry-validation-industry"
+        }
+      ],
+      "nodeRefHash": "e6d5f9b1f395ef4ee9c3fc90b9f065377d122b6e97a47983cf156977fa4c9719",
+      "edgeRefHash": "2474a296f97cb901546965ad34ca46db5f015359f197dbb44d28ba138424eeb9"
+    },
+    "canonicalDirectionChecked": true
+  },
+  "reviewFixture": {
+    "source": "deterministic_workflow_fixture",
+    "reviewCaseId": "review-case-43c7350c46434da5f713c5c908eb909003df227b982a79e1787dcadc67f79054",
+    "producerRunId": "runtime-restart-review-fixture"
+  },
+  "reviewA": {
+    "reviewCaseId": "review-case-43c7350c46434da5f713c5c908eb909003df227b982a79e1787dcadc67f79054",
+    "producerRunId": "runtime-restart-review-fixture",
+    "total": 1,
+    "caseIds": [
+      "review-case-43c7350c46434da5f713c5c908eb909003df227b982a79e1787dcadc67f79054"
+    ],
+    "category": "reconciliation_review",
+    "actionability": "knowledge_decision",
+    "origin": "semantic_case",
+    "proposalKind": "entity",
+    "semanticType": "company",
+    "status": "open",
+    "rootProposalExists": true,
+    "evidenceBindingCount": 1,
+    "totalDependentProposals": 0,
+    "dependentProposalSampleCount": 0
+  },
+  "hardClose": {
+    "serverAClosed": true,
+    "runtimeAClosed": true,
+    "oldOriginUnavailable": true
+  },
+  "runtimeA": {
+    "created": true,
+    "snapshotsCompleted": true,
+    "hardClosed": true
+  },
+  "runtimeB": {
+    "newModelRuntime": true,
+    "newApplicationRuntime": true,
+    "newServer": true,
+    "bootstrap": "PASS",
+    "sameKnowledgeBaseRoot": true,
+    "sameWorkspaceRoot": true
+  },
+  "canonicalPersistence": {
+    "revisionStable": true,
+    "countsStable": true,
+    "canonicalStable": true,
+    "refHash": "48553b0027d1a1f1d39893c28f169d2f3761f354e358239493491a860b6c9e38",
+    "revisionA": 1,
+    "revisionB": 1,
+    "countsA": {
+      "themeGroups": 0,
+      "entities": 5,
+      "relations": 1,
+      "claims": 1,
+      "sources": 1,
+      "modules": 0
+    },
+    "countsB": {
+      "themeGroups": 0,
+      "entities": 5,
+      "relations": 1,
+      "claims": 1,
+      "sources": 1,
+      "modules": 0
+    },
+    "refHashA": "48553b0027d1a1f1d39893c28f169d2f3761f354e358239493491a860b6c9e38",
+    "refHashB": "48553b0027d1a1f1d39893c28f169d2f3761f354e358239493491a860b6c9e38"
+  },
+  "rawPersistence": {
+    "rawStable": true,
+    "sameRawRef": true,
+    "sameHash": true,
+    "sameSize": true,
+    "integrity": true,
+    "sizeA": 892,
+    "sizeB": 892,
+    "contentHashA": "sha256:843266f93699845b12aff6abc1830fbb3e368c1b98781ca0799fef6e8eae4cb9",
+    "contentHashB": "sha256:843266f93699845b12aff6abc1830fbb3e368c1b98781ca0799fef6e8eae4cb9",
+    "storageManifestRead": true
+  },
+  "knowledgeApiPersistence": {
+    "searchHttp": 200,
+    "objectHttp": 200,
+    "directoryHttp": 200,
+    "sameRootRef": true,
+    "searchRefHashStable": true,
+    "canonicalObjectAvailable": true
+  },
+  "graphPersistence": {
+    "depthOne": {
+      "graphStable": true,
+      "rootStable": true,
+      "nodeRefHash": "e6d5f9b1f395ef4ee9c3fc90b9f065377d122b6e97a47983cf156977fa4c9719",
+      "edgeRefHash": "2474a296f97cb901546965ad34ca46db5f015359f197dbb44d28ba138424eeb9"
+    },
+    "depthTwo": {
+      "graphStable": true,
+      "rootStable": true,
+      "nodeRefHash": "e6d5f9b1f395ef4ee9c3fc90b9f065377d122b6e97a47983cf156977fa4c9719",
+      "edgeRefHash": "2474a296f97cb901546965ad34ca46db5f015359f197dbb44d28ba138424eeb9"
+    },
+    "sortedDirectionStable": true
+  },
+  "reviewPersistence": {
+    "reviewStable": true,
+    "reviewCaseFound": true,
+    "detailFound": true,
+    "metadataStable": true,
+    "source": "deterministic_workflow_fixture",
+    "reviewA": {
+      "reviewCaseId": "review-case-43c7350c46434da5f713c5c908eb909003df227b982a79e1787dcadc67f79054",
+      "producerRunId": "runtime-restart-review-fixture",
+      "total": 1,
+      "caseIds": [
+        "review-case-43c7350c46434da5f713c5c908eb909003df227b982a79e1787dcadc67f79054"
+      ],
+      "category": "reconciliation_review",
+      "actionability": "knowledge_decision",
+      "origin": "semantic_case",
+      "proposalKind": "entity",
+      "semanticType": "company",
+      "status": "open",
+      "rootProposalExists": true,
+      "evidenceBindingCount": 1,
+      "totalDependentProposals": 0,
+      "dependentProposalSampleCount": 0
+    },
+    "reviewB": {
+      "reviewCaseId": "review-case-43c7350c46434da5f713c5c908eb909003df227b982a79e1787dcadc67f79054",
+      "producerRunId": "runtime-restart-review-fixture",
+      "total": 1,
+      "caseIds": [
+        "review-case-43c7350c46434da5f713c5c908eb909003df227b982a79e1787dcadc67f79054"
+      ],
+      "category": "reconciliation_review",
+      "actionability": "knowledge_decision",
+      "origin": "semantic_case",
+      "proposalKind": "entity",
+      "semanticType": "company",
+      "status": "open",
+      "rootProposalExists": true,
+      "evidenceBindingCount": 1,
+      "totalDependentProposals": 0,
+      "dependentProposalSampleCount": 0
+    }
+  },
+  "restartPersistence": {
+    "runtimeInstanceIndependent": true,
+    "canonicalStable": true,
+    "rawStable": true,
+    "knowledgeApiStable": true,
+    "graphStable": true,
+    "reviewStable": true,
+    "revisionStable": true,
+    "revisionBeforeRestart": 1,
+    "revisionAfterRestart": 1,
+    "productionPostsAfterRestart": 0,
+    "workflowRunsAfterRestart": 0,
+    "writerInvocationsAfterRestart": 0
+  },
+  "harnessTests": {
+    "restartVerifierTests": "9/9 PASS",
+    "deterministicReviewFixtureSourceCovered": true,
+    "fixtureNotClaimedAsRealProvider": true
+  },
+  "offlineRegression": {
+    "rootTypecheck": "PASS",
+    "clientTypecheck": "PASS",
+    "clientTests": "PASS",
+    "clientBuild": "PASS",
+    "npmTest": "PASS",
+    "audit": "PASS",
+    "diffCheck": "PASS"
+  },
+  "classification": "SUCCESS",
+  "completedAt": "2026-09-07T16:22:21.711Z",
+  "protectedPdfFinal": {
+    "size": 3209114,
+    "sha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "modified": false,
+    "tracked": false
+  },
+  "evidenceIntegrity": {
+    "secretsIncluded": false,
+    "hiddenReasoningIncluded": false,
+    "rawModelOutputIncluded": false,
+    "authorizationHeadersIncluded": false,
+    "fullReviewPayloadIncluded": false,
+    "protectedPdfModified": false
+  },
+  "secretHygiene": {
+    "apiKeysIncluded": false,
+    "oauthTokensIncluded": false,
+    "runtimeTokensIncluded": false,
+    "authorizationHeadersIncluded": false,
+    "promptsIncluded": false,
+    "rawModelOutputIncluded": false,
+    "hiddenReasoningIncluded": false,
+    "fullReviewPayloadIncluded": false
+  }
+}
