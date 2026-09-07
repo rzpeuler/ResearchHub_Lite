@@ -11,6 +11,5 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["app/**/*.ts", "knowledge/**/*.ts", "plugins/**/*.ts", "skills/**/*.ts", "workflows/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["workflows/raw-document-knowledge-ingestion/index.ts"]
+  "include": ["app/**/*.ts", "knowledge/**/*.ts", "plugins/**/*.ts", "skills/**/*.ts", "workflows/**/*.ts", "tests/**/*.ts"]
 }
