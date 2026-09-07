@@ -19,13 +19,14 @@ import { getRaw, verifyRaw } from '../../knowledge/raw/raw-archive.ts'
 import { createKnowledgeBase } from '../knowledge/helpers.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
 import { classifyE2EPreflightFailure } from './pi-provider-diagnosis.ts'
+import { attachmentDtoEvidence, captureProductionStart, captureProductionTerminal, classifyProductionTerminal } from './production-application-e2e-contract.ts'
 
 const repoRoot = resolve(import.meta.dirname, '../..')
 const evidenceDir = resolve(repoRoot, 'tests/validation/evidence')
-const evidencePath = join(evidenceDir, 'rhl-production-e2e-001-rerun-002.json')
-const summaryPath = join(evidenceDir, 'RHL_PRODUCTION_E2E_001_RERUN_002_SUMMARY.md')
-const taskId = 'RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-002'
-const previousRun = 'RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001: VALIDATION_HARNESS_DEFECT / CTO reviewed'
+const evidencePath = join(evidenceDir, 'rhl-production-e2e-001-rerun-003.json')
+const summaryPath = join(evidenceDir, 'RHL_PRODUCTION_E2E_001_RERUN_003_SUMMARY.md')
+const taskId = 'RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-003'
+const previousRun = 'RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-002: VALIDATION_HARNESS_DEFECT / CTO reviewed'
 const pollIntervalMs = 1_000
 const workflowTimeoutMs = 15 * 60 * 1_000
 const browserHoldMs = 10 * 60 * 1_000
@@ -209,7 +210,7 @@ async function writeSummary(evidence: Dict): Promise<void> {
   const pdf = isDict(evidence.validationDocument) ? evidence.validationDocument : {}; const initial = isDict(evidence.freshKnowledgeBase) ? evidence.freshKnowledgeBase : {}
   const attachment = isDict(evidence.attachment) ? evidence.attachment : {}; const production = isDict(evidence.knowledgeProduction) ? evidence.knowledgeProduction : {}
   const canonical = isDict(evidence.canonicalResult) ? evidence.canonicalResult : {}; const api = isDict(evidence.knowledgeApi) ? evidence.knowledgeApi : {}; const graph = isDict(evidence.graphApi) ? evidence.graphApi : {}
-  const browser = isDict(evidence.browserSmoke) ? evidence.browserSmoke : {}; const replay = isDict(evidence.replay) ? evidence.replay : {}; const security = isDict(evidence.securityRegression) ? evidence.securityRegression : {}
+  const browser = isDict(evidence.browserSmoke) ? evidence.browserSmoke : {}; const replay = isDict(evidence.replay) ? evidence.replay : {}; const security = isDict(evidence.securityRegression) ? evidence.securityRegression : {}; const productionStart = isDict(evidence.productionStart) ? evidence.productionStart : {}; const productionTerminal = isDict(evidence.productionTerminal) ? evidence.productionTerminal : {}; const reasoningAtTerminal = isDict(evidence.reasoningAtTerminal) ? evidence.reasoningAtTerminal : {}
   const lines = [
     `# ${taskId}`, '',
     `Classification: **${String(evidence.classification ?? 'IN_PROGRESS')}**`, '',
@@ -219,6 +220,9 @@ async function writeSummary(evidence: Dict): Promise<void> {
     `- PDF: ${String(pdf.filename ?? 'n/a')}; bytes=${String(pdf.bytes ?? 'n/a')}; SHA-256=${String(pdf.sha256 ?? 'n/a')}; pages=${String(pdf.pages ?? 'n/a')}`,
     `- Fresh KB: ${String(initial.knowledgeBaseId ?? 'n/a')}; revision ${String(initial.revision ?? 'n/a')} -> ${String(canonical.finalRevision ?? 'n/a')}; initial=${JSON.stringify(initial.counts ?? {})}; final=${JSON.stringify(canonical.counts ?? {})}`,
     `- Attachment: id=${String(attachment.attachmentId ?? 'n/a')}; upload=${String(attachment.uploadSucceeded ?? 'n/a')}; upload-only mutation=${String(attachment.canonicalCountsChangedAfterUpload ?? 'n/a')}`,
+    `- Production start: ${JSON.stringify(productionStart)}`,
+    `- Production terminal: ${JSON.stringify(productionTerminal)}`,
+    `- Reasoning at terminal: ${JSON.stringify(reasoningAtTerminal)}`,
     `- Production: run=${String(production.runId ?? 'n/a')}; terminal=${String(production.terminalStatus ?? 'n/a')}; Docling=${String(production.doclingReal ?? 'n/a')} ${JSON.stringify(production.docling ?? {})}; reasoning=${String(production.reasoningReal ?? 'n/a')} calls=${String(production.reasoningCalls ?? 'n/a')}; Writer=${String(production.writerResult ?? 'n/a')}`,
     `- Knowledge API: ${JSON.stringify(api)}`,
     `- Graph API: ${JSON.stringify(graph)}`,
@@ -238,7 +242,7 @@ async function main(): Promise<void> {
   try {
     const baseline = await stage(stages, 'preflight', async () => {
       const head = (await Bunless.command('git', ['rev-parse', 'HEAD'])).trim(); const originMain = (await Bunless.command('git', ['rev-parse', 'origin/main'])).trim()
-      assertCondition(head === originMain, `Expected clean accepted baseline, got HEAD=${head}, origin/main=${originMain}`)
+      assertCondition(head === originMain, `BASELINE_CHANGED: got HEAD=${head}, origin/main=${originMain}`)
       const status = (await Bunless.command('git', ['status', '--porcelain', '--untracked-files=no'])).trim(); assertCondition(status === '', 'Tracked working tree is not clean')
       return { head, originMain, trackedWorkingTreeClean: true, protectedPdf: 'pre-existing untracked and unstaged; not read or modified' }
     })
@@ -318,11 +322,14 @@ async function main(): Promise<void> {
     })
     evidence.freeResearch = freeResearch
 
-    const beforeUpload = await snapshotKnowledge(kbRoot); const attachment = await upload(origin, token, bytes); const attachmentId = String(attachment.attachmentId ?? ''); assertCondition(attachmentId !== '' && attachment.sha256 === sha256(bytes) && Number(attachment.size) === bytes.byteLength, 'AttachmentRef identity does not match the PDF')
-    const contentResponse = await requestJson(origin, `/api/attachments/${encodeURIComponent(attachmentId)}/content`); assertCondition(contentResponse.status === 200, 'Controlled attachment content endpoint failed'); const storedBuffer = await fetch(`${origin}/api/attachments/${encodeURIComponent(attachmentId)}/content`, { headers: { Origin: origin } }).then((response) => response.arrayBuffer() as Promise<ArrayBuffer>); const storedBytes = Uint8Array.from(new Uint8Array(storedBuffer)); const afterUpload = await snapshotKnowledge(kbRoot); const uploadCountsUnchanged = stable(afterUpload.counts) === stable(beforeUpload.counts) && afterUpload.revision === beforeUpload.revision; const rawAfterUpload = await countFiles(join(kbRoot, 'raw')); evidence.attachment = { attachmentId, filename: attachment.filename, sha256: attachment.sha256, size: attachment.size, uploadSucceeded: true, controlledStorageContentMatches: sha256(storedBytes) === sha256(bytes), workspaceStorageReferenceReturned: typeof attachment.workspaceRelativePath === 'string', canonicalRevisionAfterUpload: afterUpload.revision, canonicalCountsChangedAfterUpload: !uploadCountsUnchanged, rawArchiveFilesAfterUpload: rawAfterUpload, rawIngestionTriggeredByUploadAlone: rawAfterUpload > 0 }
+    const beforeUpload = await snapshotKnowledge(kbRoot); const attachment = await upload(origin, token, bytes); const attachmentId = String(attachment.attachmentId ?? ''); assertCondition(attachmentId !== '' && attachment.sha256 === sha256(bytes) && Number(attachment.size) === bytes.byteLength, 'AttachmentRef identity does not match the PDF'); const publicAttachment = attachmentDtoEvidence(attachment)
+    assertCondition(publicAttachment.valid === true, 'AttachmentRef exposed a private workspace or filesystem path')
+    const contentResponse = await requestJson(origin, `/api/attachments/${encodeURIComponent(attachmentId)}/content`); assertCondition(contentResponse.status === 200, 'Controlled attachment content endpoint failed'); const storedBuffer = await fetch(`${origin}/api/attachments/${encodeURIComponent(attachmentId)}/content`, { headers: { Origin: origin } }).then((response) => response.arrayBuffer() as Promise<ArrayBuffer>); const storedBytes = Uint8Array.from(new Uint8Array(storedBuffer)); const afterUpload = await snapshotKnowledge(kbRoot); const uploadCountsUnchanged = stable(afterUpload.counts) === stable(beforeUpload.counts) && afterUpload.revision === beforeUpload.revision; const rawAfterUpload = await countFiles(join(kbRoot, 'raw')); evidence.attachment = { attachmentId, filename: attachment.filename, sha256: attachment.sha256, size: attachment.size, uploadSucceeded: true, controlledStorageContentMatches: sha256(storedBytes) === sha256(bytes), ...publicAttachment, canonicalRevisionAfterUpload: afterUpload.revision, canonicalCountsChangedAfterUpload: !uploadCountsUnchanged, rawArchiveFilesAfterUpload: rawAfterUpload, rawIngestionTriggeredByUploadAlone: rawAfterUpload > 0 }
     assertCondition(uploadCountsUnchanged && rawAfterUpload === 0 && sha256(storedBytes) === sha256(bytes), 'Upload crossed the canonical Knowledge boundary')
 
-    const start = await startProduction(origin, token, attachmentId); const runId = String(start.runId); const terminal = await stage(stages, 'production_workflow_poll', async () => pollWorkflow(origin, runId)); const terminalStatus = String(terminal.status); productCondition(['completed', 'completed_with_review'].includes(terminalStatus), 'production_workflow_poll', `Production Workflow terminal status was ${terminalStatus}`)
+    const start = await startProduction(origin, token, attachmentId); const productionStart = captureProductionStart(start); const runId = String(productionStart.runId); evidence.productionStart = productionStart; evidence.knowledgeProduction = { runId, initialStatus: productionStart.initialStatus, productionStartPersisted: true }; await writeEvidence(evidence)
+    const terminal = await stage(stages, 'production_workflow_poll', async () => pollWorkflow(origin, runId)); const productionTerminal = captureProductionTerminal(terminal); const reasoningAtTerminal = { calls: recorder.calls.length, successes: recorder.calls.filter((call) => call.status === 'passed').length, failures: recorder.calls.filter((call) => call.status === 'failed').length, operations: [...new Set(recorder.calls.map((call) => String(call.operation)))], peakConcurrency: recorder.peakConcurrency, failureMetadata: recorder.calls.filter((call) => call.status === 'failed').map((call) => ({ operation: call.operation, status: call.status, durationMs: call.durationMs, error: call.error })) }; evidence.productionTerminal = productionTerminal; evidence.reasoningAtTerminal = reasoningAtTerminal; evidence.knowledgeProduction = { ...(evidence.knowledgeProduction as Dict), terminalStatus: productionTerminal.status, terminalEvidencePersisted: true, reasoningAtTerminalPersisted: true }; await writeEvidence(evidence)
+    const terminalStatus = String(productionTerminal.status); const terminalClassification = classifyProductionTerminal(terminalStatus); const terminalAssertion = await stage(stages, 'production_workflow_terminal', async () => { productCondition(terminalClassification.classification === 'SUCCESS', 'production_workflow_terminal', `Production Workflow terminal status was ${terminalStatus}`); return terminalClassification }); assertCondition(terminalAssertion.terminalStage === 'PASS', 'Production Workflow terminal acceptance failed')
     const finalBeforeReplay = await snapshotKnowledge(kbRoot); const rawRef = [...finalBeforeReplay.assets.sources].map((asset) => asset.value as unknown as Dict).flatMap((value) => Array.isArray(value.rawRefs) ? value.rawRefs : []).find((value): value is string => typeof value === 'string')
     assertCondition(typeof rawRef === 'string', 'Production workflow did not persist a canonical Source/raw provenance'); const rawRecord = await getRaw(await new KnowledgeBaseRegistry().mount(kbRoot), rawRef); const rawIntegrity = await verifyRaw(await new KnowledgeBaseRegistry().mount(kbRoot), rawRef); const canonicalValidation = await validateKnowledgeBaseV03(kbRoot); const provenance = provenanceCheck(finalBeforeReplay.assets, rawRef); const transient = transientRefCheck(finalBeforeReplay.assets)
     const production = { runId, initialStatus: isDict(start.workflow) ? start.workflow.status : undefined, terminalStatus, reviewCount: terminal.reviewCount ?? 0, doclingReal: rawIntegrity.valid && rawRecord.manifest.contentHash === `sha256:${sha256(bytes)}`, docling: { parser: parsed.parser, stats: parsed.stats }, reasoningReal: recorder.calls.length > 0 && recorder.calls.every((call) => call.status === 'passed'), reasoningCalls: recorder.calls.length, reasoningOperations: [...new Set(recorder.calls.map((call) => String(call.operation)))], reasoningSuccesses: recorder.calls.filter((call) => call.status === 'passed').length, reasoningFailures: recorder.calls.filter((call) => call.status === 'failed').length, peakConcurrency: recorder.peakConcurrency, writerEntered: finalBeforeReplay.revision > 0, writerResult: finalBeforeReplay.revision === 1 ? 'committed' : 'not_verified' }
