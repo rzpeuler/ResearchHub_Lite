@@ -59,8 +59,10 @@ export class ProductionService {
         } }
         const workflow = await (this.options.workflowRunner ?? runRawDocumentKnowledgeIngestion)({ handle, documentInput, skill: new KnowledgeCurationSkill({ executor }), workflowRunId: input.workflowRunId, instructions: input.instructions, sourceMetadata: input.sourceMetadata, signal: combined.signal })
         if (workflow.status === 'completed' || workflow.status === 'completed_with_review') {
-          this.options.workflowService.markAuthoritativeTerminal(input.workflowRunId, workflow.status, { summary: summaryFor(workflow), reviewCount: workflow.reviewCases?.length ?? 0, errorSummary: workflow.errors.length > 0 ? workflow.errors.join('; ').slice(0, 500) : undefined })
-          return { status: workflow.status, summary: summaryFor(workflow), reviewCount: workflow.reviewCases?.length ?? 0, errorSummary: workflow.errors.length > 0 ? workflow.errors.join('; ').slice(0, 500) : undefined, workflow }
+          assertTerminalReviewCaseInvariant(workflow)
+          const reviewCount = workflow.reviewCases?.length ?? 0
+          this.options.workflowService.markAuthoritativeTerminal(input.workflowRunId, workflow.status, { summary: summaryFor(workflow), reviewCount, errorSummary: workflow.errors.length > 0 ? workflow.errors.join('; ').slice(0, 500) : undefined })
+          return { status: workflow.status, summary: summaryFor(workflow), reviewCount, errorSummary: workflow.errors.length > 0 ? workflow.errors.join('; ').slice(0, 500) : undefined, workflow }
         }
         if (combined.signal.aborted || activeSignal.aborted || callerSignal?.aborted) throw new ApplicationServiceError('cancelled', 'Workflow was cancelled')
         return { status: workflow.status, summary: summaryFor(workflow), reviewCount: workflow.reviewCases?.length ?? 0, errorSummary: workflow.errors.length > 0 ? workflow.errors.join('; ').slice(0, 500) : undefined, workflow }
@@ -89,4 +91,9 @@ export class ProductionService {
   }
 }
 function summaryFor(result: IngestionWorkflowResult): string { if (result.status === 'completed_with_review') return 'Document ingestion completed with ReviewCases'; if (result.status === 'blocked') return 'Document ingestion was blocked by deterministic Knowledge governance'; return 'Document ingestion completed' }
+function assertTerminalReviewCaseInvariant(result: IngestionWorkflowResult): void {
+  const reviewCount = result.reviewCases?.length ?? 0
+  const consistent = result.status === 'completed_with_review' ? reviewCount > 0 : reviewCount === 0
+  if (!consistent) throw new ApplicationServiceError('failed', 'Workflow success status is inconsistent with durable ReviewCases')
+}
 function projectResult(runId: string, result: IngestionWorkflowResult): ApplicationProductionResult { const reviewCaseIds = (result.reviewCases ?? []).map((item) => item.reviewCaseId).sort(); return { runId, status: result.status, knowledgeBaseId: result.knowledgeBaseId, ...(result.rawRef === undefined ? {} : { rawRef: result.rawRef }), ...(result.documentId === undefined ? {} : { documentId: result.documentId }), ...(result.changeSetId === undefined ? {} : { changeSetId: result.changeSetId }), ...(result.baseRevision === undefined ? {} : { baseRevision: result.baseRevision }), ...(result.committedRevision === undefined ? {} : { committedRevision: result.committedRevision }), reviewCount: reviewCaseIds.length, reviewCaseIds, summary: summaryFor(result), ...(result.errors.length === 0 ? {} : { errorSummary: result.errors.join('; ').slice(0, 500) }) } }

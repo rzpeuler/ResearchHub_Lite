@@ -178,6 +178,25 @@ test('ProductionService accepts workspace files and rejects traversal and canoni
   } finally { await removeKnowledgeBase(root); await removeKnowledgeBase(project) }
 })
 
+test('ProductionService rejects success terminals whose status and durable ReviewCase count disagree', async () => {
+  const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-service-terminal-invariant' })
+  try {
+    const reviewCase = dependentReviewCases()[0]!
+    const base = { workflowRunId: 'terminal-invariant-run', knowledgeBaseId: 'kb-service-terminal-invariant', unitSummaries: [], candidateCounts: {}, rejectedCandidates: [], reviewItems: [], reviewSummary: { total: 1, rootCount: 1, dependencyCount: 0, byCategory: {} as never, byCandidateKind: {} as never, samplesByCategory: {} as never }, errors: [] } as const
+    const mismatches = [
+      { status: 'completed_with_review' as const, reviewCases: [] as const },
+      { status: 'completed' as const, reviewCases: [reviewCase] as const },
+    ]
+    for (const [index, mismatch] of mismatches.entries()) {
+      const workflowService = new WorkflowService()
+      const runId = `terminal-invariant-run-${index}`
+      const production = new ProductionService({ mountedKnowledgeBaseRoot: root, workspaceRoot: join(root, 'workspace'), reasoningExecutor: new NoopExecutor(), workflowService, workflowRunner: async (): Promise<IngestionWorkflowResult> => ({ ...base, workflowRunId: runId, ...mismatch }) })
+      await assert.rejects(() => production.ingestDocument({ workflowRunId: runId, text: 'fixture' }), /inconsistent with durable ReviewCases/)
+      assert.equal(workflowService.getWorkflowStatus(runId)?.status, 'failed')
+    }
+  } finally { await removeKnowledgeBase(root) }
+})
+
 test('Pi Application Tools expose exactly the product-level eight-tool surface', async () => {
   const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-service-tools' }); try {
     const workflowService = new WorkflowService(); const tools = createResearchHubTools({ knowledgeService: new KnowledgeService(root), reviewService: new ReviewService(root), workflowService, productionService: new ProductionService({ mountedKnowledgeBaseRoot: root, workspaceRoot: join(root, 'workspace'), reasoningExecutor: new NoopExecutor(), workflowService }) })

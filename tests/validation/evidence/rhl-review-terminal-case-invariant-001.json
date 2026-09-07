@@ -1,0 +1,160 @@
+{
+  "taskId": "RHL-FIX-REVIEW-TERMINAL-CASE-INVARIANT-001",
+  "currentRun": "SUCCESS",
+  "startedAt": "2026-09-07T15:53:49.997Z",
+  "phase": "completed",
+  "phaseTimestamps": {
+    "baseline_fetch": {
+      "startedAt": "2026-09-07T15:53:49.997Z",
+      "completedAt": "2026-09-07T15:53:51.556Z",
+      "durationMs": 1559,
+      "status": "passed"
+    },
+    "docling_preflight": {
+      "startedAt": "2026-09-07T15:53:51.561Z",
+      "completedAt": "2026-09-07T15:53:51.561Z",
+      "durationMs": 0,
+      "status": "passed"
+    },
+    "docling_parse": {
+      "startedAt": "2026-09-07T15:53:51.561Z",
+      "completedAt": "2026-09-07T15:53:58.077Z",
+      "durationMs": 6516,
+      "status": "passed"
+    },
+    "provider_setup": {
+      "startedAt": "2026-09-07T15:53:58.077Z",
+      "completedAt": "2026-09-07T15:53:58.082Z",
+      "durationMs": 5,
+      "status": "passed"
+    },
+    "runtime_create": {
+      "startedAt": "2026-09-07T15:53:58.083Z",
+      "completedAt": "2026-09-07T15:53:58.106Z",
+      "durationMs": 23,
+      "status": "passed"
+    },
+    "server_create": {
+      "startedAt": "2026-09-07T15:53:58.106Z",
+      "completedAt": "2026-09-07T15:53:58.116Z",
+      "durationMs": 10,
+      "status": "passed"
+    },
+    "production_poll": {
+      "startedAt": "2026-09-07T15:53:58.165Z",
+      "completedAt": "2026-09-07T15:57:25.084Z",
+      "durationMs": 206919,
+      "status": "passed"
+    },
+    "runtime_close": {
+      "startedAt": "2026-09-07T15:57:25.094Z",
+      "completedAt": "2026-09-07T15:57:25.095Z",
+      "durationMs": 1,
+      "status": "passed"
+    }
+  },
+  "targetedRealProductionOnly": true,
+  "noBrowser": true,
+  "noRuntimeBRestart": true,
+  "secretsIncluded": false,
+  "hiddenReasoningIncluded": false,
+  "rawModelOutputIncluded": false,
+  "baseline": {
+    "expectedParentBaseline": "80f3aece47309dab3aace57e9379969dfcb32830",
+    "head": "c079960782811a91bcc7a0bc0e54a114853de8ce",
+    "originMain": "80f3aece47309dab3aace57e9379969dfcb32830",
+    "approvedDiffOnly": true,
+    "changedPaths": [
+      "docs/superpowers/specs/2026-09-07-review-terminal-case-invariant-design.md"
+    ],
+    "protectedPdf": {
+      "size": 3209114,
+      "sha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+      "modified": false,
+      "tracked": false
+    }
+  },
+  "validationDocument": {
+    "filename": "rhl-review-terminal-case-invariant-001.pdf",
+    "size": 890,
+    "sha256": "707e082402377b21d5fe7cca9dec3f67e65bafa1c399f029decce81090020d46",
+    "parser": {
+      "id": "docling-local",
+      "version": "2.116.0"
+    },
+    "stats": {
+      "pageCount": 1,
+      "sectionCount": 1,
+      "blockCount": 2,
+      "normalizedCharacters": 254,
+      "tableCount": 0,
+      "headingCount": 0,
+      "listCount": 0,
+      "captionCount": 0
+    }
+  },
+  "provider": {
+    "provider": "zhipu-openapi",
+    "model": "glm-5.3-flash",
+    "real": true,
+    "fauxOrMock": false,
+    "parser": {
+      "id": "docling-local",
+      "version": "2.116.0"
+    }
+  },
+  "production": {
+    "runId": "a0854075-82f9-421b-9c81-375a35d4f6d8",
+    "status": "completed",
+    "reviewCount": 0,
+    "parser": {
+      "id": "docling-local",
+      "version": "2.116.0"
+    },
+    "reasoningCalls": 2,
+    "reasoningSuccesses": 2,
+    "reasoningFailures": 0,
+    "realReasoning": true
+  },
+  "reviewApi": {
+    "listHttp": 200,
+    "total": 0,
+    "currentProducerRunFound": false,
+    "detailHttp": null
+  },
+  "reviewTelemetry": {
+    "total": 0,
+    "durableReviewCaseCount": 0,
+    "logStatus": "completed",
+    "logCaseIds": []
+  },
+  "canonical": {
+    "revision": 1,
+    "counts": {
+      "themeGroups": 0,
+      "entities": 4,
+      "relations": 3,
+      "claims": 2,
+      "sources": 1,
+      "modules": 0
+    }
+  },
+  "validation": {
+    "status": "PASS",
+    "reviewApiStatus": 200
+  },
+  "classification": "SUCCESS",
+  "completedAt": "2026-09-07T15:57:25.095Z",
+  "protectedPdfFinal": {
+    "size": 3209114,
+    "sha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+    "modified": false,
+    "tracked": false
+  },
+  "evidenceIntegrity": {
+    "secretsIncluded": false,
+    "hiddenReasoningIncluded": false,
+    "rawModelOutputIncluded": false,
+    "protectedPdfModified": false
+  }
+}

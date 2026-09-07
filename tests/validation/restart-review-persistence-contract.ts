@@ -2,6 +2,11 @@ import { createHash } from 'node:crypto'
 
 type Dict = Record<string, unknown>
 
+export function setEvidenceClassification(evidence: Dict, classification: string): void {
+  evidence.currentRun = classification
+  evidence.classification = classification
+}
+
 export class RestartPersistenceValidationError extends Error {
   constructor(message: string) { super(message); this.name = 'RestartPersistenceValidationError' }
 }

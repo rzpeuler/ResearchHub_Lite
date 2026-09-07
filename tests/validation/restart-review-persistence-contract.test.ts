@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { canonicalRefHash, graphStructuralSnapshot, RestartPersistenceValidationError, validateReviewApiListAndDetail, verifyCanonicalPersistence, verifyGraphPersistence, verifyRawPersistence, verifyReviewPersistence, verifyRuntimeInstanceIndependence } from './restart-review-persistence-contract.ts'
+import { canonicalRefHash, graphStructuralSnapshot, RestartPersistenceValidationError, setEvidenceClassification, validateReviewApiListAndDetail, verifyCanonicalPersistence, verifyGraphPersistence, verifyRawPersistence, verifyReviewPersistence, verifyRuntimeInstanceIndependence } from './restart-review-persistence-contract.ts'
 
 const counts = { entities: 1, relations: 1, claims: 0, sources: 1, modules: 0, themeGroups: 0 }
 const refs = ['entity:a', 'relation:r', 'source:s']
@@ -21,4 +21,11 @@ test('sorted ordering differences do not fail equivalent structural state', () =
   const before = validateReviewApiListAndDetail(list, detail, 'run:1'); const after = validateReviewApiListAndDetail({ ...list, cases: [...list.cases].reverse() }, detail, 'run:1')
   assert.deepEqual(verifyReviewPersistence(before, after), { reviewStable: true, reviewCaseFound: true, detailFound: true, metadataStable: true })
   assert.deepEqual(verifyRawPersistence({ rawRef: 'raw-sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', sizeBytes: 1, contentHash: 'sha256:a', integrity: true }, { rawRef: 'raw-sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', sizeBytes: 1, contentHash: 'sha256:a', integrity: true }), { rawStable: true, sameRawRef: true, sameHash: true, sameSize: true, integrity: true })
+})
+
+test('evidence classification writes currentRun and classification as one state', () => {
+  const evidence: Record<string, unknown> = { currentRun: 'IN_PROGRESS', classification: 'IN_PROGRESS' }
+  setEvidenceClassification(evidence, 'PRODUCT_DEFECT')
+  assert.equal(evidence.currentRun, 'PRODUCT_DEFECT')
+  assert.equal(evidence.classification, 'PRODUCT_DEFECT')
 })
