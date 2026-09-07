@@ -1,0 +1,68 @@
+{
+  "taskId": "RHL-DIAGNOSE-PI-PROVIDER-ENVIRONMENT-001",
+  "startedAt": "2026-09-07T11:45:32.492Z",
+  "phase": "completed",
+  "secretsIncluded": false,
+  "credentialValuesExposed": false,
+  "authHeadersExposed": false,
+  "previousEvidenceModified": false,
+  "fullE2ERun": false,
+  "offlineTests": {
+    "typecheck": "PASS",
+    "clientTests": "PASS",
+    "nodeTests": "PASS",
+    "audit": "PASS",
+    "diffCheck": "PASS",
+    "note": "Baseline rerun/verified before diagnosis task"
+  },
+  "baseline": {
+    "startingHead": "7de3dea4950454238d11059b47cd8064508fb7dd",
+    "originMain": "7de3dea4950454238d11059b47cd8064508fb7dd",
+    "workspaceTrackedState": "modified"
+  },
+  "piEnvironment": {
+    "agentDirectory": "default Pi agent directory (~/.pi/agent)",
+    "authStoreExists": true,
+    "credentialPresent": true,
+    "credentialType": "api_key",
+    "runtimeCredentialEntryPresent": false,
+    "authCheckAvailable": true,
+    "environmentApiKeyPresent": true
+  },
+  "model": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "visibleToModelRuntime": true,
+    "availableModelCount": 3
+  },
+  "nativePiProbe": {
+    "executed": true,
+    "result": "FAIL",
+    "durationMs": 276,
+    "markerObserved": false,
+    "diagnosis": {
+      "category": "authentication_failed",
+      "providerStatus": 401,
+      "safeMessage": "Provider authentication was rejected"
+    }
+  },
+  "reasoningExecutorProbe": {
+    "executed": false,
+    "result": "NOT_RUN",
+    "reason": "Native Pi completion failed; per task order no higher-layer probe was run"
+  },
+  "classification": "USER_AUTHORIZATION_REQUIRED",
+  "specificAuthenticationAttributionProven": true,
+  "governance": {
+    "graphPage": "PASS / CLOSED",
+    "graphFix": "PASS / CLOSED",
+    "previousProductionE2E": "ENVIRONMENT_BLOCKED / CTO reviewed",
+    "diagnosisTask": "executed / CTO acceptance pending"
+  },
+  "harnessFix": {
+    "blanketCatchRemoved": true,
+    "sanitizedErrorPreservation": true,
+    "classificationMapping": "Preserves ReasoningExecutorError code, sanitized category, and provider HTTP status; does not rewrite every failure as authentication"
+  },
+  "completedAt": "2026-09-07T11:45:32.843Z"
+}

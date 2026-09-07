@@ -16,6 +16,7 @@ import { validateKnowledgeBaseV03 } from '../../knowledge/validation/v03-validat
 import { getRaw, verifyRaw } from '../../knowledge/raw/raw-archive.ts'
 import { createKnowledgeBase } from '../knowledge/helpers.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
+import { classifyE2EPreflightFailure } from './pi-provider-diagnosis.ts'
 
 const repoRoot = resolve(import.meta.dirname, '../..')
 const evidenceDir = resolve(repoRoot, 'tests/validation/evidence')
@@ -258,10 +259,11 @@ async function main(): Promise<void> {
       try {
         await probe.execute({ operation: 'understandAndPlan', instruction: 'Return exactly one JSON object with key probe and value ok.', input: { probe: true }, outputContract: { type: 'object' }, metadata: { executionId: 'rhl-production-e2e-provider-probe' } })
         evidence.realRuntime = { ...(evidence.realRuntime as Dict), realProviderConfirmed: true, completionPreflight: 'passed' }
-      } catch {
-        evidence.realRuntime = { ...(evidence.realRuntime as Dict), realProviderConfirmed: false, completionPreflight: 'blocked', blockedReason: 'Real Pi provider completion was rejected by the configured authentication environment' }
-        classification = 'ENVIRONMENT_BLOCKED'
-        throw new Error('Real Pi provider completion is unavailable in the configured environment')
+      } catch (error) {
+        const diagnosis = classifyE2EPreflightFailure(error)
+        evidence.realRuntime = { ...(evidence.realRuntime as Dict), realProviderConfirmed: false, completionPreflight: 'blocked', failure: { errorCode: diagnosis.errorCode, category: diagnosis.category, providerStatus: diagnosis.providerStatus, safeMessage: diagnosis.safeMessage } }
+        classification = diagnosis.classification
+        throw new Error(`Real Pi provider completion is unavailable: ${diagnosis.safeMessage}`)
       }
     })
 
