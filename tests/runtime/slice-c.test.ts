@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
 import { Readable } from 'node:stream'
@@ -73,6 +73,8 @@ test('Slice C AttachmentService streams, hashes, normalizes, and keeps upload ou
     const request = await multipartBody([{ name: 'file', value: new Blob(['hello'], { type: 'text/plain' }), filename: '../nested\\report.txt' }])
     const attachment = await service.upload(request.body, request.contentType)
     assert.equal(attachment.filename, 'report.txt'); assert.deepEqual(Object.keys(attachment).sort(), ['attachmentId', 'createdAt', 'filename', 'mediaType', 'sha256', 'size']); assert.equal('path' in attachment, false); assert.equal('workspaceRelativePath' in attachment, false)
+    const workspaceReference = await service.getWorkspaceFileReference(attachment.attachmentId)
+    assert.equal(isAbsolute(workspaceReference), false); assert.notEqual(workspaceReference, ''); assert.deepEqual(workspaceReference.split(/[\\/]+/), ['uploads', attachment.attachmentId, 'report.txt'])
     assert.equal((await service.getAttachment(attachment.attachmentId)).sha256.length, 64)
     assert.deepEqual(await readdir(join(root, 'uploads', attachment.attachmentId)), ['metadata.json', 'report.txt'])
     const reserved = await multipartBody([{ name: 'file', value: new Blob(['reserved content'], { type: 'text/plain' }), filename: 'metadata.json' }])
@@ -122,6 +124,9 @@ test('Slice C AttachmentService rejects control names, size overflow, metadata t
     const attachment = await goodService.upload(good.body, good.contentType)
     const metadataPath = join((await goodService.openAttachment(attachment.attachmentId)).path.replace(/\\[^\\]+$/, ''), 'metadata.json')
     const metadata = JSON.parse(await readFile(metadataPath, 'utf8')) as Record<string, unknown>
+    metadata.workspaceRelativePath = '../outside.txt'; await writeFile(metadataPath, JSON.stringify(metadata))
+    await assert.rejects(() => goodService.getAttachment(attachment.attachmentId), /metadata path|invalid/i)
+    metadata.workspaceRelativePath = `uploads/${attachment.attachmentId}/safe.txt`; await writeFile(metadataPath, JSON.stringify(metadata))
     metadata.sha256 = '0'.repeat(64); await writeFile(metadataPath, JSON.stringify(metadata))
     await assert.rejects(() => goodService.getAttachment(attachment.attachmentId), /hash/i)
     const outside = join(root, 'outside.txt'); await writeFile(outside, 'outside')
@@ -175,6 +180,39 @@ test('Slice C HTTP upload returns only the public Attachment DTO and leaves cano
     const beforeManifest = await readManifest(fixture.mountedKnowledgeBaseRoot); const beforeFiles = (await readdir(fixture.mountedKnowledgeBaseRoot, { recursive: true })).sort(); const info = await server.start(); const form = new FormData(); form.append('file', new Blob(['not canonical'], { type: 'text/plain' }), 'upload.txt')
     const response = await fetch(`${info.origin}/api/attachments`, { method: 'POST', headers: { origin: info.origin, 'x-researchhub-runtime-token': info.runtimeToken }, body: form })
     assert.equal(response.status, 201); const payload = await response.json() as { attachment: Record<string, unknown> }; assert.deepEqual(Object.keys(payload.attachment).sort(), ['attachmentId', 'createdAt', 'filename', 'mediaType', 'sha256', 'size']); assert.equal('workspaceRelativePath' in payload.attachment, false); assert.equal('path' in payload.attachment, false); assert.deepEqual(await readManifest(fixture.mountedKnowledgeBaseRoot), beforeManifest); assert.deepEqual((await readdir(fixture.mountedKnowledgeBaseRoot, { recursive: true })).sort(), beforeFiles)
+  } finally { await server.close(); await fixture.runtime.close(); await rm(fixture.root, { recursive: true, force: true }); await removeKnowledgeBase(fixture.mountedKnowledgeBaseRoot) }
+})
+
+test('Slice C Runtime production ingress hands off a validated workspace-relative attachment reference', async () => {
+  const fixture = await makeMountedRuntimeFixture(); const workflow = fixture.runtime.workflowService; let receivedReference: string | undefined
+  const production = new ProductionService({ mountedKnowledgeBaseRoot: fixture.mountedKnowledgeBaseRoot, workspaceRoot: fixture.workspaceRoot, cwd: fixture.cwd, reasoningExecutor: new FixtureExecutor(), workflowService: workflow, workflowRunner: async ({ documentInput }) => { if (documentInput.type !== 'file') throw new Error('expected a file document input'); return responseResult() } })
+  const originalStart = production.startIngestDocument.bind(production)
+  production.startIngestDocument = ((input, signal) => { receivedReference = input.workspaceFile; return originalStart(input, signal) }) as typeof production.startIngestDocument
+  ;(fixture.runtime.services as unknown as { productionService: ProductionService }).productionService = production
+  const server = new ResearchHubRuntimeServer({ runtime: fixture.runtime, port: 0 })
+  try {
+    const info = await server.start(); const form = new FormData(); form.append('file', new Blob(['production handoff'], { type: 'text/plain' }), 'handoff.txt')
+    const uploaded = await fetch(`${info.origin}/api/attachments`, { method: 'POST', headers: { origin: info.origin, 'x-researchhub-runtime-token': info.runtimeToken }, body: form }); assert.equal(uploaded.status, 201); const attachment = (await uploaded.json() as { attachment: AttachmentRef }).attachment
+    const started = await fetch(`${info.origin}/api/production/ingest`, { method: 'POST', headers: { origin: info.origin, 'content-type': 'application/json', 'x-researchhub-runtime-token': info.runtimeToken }, body: JSON.stringify({ attachmentId: attachment.attachmentId }) }); assert.equal(started.status, 202); const startedBody = await started.json() as { runId: string }
+    for (let attempt = 0; attempt < 50 && workflow.getWorkflowStatus(startedBody.runId)?.status === 'running'; attempt += 1) await new Promise<void>((resolve) => setTimeout(resolve, 0))
+    assert.equal(receivedReference, `uploads/${attachment.attachmentId}/handoff.txt`); assert.equal(workflow.getWorkflowStatus(startedBody.runId)?.status, 'completed')
+  } finally { await server.close(); await fixture.runtime.close(); await rm(fixture.root, { recursive: true, force: true }); await removeKnowledgeBase(fixture.mountedKnowledgeBaseRoot) }
+})
+
+test('Slice C Windows canonical and lexical workspace representations use the relative attachment handoff', async (t) => {
+  if (process.platform !== 'win32') { t.skip('Windows-specific canonical/lexical regression'); return }
+  const fixture = await makeMountedRuntimeFixture(); const workspaceVariant = join(fixture.root, 'WORKSPACE'); const workflow = fixture.runtime.workflowService; let receivedReference: string | undefined
+  const production = new ProductionService({ mountedKnowledgeBaseRoot: fixture.mountedKnowledgeBaseRoot, workspaceRoot: fixture.workspaceRoot, cwd: fixture.cwd, reasoningExecutor: new FixtureExecutor(), workflowService: workflow, workflowRunner: async ({ documentInput }) => { if (documentInput.type !== 'file') throw new Error('expected a file document input'); return responseResult() } })
+  const originalStart = production.startIngestDocument.bind(production)
+  production.startIngestDocument = ((input, signal) => { receivedReference = input.workspaceFile; return originalStart(input, signal) }) as typeof production.startIngestDocument
+  ;(fixture.runtime.services as unknown as { productionService: ProductionService }).productionService = production
+  const server = new ResearchHubRuntimeServer({ runtime: fixture.runtime, attachmentService: new AttachmentService({ workspaceRoot: workspaceVariant, forbiddenRoot: fixture.mountedKnowledgeBaseRoot }), port: 0 })
+  try {
+    const info = await server.start(); const form = new FormData(); form.append('file', new Blob(['windows handoff'], { type: 'text/plain' }), 'windows.txt')
+    const uploaded = await fetch(`${info.origin}/api/attachments`, { method: 'POST', headers: { origin: info.origin, 'x-researchhub-runtime-token': info.runtimeToken }, body: form }); assert.equal(uploaded.status, 201); const attachment = (await uploaded.json() as { attachment: AttachmentRef }).attachment
+    const started = await fetch(`${info.origin}/api/production/ingest`, { method: 'POST', headers: { origin: info.origin, 'content-type': 'application/json', 'x-researchhub-runtime-token': info.runtimeToken }, body: JSON.stringify({ attachmentId: attachment.attachmentId }) }); assert.equal(started.status, 202); const startedBody = await started.json() as { runId: string }
+    for (let attempt = 0; attempt < 50 && workflow.getWorkflowStatus(startedBody.runId)?.status === 'running'; attempt += 1) await new Promise<void>((resolve) => setTimeout(resolve, 0))
+    assert.equal(receivedReference, `uploads/${attachment.attachmentId}/windows.txt`); assert.equal(workflow.getWorkflowStatus(startedBody.runId)?.status, 'completed')
   } finally { await server.close(); await fixture.runtime.close(); await rm(fixture.root, { recursive: true, force: true }); await removeKnowledgeBase(fixture.mountedKnowledgeBaseRoot) }
 })
 

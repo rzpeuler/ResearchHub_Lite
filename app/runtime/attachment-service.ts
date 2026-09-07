@@ -291,6 +291,12 @@ export class AttachmentService {
     return join(await this.storageRoot(), attachmentId, metadata.filename)
   }
 
+  /** Returns the validated logical reference used for ProductionService workspace input. */
+  async getWorkspaceFileReference(attachmentId: string): Promise<string> {
+    const metadata = await this.readAndValidate(attachmentId)
+    return metadata.workspaceRelativePath
+  }
+
   async openAttachment(attachmentId: string): Promise<{ readonly metadata: AttachmentRef; readonly path: string }> {
     const metadata = await this.readAndValidate(attachmentId)
     return { metadata: toDto(metadata), path: join(await this.storageRoot(), attachmentId, metadata.filename) }

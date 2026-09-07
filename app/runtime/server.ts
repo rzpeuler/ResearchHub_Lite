@@ -432,7 +432,7 @@ export class ResearchHubRuntimeServer {
     let input: IngestDocumentInput
     if (attachmentId !== undefined) {
       const attachment = await this.attachmentService!.getAttachment(attachmentId)
-      input = { workflowRunId: randomUUID(), workspaceFile: await this.attachmentService!.resolveAttachmentPath(attachmentId), originalFilename: attachment.filename, mediaType: attachment.mediaType, instructions: this.optionalString(body, 'instructions', MAX_MESSAGE_LENGTH), sourceMetadata: this.sourceMetadata(body) }
+      input = { workflowRunId: randomUUID(), workspaceFile: await this.attachmentService!.getWorkspaceFileReference(attachmentId), originalFilename: attachment.filename, mediaType: attachment.mediaType, instructions: this.optionalString(body, 'instructions', MAX_MESSAGE_LENGTH), sourceMetadata: this.sourceMetadata(body) }
     } else {
       const text = this.optionalString(body, 'text', 2_000_000)
       if (text === undefined) throw new ApplicationServiceError('invalid_input', 'attachmentId or text is required')

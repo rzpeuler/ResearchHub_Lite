@@ -58,7 +58,7 @@ export interface WorkflowDiagnosisInput {
   readonly ingestionLog?: Record<string, unknown>
   readonly canonicalRevision: number
   readonly rawPresent: boolean
-  readonly pathBoundary?: { readonly runtimeProductionWorkspaceSame?: boolean; readonly attachmentInsideRuntimeWorkspace?: boolean; readonly attachmentInsideProductionWorkspace?: boolean; readonly attachmentOutsideCanonicalKnowledge?: boolean; readonly attachmentPathMatchesResolvedPath?: boolean }
+  readonly pathBoundary?: { readonly runtimeProductionWorkspaceSame?: boolean; readonly attachmentInsideRuntimeWorkspace?: boolean; readonly attachmentInsideProductionWorkspace?: boolean; readonly attachmentOutsideCanonicalKnowledge?: boolean; readonly attachmentPathMatchesResolvedPath?: boolean; readonly canonicalAttachmentPathPresent?: boolean; readonly productionWorkspaceReference?: string; readonly workspaceReferenceRelative?: boolean; readonly workspaceReferenceResolvesInsideRuntimeWorkspace?: boolean; readonly workspaceReferenceResolvesInsideProductionWorkspace?: boolean; readonly workspaceReferenceOutsideCanonicalKnowledge?: boolean }
 }
 
 export interface WorkflowDiagnosisResult {

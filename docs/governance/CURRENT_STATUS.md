@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Production Workflow failure diagnosed at the ProductionService input boundary — CTO acceptance pending**
+**Attachment to Production workspace-reference boundary fix executed — CTO acceptance pending**
 
 ## Current Snapshot
 
@@ -29,9 +29,11 @@
 - `RHL-CONFIGURE-PI-MULTI-PROVIDER-001`: PASS / CLOSED by CTO decision; local Pi `models.json` and `auth.json` are configured for `zhipu-openapi/glm-5.3-flash` and Pi-native `openai-codex` OAuth. Both providers passed Native Pi and PiReasoningExecutor gates.
 - `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001`: `VALIDATION_HARNESS_DEFECT / CTO reviewed`; the run reached real Free Research completion, but the validation oracle incorrectly required a fixed marker in serialized SSE output. No production contract failure was established; the old evidence remains immutable.
 - `RHL-FIX-PRODUCTION-E2E-FREE-RESEARCH-ORACLE-001`: harness-only correction implemented; the oracle validates lifecycle, safe normalized SSE, non-empty assistant deltas, current persisted user nonce, and non-empty persisted assistant content without fixed wording.
-- `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-002`: `VALIDATION_HARNESS_DEFECT / CTO reviewed`; real Production Workflow terminal failure was observed, but the original evidence did not retain terminal errorSummary, runId, or reasoning/storage diagnostics required for root-cause classification. The historical evidence remains unchanged.
-- `RHL-DIAGNOSE-PRODUCTION-WORKFLOW-FAILURE-001`: `executed / PRODUCT_DEFECT / CTO acceptance pending`; targeted real reproduction identified a deterministic Windows `INPUT_RESOLUTION` path canonicalization/wiring failure: `AttachmentService` returned a canonical path that `ProductionService.resolveWorkspaceFile()` rejected, despite matching Runtime/Production workspace configuration and remaining outside the canonical KB. No reasoning call, Raw archive, ingestion log, or canonical mutation occurred.
-- Next recommended phase: CTO review and separate authorization of a ProductionService/AttachmentService path-boundary remediation before another full E2E run.
+- `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-002`: `VALIDATION_HARNESS_DEFECT / CTO reviewed`; the original evidence remains unchanged, and the later real Workflow failure was independently diagnosed as an `INPUT_RESOLUTION` Product defect.
+- `RHL-DIAGNOSE-PRODUCTION-WORKFLOW-FAILURE-001`: PASS / CLOSED by CTO decision; the deterministic Windows `INPUT_RESOLUTION` defect was confirmed as an AttachmentService canonical-path to ProductionService lexical-boundary handoff error.
+- `RHL-FIX-ATTACHMENT-PRODUCTION-PATH-BOUNDARY-001`: `executed / CTO acceptance pending`; AttachmentService now exposes only its validated workspace-relative metadata reference for Runtime production handoff, while canonical attachment path APIs and ProductionService's lexical/realpath/Knowledge isolation checks remain unchanged.
+- Targeted real reproduction passed the path boundary and completed with review using real `zhipu-openapi/glm-5.3-flash`, PiReasoningExecutor, and Docling 2.116.0. It produced Raw archive state, ingestion log, canonical revision 1, and no new authoritative failure. Full Production E2E was intentionally not run.
+- Next recommended phase: CTO acceptance review of the scoped path-boundary fix; do not infer full Production E2E completion from this targeted result.
 - `docs/governance/ARCHITECTURE.md` remains a frozen CTO-generated summary and is intentionally not rewritten by this admission task; where its older frontend/transport wording conflicts, the normative Runtime/Client architecture and this decision record supersede it until a consolidated replacement is issued.
 
 ## Completed

@@ -1,0 +1,150 @@
+{
+  "taskId": "RHL-FIX-ATTACHMENT-PRODUCTION-PATH-BOUNDARY-001",
+  "startedAt": "2026-09-07T14:00:15.387Z",
+  "baselineExpected": "34615e72b459fb2706da3b586e8d6994279412f8",
+  "provider": "zhipu-openapi",
+  "model": "glm-5.3-flash",
+  "secretsIncluded": false,
+  "rawHiddenReasoningIncluded": false,
+  "credentialValuesExposed": false,
+  "authHeadersExposed": false,
+  "baseline": {
+    "head": "34615e72b459fb2706da3b586e8d6994279412f8",
+    "originMain": "34615e72b459fb2706da3b586e8d6994279412f8",
+    "expected": "34615e72b459fb2706da3b586e8d6994279412f8",
+    "matchesExpected": true,
+    "trackedWorkingTreeClean": false
+  },
+  "attachment": {
+    "filename": "rhl-production-e2e-001.pdf",
+    "bytes": 886,
+    "sha256": "b7b3becbc413e368482c5bf5a593f55c34c65253d4f6e4f03382ab57487aa2ee",
+    "docling": {
+      "parser": {
+        "id": "docling-local",
+        "version": "2.116.0"
+      },
+      "stats": {
+        "pageCount": 1,
+        "sectionCount": 1,
+        "blockCount": 2,
+        "normalizedCharacters": 250,
+        "tableCount": 0,
+        "headingCount": 0,
+        "listCount": 0,
+        "captionCount": 0
+      }
+    },
+    "attachmentId": "851039a6-5d91-42b6-bd80-ee8ab0779901",
+    "uploadSucceeded": true,
+    "controlledStorageContentMatches": true,
+    "canonicalMutationByUpload": false
+  },
+  "pathBoundary": {
+    "runtimeProductionWorkspaceSame": true,
+    "canonicalAttachmentPathPresent": true,
+    "productionWorkspaceReference": "uploads/851039a6-5d91-42b6-bd80-ee8ab0779901/rhl-production-e2e-001.pdf",
+    "workspaceReferenceRelative": true,
+    "workspaceReferenceResolvesInsideRuntimeWorkspace": true,
+    "workspaceReferenceResolvesInsideProductionWorkspace": true,
+    "workspaceReferenceOutsideCanonicalKnowledge": true
+  },
+  "productionStart": {
+    "runId": "a0f29cc1-1a61-443b-b324-e3fb9f601e4a",
+    "initialWorkflow": {
+      "runId": "a0f29cc1-1a61-443b-b324-e3fb9f601e4a",
+      "workflowType": "raw_document_knowledge_ingestion",
+      "objective": "rhl-production-e2e-001.pdf",
+      "status": "running",
+      "progressSummary": "raw_document_knowledge_ingestion is running",
+      "startedAt": "2026-09-07T14:00:23.615Z",
+      "updatedAt": "2026-09-07T14:00:23.616Z"
+    },
+    "httpStatus": 202,
+    "accepted": true
+  },
+  "productionTerminal": {
+    "runId": "a0f29cc1-1a61-443b-b324-e3fb9f601e4a",
+    "workflowType": "raw_document_knowledge_ingestion",
+    "objective": "rhl-production-e2e-001.pdf",
+    "status": "completed_with_review",
+    "progressSummary": "Document ingestion completed with ReviewCases",
+    "reviewCount": 1,
+    "startedAt": "2026-09-07T14:00:23.615Z",
+    "updatedAt": "2026-09-07T14:03:46.257Z",
+    "completedAt": "2026-09-07T14:03:46.257Z"
+  },
+  "workflowDurationMs": 202642,
+  "reasoningCalls": [
+    {
+      "operation": "understandAndPlan",
+      "startedAt": "2026-09-07T14:00:31.352Z",
+      "durationMs": 48031,
+      "status": "passed"
+    },
+    {
+      "operation": "extractKnowledge",
+      "startedAt": "2026-09-07T14:01:19.385Z",
+      "durationMs": 56023,
+      "status": "passed"
+    },
+    {
+      "operation": "extractKnowledge",
+      "startedAt": "2026-09-07T14:01:19.385Z",
+      "durationMs": 146753,
+      "status": "passed"
+    }
+  ],
+  "rawArchive": {
+    "directoryPresent": true,
+    "fileOrDirectoryCount": 1,
+    "rawRefs": [
+      {
+        "rawRef": "raw-sha256-b7b3becbc413e368482c5bf5a593f55c34c65253d4f6e4f03382ab57487aa2ee",
+        "integrityValid": true,
+        "contentHashMatches": true,
+        "sizeBytes": 886
+      }
+    ]
+  },
+  "ingestionLog": {
+    "present": true,
+    "parseable": true,
+    "status": "completed_with_review",
+    "workflowRunId": "a0f29cc1-1a61-443b-b324-e3fb9f601e4a",
+    "rawRef": "raw-sha256-b7b3becbc413e368482c5bf5a593f55c34c65253d4f6e4f03382ab57487aa2ee",
+    "documentId": "document-b7b3becbc413e368",
+    "changeSetIdPresent": true,
+    "committedRevision": 1,
+    "reviewSummary": {
+      "total": 6,
+      "rootCount": 6,
+      "dependencyCount": 0
+    },
+    "reviewCaseCount": 1,
+    "errorCodes": [],
+    "errorCategories": []
+  },
+  "canonicalKnowledge": {
+    "revision": 1,
+    "counts": {
+      "themeGroups": 0,
+      "entities": 4,
+      "relations": 2,
+      "claims": 4,
+      "sources": 1,
+      "modules": 0
+    },
+    "validation": "passed"
+  },
+  "review": {
+    "count": 1,
+    "source": "sanitized ingestion log metadata"
+  },
+  "failurePhase": "NONE",
+  "rootCauseClassification": "NONE",
+  "rootCauseSummary": "Workflow completed without a new authoritative failure",
+  "pathFixClassification": "ATTACHMENT_PRODUCTION_PATH_DEFECT_FIXED",
+  "completedAt": "2026-09-07T14:03:47.598Z",
+  "status": "executed"
+}
