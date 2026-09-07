@@ -29,9 +29,42 @@ export interface AttachmentRef { readonly attachmentId: string; readonly filenam
 export interface ClientEvent { readonly eventId: string; readonly conversationId: string; readonly timestamp: string; readonly type: string; readonly role?: 'user' | 'assistant'; readonly summary?: string; readonly status?: string; readonly toolCallId?: string; readonly name?: string; readonly isError?: boolean; readonly steeringCount?: number; readonly followUpCount?: number; readonly code?: string }
 export interface BootstrapResponse { readonly runtime: { readonly origin: string; readonly runtimeToken: string }; readonly origin: string; readonly session: SessionState; readonly conversations: readonly ConversationSummary[]; readonly knowledgeBase?: KnowledgeBaseStatus; readonly openReviewCases?: number; readonly knowledgeError?: RuntimeErrorBody }
 
-type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+type FetchResponseLike = Pick<Response, 'ok' | 'status' | 'json'>
+type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<FetchResponseLike>
+type HeaderBag = { set: (name: string, value: string) => void; has: (name: string) => boolean; forEach: (callback: (value: string, key: string) => void) => void }
 type EventSourceLike = { onopen: ((event: Event) => void) | null; onerror: ((event: Event) => void) | null; close: () => void; addEventListener: (type: string, listener: (event: MessageEvent<string>) => void) => void; removeEventListener: (type: string, listener: (event: MessageEvent<string>) => void) => void }
 type EventSourceFactory = (url: string) => EventSourceLike
+
+function createHeaders(input?: HeadersInit): HeaderBag {
+  const constructor = globalThis.Headers
+  if (typeof constructor === 'function') return new constructor(input)
+  const values = new Map<string, string>()
+  const add = (name: string, value: string): void => { values.set(name.toLowerCase(), value) }
+  if (Array.isArray(input)) input.forEach(([name, value]) => add(name, value))
+  else if (input !== undefined) Object.entries(input).forEach(([name, value]) => add(name, String(value)))
+  return { set: (name, value) => add(name, value), has: (name) => values.has(name.toLowerCase()), forEach: (callback) => values.forEach((value, key) => callback(value, key)) }
+}
+
+function xhrFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<FetchResponseLike> {
+  const constructor = globalThis.XMLHttpRequest
+  if (typeof constructor !== 'function') return Promise.reject(new Error('Browser network APIs are unavailable'))
+  return new Promise((resolve, reject) => {
+    const request = new constructor()
+    request.open(init.method ?? 'GET', String(input), true)
+    createHeaders(init.headers).forEach((value, key) => request.setRequestHeader(key, value))
+    request.onload = () => resolve({ ok: request.status >= 200 && request.status < 300, status: request.status, json: async () => JSON.parse(request.responseText) })
+    request.onerror = () => reject(new Error('ResearchHub Runtime network request failed'))
+    request.ontimeout = () => reject(new Error('ResearchHub Runtime network request timed out'))
+    request.send(init.body as XMLHttpRequestBodyInit | null | undefined)
+  })
+}
+
+function defaultFetch(input: RequestInfo | URL, init?: RequestInit): Promise<FetchResponseLike> {
+  const fetchFunction = globalThis.fetch
+  if (typeof fetchFunction === 'function') return fetchFunction(input, init)
+  return xhrFetch(input, init)
+}
+
 const defaultEventSourceFactory: EventSourceFactory = (url) => {
   const constructor = globalThis.EventSource
   if (typeof constructor !== 'function') return { onopen: null, onerror: null, close: () => undefined, addEventListener: () => undefined, removeEventListener: () => undefined }
@@ -71,17 +104,18 @@ export class RuntimeClient {
   private readonly fetchImpl: FetchLike
   private runtimeToken?: string
 
-  constructor(fetchImpl: FetchLike = fetch) { this.fetchImpl = fetchImpl }
+  constructor(fetchImpl: FetchLike = defaultFetch) { this.fetchImpl = fetchImpl }
 
   private async request<T>(path: string, init: RequestInit = {}, mutation = false): Promise<T> {
-    const headers = new Headers(init.headers)
+    const headers = createHeaders(init.headers)
     headers.set('Accept', 'application/json')
     if (mutation) {
       if (this.runtimeToken === undefined) throw new RuntimeClientError('unauthorized_runtime_token', 'Runtime authorization is not ready', 401)
       headers.set('X-ResearchHub-Runtime-Token', this.runtimeToken)
     }
-    if (init.body !== undefined && !headers.has('Content-Type') && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
-    const response = await this.fetchImpl(path, { ...init, headers })
+    const isFormData = typeof globalThis.FormData === 'function' && init.body instanceof globalThis.FormData
+    if (init.body !== undefined && !headers.has('Content-Type') && !isFormData) headers.set('Content-Type', 'application/json')
+    const response = await this.fetchImpl(path, { ...init, headers: headers as unknown as HeadersInit })
     let body: unknown
     try { body = await response.json() } catch { body = undefined }
     if (!response.ok) {
