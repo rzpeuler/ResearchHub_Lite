@@ -27,7 +27,7 @@ test('Runtime serves only the configured client root with safe SPA fallback', as
     const get = (path: string) => fetch(`${info.origin}${path}`)
     const home = await get('/'); assert.equal(home.status, 200); assert.equal(await home.text(), '<html>client</html>'); assert.match(home.headers.get('cache-control') ?? '', /no-store/)
     const asset = await get('/assets/app-abc.js'); assert.equal(asset.status, 200); assert.equal(await asset.text(), 'console.log("client")'); assert.match(asset.headers.get('cache-control') ?? '', /immutable/)
-    const spa = await get('/research/queue'); assert.equal(spa.status, 200); assert.equal(await spa.text(), '<html>client</html>')
+    for (const path of ['/research', '/graph', '/reviews', '/research/queue']) { const spa = await get(path); assert.equal(spa.status, 200); assert.equal(await spa.text(), '<html>client</html>') }
     const api = await get('/api/not-a-route'); assert.equal(api.status, 404); assert.notEqual(await api.text(), '<html>client</html>')
     assert.equal((await get('/%2e%2e/workspace/secret.txt')).status, 404)
     assert.equal((await get('/%2e%2e/knowledge/canonical.txt')).status, 404)

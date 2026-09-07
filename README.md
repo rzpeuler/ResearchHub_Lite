@@ -42,7 +42,7 @@ npm run client:build
 npm run researchhub
 ```
 
-The Runtime prints its loopback URL. Open it in a browser; the client is served by the same Runtime origin. The Homepage currently provides the Agent conversation shell, Knowledge/Attachment/Workflow context, and read-only Review Inbox. It does not claim Theme Research, Industry Research, Company Research, or ReviewDecision capabilities.
+The Runtime prints its loopback URL. Open it in a browser; the client is served by the same Runtime origin. The Application Shell currently provides Research (`/` and `/research`), a Knowledge Graph placeholder (`/graph`), and a read-only Review Inbox (`/reviews`). Research contains the Agent conversation shell, Attachments, Workflow observation, and Review notifications. Knowledge Graph visualization is deferred to the next phase. The product does not claim Theme Research, Industry Research, Company Research, or ReviewDecision capabilities.
 
 `ReasoningExecutor` remains the Workflow semantic-operation boundary and deterministic testing seam. It is not a product-level host-portability architecture. Conversation context and Workflow semantic context remain separate even when they share Pi `ModelRuntime`.
 

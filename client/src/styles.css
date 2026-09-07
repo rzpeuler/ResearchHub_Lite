@@ -7,6 +7,12 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid #72d2c4; outline-offset: 2px; }
 .app-shell { min-height: 100vh; background: radial-gradient(circle at 65% -20%, #23313c 0, transparent 44%), #0d141b; }
 .topbar { height: 68px; padding: 0 28px; border-bottom: 1px solid #273541; display: flex; align-items: center; justify-content: space-between; background: rgba(13, 20, 27, .9); }
+.topbar-left { display: flex; align-items: center; gap: 36px; }
+.brand { display: flex; align-items: center; }
+.primary-nav ul { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.nav-link { display: block; padding: 8px 11px; border-radius: 6px; color: #7f939f; font-size: 12px; text-decoration: none; }
+.nav-link:hover { color: #d4e5e8; background: #16242d; }
+.nav-link.active { color: #d5eee9; background: #1a3735; }
 .brand-mark { display: inline-grid; place-items: center; width: 29px; height: 29px; margin-right: 10px; border-radius: 8px; color: #0d1a1d; background: #72d2c4; font-size: 11px; font-weight: 800; letter-spacing: .05em; }
 .brand-name { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
 .runtime-status { display: flex; gap: 8px; align-items: center; color: #b6c4cf; font-size: 12px; }
@@ -69,6 +75,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .context-heading { margin-bottom: 22px; }
 .context-count { color: #708490; font-size: 10px; }
 .panel-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 3px; border: 1px solid #2a3944; border-radius: 7px; background: #111b22; }
+.research-tabs { grid-template-columns: repeat(3, 1fr); }
 .panel-tabs button { position: relative; padding: 8px 3px; border: 0; border-radius: 5px; color: #718591; background: transparent; font-size: 10px; }
 .panel-tabs button.selected { color: #d3eee9; background: #1c3836; }
 .panel-tabs b { position: absolute; top: 3px; right: 3px; min-width: 13px; padding: 1px 3px; border-radius: 7px; color: #0f201e; background: #72d2c4; font-size: 8px; }
@@ -108,6 +115,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .workflow-card dl { display: grid; grid-template-columns: 70px 1fr; gap: 8px; margin: 0; font-size: 10px; }
 .workflow-card dt { color: #69808b; }
 .workflow-card dd { margin: 0; color: #b8c9d0; overflow-wrap: anywhere; }
+.page-frame { min-height: calc(100vh - 68px); padding: clamp(48px, 9vh, 100px) clamp(36px, 9vw, 160px); background: radial-gradient(circle at 65% -20%, #23313c 0, transparent 44%), rgba(14, 22, 29, .54); }
+.page-frame h1 { margin: 8px 0 12px; color: #e5eef1; font-size: clamp(28px, 4vw, 46px); font-weight: 550; letter-spacing: -.04em; }
+.page-frame > p { max-width: 620px; margin: 0; color: #a5b8c0; font-size: 15px; line-height: 1.7; }
+.graph-page .notice { max-width: 520px; margin-top: 34px; }
+.page-heading { display: flex; align-items: flex-start; justify-content: space-between; max-width: 900px; margin-bottom: 30px; }
+.page-heading h1 { margin-bottom: 0; }
+.read-only-badge { padding: 5px 10px; border: 1px solid #4a4a3b; border-radius: 999px; color: #d8c998; background: #28271d; font-size: 10px; }
+.review-page { overflow: auto; }
+.review-layout { display: grid; grid-template-columns: minmax(280px, 430px) minmax(320px, 1fr); gap: 28px; max-width: 1000px; }
+.review-detail { align-self: start; padding: 16px; border: 1px solid #385b59; border-radius: 8px; background: #152827; }
+.review-detail h2 { margin: 14px 0; color: #d8e7ea; font-size: 14px; overflow-wrap: anywhere; }
+.review-detail p { margin: 10px 0; color: #a8bbc3; font-size: 11px; line-height: 1.55; overflow-wrap: anywhere; }
+.detail-empty { align-self: start; }
 .review-item strong { color: #d8c998; }
 .state-screen { display: grid; place-items: center; min-height: 100vh; background: #0d141b; }
 .state-card { width: min(420px, calc(100vw - 40px)); padding: 35px; border: 1px solid #2b3d48; border-radius: 12px; background: #121e26; box-shadow: 0 20px 80px rgba(0,0,0,.25); }
