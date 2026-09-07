@@ -1,0 +1,104 @@
+{
+  "taskId": "RHL-VALIDATE-PRODUCTION-E2E-001",
+  "startedAt": "2026-09-07T11:29:00.806Z",
+  "phase": "blocked",
+  "phaseTimestamps": {
+    "preflight": {
+      "startedAt": "2026-09-07T11:29:00.807Z",
+      "completedAt": "2026-09-07T11:29:00.879Z",
+      "durationMs": 72,
+      "status": "passed"
+    },
+    "docling_preflight": {
+      "startedAt": "2026-09-07T11:29:00.882Z",
+      "completedAt": "2026-09-07T11:29:00.882Z",
+      "durationMs": 0,
+      "status": "passed"
+    },
+    "docling_preflight_parse": {
+      "startedAt": "2026-09-07T11:29:00.882Z",
+      "completedAt": "2026-09-07T11:29:07.736Z",
+      "durationMs": 6854,
+      "status": "passed"
+    },
+    "real_provider_preflight": {
+      "startedAt": "2026-09-07T11:29:07.737Z",
+      "completedAt": "2026-09-07T11:29:07.740Z",
+      "durationMs": 3,
+      "status": "passed"
+    },
+    "real_provider_completion_preflight": {
+      "startedAt": "2026-09-07T11:29:07.745Z",
+      "completedAt": "2026-09-07T11:29:08.207Z",
+      "durationMs": 462,
+      "status": "failed",
+      "error": "Real Pi provider completion is unavailable in the configured environment"
+    }
+  },
+  "offlineRegression": {
+    "rootTypecheck": "PASS",
+    "clientTypecheck": "PASS",
+    "clientTests": "PASS",
+    "clientBuild": "PASS",
+    "npmTest": "PASS",
+    "audit": "PASS",
+    "diffCheck": "PASS",
+    "note": "Executed before the real E2E invocation on the accepted baseline"
+  },
+  "secretsIncluded": false,
+  "rawHiddenReasoningIncluded": false,
+  "fauxOrMockUsed": false,
+  "baseline": {
+    "head": "5247a98ccafb67dd7bae89fcb8510b5118fcd95e",
+    "originMain": "5247a98ccafb67dd7bae89fcb8510b5118fcd95e",
+    "trackedWorkingTreeClean": true,
+    "protectedPdf": "pre-existing untracked and unstaged; not read or modified"
+  },
+  "validationDocument": {
+    "filename": "rhl-production-e2e-001.pdf",
+    "sha256": "b7b3becbc413e368482c5bf5a593f55c34c65253d4f6e4f03382ab57487aa2ee",
+    "bytes": 886,
+    "pages": 1,
+    "protectedArtifactModifiedOrTracked": false,
+    "doclingPreflight": {
+      "parser": {
+        "id": "docling-local",
+        "version": "2.116.0"
+      },
+      "stats": {
+        "pageCount": 1,
+        "sectionCount": 1,
+        "blockCount": 2,
+        "normalizedCharacters": 250,
+        "tableCount": 0,
+        "headingCount": 0,
+        "listCount": 0,
+        "captionCount": 0
+      }
+    }
+  },
+  "realRuntime": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "reasoningConfiguration": {
+      "structuredOutputSupport": true,
+      "maxConcurrency": 4
+    },
+    "configuredModelAvailable": true,
+    "realProviderConfirmed": false,
+    "fauxOrMockUsed": false,
+    "completionPreflight": "blocked",
+    "blockedReason": "Real Pi provider completion was rejected by the configured authentication environment"
+  },
+  "classification": "ENVIRONMENT_BLOCKED",
+  "completedAt": "2026-09-07T11:29:08.207Z",
+  "failureStage": "real_provider_completion_preflight",
+  "error": "Real Pi provider completion is unavailable in the configured environment",
+  "evidenceIntegrity": {
+    "secretsIncluded": false,
+    "rawHiddenReasoningIncluded": false,
+    "rawToolPayloadIncluded": false,
+    "protectedPdfModified": false,
+    "productionFilesModified": false
+  }
+}
