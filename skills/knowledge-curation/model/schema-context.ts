@@ -1,5 +1,5 @@
-import { KNOWLEDGE_SCHEMA_V03 } from '../../knowledge/schema/executable-schema.ts'
-import type { ClaimComparatorV03, ClaimTemporalScopeTypeV03, ClaimTypeV03, EntityTypeV03, RelationTypeV03, SourceReliabilityV03, SourceTypeV03 } from '../../knowledge/schema/domain.ts'
+import { KNOWLEDGE_SCHEMA_V03 } from '../../../knowledge/schema/executable-schema.ts'
+import type { ClaimComparatorV03, ClaimTemporalScopeTypeV03, ClaimTypeV03, EntityTypeV03, RelationTypeV03, SourceReliabilityV03, SourceTypeV03 } from '../../../knowledge/schema/domain.ts'
 import type { CurationSchemaContext, CurationSchemaContextSlice, EntitySchemaContract, RelationSchemaContract } from './schema-context-types.ts'
 
 export function buildCurationSchemaContext(slice: CurationSchemaContextSlice): CurationSchemaContext {

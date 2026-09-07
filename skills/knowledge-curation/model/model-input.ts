@@ -1,5 +1,5 @@
-import type { ReasoningCapabilities } from '../../plugins/reasoning/contracts.ts'
-import type { ExtractKnowledgeInput, ResolveSemanticCaseInput, UnderstandAndPlanInput, DocumentContentRef } from './contracts.ts'
+import type { ReasoningCapabilities } from '../../../plugins/reasoning/contracts.ts'
+import type { ExtractKnowledgeInput, ResolveSemanticCaseInput, UnderstandAndPlanInput, DocumentContentRef } from '../contracts.ts'
 import type { CurationSchemaContext } from './schema-context-types.ts'
 
 export interface PreparedUnderstandAndPlanInput extends UnderstandAndPlanInput {

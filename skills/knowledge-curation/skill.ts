@@ -2,13 +2,13 @@ import type { ReasoningExecutor, ReasoningRequest } from '../../plugins/reasonin
 import { ReasoningExecutorError } from '../../plugins/reasoning/errors.ts'
 import { validateReasoningCapabilities } from '../../plugins/reasoning/capabilities.ts'
 import { KnowledgeCurationError } from './errors.ts'
-import { buildCurationSchemaContext } from './schema-context.ts'
-import { projectExtractKnowledgeModelInput, projectResolveSemanticCaseModelInput, projectUnderstandAndPlanModelInput } from './model-input.ts'
-import { validateExtractKnowledge, validateSemanticResolutionResult, validateUnderstandAndPlanOutput } from './validation.ts'
+import { buildCurationSchemaContext } from './model/schema-context.ts'
+import { projectExtractKnowledgeModelInput, projectResolveSemanticCaseModelInput, projectUnderstandAndPlanModelInput } from './model/model-input.ts'
+import { validateExtractKnowledge, validateSemanticResolutionResult, validateUnderstandAndPlanOutput } from './validation/validation.ts'
 import { UNDERSTAND_AND_PLAN_PROMPT, PLAN_REPAIR_PROMPT } from './prompts/understand-and-plan.ts'
 import { EXTRACT_KNOWLEDGE_PROMPT } from './prompts/extract-knowledge.ts'
 import { RESOLVE_SEMANTIC_CASE_PROMPT } from './prompts/resolve-semantic-case.ts'
-import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildResolveSemanticCaseOutputContract } from './output-contracts.ts'
+import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildResolveSemanticCaseOutputContract } from './model/output-contracts.ts'
 import type { ExtractKnowledgeInput, ResolveSemanticCaseInput, SemanticResolutionResult, UnderstandAndPlanInput, UnderstandAndPlanOutput, ValidatedExtractKnowledgeResult } from './contracts.ts'
 
 export interface KnowledgeCurationSkillOptions { readonly executor: ReasoningExecutor }

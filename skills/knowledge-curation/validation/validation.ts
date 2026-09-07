@@ -1,11 +1,11 @@
-import type { DocumentContentRef, StructuredDocument, EntityCandidate, CandidateEntityRef, RelationCandidate, ClaimCandidate, ValidatedExtractKnowledgeResult, CandidateKind, CandidateValidationCode, CandidateValidationRejection, UnderstandAndPlanOutput, ResolutionCaseKind, ResolutionOutcome, SemanticResolutionResult } from './contracts.ts'
-import type { ClaimTemporalV03 } from '../../knowledge/schema/domain.ts'
-import { isV03DateLike, validateRelationAttributesV03 } from '../../knowledge/validation/v03-validation-core.ts'
-import type { PreparedExtractKnowledgeInput, PreparedResolveSemanticCaseInput } from './model-input.ts'
-import { KnowledgeCurationError } from './errors.ts'
-import { blockIdsForRef } from './model-input.ts'
-import type { CurationSchemaContext } from './schema-context-types.ts'
-import { normalizeCompanyCandidateIdentity } from './company-identity.ts'
+import type { DocumentContentRef, StructuredDocument, EntityCandidate, CandidateEntityRef, RelationCandidate, ClaimCandidate, ValidatedExtractKnowledgeResult, CandidateKind, CandidateValidationCode, CandidateValidationRejection, UnderstandAndPlanOutput, ResolutionCaseKind, ResolutionOutcome, SemanticResolutionResult } from '../contracts.ts'
+import type { ClaimTemporalV03 } from '../../../knowledge/schema/domain.ts'
+import { isV03DateLike, validateRelationAttributesV03 } from '../../../knowledge/validation/v03-validation-core.ts'
+import type { PreparedExtractKnowledgeInput, PreparedResolveSemanticCaseInput } from '../model/model-input.ts'
+import { KnowledgeCurationError } from '../errors.ts'
+import { blockIdsForRef } from '../model/model-input.ts'
+import type { CurationSchemaContext } from '../model/schema-context-types.ts'
+import { normalizeCompanyCandidateIdentity } from '../identity/company-identity.ts'
 
 type RecordValue = Record<string, unknown>
 const TRUSTED_KEYS = new Set(['id', 'entityId', 'relationId', 'claimId', 'sourceRef', 'sourceRefs', 'rawRef', 'rawRefs', 'registryPath', 'revision', 'storageRef', 'workflowRunId', 'changeSetId', 'knowledgeBaseId'])

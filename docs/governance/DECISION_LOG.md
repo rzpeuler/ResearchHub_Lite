@@ -577,3 +577,15 @@ Before the fix, `index.ts` used `export *` for `contracts.ts`, `plan-validation.
 Node discovery now passes the absolute `tests/validation/evidence/` directory as an explicit, normalized `node:path` exclusion boundary. A temporary-fixture regression proves that a future `example.test.ts` under evidence is not discovered, without writing to or modifying historical evidence. The previous inventory was 30 files; the current inventory is 31, consisting of the same 30 ordinary tests plus one test-infrastructure regression; `missingFromDiscovery = []`.
 
 `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001` remains `NEEDS FIX / CTO reviewed` until CTO acceptance. This fix is not Phase B, does not migrate Workflow directories, and does not begin Skill/Plugin migration or code decomposition. Production Logic Modified = NONE; only the Workflow public barrel declaration was modified. Historical evidence and the protected PDF are unchanged.
+
+## RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-B-001 — 2026-09-08
+
+**Status:** Executed / CTO acceptance pending
+
+Phase A and `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001-FIX-001` are now recorded as `PASS / CLOSED by CTO decision`; their historical commits remain `49ab86a5457cab93334fd93304f579440133372e` and `a0f736882db6139db3694daf4efec0101b1ae09d` respectively. Phase B applies the frozen Repository Layout v1 physical ownership without changing Production Baseline v1.
+
+Workflow internals moved by `git mv` into `planning/`, `extraction/`, `resolution/`, `review/`, `changeset/`, and `shared/`; `index.ts`, `contracts.ts`, and `workflow.ts` remain at the stable root. Knowledge Curation internals moved into `identity/`, `model/`, and `validation/`; `SKILL.md`, `index.ts`, `skill.ts`, `contracts.ts`, `errors.ts`, `types.ts`, and `prompts/` remain at root. Document parser implementations moved into `parsers/text/parser.ts` and `parsers/docling/`, including the tracked Python bridge; the Plugin root entrypoint and non-parser files remain unchanged.
+
+All active consumers were updated with import-path-only changes. The three root public entrypoints remain in place and preserve their pre-migration export surfaces, including the explicit Workflow ChangeSet planner exports. Moved-file semantic diff audit found no algorithm, condition, loop, signature, type-field, error-code, validation-policy, status, review-policy, planner, or reasoning changes. Docling `import.meta.url` bridge resolution remains a sibling `bridge/docling_bridge.py` path after the move.
+
+No new sub-barrels or architecture layers were added. `client/`, `package.json`, `package-lock.json`, `tsconfig.json`, frozen architecture documents, and `tests/validation/evidence/` were not modified. Phase C code decomposition, Client/Runtime refactor, provider changes, Knowledge schema changes, Writer changes, Review behavior changes, and API changes remain unstarted.

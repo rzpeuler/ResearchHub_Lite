@@ -1,4 +1,4 @@
-import type { ClaimComparatorV03, ClaimTemporalScopeTypeV03, ClaimTypeV03, EntityTypeV03, RelationTypeV03, SourceReliabilityV03, SourceTypeV03 } from '../../knowledge/schema/domain.ts'
+import type { ClaimComparatorV03, ClaimTemporalScopeTypeV03, ClaimTypeV03, EntityTypeV03, RelationTypeV03, SourceReliabilityV03, SourceTypeV03 } from '../../../knowledge/schema/domain.ts'
 
 export type CurationSchemaContextSlice = 'understand_and_plan' | 'knowledge_extraction' | 'knowledge_resolution'
 

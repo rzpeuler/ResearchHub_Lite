@@ -6,7 +6,7 @@ import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, Reason
 import type { StructuredDocument } from '../../../plugins/document/contracts.ts'
 import { KnowledgeCurationSkill } from '../../../skills/knowledge-curation/skill.ts'
 import { runRawDocumentKnowledgeIngestion, validateIngestionConfig } from '../../../workflows/raw-document-knowledge-ingestion/workflow.ts'
-import { ExtractionPlanValidationError, validateExtractionPlan } from '../../../workflows/raw-document-knowledge-ingestion/plan-validation.ts'
+import { ExtractionPlanValidationError, validateExtractionPlan } from '../../../workflows/raw-document-knowledge-ingestion/planning/plan-validation.ts'
 import { createKnowledgeBase, readManifest, removeKnowledgeBase } from '../../knowledge/helpers.ts'
 import { KnowledgeBaseRegistry } from '../../../knowledge/registry/registry.ts'
 import { KnowledgeBaseLoaderV03 } from '../../../knowledge/storage/loader.ts'

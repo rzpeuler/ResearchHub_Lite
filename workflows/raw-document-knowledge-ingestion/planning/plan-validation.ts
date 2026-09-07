@@ -1,7 +1,7 @@
-import type { ReasoningCapabilities } from '../../plugins/reasoning/contracts.ts'
-import { blockIdsForRef } from '../../skills/knowledge-curation/model-input.ts'
-import type { DocumentContentRef, PlanValidationCode, PlanValidationFeedback, ProposedExtractionUnit, StructuredDocument, UnderstandAndPlanOutput } from '../../skills/knowledge-curation/contracts.ts'
-import type { AcceptedExtractionPlan, AcceptedExtractionUnit, IngestionWorkflowConfig } from './contracts.ts'
+import type { ReasoningCapabilities } from '../../../plugins/reasoning/contracts.ts'
+import { blockIdsForRef } from '../../../skills/knowledge-curation/model/model-input.ts'
+import type { DocumentContentRef, PlanValidationCode, PlanValidationFeedback, ProposedExtractionUnit, StructuredDocument, UnderstandAndPlanOutput } from '../../../skills/knowledge-curation/contracts.ts'
+import type { AcceptedExtractionPlan, AcceptedExtractionUnit, IngestionWorkflowConfig } from '../contracts.ts'
 
 const canonicalId = /\b(?:theme-group|entity|relation|claim|source|module):[A-Za-z0-9._-]+/i
 const defaultMaxUnits = 64

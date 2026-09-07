@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { basename, extname } from 'node:path'
-import { DoclingDocumentParser } from './docling/parser.ts'
+import { DoclingDocumentParser } from './parsers/docling/parser.ts'
 import { DocumentPluginError } from './errors.ts'
 import { DocumentParserRegistry } from './parser-registry.ts'
-import { PlainTextDocumentParser } from './text-parser.ts'
+import { PlainTextDocumentParser } from './parsers/text/parser.ts'
 import type { AcquiredDocumentInput, DocumentInputRef, DocumentParser, ResolvedDocumentInput } from './contracts.ts'
 
 export interface DocumentInputResolverOptions {

@@ -1,9 +1,9 @@
-import { normalizeSemanticText } from '../../knowledge/registry/id-allocation.ts'
-import { canonicalSerialize, hashKnowledgeObject } from '../../knowledge/storage/canonical-hash.ts'
-import type { CandidateEntityRef, ClaimCandidate, EntityCandidate, RelationCandidate, ValidatedExtractKnowledgeResult } from '../../skills/knowledge-curation/contracts.ts'
-import { normalizeCompanyCandidateIdentity } from '../../skills/knowledge-curation/company-identity.ts'
-import { consolidationReviewKey } from './review-telemetry.ts'
-import type { AcceptedExtractionUnit, ConsolidationReviewConstraint } from './contracts.ts'
+import { normalizeSemanticText } from '../../../knowledge/registry/id-allocation.ts'
+import { canonicalSerialize, hashKnowledgeObject } from '../../../knowledge/storage/canonical-hash.ts'
+import type { CandidateEntityRef, ClaimCandidate, EntityCandidate, RelationCandidate, ValidatedExtractKnowledgeResult } from '../../../skills/knowledge-curation/contracts.ts'
+import { normalizeCompanyCandidateIdentity } from '../../../skills/knowledge-curation/identity/company-identity.ts'
+import { consolidationReviewKey } from '../review/review-telemetry.ts'
+import type { AcceptedExtractionUnit, ConsolidationReviewConstraint } from '../contracts.ts'
 
 export interface ConsolidatedCandidateSupport {
   readonly supportingCandidateCount: number

@@ -4,7 +4,7 @@ import type { KnowledgeAssetCollectionV03 } from '../storage/v03-types.ts'
 import type { KnowledgeClaimV03, KnowledgeEntityV03, KnowledgeRelationV03 } from '../schema/domain.ts'
 import type { ClaimCandidate, EntityCandidate, RelationCandidate, ResolvedCandidateGroup } from '../../skills/knowledge-curation/contracts.ts'
 import type { ConsolidationReviewConstraint, PotentialInvestmentThemeAssessment, ReviewCategory, ReviewItem, ReviewOrigin } from '../../workflows/raw-document-knowledge-ingestion/contracts.ts'
-import type { EntityBinding, ResolutionIntent } from '../../workflows/raw-document-knowledge-ingestion/knowledge-resolution.ts'
+import type { EntityBinding, ResolutionIntent } from '../../workflows/raw-document-knowledge-ingestion/resolution/knowledge-resolution.ts'
 import type { ExistingKnowledgeProjection, ExistingKnowledgeProjectionPayload, ReviewCase, ReviewCaseActionability, ReviewCaseAdvisory, ReviewCaseAttributeConflict, ReviewCaseClassification, ReviewEvidenceBinding, ReviewProposalKind, ReviewSemanticPayload, ReviewSemanticProposal } from './contracts.ts'
 
 export interface BuildReviewCasesInput {

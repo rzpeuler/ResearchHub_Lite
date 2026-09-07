@@ -9,7 +9,7 @@ import { PRIMARY_PRODUCTION_REASONING_MODEL, selectProductionReasoningModel } fr
 import { ResearchHubRuntimeServer } from '../../app/runtime/server.ts'
 import { PiReasoningExecutor } from '../../plugins/reasoning/pi/executor.ts'
 import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../plugins/reasoning/contracts.ts'
-import { DoclingDocumentParser } from '../../plugins/document/docling/parser.ts'
+import { DoclingDocumentParser } from '../../plugins/document/parsers/docling/parser.ts'
 import { DocumentInputResolver } from '../../plugins/document/input-resolver.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { KnowledgeBaseLoaderV03 } from '../../knowledge/storage/loader.ts'

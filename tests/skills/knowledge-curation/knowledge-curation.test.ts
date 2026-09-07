@@ -1,14 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { StructuredDocument } from '../../../plugins/document/contracts.ts'
-import { buildCurationSchemaContext } from '../../../skills/knowledge-curation/schema-context.ts'
-import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildResolveSemanticCaseOutputContract } from '../../../skills/knowledge-curation/output-contracts.ts'
+import { buildCurationSchemaContext } from '../../../skills/knowledge-curation/model/schema-context.ts'
+import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildResolveSemanticCaseOutputContract } from '../../../skills/knowledge-curation/model/output-contracts.ts'
 import { UNDERSTAND_AND_PLAN_PROMPT } from '../../../skills/knowledge-curation/prompts/understand-and-plan.ts'
 import { EXTRACT_KNOWLEDGE_PROMPT } from '../../../skills/knowledge-curation/prompts/extract-knowledge.ts'
 import { KnowledgeCurationSkill } from '../../../skills/knowledge-curation/skill.ts'
 import { KnowledgeCurationError } from '../../../skills/knowledge-curation/errors.ts'
 import { MockReasoningExecutor } from '../../../plugins/reasoning/mock/executor.ts'
-import { normalizeCompanyCandidateIdentity } from '../../../skills/knowledge-curation/company-identity.ts'
+import { normalizeCompanyCandidateIdentity } from '../../../skills/knowledge-curation/identity/company-identity.ts'
 
 const capabilities = { maxContextTokens: 1000, maxOutputTokens: 500, structuredOutputSupport: true, maxConcurrency: 1 }
 const document: StructuredDocument = {

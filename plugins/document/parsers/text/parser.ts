@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
-import { DocumentPluginError } from './errors.ts'
-import { validateStructuredDocument } from './validation.ts'
-import type { DocumentBlock, DocumentParser, DocumentParserInput, DocumentSection, StructuredDocument } from './contracts.ts'
+import { DocumentPluginError } from '../../errors.ts'
+import { validateStructuredDocument } from '../../validation.ts'
+import type { DocumentBlock, DocumentParser, DocumentParserInput, DocumentSection, StructuredDocument } from '../../contracts.ts'
 
 type MutableSection = Omit<DocumentSection, 'blockRefs'> & { blockRefs: string[] }
 

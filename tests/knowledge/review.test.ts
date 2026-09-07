@@ -9,7 +9,7 @@ import { listOpenReviewCases, loadReviewCase, persistReviewCases, recoverReviewC
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
 import type { ClaimCandidate, EntityCandidate, RelationCandidate, ResolvedCandidateGroup } from '../../skills/knowledge-curation/contracts.ts'
 import type { ReviewItem } from '../../workflows/raw-document-knowledge-ingestion/contracts.ts'
-import type { ResolutionIntent } from '../../workflows/raw-document-knowledge-ingestion/knowledge-resolution.ts'
+import type { ResolutionIntent } from '../../workflows/raw-document-knowledge-ingestion/resolution/knowledge-resolution.ts'
 
 const baseAssets = (): KnowledgeAssetCollectionV03 => ({ rootDir: '', themeGroups: [], entities: [], relations: [], claims: [], modules: [], sources: [], registry: [] })
 const loaded = (kind: 'entity' | 'relation' | 'claim', value: Record<string, unknown>) => ({ kind, value, filePath: '', storageRef: '' })

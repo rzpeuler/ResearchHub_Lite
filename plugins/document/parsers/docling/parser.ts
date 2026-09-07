@@ -4,9 +4,9 @@ import { access, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { DocumentPluginError } from '../errors.ts'
-import { validateStructuredDocument } from '../validation.ts'
-import type { DocumentBlock, DocumentParser, DocumentParserInput, DocumentSection, StructuredDocument } from '../contracts.ts'
+import { DocumentPluginError } from '../../errors.ts'
+import { validateStructuredDocument } from '../../validation.ts'
+import type { DocumentBlock, DocumentParser, DocumentParserInput, DocumentSection, StructuredDocument } from '../../contracts.ts'
 
 export interface DoclingDocumentParserOptions {
   readonly pythonExecutable?: string

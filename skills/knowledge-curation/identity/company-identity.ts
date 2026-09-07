@@ -1,5 +1,5 @@
-import { normalizeSemanticText } from '../../knowledge/registry/id-allocation.ts'
-import type { EntityCandidate } from './contracts.ts'
+import { normalizeSemanticText } from '../../../knowledge/registry/id-allocation.ts'
+import type { EntityCandidate } from '../contracts.ts'
 
 export interface CompanyIdentityDiagnostic {
   readonly code: 'invalid_semantics'

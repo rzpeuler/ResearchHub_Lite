@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { access, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
-import { canonicalSerialize } from '../../knowledge/storage/canonical-hash.ts'
-import { withKnowledgeBaseMutationLock } from '../../knowledge/storage/mutation-lock.ts'
-import { parseYaml } from '../../knowledge/storage/yaml.ts'
-import type { ResolvedCandidateGroup } from '../../skills/knowledge-curation/contracts.ts'
-import type { ReviewCase } from '../../knowledge/review/contracts.ts'
-import type { ConsolidationReviewConstraint, ReviewCategory, ReviewItem, ReviewOrigin, ReviewSample, ReviewSummary } from './contracts.ts'
+import { canonicalSerialize } from '../../../knowledge/storage/canonical-hash.ts'
+import { withKnowledgeBaseMutationLock } from '../../../knowledge/storage/mutation-lock.ts'
+import { parseYaml } from '../../../knowledge/storage/yaml.ts'
+import type { ResolvedCandidateGroup } from '../../../skills/knowledge-curation/contracts.ts'
+import type { ReviewCase } from '../../../knowledge/review/contracts.ts'
+import type { ConsolidationReviewConstraint, ReviewCategory, ReviewItem, ReviewOrigin, ReviewSample, ReviewSummary } from '../contracts.ts'
 
 type Dict = Record<string, unknown>
 type Event = ReviewSample & { readonly dependency: boolean; readonly origin: ReviewOrigin; readonly reviewKey: string }

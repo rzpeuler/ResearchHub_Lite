@@ -1,6 +1,6 @@
-import type { EntityCandidate, StructuredDocument } from '../../skills/knowledge-curation/contracts.ts'
-import type { AcceptedExtractionPlan, PotentialInvestmentThemeAssessment, PotentialInvestmentThemeSupport } from './contracts.ts'
-import type { ConsolidatedCandidateSupport } from './consolidation.ts'
+import type { EntityCandidate, StructuredDocument } from '../../../skills/knowledge-curation/contracts.ts'
+import type { AcceptedExtractionPlan, PotentialInvestmentThemeAssessment, PotentialInvestmentThemeSupport } from '../contracts.ts'
+import type { ConsolidatedCandidateSupport } from '../extraction/consolidation.ts'
 
 /** Conservative v0.1 runtime policy; this is not part of Schema 0.3 or ontology. */
 export const MATERIAL_PRIMARY_BLOCK_THRESHOLD = 8
