@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Attachment to Production workspace-reference boundary fix executed — CTO acceptance pending**
+**Production Application E2E RERUN-003 executed successfully — CTO acceptance pending**
 
 ## Current Snapshot
 
@@ -31,9 +31,10 @@
 - `RHL-FIX-PRODUCTION-E2E-FREE-RESEARCH-ORACLE-001`: harness-only correction implemented; the oracle validates lifecycle, safe normalized SSE, non-empty assistant deltas, current persisted user nonce, and non-empty persisted assistant content without fixed wording.
 - `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-002`: `VALIDATION_HARNESS_DEFECT / CTO reviewed`; the original evidence remains unchanged, and the later real Workflow failure was independently diagnosed as an `INPUT_RESOLUTION` Product defect.
 - `RHL-DIAGNOSE-PRODUCTION-WORKFLOW-FAILURE-001`: PASS / CLOSED by CTO decision; the deterministic Windows `INPUT_RESOLUTION` defect was confirmed as an AttachmentService canonical-path to ProductionService lexical-boundary handoff error.
-- `RHL-FIX-ATTACHMENT-PRODUCTION-PATH-BOUNDARY-001`: `executed / CTO acceptance pending`; AttachmentService now exposes only its validated workspace-relative metadata reference for Runtime production handoff, while canonical attachment path APIs and ProductionService's lexical/realpath/Knowledge isolation checks remain unchanged.
-- Targeted real reproduction passed the path boundary and completed with review using real `zhipu-openapi/glm-5.3-flash`, PiReasoningExecutor, and Docling 2.116.0. It produced Raw archive state, ingestion log, canonical revision 1, and no new authoritative failure. Full Production E2E was intentionally not run.
-- Next recommended phase: CTO acceptance review of the scoped path-boundary fix; do not infer full Production E2E completion from this targeted result.
+- `RHL-FIX-ATTACHMENT-PRODUCTION-PATH-BOUNDARY-001`: PASS / CLOSED by CTO decision; AttachmentService exposes only its validated workspace-relative metadata reference for Runtime production handoff, while canonical attachment path APIs and ProductionService's lexical/realpath/Knowledge isolation checks remain unchanged.
+- Targeted real reproduction passed the path boundary and completed with review using real `zhipu-openapi/glm-5.3-flash`, PiReasoningExecutor, and Docling 2.116.0. It produced Raw archive state, ingestion log, canonical revision 1, and no new authoritative failure.
+- `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-003`: SUCCESS / executed; the validation harness persisted Production terminal evidence before terminal classification, corrected Attachment DTO privacy expectations, and the full real Application E2E passed against a fresh KB. Real Provider, Pi ModelRuntime/PiReasoningExecutor, Docling, Free Research HTTP/SSE, Attachment, Workflow/Writer, Raw archive, Canonical Knowledge, Provenance, Knowledge/Graph APIs, Review, Edge/CUA smoke, replay, and security checks passed. Production terminal was `completed_with_review` with one ReviewCase; replay left revision and counts unchanged. Evidence is preserved in `tests/validation/evidence/rhl-production-e2e-001-rerun-003.json` and `tests/validation/evidence/RHL_PRODUCTION_E2E_001_RERUN_003_SUMMARY.md`.
+- Next recommended phase: CTO independent acceptance of RERUN-003; do not start another development task automatically.
 - `docs/governance/ARCHITECTURE.md` remains a frozen CTO-generated summary and is intentionally not rewritten by this admission task; where its older frontend/transport wording conflicts, the normative Runtime/Client architecture and this decision record supersede it until a consolidated replacement is issued.
 
 ## Completed
