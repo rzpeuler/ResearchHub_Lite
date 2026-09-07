@@ -21,6 +21,7 @@
 - `RHL-IMPLEMENT-APPLICATION-RUNTIME-001`: PASS / CLOSED.
 - `RHL-IMPLEMENT-APPLICATION-RUNTIME-001-FIX-001`: PASS / CLOSED.
 - `RHL-IMPLEMENT-HOMEPAGE-SHELL-001`: implemented / CTO acceptance pending; Research is the default page, Knowledge Graph is a placeholder at `/graph`, and Reviews is a separate read-only page at `/reviews`.
+- `RHL-IMPLEMENT-HOMEPAGE-SHELL-001-FIX-001`: implemented / CTO acceptance pending; Workflow polling is bounded to one non-overlapping request per approximately one-second interval, terminal states stop polling, and old-run responses are ignored after replacement.
 - Next recommended phase after acceptance: `RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001`; Production E2E validation follows Graph Page acceptance. Neither phase is started.
 - `docs/governance/ARCHITECTURE.md` remains a frozen CTO-generated summary and is intentionally not rewritten by this admission task; where its older frontend/transport wording conflicts, the normative Runtime/Client architecture and this decision record supersede it until a consolidated replacement is issued.
 
