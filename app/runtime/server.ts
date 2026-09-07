@@ -94,6 +94,8 @@ function isInsideStaticRoot(root: string, candidate: string): boolean {
   return child === '' || (!isAbsolute(child) && child !== '..' && !child.startsWith(`..${'\\'}`) && !child.startsWith(`..${'/'}`))
 }
 
+function pathsOverlap(left: string, right: string): boolean { return isInsideStaticRoot(left, right) || isInsideStaticRoot(right, left) }
+
 /** Local Node HTTP/SSE adapter over the shared Application Runtime and Services. */
 export class ResearchHubRuntimeServer {
   private readonly options: ResearchHubRuntimeServerOptions
@@ -167,6 +169,7 @@ export class ResearchHubRuntimeServer {
       this.runtime = await createResearchHubApplicationRuntime({ cwd: this.options.cwd ?? process.cwd(), agentDir: this.options.agentDir, sessionDir: this.options.sessionDir, mountedKnowledgeBaseRoot: this.options.mountedKnowledgeBaseRoot, workspaceRoot: this.options.workspaceRoot, modelRuntime: this.options.modelRuntime, sessionManager: this.options.sessionManager, model: this.options.model, reasoningExecutor: this.options.reasoningExecutor, settingsManager: this.options.settingsManager, resourceLoader: this.options.resourceLoader })
       this.ownsRuntime = true
     }
+    this.assertClientRootBoundary()
     this.attachmentService ??= new AttachmentService({ workspaceRoot: this.runtime.workspaceRoot, forbiddenRoot: this.runtime.mountedKnowledgeBaseRoot, maxBytes: DEFAULT_MAX_ATTACHMENT_BYTES })
     if (this.runtime.mountedKnowledgeBaseRoot !== undefined) await this.attachmentService.assertCompatibleWithKnowledgeBase(this.runtime.mountedKnowledgeBaseRoot)
     this.httpServer = createServer((request, response) => { void this.handle(request, response) })
@@ -198,6 +201,13 @@ export class ResearchHubRuntimeServer {
       }
       throw combineErrors([error, ...cleanupErrors], 'Runtime server startup and cleanup failed')
     }
+  }
+
+  private assertClientRootBoundary(): void {
+    const runtime = this.runtime!
+    const protectedRoots = [runtime.workspaceRoot, runtime.agentDir, runtime.mountedKnowledgeBaseRoot, this.options.sessionDir === undefined ? undefined : resolve(this.options.sessionDir)].filter((value): value is string => value !== undefined)
+    if (protectedRoots.some((root) => pathsOverlap(this.clientRoot, root)) || pathsOverlap(this.clientRoot, runtime.cwd) && resolve(this.clientRoot) === resolve(runtime.cwd)) throw new ApplicationServiceError('invalid_input', 'clientRoot overlaps protected Runtime storage')
+    if (isInsideStaticRoot(this.clientRoot, runtime.cwd)) throw new ApplicationServiceError('invalid_input', 'clientRoot cannot contain the Runtime workspace')
   }
 
   close(): Promise<void> {
