@@ -50,6 +50,16 @@ export class WorkflowService {
     this.runs.set(runId, next)
     return this.view(next)
   }
+  markAuthoritativeTerminal(runId: string, status: TerminalWorkflowStatus, details: { readonly summary?: string; readonly reviewCount?: number; readonly errorSummary?: string } = {}): WorkflowRunView {
+    if (!TERMINAL.has(status)) throw new ApplicationServiceError('invalid_input', `Not a terminal status: ${status}`)
+    const current = this.require(runId)
+    if (current.terminal && current.status !== 'cancelled') return this.view(current)
+    if (status === 'failed') return this.markFailure(runId, details.errorSummary ?? details.summary ?? 'Workflow failed')
+    const timestamp = now()
+    const next: RunRecord = { ...current, status, updatedAt: timestamp, completedAt: timestamp, terminal: true, ...(details.summary === undefined ? {} : { progressSummary: details.summary }), ...(details.reviewCount === undefined ? {} : { reviewCount: details.reviewCount }), ...(details.errorSummary === undefined ? {} : { errorSummary: details.errorSummary }) }
+    this.runs.set(runId, next)
+    return this.view(next)
+  }
   markFailure(runId: string, error: unknown): WorkflowRunView {
     const current = this.require(runId)
     if (current.terminal) return this.view(current)

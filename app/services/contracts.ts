@@ -1,6 +1,6 @@
 import type { EntityTypeV03 } from '../../knowledge/schema/domain.ts'
 
-export type ApplicationErrorCode = 'not_found' | 'invalid_input' | 'cancelled' | 'failed' | 'no_kb_mounted'
+export type ApplicationErrorCode = 'not_found' | 'invalid_input' | 'cancelled' | 'failed' | 'conflict' | 'no_kb_mounted' | 'unauthorized_runtime_token'
 
 export class ApplicationServiceError extends Error {
   readonly code: ApplicationErrorCode
