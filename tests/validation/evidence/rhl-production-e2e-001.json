@@ -1,38 +1,43 @@
 {
   "taskId": "RHL-VALIDATE-PRODUCTION-E2E-001",
-  "startedAt": "2026-09-07T11:29:00.806Z",
+  "startedAt": "2026-09-07T13:01:35.344Z",
   "phase": "blocked",
   "phaseTimestamps": {
     "preflight": {
-      "startedAt": "2026-09-07T11:29:00.807Z",
-      "completedAt": "2026-09-07T11:29:00.879Z",
-      "durationMs": 72,
+      "startedAt": "2026-09-07T13:01:35.344Z",
+      "completedAt": "2026-09-07T13:01:35.413Z",
+      "durationMs": 69,
       "status": "passed"
     },
     "docling_preflight": {
-      "startedAt": "2026-09-07T11:29:00.882Z",
-      "completedAt": "2026-09-07T11:29:00.882Z",
+      "startedAt": "2026-09-07T13:01:35.415Z",
+      "completedAt": "2026-09-07T13:01:35.415Z",
       "durationMs": 0,
       "status": "passed"
     },
     "docling_preflight_parse": {
-      "startedAt": "2026-09-07T11:29:00.882Z",
-      "completedAt": "2026-09-07T11:29:07.736Z",
-      "durationMs": 6854,
+      "startedAt": "2026-09-07T13:01:35.415Z",
+      "completedAt": "2026-09-07T13:01:42.339Z",
+      "durationMs": 6924,
       "status": "passed"
     },
     "real_provider_preflight": {
-      "startedAt": "2026-09-07T11:29:07.737Z",
-      "completedAt": "2026-09-07T11:29:07.740Z",
-      "durationMs": 3,
+      "startedAt": "2026-09-07T13:01:42.339Z",
+      "completedAt": "2026-09-07T13:01:42.345Z",
+      "durationMs": 6,
       "status": "passed"
     },
     "real_provider_completion_preflight": {
-      "startedAt": "2026-09-07T11:29:07.745Z",
-      "completedAt": "2026-09-07T11:29:08.207Z",
-      "durationMs": 462,
-      "status": "failed",
-      "error": "Real Pi provider completion is unavailable in the configured environment"
+      "startedAt": "2026-09-07T13:01:42.346Z",
+      "completedAt": "2026-09-07T13:01:44.362Z",
+      "durationMs": 2016,
+      "status": "passed"
+    },
+    "fresh_kb": {
+      "startedAt": "2026-09-07T13:01:44.366Z",
+      "completedAt": "2026-09-07T13:01:44.366Z",
+      "durationMs": 0,
+      "status": "passed"
     }
   },
   "offlineRegression": {
@@ -49,8 +54,8 @@
   "rawHiddenReasoningIncluded": false,
   "fauxOrMockUsed": false,
   "baseline": {
-    "head": "5247a98ccafb67dd7bae89fcb8510b5118fcd95e",
-    "originMain": "5247a98ccafb67dd7bae89fcb8510b5118fcd95e",
+    "head": "57d2a4bec03262872aadeae254cf28c984f17be7",
+    "originMain": "57d2a4bec03262872aadeae254cf28c984f17be7",
     "trackedWorkingTreeClean": true,
     "protectedPdf": "pre-existing untracked and unstaged; not read or modified"
   },
@@ -78,22 +83,54 @@
     }
   },
   "realRuntime": {
-    "provider": "deepseek",
-    "model": "deepseek-v4-flash",
+    "provider": "zhipu-openapi",
+    "model": "glm-5.3-flash",
     "reasoningConfiguration": {
       "structuredOutputSupport": true,
       "maxConcurrency": 4
     },
     "configuredModelAvailable": true,
-    "realProviderConfirmed": false,
+    "realProviderConfirmed": true,
     "fauxOrMockUsed": false,
-    "completionPreflight": "blocked",
-    "blockedReason": "Real Pi provider completion was rejected by the configured authentication environment"
+    "completionPreflight": "passed"
   },
-  "classification": "ENVIRONMENT_BLOCKED",
-  "completedAt": "2026-09-07T11:29:08.207Z",
-  "failureStage": "real_provider_completion_preflight",
-  "error": "Real Pi provider completion is unavailable in the configured environment",
+  "freshKnowledgeBase": {
+    "knowledgeBaseId": "kb-rhl-production-e2e-001",
+    "revision": 0,
+    "counts": {
+      "themeGroups": 0,
+      "entities": 0,
+      "relations": 0,
+      "claims": 0,
+      "sources": 0,
+      "modules": 0
+    },
+    "seedObjects": 0,
+    "fullValidation": "passed"
+  },
+  "freeResearch": {
+    "conversation": "01a07bf5-d831-731b-8005-30baee4140b9",
+    "promptAccepted": true,
+    "sseObserved": true,
+    "assistantResponse": true,
+    "markerObserved": false,
+    "eventTypes": [
+      "agent.started",
+      "message.started",
+      "message.completed",
+      "thinking.status",
+      "message.delta",
+      "agent.completed"
+    ],
+    "normalizedEvents": true,
+    "rawHiddenReasoningExposed": false,
+    "rawToolPayloadExposed": false,
+    "eventPayloadBytes": 14700
+  },
+  "classification": "PRODUCT_DEFECT",
+  "completedAt": "2026-09-07T13:01:50.161Z",
+  "failureStage": "unknown",
+  "error": "Free Research did not produce a safe normalized assistant SSE response",
   "evidenceIntegrity": {
     "secretsIncluded": false,
     "rawHiddenReasoningIncluded": false,
