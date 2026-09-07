@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import test from 'node:test'
-import { DoclingDocumentParser } from '../../plugins/document/docling/parser.ts'
-import { DocumentPluginError } from '../../plugins/document/errors.ts'
+import { DoclingDocumentParser } from '../../../plugins/document/docling/parser.ts'
+import { DocumentPluginError } from '../../../plugins/document/errors.ts'
 
 test('Docling bridge output normalizes headings, tables, captions, pages, and stats', async () => {
   const bridgePath = fileURLToPath(new URL('./fixtures/structured-bridge-fixture.py', import.meta.url))

@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { Api, AssistantMessage, Context, Model } from '@earendil-works/pi-ai'
-import { PiReasoningExecutor } from '../../plugins/reasoning/pi/executor.ts'
-import { ReasoningExecutorError } from '../../plugins/reasoning/errors.ts'
+import { PiReasoningExecutor } from '../../../plugins/reasoning/pi/executor.ts'
+import { ReasoningExecutorError } from '../../../plugins/reasoning/errors.ts'
 
 const capabilities = { maxContextTokens: 4_000, maxOutputTokens: 1_000, structuredOutputSupport: true, maxConcurrency: 1 }
 

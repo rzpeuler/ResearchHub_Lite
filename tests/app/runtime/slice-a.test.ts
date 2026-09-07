@@ -5,10 +5,10 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fauxAssistantMessage, fauxProvider } from '@earendil-works/pi-ai'
 import { ModelRuntime } from '@earendil-works/pi-coding-agent'
-import { createResearchHubApplicationRuntime } from '../../app/runtime/application-runtime.ts'
-import { toSafeConversationMessage } from '../../app/runtime/session-runtime.ts'
-import { WorkflowService } from '../../app/services/workflow-service.ts'
-import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../plugins/reasoning/contracts.ts'
+import { createResearchHubApplicationRuntime } from '../../../app/runtime/application-runtime.ts'
+import { toSafeConversationMessage } from '../../../app/runtime/session-runtime.ts'
+import { WorkflowService } from '../../../app/services/workflow-service.ts'
+import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../../plugins/reasoning/contracts.ts'
 
 const capabilities: ReasoningCapabilities = { maxContextTokens: 100_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 4 }
 

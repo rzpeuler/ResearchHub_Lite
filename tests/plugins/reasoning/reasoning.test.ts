@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { MockReasoningExecutor } from '../../plugins/reasoning/mock/executor.ts'
-import { ReasoningExecutorError } from '../../plugins/reasoning/errors.ts'
-import { buildCodexInvocationArgs, CodexReasoningExecutor } from '../../plugins/reasoning/codex/executor.ts'
+import { MockReasoningExecutor } from '../../../plugins/reasoning/mock/executor.ts'
+import { ReasoningExecutorError } from '../../../plugins/reasoning/errors.ts'
+import { buildCodexInvocationArgs, CodexReasoningExecutor } from '../../../plugins/reasoning/codex/executor.ts'
 
 const capabilities = { maxContextTokens: 1000, maxOutputTokens: 500, structuredOutputSupport: false, maxConcurrency: 1 }
 
@@ -53,7 +53,7 @@ test('Codex executor rejects invalid termination budgets', () => {
 test('Codex executor isolates and cleans its invocation directory', async () => {
   const root = await mkdtemp(join(tmpdir(), 'rhl-reasoning-test-'))
   try {
-    const executor = new CodexReasoningExecutor({ capabilities, executable: process.execPath, tempRoot: root, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs')] })
+    const executor = new CodexReasoningExecutor({ capabilities, executable: process.execPath, tempRoot: root, commandPrefix: [join(process.cwd(), 'tests/plugins/reasoning/fixtures/fake-reasoning-host.mjs')] })
     const result = await executor.execute({ operation: 'extractKnowledge', instruction: 'test', input: { private: 'only here' }, outputContract: { type: 'object' } })
     const parsed = JSON.parse(result.output as string) as { cwd: string; ok: boolean }
     assert.equal(parsed.ok, true)
@@ -66,9 +66,9 @@ test('Codex executor isolates and cleans its invocation directory', async () => 
 })
 
 test('Codex executor preserves bounded failure details and timeout errors', async () => {
-  const failure = new CodexReasoningExecutor({ capabilities, executable: process.execPath, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--fail'] })
+  const failure = new CodexReasoningExecutor({ capabilities, executable: process.execPath, commandPrefix: [join(process.cwd(), 'tests/plugins/reasoning/fixtures/fake-reasoning-host.mjs'), '--fail'] })
   await assert.rejects(() => failure.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_execution_failed' && error.exitCode === 7 && error.stderr === 'fixture failure\n')
-  const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, timeoutMs: 50, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--sleep'] })
+  const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, timeoutMs: 50, commandPrefix: [join(process.cwd(), 'tests/plugins/reasoning/fixtures/fake-reasoning-host.mjs'), '--sleep'] })
   const started = Date.now()
   await assert.rejects(() => timeout.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_timeout')
   assert.ok(Date.now() - started < 2_000)
@@ -78,7 +78,7 @@ test('Codex executor terminates a timed-out process tree', async () => {
   const root = await mkdtemp(join(tmpdir(), 'rhl-reasoning-tree-test-'))
   const pidFile = join(root, 'grandchild.pid')
   try {
-    const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, tempRoot: root, timeoutMs: 50, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--spawn-grandchild', '--pid-file', pidFile] })
+      const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, tempRoot: root, timeoutMs: 50, commandPrefix: [join(process.cwd(), 'tests/plugins/reasoning/fixtures/fake-reasoning-host.mjs'), '--spawn-grandchild', '--pid-file', pidFile] })
     const started = Date.now()
     await assert.rejects(() => timeout.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_timeout')
     assert.ok(Date.now() - started < 2_000)
@@ -95,7 +95,7 @@ if (process.platform !== 'win32') {
     const root = await mkdtemp(join(tmpdir(), 'rhl-reasoning-kill-test-'))
     const pidFile = join(root, 'grandchild.pid')
     try {
-      const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, tempRoot: root, timeoutMs: 50, terminationGraceMs: 100, forcedTerminationWaitMs: 500, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--spawn-grandchild', '--ignore-term', '--pid-file', pidFile] })
+      const timeout = new CodexReasoningExecutor({ capabilities, executable: process.execPath, tempRoot: root, timeoutMs: 50, terminationGraceMs: 100, forcedTerminationWaitMs: 500, commandPrefix: [join(process.cwd(), 'tests/plugins/reasoning/fixtures/fake-reasoning-host.mjs'), '--spawn-grandchild', '--ignore-term', '--pid-file', pidFile] })
       const started = Date.now()
       await assert.rejects(() => timeout.execute({ operation: 'resolveSemanticCase', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_timeout')
       assert.ok(Date.now() - started < 2_000)
@@ -108,9 +108,9 @@ if (process.platform !== 'win32') {
 }
 
 test('Codex executor classifies unavailable hosts and oversized output', async () => {
-  const unavailable = new CodexReasoningExecutor({ capabilities, executable: join(process.cwd(), 'tests/reasoning/fixtures/does-not-exist.exe') })
+  const unavailable = new CodexReasoningExecutor({ capabilities, executable: join(process.cwd(), 'tests/plugins/reasoning/fixtures/does-not-exist.exe') })
   await assert.rejects(() => unavailable.execute({ operation: 'understandAndPlan', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_host_unavailable')
-  const oversized = new CodexReasoningExecutor({ capabilities, executable: process.execPath, maxOutputChars: 10, commandPrefix: [join(process.cwd(), 'tests/reasoning/fixtures/fake-reasoning-host.mjs'), '--big'] })
+  const oversized = new CodexReasoningExecutor({ capabilities, executable: process.execPath, maxOutputChars: 10, commandPrefix: [join(process.cwd(), 'tests/plugins/reasoning/fixtures/fake-reasoning-host.mjs'), '--big'] })
   await assert.rejects(() => oversized.execute({ operation: 'understandAndPlan', instruction: 'test', input: {}, outputContract: {} }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_output_too_large')
 })
 

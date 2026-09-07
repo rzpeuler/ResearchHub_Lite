@@ -2,8 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { createKnowledgeBase, removeKnowledgeBase } from '../knowledge/helpers.ts'
-import { KnowledgeGraphService } from '../../app/services/knowledge-graph-service.ts'
+import { createKnowledgeBase, removeKnowledgeBase } from '../../knowledge/helpers.ts'
+import { KnowledgeGraphService } from '../../../app/services/knowledge-graph-service.ts'
 
 async function writeGraphFixture(root: string): Promise<void> {
   const registry: Record<string, { type: string; storageRef: string }> = {}

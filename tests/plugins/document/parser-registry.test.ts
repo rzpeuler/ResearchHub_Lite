@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { DocumentPluginError } from '../../plugins/document/errors.ts'
-import { DocumentParserRegistry } from '../../plugins/document/parser-registry.ts'
-import { PlainTextDocumentParser } from '../../plugins/document/text-parser.ts'
+import { DocumentPluginError } from '../../../plugins/document/errors.ts'
+import { DocumentParserRegistry } from '../../../plugins/document/parser-registry.ts'
+import { PlainTextDocumentParser } from '../../../plugins/document/text-parser.ts'
 
 test('parser registry selects explicitly and rejects unsupported providers without fallback', () => {
   const parser = new PlainTextDocumentParser()

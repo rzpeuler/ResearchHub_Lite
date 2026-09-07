@@ -6,11 +6,11 @@ import { tmpdir } from 'node:os'
 import type { AgentSession, AgentSessionEvent } from '@earendil-works/pi-coding-agent'
 import { fauxAssistantMessage, fauxProvider } from '@earendil-works/pi-ai'
 import { ModelRuntime } from '@earendil-works/pi-coding-agent'
-import { createResearchHubApplicationRuntime } from '../../app/runtime/application-runtime.ts'
-import { ClientEventAdapter } from '../../app/runtime/client-events.ts'
-import { ClientEventStream, serializeClientEvent } from '../../app/runtime/event-stream.ts'
-import { toSafeConversationMessage } from '../../app/runtime/session-runtime.ts'
-import { RuntimeSecurity, RuntimeSecurityError, assertLoopbackBindAddress, type RuntimeSecurityRequest } from '../../app/runtime/security.ts'
+import { createResearchHubApplicationRuntime } from '../../../app/runtime/application-runtime.ts'
+import { ClientEventAdapter } from '../../../app/runtime/client-events.ts'
+import { ClientEventStream, serializeClientEvent } from '../../../app/runtime/event-stream.ts'
+import { toSafeConversationMessage } from '../../../app/runtime/session-runtime.ts'
+import { RuntimeSecurity, RuntimeSecurityError, assertLoopbackBindAddress, type RuntimeSecurityRequest } from '../../../app/runtime/security.ts'
 
 type TestSession = AgentSession & { emit(event: AgentSessionEvent): void }
 
@@ -257,8 +257,8 @@ test('Slice B SSE publish delivers the normalized allowlisted event as its secon
     result: { raw: 'secret' },
     path: '/etc',
     stack: 'private stack',
-  } as unknown as import('../../app/runtime/client-events.ts').ClientEvent
-  let delivered: import('../../app/runtime/client-events.ts').ClientEvent | undefined
+  } as unknown as import('../../../app/runtime/client-events.ts').ClientEvent
+  let delivered: import('../../../app/runtime/client-events.ts').ClientEvent | undefined
   stream.subscribe((_frame, event) => { delivered = event })
   stream.publish(malicious)
   assert.notStrictEqual(delivered, malicious)
@@ -277,7 +277,7 @@ test('Slice B SSE publish delivers the normalized allowlisted event as its secon
 
 test('Slice B malformed SSE input degrades to a safe runtime error for every subscriber', () => {
   const stream = new ClientEventStream()
-  const delivered: import('../../app/runtime/client-events.ts').ClientEvent[] = []
+  const delivered: import('../../../app/runtime/client-events.ts').ClientEvent[] = []
   stream.subscribe((_frame, event) => delivered.push(event))
   for (const input of [null, undefined, { type: 'unknown', raw: 'secret' }]) assert.doesNotThrow(() => stream.publish(input))
   assert.equal(delivered.length, 3)
@@ -301,7 +301,7 @@ test('Slice B SSE serialization rebuilds an allowlisted event and strips runtime
     result: { raw: 'secret' },
     path: 'C:\\private',
     raw: 'untrusted',
-  } as unknown as import('../../app/runtime/client-events.ts').ClientEvent
+  } as unknown as import('../../../app/runtime/client-events.ts').ClientEvent
   const frame = serializeClientEvent(malicious)
   const data = JSON.parse(frame.split('data: ')[1].split('\n')[0]) as Record<string, unknown>
   assert.deepEqual(Object.keys(data).sort(), ['conversationId', 'eventId', 'isError', 'name', 'status', 'summary', 'timestamp', 'toolCallId', 'type'].sort())
@@ -325,7 +325,7 @@ test('Slice B SSE summaries redact POSIX paths, bare commands, command paths, an
     { type: 'error', code: 'runtime_error', summary: 'ghp_TESTTOKEN AKIA1234567890ABCDEF -----BEGIN PRIVATE KEY-----' },
   ] as const
   for (const event of cases) {
-    const frame = serializeClientEvent({ ...event, eventId: 'summary-test', conversationId: 'conversation', timestamp: new Date(0).toISOString() } as unknown as import('../../app/runtime/client-events.ts').ClientEvent)
+  const frame = serializeClientEvent({ ...event, eventId: 'summary-test', conversationId: 'conversation', timestamp: new Date(0).toISOString() } as unknown as import('../../../app/runtime/client-events.ts').ClientEvent)
     assert.equal(frame.includes('/var/private'), false)
     assert.equal(frame.includes('/tmp/private'), false)
     assert.equal(frame.includes('/etc'), false)

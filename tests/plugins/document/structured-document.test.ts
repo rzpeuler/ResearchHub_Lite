@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { DocumentPluginError } from '../../plugins/document/errors.ts'
-import { validateStructuredDocument } from '../../plugins/document/validation.ts'
-import type { StructuredDocument } from '../../plugins/document/contracts.ts'
+import { DocumentPluginError } from '../../../plugins/document/errors.ts'
+import { validateStructuredDocument } from '../../../plugins/document/validation.ts'
+import type { StructuredDocument } from '../../../plugins/document/contracts.ts'
 
 function documentFixture(): StructuredDocument {
   return {

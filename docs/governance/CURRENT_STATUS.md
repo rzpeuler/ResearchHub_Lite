@@ -8,6 +8,7 @@
 
 - ResearchHub_Lite is the active clean foundation of the ResearchHub Agent-first investment research application.
 - Production Baseline v1 is established by CTO decision. Product implementation baseline: `5319d130952f4c784f5829890591b64dcd5f72a4`; accepted pre-freeze repository/governance baseline: `3d6f0212b7500b11d806b444dadbf550af1e80de`; freeze decision commit: `0697dee129b539857b9104ffffef85693a4382e5`.
+- `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001`: executed; CTO acceptance is pending. Ordinary tests now mirror app/plugins/skills/workflows ownership, the engineering spec is under `docs/engineering/specs/`, TypeScript ownership includes `workflows/**/*.ts` with one pre-existing invalid barrel excluded, and Node discovery is stable. No Workflow/Skill/Plugin source migration, Client refactor, validation evidence migration, or Production semantic change was performed.
 - `RHL-FREEZE-REPOSITORY-LAYOUT-V1-001`: FROZEN / CTO decision. Repository Layout v1 is recorded in [`RESEARCHHUB_LITE_REPOSITORY_LAYOUT_V1.md`](../architecture/RESEARCHHUB_LITE_REPOSITORY_LAYOUT_V1.md); it freezes physical ownership and dependency direction without moving any source directory or changing Production Baseline v1.
 - Pi Coding Agent is the canonical application host; Pi ModelRuntime, settings, authentication, and provider/model infrastructure are reused directly. Agent-host portability is not a product requirement.
 - Primary interactions are Free Research, Knowledge Query, and Knowledge Production. Review is downstream Knowledge Production governance, not a fourth mode.

@@ -5,10 +5,10 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fauxAssistantMessage, fauxProvider } from '@earendil-works/pi-ai'
 import { ModelRuntime } from '@earendil-works/pi-coding-agent'
-import { createResearchHubApplicationRuntime } from '../../app/runtime/application-runtime.ts'
-import { ResearchHubRuntimeServer } from '../../app/runtime/server.ts'
-import type { ReasoningCapabilities, ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
-import { createKnowledgeBase, removeKnowledgeBase } from '../knowledge/helpers.ts'
+import { createResearchHubApplicationRuntime } from '../../../app/runtime/application-runtime.ts'
+import { ResearchHubRuntimeServer } from '../../../app/runtime/server.ts'
+import type { ReasoningCapabilities, ReasoningExecutor } from '../../../plugins/reasoning/contracts.ts'
+import { createKnowledgeBase, removeKnowledgeBase } from '../../knowledge/helpers.ts'
 
 const capabilities: ReasoningCapabilities = { maxContextTokens: 100_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 4 }
 class FixtureExecutor implements ReasoningExecutor { capabilities(): ReasoningCapabilities { return capabilities }; async execute() { return { operation: 'fixture', output: {} } as never } }

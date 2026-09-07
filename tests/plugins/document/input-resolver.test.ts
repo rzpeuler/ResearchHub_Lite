@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import { writeFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import test from 'node:test'
-import { DocumentInputResolver } from '../../plugins/document/input-resolver.ts'
-import { DocumentPluginError } from '../../plugins/document/errors.ts'
+import { DocumentInputResolver } from '../../../plugins/document/input-resolver.ts'
+import { DocumentPluginError } from '../../../plugins/document/errors.ts'
 
 test('text input preserves raw bytes and produces Sections/Blocks, not the retired model', async () => {
   const input = 'Heading\r\n\r\nFirst paragraph.\r\n\r\nSecond paragraph.'
@@ -26,7 +26,7 @@ test('document acquisition and parsing are independently callable', async () => 
 })
 
 test('file input resolves media type and missing references use Document Plugin errors', async () => {
-  const path = join(process.cwd(), 'tests', 'document', 'resolver-fixture.md')
+  const path = join(process.cwd(), 'tests', 'plugins', 'document', 'resolver-fixture.md')
   await writeFile(path, '# Title\n\nBody')
   try {
     const result = await new DocumentInputResolver().resolve({ type: 'file', reference: path })
