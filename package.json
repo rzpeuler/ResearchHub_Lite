@@ -7,16 +7,30 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "client:typecheck": "tsc --noEmit -p client/tsconfig.json",
+    "client:build": "vite build --config client/vite.config.ts",
+    "client:watch": "vite build --watch --config client/vite.config.ts",
+    "client:test": "vitest run --config client/vitest.config.ts",
     "researchhub/runtime": "tsx app/runtime/cli.ts",
-    "test": "tsx --test tests/knowledge/core.test.ts tests/knowledge/schema.test.ts tests/knowledge/schema/domain.test.ts tests/knowledge/schema/executable-schema.test.ts tests/knowledge/writer.test.ts tests/knowledge/transaction.test.ts tests/knowledge/validation.test.ts tests/knowledge/review.test.ts tests/document/structured-document.test.ts tests/document/parser-registry.test.ts tests/document/input-resolver.test.ts tests/document/docling-contract.test.ts tests/reasoning/reasoning.test.ts tests/curation/knowledge-curation.test.ts tests/workflow/raw-document-knowledge-ingestion.test.ts tests/workflow/raw-document-knowledge-ingestion-fix.test.ts tests/app/application-services.test.ts tests/runtime/slice-a.test.ts tests/runtime/slice-b.test.ts tests/runtime/slice-c.test.ts tests/pi/host.test.ts tests/pi/reasoning-executor.test.ts"
+    "researchhub": "npm run client:build && npm run researchhub/runtime",
+    "test": "npm run client:test && tsx --test tests/knowledge/core.test.ts tests/knowledge/schema.test.ts tests/knowledge/schema/domain.test.ts tests/knowledge/schema/executable-schema.test.ts tests/knowledge/writer.test.ts tests/knowledge/transaction.test.ts tests/knowledge/validation.test.ts tests/knowledge/review.test.ts tests/document/structured-document.test.ts tests/document/parser-registry.test.ts tests/document/input-resolver.test.ts tests/document/docling-contract.test.ts tests/reasoning/reasoning.test.ts tests/curation/knowledge-curation.test.ts tests/workflow/raw-document-knowledge-ingestion.test.ts tests/workflow/raw-document-knowledge-ingestion-fix.test.ts tests/app/application-services.test.ts tests/runtime/slice-a.test.ts tests/runtime/slice-b.test.ts tests/runtime/slice-c.test.ts tests/runtime/client-static.test.ts tests/runtime/homepage-smoke.test.ts tests/pi/host.test.ts tests/pi/reasoning-executor.test.ts"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.0",
     "@types/node": "22.15.21",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "jsdom": "^30.0.1",
     "tsx": "4.19.2",
-    "typescript": "5.8.3"
+    "typescript": "5.8.3",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0"
   },
   "dependencies": {
     "@earendil-works/pi-ai": "0.85.1",
-    "@earendil-works/pi-coding-agent": "0.85.1"
+    "@earendil-works/pi-coding-agent": "0.85.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }

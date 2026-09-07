@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { pipeline } from 'node:stream/promises'
 import { createReadStream } from 'node:fs'
+import { lstat, realpath, stat } from 'node:fs/promises'
+import { isAbsolute, join, relative, resolve } from 'node:path'
 import { ApplicationServiceError, type IngestDocumentInput, type KnowledgeSearchInput, type ReviewCaseListInput } from '../services/contracts.ts'
 import { createResearchHubApplicationRuntime, ResearchHubApplicationRuntime } from './application-runtime.ts'
 import { AttachmentService, DEFAULT_MAX_ATTACHMENT_BYTES } from './attachment-service.ts'
@@ -16,12 +18,14 @@ const MAX_SESSION_NAME_LENGTH = 200
 const TOKEN_HEADER = 'x-researchhub-runtime-token'
 const MAX_SSE_PENDING_FRAMES = 64
 const MAX_BACKGROUND_OPERATIONS = 128
+const CLIENT_MIME_TYPES: Readonly<Record<string, string>> = { '.css': 'text/css; charset=utf-8', '.gif': 'image/gif', '.html': 'text/html; charset=utf-8', '.ico': 'image/x-icon', '.jpeg': 'image/jpeg', '.jpg': 'image/jpeg', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.map': 'application/json; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.webp': 'image/webp', '.woff': 'font/woff', '.woff2': 'font/woff2' }
 
 export interface ResearchHubRuntimeServerOptions extends Omit<ResearchHubApplicationRuntimeOptions, 'cwd'> {
   readonly cwd?: string
   readonly runtime?: ResearchHubApplicationRuntime
   readonly bindAddress?: string
   readonly port?: number
+  readonly clientRoot?: string
   readonly attachmentService?: AttachmentService
   readonly maxSseSubscribers?: number
 }
@@ -85,9 +89,15 @@ function decodeSegment(value: string): string {
   try { return decodeURIComponent(value) } catch { throw new ApplicationServiceError('invalid_input', 'URL path segment is invalid') }
 }
 
+function isInsideStaticRoot(root: string, candidate: string): boolean {
+  const child = relative(resolve(root), resolve(candidate))
+  return child === '' || (!isAbsolute(child) && child !== '..' && !child.startsWith(`..${'\\'}`) && !child.startsWith(`..${'/'}`))
+}
+
 /** Local Node HTTP/SSE adapter over the shared Application Runtime and Services. */
 export class ResearchHubRuntimeServer {
   private readonly options: ResearchHubRuntimeServerOptions
+  private readonly clientRoot: string
   private readonly bindAddress: LoopbackBindAddress
   private readonly port: number
   private runtime?: ResearchHubApplicationRuntime
@@ -106,6 +116,7 @@ export class ResearchHubRuntimeServer {
 
   constructor(options: ResearchHubRuntimeServerOptions) {
     this.options = options
+    this.clientRoot = resolve(options.clientRoot ?? join(options.cwd ?? process.cwd(), 'dist', 'client'))
     this.bindAddress = assertLoopbackBindAddress(options.bindAddress ?? '127.0.0.1')
     const selectedPort = options.port ?? 0
     if (!Number.isInteger(selectedPort) || selectedPort < 0 || selectedPort > 65_535) throw new ApplicationServiceError('invalid_input', 'port must be an integer between 0 and 65535')
@@ -274,6 +285,9 @@ export class ResearchHubRuntimeServer {
       if (url.pathname === '/api/events' && request.method === 'GET') { this.validateRead(request); this.openEvents(response); return }
       if (this.isMutation(request.method, url.pathname)) this.validateMutation(request)
       else this.validateRead(request)
+      if (url.pathname !== '/api' && !url.pathname.startsWith('/api/')) {
+        if (await this.serveClient(request, response, url)) return
+      }
       await this.route(request, response, url)
     } catch (error) {
       if (response.headersSent) { response.destroy(); return }
@@ -285,6 +299,39 @@ export class ResearchHubRuntimeServer {
     if (method !== 'POST' && method !== 'PUT' && method !== 'PATCH' && method !== 'DELETE') return false
     return pathname.startsWith('/api/')
   }
+
+  private async serveClient(request: IncomingMessage, response: ServerResponse, url: URL): Promise<boolean> {
+    if (request.method !== 'GET' && request.method !== 'HEAD') return false
+    let decodedPath: string
+    try { decodedPath = decodeURIComponent(url.pathname) } catch { this.sendStaticNotFound(response); return true }
+    if (decodedPath.includes('\u0000') || decodedPath.includes('\\')) { this.sendStaticNotFound(response); return true }
+    const segments = decodedPath.split('/').filter((segment) => segment.length > 0)
+    if (segments.includes('..')) { this.sendStaticNotFound(response); return true }
+    const clientRoot = await realpath(this.clientRoot).catch(() => undefined)
+    if (clientRoot === undefined || !(await lstat(clientRoot).then((info) => info.isDirectory() && !info.isSymbolicLink()).catch(() => false))) return false
+    const requestedPath = segments.length === 0 ? join(this.clientRoot, 'index.html') : join(this.clientRoot, ...segments)
+    let filePath = requestedPath
+    let fileInfo = await lstat(filePath).catch(() => undefined)
+    const isAsset = decodedPath === '/assets' || decodedPath.startsWith('/assets/')
+    if (!fileInfo) {
+      if (isAsset || /\.[^/]+$/.test(decodedPath)) { this.sendStaticNotFound(response); return true }
+      filePath = join(this.clientRoot, 'index.html')
+      fileInfo = await lstat(filePath).catch(() => undefined)
+    }
+    if (!fileInfo || fileInfo.isDirectory()) { this.sendStaticNotFound(response); return true }
+    const resolvedPath = await realpath(filePath).catch(() => undefined)
+    if (resolvedPath === undefined || !isInsideStaticRoot(clientRoot, resolvedPath)) { this.sendStaticNotFound(response); return true }
+    const resolvedInfo = await stat(resolvedPath).catch(() => undefined)
+    if (!resolvedInfo?.isFile()) { this.sendStaticNotFound(response); return true }
+    const extension = resolvedPath.slice(resolvedPath.lastIndexOf('.')).toLowerCase()
+    const headers = { ...this.runtimeSecurity!.corsHeaders(), 'Cache-Control': isAsset ? 'public, max-age=31536000, immutable' : 'no-store', 'Content-Type': CLIENT_MIME_TYPES[extension] ?? 'application/octet-stream', 'Content-Length': String(resolvedInfo.size) }
+    response.writeHead(200, headers)
+    if (request.method === 'HEAD') { response.end(); return true }
+    await pipeline(createReadStream(resolvedPath), response)
+    return true
+  }
+
+  private sendStaticNotFound(response: ServerResponse): void { if (response.writableEnded) return; response.writeHead(404, { ...this.runtimeSecurity!.corsHeaders(), 'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8' }); response.end('Not found') }
 
   private validateBootstrap(request: IncomingMessage): void {
     this.validateRead(request)

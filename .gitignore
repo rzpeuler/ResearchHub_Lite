@@ -1,4 +1,7 @@
 node_modules/
+dist/
+coverage/
+.superpowers/
 runtime-data/
 *.staging-*
 *.backup-*
