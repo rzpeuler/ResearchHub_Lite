@@ -24,6 +24,7 @@ async function writeMountedGraph(root: string): Promise<void> {
     ['entities', 'theme', { id: 'entity:theme', type: 'investment_theme', name: 'AI Infrastructure', aliases: [], themeGroupRef: 'theme-group:infra', lifecycle: { status: 'active' } }, 'entity'],
     ['entities', 'industry', { id: 'entity:industry', type: 'industry', name: 'Semiconductors', aliases: [], lifecycle: { status: 'active' } }, 'entity'],
     ['relations', 'theme-industry', { id: 'relation:theme-industry', type: 'theme_exposure', sourceRef: 'entity:theme', targetRef: 'entity:industry', lifecycle: { status: 'active' } }, 'relation'],
+    ['claims', 'claim', { id: 'claim:runtime', claimType: 'fact', statement: 'runtime fixture', subjectRefs: ['entity:industry'], sourceRefs: [], lifecycle: { status: 'active' } }, 'claim'],
   ] as const
   for (const [directory, filename, value, type] of assets) { const storageRef = `${directory}/${filename}.yaml`; await writeFile(join(root, storageRef), JSON.stringify(value)); registry[value.id] = { type, storageRef } }
   await writeFile(join(root, 'registry', 'assets.yaml'), JSON.stringify(registry))
@@ -53,6 +54,34 @@ test('Runtime exposes read-only Knowledge Directory and rooted Graph APIs', asyn
     assert.deepEqual(graph.edges[0], { ref: 'relation:theme-industry', relationType: 'theme_exposure', sourceRef: 'entity:theme', targetRef: 'entity:industry', label: 'theme exposure' })
     const noMutationToken = await fetch(`${info.origin}/api/knowledge/directory`, { headers: { 'x-researchhub-runtime-token': 'invalid' } })
     assert.equal(noMutationToken.status, 200)
+    const aliasResponse = await fetch(`${info.origin}/api/knowledge/graph?root=${encodeURIComponent('entity:theme')}&depth=1`)
+    assert.equal(aliasResponse.status, 200)
+    assert.equal((await aliasResponse.json()).rootRef, 'entity:theme')
+    for (const [query, status, code] of [
+      ['rootRef=', 400, 'invalid_input'],
+      ['rootRef=entity%3Aunknown', 404, 'not_found'],
+      ['rootRef=theme-group%3Ainfra', 400, 'invalid_input'],
+      ['rootRef=claim%3Aruntime', 400, 'invalid_input'],
+      ['rootRef=entity%3Atheme&depth=3', 400, 'invalid_input'],
+    ] as const) {
+      const response = await fetch(`${info.origin}/api/knowledge/graph?${query}`)
+      assert.equal(response.status, status)
+      assert.equal((await response.json()).code, code)
+    }
+    const noKbRoot = join(fixtureRoot, 'no-kb')
+    const noKbAgent = join(fixtureRoot, 'no-kb-agent')
+    const noKbWorkspace = join(fixtureRoot, 'no-kb-workspace')
+    await mkdir(noKbRoot, { recursive: true }); await mkdir(noKbAgent, { recursive: true })
+    const noKbRuntime = await createResearchHubApplicationRuntime({ cwd: noKbRoot, agentDir: noKbAgent, workspaceRoot: noKbWorkspace, modelRuntime, model: faux.getModel(), reasoningExecutor: new FixtureExecutor() })
+    const noKbServer = new ResearchHubRuntimeServer({ runtime: noKbRuntime, port: 0 })
+    try {
+      const noKbInfo = await noKbServer.start()
+      const noKbResponse = await fetch(`${noKbInfo.origin}/api/knowledge/directory`)
+      assert.equal(noKbResponse.status, 503)
+      assert.equal((await noKbResponse.json()).code, 'no_kb_mounted')
+    } finally {
+      await noKbServer.close(); await noKbRuntime.close()
+    }
   } finally {
     await server.close(); await runtime.close(); await (modelRuntime as unknown as { readonly dispose?: () => void | Promise<void> }).dispose?.(); await removeKnowledgeBase(kb); await rm(fixtureRoot, { recursive: true, force: true })
   }

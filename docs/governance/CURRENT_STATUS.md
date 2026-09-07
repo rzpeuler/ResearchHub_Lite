@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Knowledge Graph Projection + Graph Page v0.1 implemented — CTO acceptance pending**
+**Knowledge Graph Page v0.1 corrective implementation complete — CTO acceptance pending**
 
 ## Current Snapshot
 
@@ -20,9 +20,10 @@
 - `RHL-ARCH-APPLICATION-RUNTIME-CLIENT-001`: PASS / CLOSED.
 - `RHL-IMPLEMENT-APPLICATION-RUNTIME-001`: PASS / CLOSED.
 - `RHL-IMPLEMENT-APPLICATION-RUNTIME-001-FIX-001`: PASS / CLOSED.
-- `RHL-IMPLEMENT-HOMEPAGE-SHELL-001`: implemented / CTO acceptance pending; Research is the default page, Knowledge Graph is delivered by the follow-up Graph Page task at `/graph`, and Reviews is a separate read-only page at `/reviews`.
-- `RHL-IMPLEMENT-HOMEPAGE-SHELL-001-FIX-001`: implemented / CTO acceptance pending; Workflow polling is bounded to one non-overlapping request per approximately one-second interval, terminal states stop polling, and old-run responses are ignored after replacement.
+- `RHL-IMPLEMENT-HOMEPAGE-SHELL-001`: PASS / CLOSED; Research is the default page, Knowledge Graph is delivered by the follow-up Graph Page task at `/graph`, and Reviews is a separate read-only page at `/reviews`.
+- `RHL-IMPLEMENT-HOMEPAGE-SHELL-001-FIX-001`: PASS / CLOSED; Workflow polling is bounded to one non-overlapping request per approximately one-second interval, terminal states stop polling, and old-run responses are ignored after replacement.
 - `RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001`: implemented / CTO acceptance pending; the frozen Graph Projection Architecture is admitted byte-for-byte, Directory and rooted read-only graph APIs are available, and `/graph` provides Directory, Search, React Flow canvas, Dagre layout, filters, focus/re-root, depth, and canonical Inspector reads.
+- `RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001-FIX-001`: implemented / CTO acceptance pending; ThemeGroup taxonomy toggles, bounded structured canonical/evidence Inspector views, deterministic five-profile/depth/bounds/API/UI contract tests, and Homepage governance reconciliation are complete.
 - Next recommended phase after Graph Page acceptance: Production E2E validation. Graph Page v0.1 remains pending independent CTO acceptance.
 - `docs/governance/ARCHITECTURE.md` remains a frozen CTO-generated summary and is intentionally not rewritten by this admission task; where its older frontend/transport wording conflicts, the normative Runtime/Client architecture and this decision record supersede it until a consolidated replacement is issued.
 

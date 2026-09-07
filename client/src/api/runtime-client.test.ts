@@ -52,4 +52,9 @@ describe('RuntimeClient', () => {
     expect(paths[1]).toBe('/api/knowledge/graph?rootRef=entity%3Acompany%2Facme&depth=2&maxNodes=10&maxEdges=20')
     expect(headers.every((value) => value.has('X-ResearchHub-Runtime-Token') === false)).toBe(true)
   })
+
+  it('uses the standard RuntimeClientError path for Graph read failures', async () => {
+    const client = new RuntimeClient(async () => json({ code: 'not_found', error: 'Resource not found' }, 404))
+    await expect(client.getKnowledgeGraph({ rootRef: 'entity:missing' })).rejects.toMatchObject({ code: 'not_found', status: 404 })
+  })
 })
