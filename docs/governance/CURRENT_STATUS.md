@@ -7,7 +7,7 @@
 ## Current Snapshot
 
 - ResearchHub_Lite is the active clean foundation of the ResearchHub Agent-first investment research application.
-- Production Baseline v1 is established by CTO decision. Product implementation baseline: `5319d130952f4c784f5829890591b64dcd5f72a4`; latest repository/governance baseline: `3d6f0212b7500b11d806b444dadbf550af1e80de`.
+- Production Baseline v1 is established by CTO decision. Product implementation baseline: `5319d130952f4c784f5829890591b64dcd5f72a4`; accepted pre-freeze repository/governance baseline: `3d6f0212b7500b11d806b444dadbf550af1e80de`; freeze decision commit: `0697dee129b539857b9104ffffef85693a4382e5`.
 - Pi Coding Agent is the canonical application host; Pi ModelRuntime, settings, authentication, and provider/model infrastructure are reused directly. Agent-host portability is not a product requirement.
 - Primary interactions are Free Research, Knowledge Query, and Knowledge Production. Review is downstream Knowledge Production governance, not a fourth mode.
 - Free Research is non-persistent by default. Canonical persistence requires explicit Knowledge Production intent; upload and attachment handling are distinct from ingestion.

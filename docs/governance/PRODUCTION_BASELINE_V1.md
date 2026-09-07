@@ -15,7 +15,8 @@ Production Baseline v1 is **ESTABLISHED**. The Production stabilization phase is
 ## 2. Repository Baseline
 
 - Product implementation baseline: `5319d130952f4c784f5829890591b64dcd5f72a4`
-- Latest repository/governance baseline: `3d6f0212b7500b11d806b444dadbf550af1e80de`
+- Accepted pre-freeze repository/governance baseline: `3d6f0212b7500b11d806b444dadbf550af1e80de`
+- Freeze decision commit: `0697dee129b539857b9104ffffef85693a4382e5`
 - The freeze task changes governance documentation only.
 
 ## 3. Product Implementation Baseline

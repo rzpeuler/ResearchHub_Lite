@@ -6,7 +6,7 @@ ResearchHub_Lite is the active clean foundation for the ResearchHub Agent-first 
 
 Pi Coding Agent is the canonical application host. ResearchHub directly reuses Pi's Agent loop, ModelRuntime, settings, authentication, provider/model catalog, Skills/Extensions, and session/runtime facilities. Agent-host portability is not a current product requirement.
 
-Production Baseline v1 is established by CTO decision. The accepted compositional baseline is recorded in `docs/governance/PRODUCTION_BASELINE_V1.md`; its product implementation baseline is `5319d130952f4c784f5829890591b64dcd5f72a4`, and its latest repository/governance baseline is `3d6f0212b7500b11d806b444dadbf550af1e80de`.
+Production Baseline v1 is established by CTO decision. The accepted compositional baseline is recorded in `docs/governance/PRODUCTION_BASELINE_V1.md`; its product implementation baseline is `5319d130952f4c784f5829890591b64dcd5f72a4`, its accepted pre-freeze repository/governance baseline is `3d6f0212b7500b11d806b444dadbf550af1e80de`, and the freeze decision is recorded by commit `0697dee129b539857b9104ffffef85693a4382e5`.
 
 ## 2. Product Interaction Model
 
