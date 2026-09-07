@@ -8,6 +8,8 @@ Pi Coding Agent is the canonical application host. ResearchHub directly reuses P
 
 Production Baseline v1 is established by CTO decision. The accepted compositional baseline is recorded in `docs/governance/PRODUCTION_BASELINE_V1.md`; its product implementation baseline is `5319d130952f4c784f5829890591b64dcd5f72a4`, its accepted pre-freeze repository/governance baseline is `3d6f0212b7500b11d806b444dadbf550af1e80de`, and the freeze decision is recorded by commit `0697dee129b539857b9104ffffef85693a4382e5`.
 
+Repository physical ownership is frozen in [`docs/architecture/RESEARCHHUB_LITE_REPOSITORY_LAYOUT_V1.md`](../architecture/RESEARCHHUB_LITE_REPOSITORY_LAYOUT_V1.md). The layout is a physical mapping of existing architecture, not a new architecture layer; no migration is implied by the freeze.
+
 ## 2. Product Interaction Model
 
 The primary user interactions are:

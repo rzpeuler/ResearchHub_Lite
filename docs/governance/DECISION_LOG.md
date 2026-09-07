@@ -542,6 +542,16 @@ ResearchHub Lite Production Baseline v1 is established. The product implementati
 
 The baseline uses Pi Coding Agent as the application host, Pi ModelRuntime and `PiReasoningExecutor` for Production reasoning, primary provider `zhipu-openapi/glm-5.3-flash`, and verified secondary Pi-native `openai-codex`. The primary interactions are Free Research, Knowledge Query, Knowledge Production, and downstream Review governance. Knowledge Production remains `Attachment → ProductionService → Raw Document Knowledge Ingestion Workflow → Docling → Understand + Plan → bounded Extraction → Knowledge Resolution → ChangeSet → deterministic Validation → atomic Writer → Canonical Knowledge v0.3`.
 
+## RHL-FREEZE-REPOSITORY-LAYOUT-V1-001 — 2026-09-08
+
+**Status:** FROZEN / CTO decision
+
+`docs/architecture/RESEARCHHUB_LITE_REPOSITORY_LAYOUT_V1.md` is admitted as the normative physical repository ownership and layout document. It preserves the eight existing root directories—`app`, `client`, `knowledge`, `workflows`, `skills`, `plugins`, `tests`, and `docs`—and does not introduce a new architecture layer or change Production Baseline v1.
+
+The decision freezes ownership and dependency direction: `client` crosses the HTTP/SSE boundary into `app`; `app` coordinates `workflows`; Workflow may use Skills and Plugins as defined by the existing architecture; Knowledge remains the canonical integrity authority and does not reverse-depend on application, Workflow, Skill, or client layers. Tests mirror source ownership, while `tests/validation/evidence/` remains frozen and historical evidence remains immutable. Root `src/`, `packages/`, `core/`, `common/`, `utils/`, `backend/`, `providers/`, `capabilities/`, and `agents/` abstractions are forbidden without a new CTO architecture decision.
+
+The document defines, but this task does not execute, three migration phases: Phase A Structural Governance / Low-risk migration, Phase B Production Module Layout, and Phase C Code Decomposition. Repository migration and code refactor remain separate tasks. No source directory, test directory, configuration file, Production implementation, or historical validation evidence was modified by this freeze.
+
 Raw Archive, Canonical Knowledge, and durable ReviewCase are persistent authorities. Runtime is not an authority. Hard restart acceptance is Runtime A close followed by a new Runtime B using the same persistent roots with successful cold reads, unchanged canonical revision, and no new writes after restart. Knowledge API search/object/directory, read-only Graph, and read-only Review list/detail are the accepted read models. The baseline does not change the frozen Workflow / Skill / Plugin boundaries or the frozen Runtime/Client architecture.
 
 The accepted validation chain records `RHL-CONFIGURE-PI-MULTI-PROVIDER-001`, `RHL-DIAGNOSE-PRODUCTION-WORKFLOW-FAILURE-001`, `RHL-FIX-ATTACHMENT-PRODUCTION-PATH-BOUNDARY-001`, `RHL-FIX-REVIEW-TERMINAL-CASE-INVARIANT-001`, and `RHL-VALIDATE-RUNTIME-RESTART-PERSISTENCE-001` as PASS / CLOSED. `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-003` remains `VALIDATION_HARNESS_DEFECT / CTO reviewed`; its real Production/browser stages remain valid, but its same-Runtime replay was not restart validation. The historical `RHL-VALIDATE-RESTART-REVIEW-PERSISTENCE-001` remains `PRODUCT_DEFECT / CTO reviewed` with immutable evidence.
