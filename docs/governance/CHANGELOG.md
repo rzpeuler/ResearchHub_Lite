@@ -4,6 +4,7 @@
 
 - Corrected the CTO-reviewed classification of `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001` to `VALIDATION_HARNESS_DEFECT`: its Free Research oracle incorrectly required a fixed marker in serialized SSE after a valid assistant completion. The old evidence remains immutable; no production defect was established.
 - Added the validation-only Free Research oracle and deterministic regression coverage, and prepared independent `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-002` evidence paths. The corrected oracle validates lifecycle completion, safe normalized SSE, assistant deltas, persisted current-request nonce, and non-empty persisted assistant content without fixed wording.
+- Executed `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-002` against real `zhipu-openapi/glm-5.3-flash`, real Pi ModelRuntime/PiReasoningExecutor, Docling 2.116.0, and a fresh Knowledge Base. Provider preflights, Application boot, Free Research, attachment upload, and the upload-only canonical-boundary check passed. The real Production Workflow then returned terminal status `failed`; classification is `PRODUCT_DEFECT / CTO acceptance pending`. No production implementation was modified after the failure and downstream API, Graph, Review, browser, and replay stages were not run.
 
 - `RHL-CONFIGURE-PI-MULTI-PROVIDER-001` is now recorded as `PASS / CLOSED` by CTO decision; both configured provider gates remain cleared.
 

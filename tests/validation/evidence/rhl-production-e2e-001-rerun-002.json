@@ -1,0 +1,188 @@
+{
+  "taskId": "RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-002",
+  "previousRun": "RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001: VALIDATION_HARNESS_DEFECT / CTO reviewed",
+  "currentRun": "PRODUCT_DEFECT",
+  "startedAt": "2026-09-07T13:21:41.934Z",
+  "phase": "blocked",
+  "phaseTimestamps": {
+    "preflight": {
+      "startedAt": "2026-09-07T13:21:41.934Z",
+      "completedAt": "2026-09-07T13:21:42.010Z",
+      "durationMs": 76,
+      "status": "passed"
+    },
+    "docling_preflight": {
+      "startedAt": "2026-09-07T13:21:42.013Z",
+      "completedAt": "2026-09-07T13:21:42.013Z",
+      "durationMs": 0,
+      "status": "passed"
+    },
+    "docling_preflight_parse": {
+      "startedAt": "2026-09-07T13:21:42.013Z",
+      "completedAt": "2026-09-07T13:21:48.996Z",
+      "durationMs": 6983,
+      "status": "passed"
+    },
+    "real_provider_preflight": {
+      "startedAt": "2026-09-07T13:21:48.997Z",
+      "completedAt": "2026-09-07T13:21:49.002Z",
+      "durationMs": 5,
+      "status": "passed"
+    },
+    "real_provider_completion_preflight": {
+      "startedAt": "2026-09-07T13:21:49.003Z",
+      "completedAt": "2026-09-07T13:21:52.032Z",
+      "durationMs": 3029,
+      "status": "passed"
+    },
+    "fresh_kb": {
+      "startedAt": "2026-09-07T13:21:52.036Z",
+      "completedAt": "2026-09-07T13:21:52.037Z",
+      "durationMs": 1,
+      "status": "passed"
+    },
+    "free_research": {
+      "startedAt": "2026-09-07T13:21:52.075Z",
+      "completedAt": "2026-09-07T13:22:50.113Z",
+      "durationMs": 58038,
+      "status": "passed"
+    },
+    "production_workflow_poll": {
+      "startedAt": "2026-09-07T13:22:50.151Z",
+      "completedAt": "2026-09-07T13:22:52.083Z",
+      "durationMs": 1932,
+      "status": "passed"
+    }
+  },
+  "fullProductionE2ERun": true,
+  "offlineRegression": {
+    "rootTypecheck": "PASS",
+    "clientTypecheck": "PASS",
+    "clientTests": "PASS",
+    "clientBuild": "PASS",
+    "npmTest": "PASS",
+    "audit": "PASS",
+    "diffCheck": "PASS",
+    "note": "Executed before the real E2E invocation on the accepted baseline"
+  },
+  "secretsIncluded": false,
+  "rawHiddenReasoningIncluded": false,
+  "fauxOrMockUsed": false,
+  "baseline": {
+    "head": "e1ca3b4f18416545beec51ade13a92a975a5040e",
+    "originMain": "e1ca3b4f18416545beec51ade13a92a975a5040e",
+    "trackedWorkingTreeClean": true,
+    "protectedPdf": "pre-existing untracked and unstaged; not read or modified"
+  },
+  "validationDocument": {
+    "filename": "rhl-production-e2e-001.pdf",
+    "sha256": "b7b3becbc413e368482c5bf5a593f55c34c65253d4f6e4f03382ab57487aa2ee",
+    "bytes": 886,
+    "pages": 1,
+    "protectedArtifactModifiedOrTracked": false,
+    "doclingPreflight": {
+      "parser": {
+        "id": "docling-local",
+        "version": "2.116.0"
+      },
+      "stats": {
+        "pageCount": 1,
+        "sectionCount": 1,
+        "blockCount": 2,
+        "normalizedCharacters": 250,
+        "tableCount": 0,
+        "headingCount": 0,
+        "listCount": 0,
+        "captionCount": 0
+      }
+    }
+  },
+  "realRuntime": {
+    "provider": "zhipu-openapi",
+    "model": "glm-5.3-flash",
+    "reasoningConfiguration": {
+      "structuredOutputSupport": true,
+      "maxConcurrency": 4
+    },
+    "configuredModelAvailable": true,
+    "realProviderConfirmed": true,
+    "fauxOrMockUsed": false,
+    "completionPreflight": "passed"
+  },
+  "freshKnowledgeBase": {
+    "knowledgeBaseId": "kb-rhl-production-e2e-001",
+    "revision": 0,
+    "counts": {
+      "themeGroups": 0,
+      "entities": 0,
+      "relations": 0,
+      "claims": 0,
+      "sources": 0,
+      "modules": 0
+    },
+    "seedObjects": 0,
+    "fullValidation": "passed"
+  },
+  "freeResearch": {
+    "conversation": "01a07c08-45a9-76f2-9c1c-c1b35d14faa4",
+    "requestNonce": "RHL_FREE_RESEARCH_E2E_b4a3ec8c-5d64-4481-b4a0-979a118a576a",
+    "promptHttp": 202,
+    "promptAccepted": true,
+    "sseHttp": 200,
+    "sseObserved": true,
+    "assistantResponse": true,
+    "assistantDeltaNonEmpty": true,
+    "agentTerminalStatus": "completed",
+    "clientErrorCount": 0,
+    "persistedConversationId": "01a07c08-45a9-76f2-9c1c-c1b35d14faa4",
+    "persistedUserMessageFound": true,
+    "persistedAssistantMessageFound": true,
+    "requestNonceInUserMessage": true,
+    "eventTypes": [
+      "agent.started",
+      "message.started",
+      "message.completed",
+      "thinking.status",
+      "tool.started",
+      "tool.updated",
+      "tool.completed",
+      "message.delta",
+      "agent.completed"
+    ],
+    "normalizedEvents": true,
+    "normalizedSafe": true,
+    "rawHiddenReasoningExposed": false,
+    "rawToolPayloadExposed": false,
+    "eventPayloadBytes": 202602
+  },
+  "attachment": {
+    "attachmentId": "e8c5a001-131f-4e2a-a92e-3f43e5c5108d",
+    "filename": "rhl-production-e2e-001.pdf",
+    "sha256": "b7b3becbc413e368482c5bf5a593f55c34c65253d4f6e4f03382ab57487aa2ee",
+    "size": 886,
+    "uploadSucceeded": true,
+    "controlledStorageContentMatches": true,
+    "workspaceStorageReferenceReturned": false,
+    "canonicalRevisionAfterUpload": 0,
+    "canonicalCountsChangedAfterUpload": false,
+    "rawArchiveFilesAfterUpload": 0,
+    "rawIngestionTriggeredByUploadAlone": false
+  },
+  "knowledgeProduction": {
+    "runId": "not retained by the pre-classification failure path",
+    "terminalStatus": "failed",
+    "workflowContractFailure": true,
+    "productionImplementationModified": false
+  },
+  "classification": "PRODUCT_DEFECT",
+  "completedAt": "2026-09-07T13:22:52.083Z",
+  "failureStage": "production_workflow_poll",
+  "error": "Production Workflow terminal status was failed",
+  "evidenceIntegrity": {
+    "secretsIncluded": false,
+    "rawHiddenReasoningIncluded": false,
+    "rawToolPayloadIncluded": false,
+    "protectedPdfModified": false,
+    "productionFilesModified": false
+  }
+}
