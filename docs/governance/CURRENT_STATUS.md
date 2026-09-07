@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Production Application E2E rerun blocked by Free Research product defect — CTO acceptance pending**
+**Production Application E2E RERUN-002 pending after Free Research oracle correction — CTO acceptance pending**
 
 ## Current Snapshot
 
@@ -27,8 +27,9 @@
 - `RHL-VALIDATE-PRODUCTION-E2E-001`: `ENVIRONMENT_BLOCKED / CTO reviewed`; historical run. The real Pi provider completion preflight was blocked by the authentication environment; the provider blocker was subsequently cleared. Docling 2.116.0 and the fresh-KB preflight passed; Application Free Research, Attachment, Writer, Graph, browser smoke, and replay were not run in that historical run.
 - `RHL-DIAGNOSE-PI-PROVIDER-ENVIRONMENT-001`: PASS / CLOSED; the provider-neutral native Pi and PiReasoningExecutor validation seam is available, and the historical DeepSeek authentication block remains preserved as evidence.
 - `RHL-CONFIGURE-PI-MULTI-PROVIDER-001`: PASS / CLOSED by CTO decision; local Pi `models.json` and `auth.json` are configured for `zhipu-openapi/glm-5.3-flash` and Pi-native `openai-codex` OAuth. Both providers passed Native Pi and PiReasoningExecutor gates.
-- `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001`: `PRODUCT_DEFECT / CTO acceptance pending`; real Production Application boot, Zhipu provider preflight, Docling preflight, and fresh-KB validation passed, but Free Research received an assistant completion without the requested deterministic marker in normalized SSE. Attachment, Writer, Knowledge API, Graph, Review, browser smoke, and replay were not run after this authoritative failure.
-- Next recommended phase: CTO review of the Free Research output-contract defect; after an approved corrective fix, rerun the Production Application E2E.
+- `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001`: `VALIDATION_HARNESS_DEFECT / CTO reviewed`; the run reached real Free Research completion, but the validation oracle incorrectly required a fixed marker in serialized SSE output. No production contract failure was established; the old evidence remains immutable.
+- `RHL-FIX-PRODUCTION-E2E-FREE-RESEARCH-ORACLE-001`: harness-only correction in progress; the oracle now validates lifecycle, safe normalized SSE, non-empty assistant deltas, current persisted user nonce, and non-empty persisted assistant content without fixed wording.
+- Next recommended phase: execute the independent `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-002` against the real primary provider, then obtain CTO independent acceptance.
 - `docs/governance/ARCHITECTURE.md` remains a frozen CTO-generated summary and is intentionally not rewritten by this admission task; where its older frontend/transport wording conflicts, the normative Runtime/Client architecture and this decision record supersede it until a consolidated replacement is issued.
 
 ## Completed

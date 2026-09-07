@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { access, mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -8,6 +8,7 @@ import { createResearchHubApplicationRuntime } from '../../app/runtime/applicati
 import { PRIMARY_PRODUCTION_REASONING_MODEL, selectProductionReasoningModel } from '../../app/pi/model-selection.ts'
 import { ResearchHubRuntimeServer } from '../../app/runtime/server.ts'
 import { PiReasoningExecutor } from '../../plugins/reasoning/pi/executor.ts'
+import { evaluateFreeResearchOracle, FreeResearchOracleError, type FreeResearchOracleEvent, type FreeResearchPersistedMessage } from './free-research-oracle.ts'
 import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../plugins/reasoning/contracts.ts'
 import { DoclingDocumentParser } from '../../plugins/document/docling/parser.ts'
 import { DocumentInputResolver } from '../../plugins/document/input-resolver.ts'
@@ -21,11 +22,10 @@ import { classifyE2EPreflightFailure } from './pi-provider-diagnosis.ts'
 
 const repoRoot = resolve(import.meta.dirname, '../..')
 const evidenceDir = resolve(repoRoot, 'tests/validation/evidence')
-const evidencePath = join(evidenceDir, 'rhl-production-e2e-001.json')
-const summaryPath = join(evidenceDir, 'RHL_PRODUCTION_E2E_001_SUMMARY.md')
-const taskId = 'RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001'
-const previousRun = 'RHL-VALIDATE-PRODUCTION-E2E-001: ENVIRONMENT_BLOCKED / CTO reviewed'
-const freeMarker = 'RHL_PRODUCTION_E2E_FREE_RESEARCH_OK'
+const evidencePath = join(evidenceDir, 'rhl-production-e2e-001-rerun-002.json')
+const summaryPath = join(evidenceDir, 'RHL_PRODUCTION_E2E_001_RERUN_002_SUMMARY.md')
+const taskId = 'RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-002'
+const previousRun = 'RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001: VALIDATION_HARNESS_DEFECT / CTO reviewed'
 const pollIntervalMs = 1_000
 const workflowTimeoutMs = 15 * 60 * 1_000
 const browserHoldMs = 10 * 60 * 1_000
@@ -34,6 +34,10 @@ const capabilities: ReasoningCapabilities = { maxContextTokens: 128_000, maxOutp
 type Dict = Record<string, unknown>
 type Classification = 'SUCCESS' | 'PRODUCT_DEFECT' | 'ENVIRONMENT_BLOCKED' | 'VALIDATION_HARNESS_DEFECT'
 type Stage = { startedAt: string; completedAt?: string; durationMs?: number; status: 'running' | 'passed' | 'failed'; error?: string }
+
+class E2EFailure extends Error {
+  constructor(readonly classification: Classification, readonly stage: string, message: string) { super(message); this.name = 'E2EFailure' }
+}
 
 function now(): string { return new Date().toISOString() }
 function isDict(value: unknown): value is Dict { return typeof value === 'object' && value !== null && !Array.isArray(value) }
@@ -49,6 +53,9 @@ function safeError(error: unknown): string {
     .slice(0, 500)
 }
 function assertCondition(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message) }
+function productCondition(condition: unknown, stage: string, message: string): asserts condition {
+  if (!condition) throw new E2EFailure('PRODUCT_DEFECT', stage, message)
+}
 async function stage<T>(stages: Record<string, Stage>, name: string, action: () => Promise<T>): Promise<T> {
   const startedAt = now(); stages[name] = { startedAt, status: 'running' }
   try { const result = await action(); const completedAt = now(); stages[name] = { startedAt, completedAt, durationMs: Date.parse(completedAt) - Date.parse(startedAt), status: 'passed' }; return result }
@@ -208,7 +215,7 @@ async function writeSummary(evidence: Dict): Promise<void> {
     `Classification: **${String(evidence.classification ?? 'IN_PROGRESS')}**`, '',
     `- Previous run: ${String(evidence.previousRun ?? previousRun)}`, `- Current run: ${String(evidence.currentRun ?? evidence.classification ?? 'IN_PROGRESS')}`, `- Failure stage: ${String(evidence.failureStage ?? 'none')}`, `- Baseline: HEAD=${String(baseline.head ?? 'n/a')}; origin/main=${String(baseline.originMain ?? 'n/a')}`, `- Offline regression: ${JSON.stringify(offline)}`,
     `- Provider/model: ${String(runtime.provider ?? 'n/a')} / ${String(runtime.model ?? 'n/a')}; real=${String(runtime.realProviderConfirmed ?? 'n/a')}; faux/mock=${String(runtime.fauxOrMockUsed ?? 'n/a')}`,
-    `- Free Research: accepted=${String(free.promptAccepted ?? 'n/a')}; SSE=${String(free.sseObserved ?? 'n/a')}; assistant=${String(free.assistantResponse ?? 'n/a')}; marker=${String(free.markerObserved ?? 'n/a')}`,
+    `- Free Research: accepted=${String(free.promptAccepted ?? 'n/a')}; SSE=${String(free.sseObserved ?? 'n/a')}; assistantDeltaNonEmpty=${String(free.assistantDeltaNonEmpty ?? 'n/a')}; terminal=${String(free.agentTerminalStatus ?? 'n/a')}; clientErrors=${String(free.clientErrorCount ?? 'n/a')}; persistedUser=${String(free.persistedUserMessageFound ?? 'n/a')}; persistedAssistant=${String(free.persistedAssistantMessageFound ?? 'n/a')}; nonceInUser=${String(free.requestNonceInUserMessage ?? 'n/a')}; normalizedSafe=${String(free.normalizedSafe ?? 'n/a')}; rawHiddenReasoning=${String(free.rawHiddenReasoningExposed ?? 'n/a')}`,
     `- PDF: ${String(pdf.filename ?? 'n/a')}; bytes=${String(pdf.bytes ?? 'n/a')}; SHA-256=${String(pdf.sha256 ?? 'n/a')}; pages=${String(pdf.pages ?? 'n/a')}`,
     `- Fresh KB: ${String(initial.knowledgeBaseId ?? 'n/a')}; revision ${String(initial.revision ?? 'n/a')} -> ${String(canonical.finalRevision ?? 'n/a')}; initial=${JSON.stringify(initial.counts ?? {})}; final=${JSON.stringify(canonical.counts ?? {})}`,
     `- Attachment: id=${String(attachment.attachmentId ?? 'n/a')}; upload=${String(attachment.uploadSucceeded ?? 'n/a')}; upload-only mutation=${String(attachment.canonicalCountsChangedAfterUpload ?? 'n/a')}`,
@@ -275,14 +282,41 @@ async function main(): Promise<void> {
     const runtime = await createResearchHubApplicationRuntime({ cwd, agentDir, workspaceRoot, mountedKnowledgeBaseRoot: kbRoot, modelRuntime, model: selected as Model<Api>, reasoningExecutor: recorder }); server = await ResearchHubRuntimeServer.create({ runtime, cwd, agentDir, workspaceRoot, mountedKnowledgeBaseRoot: kbRoot, clientRoot: resolve(repoRoot, 'dist/client') }); const info = server.address!; const origin = info.origin
 
     const bootstrap = await requestJson(origin, '/api/bootstrap'); assertCondition(bootstrap.status === 200, `Bootstrap failed with HTTP ${bootstrap.status}`); const bootstrapBody = objectBody(bootstrap); const token = bootstrapBody.runtimeToken; assertCondition(typeof token === 'string' && token.length > 10, 'Runtime token was not returned by bootstrap')
-    const freeStageStartedAt = now(); stages.free_research = { startedAt: freeStageStartedAt, status: 'running' }; const sseController = new AbortController(); const sseResponse = await fetch(`${origin}/api/events`, { signal: sseController.signal, headers: { Origin: origin } }); assertCondition(sseResponse.status === 200 && sseResponse.headers.get('content-type')?.includes('text/event-stream'), 'SSE endpoint did not open as an event stream')
-    const events: Dict[] = []; const rawFrames: string[] = []; let freeResolve: (() => void) | undefined; let freeReject: ((error: Error) => void) | undefined; const freeCompletion = new Promise<void>((resolvePromise, rejectPromise) => { freeResolve = resolvePromise; freeReject = rejectPromise })
-    const sseReader = readSse(sseResponse, (event, raw) => { events.push(event); rawFrames.push(raw); if (event.type === 'agent.completed') freeResolve?.(); if (event.type === 'error') freeReject?.(new Error(String(event.summary ?? 'SSE error'))) }).catch((error) => { if (!sseController.signal.aborted) freeReject?.(error) })
-    const promptResponse = await requestJson(origin, '/api/conversations/prompt', { method: 'POST', body: JSON.stringify({ text: `Reply with the exact marker ${freeMarker} and one short sentence.` }), headers: { 'Content-Type': 'application/json', 'X-ResearchHub-Runtime-Token': token } }); assertCondition(promptResponse.status === 202 && isDict(promptResponse.body) && promptResponse.body.accepted === true, `Free Research prompt was not accepted: HTTP ${promptResponse.status}`)
-    try { await Promise.race([freeCompletion, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Free Research SSE timed out')), 180_000))]) } finally { sseController.abort(); await sseReader }
-    const eventText = events.map((event) => JSON.stringify(event)).join('\n'); const eventTypes = [...new Set(events.map((event) => String(event.type)))]; const normalizedSafe = events.every((event) => !('thinking' in event) && !('arguments' in event) && !('result' in event) && !('rawOutput' in event)); const assistantDeltas = events.filter((event) => event.type === 'message.delta' && event.role === 'assistant').map((event) => String(event.summary ?? '')).join('')
-    evidence.freeResearch = { conversation: isDict(promptResponse.body) ? promptResponse.body.conversationId : undefined, promptAccepted: true, sseObserved: true, assistantResponse: assistantDeltas.length > 0, markerObserved: eventText.includes(freeMarker), eventTypes, normalizedEvents: normalizedSafe, rawHiddenReasoningExposed: /"thinking"\s*:/i.test(eventText), rawToolPayloadExposed: /"(?:arguments|result|rawOutput)"\s*:/i.test(eventText), eventPayloadBytes: Buffer.byteLength(eventText, 'utf8') }
-    assertCondition(assistantDeltas.length > 0 && eventText.includes(freeMarker) && normalizedSafe, 'Free Research did not produce a safe normalized assistant SSE response'); const freeStageCompletedAt = now(); stages.free_research = { startedAt: freeStageStartedAt, completedAt: freeStageCompletedAt, durationMs: Date.parse(freeStageCompletedAt) - Date.parse(freeStageStartedAt), status: 'passed' }
+    const freeResearch = await stage(stages, 'free_research', async () => {
+      const requestNonce = `RHL_FREE_RESEARCH_E2E_${randomUUID()}`
+      const sseController = new AbortController()
+      let sseResponse: Response
+      try { sseResponse = await fetch(`${origin}/api/events`, { signal: sseController.signal, headers: { Origin: origin } }) } catch (error) { throw new E2EFailure('ENVIRONMENT_BLOCKED', 'free_research', `SSE endpoint request failed: ${safeError(error)}`) }
+      productCondition(sseResponse.status === 200 && sseResponse.headers.get('content-type')?.includes('text/event-stream'), 'free_research', 'SSE endpoint did not open as an event stream')
+      const events: Dict[] = []; let terminalSeen = false; let streamError: unknown; let resolveTerminal!: () => void
+      const terminalGrace = new Promise<void>((resolvePromise) => { resolveTerminal = resolvePromise })
+      const sseReader = readSse(sseResponse, (event) => {
+        events.push(event)
+        if (event.type === 'agent.completed' && !terminalSeen) { terminalSeen = true; setTimeout(resolveTerminal, 250) }
+      }).catch((error) => { if (!sseController.signal.aborted) { streamError = error; resolveTerminal() } })
+      let promptResponse: HttpResult
+      try {
+        promptResponse = await requestJson(origin, '/api/conversations/prompt', { method: 'POST', body: JSON.stringify({ text: `Provide one short natural-language answer. Request nonce: ${requestNonce}` }), headers: { 'Content-Type': 'application/json', 'X-ResearchHub-Runtime-Token': token } })
+      } catch (error) { sseController.abort(); await sseReader; throw new E2EFailure('ENVIRONMENT_BLOCKED', 'free_research', `Free Research prompt request failed: ${safeError(error)}`) }
+      productCondition(promptResponse.status === 202 && isDict(promptResponse.body) && promptResponse.body.accepted === true, 'free_research', `Free Research prompt was not accepted: HTTP ${promptResponse.status}`)
+      const conversationId = isDict(promptResponse.body) && typeof promptResponse.body.conversationId === 'string' ? promptResponse.body.conversationId : ''
+      productCondition(conversationId !== '', 'free_research', 'Free Research prompt did not return a conversationId')
+      try { await Promise.race([terminalGrace, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Free Research SSE timed out')), 180_000))]) } finally { sseController.abort(); await sseReader }
+      if (streamError !== undefined) throw new E2EFailure('ENVIRONMENT_BLOCKED', 'free_research', `SSE stream failed: ${safeError(streamError)}`)
+      let messagesResponse: HttpResult
+      try { messagesResponse = await requestJson(origin, '/api/conversations/messages') } catch (error) { throw new E2EFailure('ENVIRONMENT_BLOCKED', 'free_research', `Conversation messages request failed: ${safeError(error)}`) }
+      productCondition(messagesResponse.status === 200, 'free_research', `Conversation messages failed with HTTP ${messagesResponse.status}`)
+      const messagesBody = objectBody(messagesResponse)
+      productCondition(messagesBody.conversationId === conversationId, 'free_research', 'Persisted messages belong to another conversation')
+      const persistedMessages = Array.isArray(messagesBody.messages) ? messagesBody.messages.filter(isDict) as FreeResearchPersistedMessage[] : []
+      const normalizedEvents = events.every((event) => !['thinking', 'arguments', 'result', 'rawOutput'].some((key) => Object.hasOwn(event, key)))
+      let oracle: ReturnType<typeof evaluateFreeResearchOracle>
+      try { oracle = evaluateFreeResearchOracle({ conversationId, requestNonce, events: events as FreeResearchOracleEvent[], persistedMessages, normalizedEvents }) }
+      catch (error) { if (error instanceof FreeResearchOracleError) throw new E2EFailure('PRODUCT_DEFECT', 'free_research', `${error.code}: ${error.message}`); throw error }
+      const eventText = events.map((event) => JSON.stringify(event)).join('\n')
+      return { conversation: conversationId, requestNonce, promptHttp: promptResponse.status, promptAccepted: true, sseHttp: sseResponse.status, sseObserved: true, assistantResponse: oracle.assistantDeltaNonEmpty, assistantDeltaNonEmpty: oracle.assistantDeltaNonEmpty, agentTerminalStatus: oracle.terminalStatus, clientErrorCount: oracle.clientErrorCount, persistedConversationId: messagesBody.conversationId, persistedUserMessageFound: oracle.persistedUserMessageFound, persistedAssistantMessageFound: oracle.persistedAssistantMessageFound, requestNonceInUserMessage: oracle.requestNonceInUserMessage, eventTypes: [...new Set(events.map((event) => String(event.type)))], normalizedEvents: oracle.normalizedSafe, normalizedSafe: oracle.normalizedSafe, rawHiddenReasoningExposed: events.some((event) => Object.hasOwn(event, 'thinking')), rawToolPayloadExposed: events.some((event) => ['arguments', 'result', 'rawOutput'].some((key) => Object.hasOwn(event, key))), eventPayloadBytes: Buffer.byteLength(eventText, 'utf8') }
+    })
+    evidence.freeResearch = freeResearch
 
     const beforeUpload = await snapshotKnowledge(kbRoot); const attachment = await upload(origin, token, bytes); const attachmentId = String(attachment.attachmentId ?? ''); assertCondition(attachmentId !== '' && attachment.sha256 === sha256(bytes) && Number(attachment.size) === bytes.byteLength, 'AttachmentRef identity does not match the PDF')
     const contentResponse = await requestJson(origin, `/api/attachments/${encodeURIComponent(attachmentId)}/content`); assertCondition(contentResponse.status === 200, 'Controlled attachment content endpoint failed'); const storedBuffer = await fetch(`${origin}/api/attachments/${encodeURIComponent(attachmentId)}/content`, { headers: { Origin: origin } }).then((response) => response.arrayBuffer() as Promise<ArrayBuffer>); const storedBytes = Uint8Array.from(new Uint8Array(storedBuffer)); const afterUpload = await snapshotKnowledge(kbRoot); const uploadCountsUnchanged = stable(afterUpload.counts) === stable(beforeUpload.counts) && afterUpload.revision === beforeUpload.revision; const rawAfterUpload = await countFiles(join(kbRoot, 'raw')); evidence.attachment = { attachmentId, filename: attachment.filename, sha256: attachment.sha256, size: attachment.size, uploadSucceeded: true, controlledStorageContentMatches: sha256(storedBytes) === sha256(bytes), workspaceStorageReferenceReturned: typeof attachment.workspaceRelativePath === 'string', canonicalRevisionAfterUpload: afterUpload.revision, canonicalCountsChangedAfterUpload: !uploadCountsUnchanged, rawArchiveFilesAfterUpload: rawAfterUpload, rawIngestionTriggeredByUploadAlone: rawAfterUpload > 0 }
@@ -315,8 +349,9 @@ async function main(): Promise<void> {
 
     classification = 'SUCCESS'; evidence.browserSmoke = await browserHold(tempRoot, origin, rootRef); evidence.currentRun = classification; evidence.classification = classification; evidence.phase = 'completed'; evidence.completedAt = now(); evidence.evidenceIntegrity = { secretsIncluded: false, rawHiddenReasoningIncluded: false, rawToolPayloadIncluded: false, protectedPdfModified: false, productionFilesModified: false }; await writeEvidence(evidence); await writeSummary(evidence); process.stdout.write(JSON.stringify({ classification, evidence: evidencePath, summary: summaryPath, origin, rootRef }) + '\n')
   } catch (error) {
-    if (classification === 'VALIDATION_HARNESS_DEFECT') classification = /baseline|tracked working tree|expected clean/i.test(errorText(error)) ? 'VALIDATION_HARNESS_DEFECT' : 'PRODUCT_DEFECT'
-    const runningStage = Object.entries(stages).find(([, value]) => value.status === 'running'); if (runningStage) { const [name, value] = runningStage; const completedAt = now(); stages[name] = { ...value, completedAt, durationMs: Date.parse(completedAt) - Date.parse(value.startedAt), status: 'failed', error: safeError(error) } }; evidence.currentRun = classification; evidence.classification = classification; evidence.phase = 'blocked'; evidence.completedAt = now(); evidence.failureStage = Object.entries(stages).find(([, value]) => value.status === 'failed')?.[0] ?? 'unknown'; evidence.error = safeError(error); evidence.evidenceIntegrity = { secretsIncluded: false, rawHiddenReasoningIncluded: false, rawToolPayloadIncluded: false, protectedPdfModified: false, productionFilesModified: false }; await writeEvidence(evidence); await writeSummary(evidence); process.stderr.write(JSON.stringify({ classification, failureStage: evidence.failureStage, error: evidence.error, evidence: evidencePath, summary: summaryPath }) + '\n'); process.exitCode = classification === 'ENVIRONMENT_BLOCKED' ? 2 : 1
+    if (error instanceof E2EFailure) classification = error.classification
+    else if (classification === 'SUCCESS' || classification === 'VALIDATION_HARNESS_DEFECT') classification = 'VALIDATION_HARNESS_DEFECT'
+    const runningStage = Object.entries(stages).find(([, value]) => value.status === 'running'); if (runningStage) { const [name, value] = runningStage; const completedAt = now(); stages[name] = { ...value, completedAt, durationMs: Date.parse(completedAt) - Date.parse(value.startedAt), status: 'failed', error: safeError(error) } }; evidence.currentRun = classification; evidence.classification = classification; evidence.phase = 'blocked'; evidence.completedAt = now(); evidence.failureStage = error instanceof E2EFailure ? error.stage : Object.entries(stages).find(([, value]) => value.status === 'failed')?.[0] ?? 'unknown'; evidence.error = safeError(error); evidence.evidenceIntegrity = { secretsIncluded: false, rawHiddenReasoningIncluded: false, rawToolPayloadIncluded: false, protectedPdfModified: false, productionFilesModified: false }; await writeEvidence(evidence); await writeSummary(evidence); process.stderr.write(JSON.stringify({ classification, failureStage: evidence.failureStage, error: evidence.error, evidence: evidencePath, summary: summaryPath }) + '\n'); process.exitCode = classification === 'ENVIRONMENT_BLOCKED' ? 2 : 1
   } finally {
     try { await server?.close() } catch { /* evidence already records the authoritative failure */ }
     try { if (modelRuntime) await (modelRuntime as unknown as { dispose?: () => void | Promise<void> }).dispose?.() } catch { /* SDK cleanup is best effort */ }

@@ -481,3 +481,15 @@ Browser Product APIs and Pi Application Tools share the existing Application Ser
 The Runtime binds to `127.0.0.1` by default, uses same-origin protections and a runtime nonce/token for mutating browser APIs, and validates Host/Origin where practical. This is local application protection, not a v0.1 login/RBAC/JWT or user identity system. Raw Pi event objects, hidden model reasoning, system prompts, credentials, raw stacks, and unrestricted internal tool payloads must not be streamed to the browser.
 
 The next implementation phases are `RHL-IMPLEMENT-APPLICATION-RUNTIME-001`, followed by `RHL-IMPLEMENT-HOMEPAGE-SHELL-001`. Runtime, AttachmentService, HTTP/SSE transport, and React client remain unimplemented until those tasks are explicitly authorized.
+
+---
+
+## RHL-FIX-PRODUCTION-E2E-FREE-RESEARCH-ORACLE-001 — 2026-09-07
+
+**Status:** Harness correction implemented; RERUN-002 pending / CTO acceptance pending
+
+The CTO-reviewed classification of `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001` is corrected from `PRODUCT_DEFECT` to `VALIDATION_HARNESS_DEFECT`. The authoritative run reached a real `agent.completed` assistant response, but the validation harness incorrectly required a fixed marker in the serialized SSE event log. That marker was not part of the Free Research product contract, so the run did not establish a production defect.
+
+The validation-only oracle now accepts natural-language assistant output and validates the actual contract: accepted prompt, current conversation, `agent.started`, final completed lifecycle status, no error event, non-empty assistant deltas, safe normalized event fields, and persisted current-request user nonce plus non-empty assistant message. Completion observation includes a short grace period so a terminal event followed immediately by an error remains observable. Unknown harness errors are classified as `VALIDATION_HARNESS_DEFECT`; explicit contract failures are `PRODUCT_DEFECT`; provider, authentication, network, and Docling availability failures remain `ENVIRONMENT_BLOCKED`.
+
+The original RERUN-001 evidence is immutable. RERUN-002 uses independent evidence and summary files and must be executed against the frozen primary provider `zhipu-openapi/glm-5.3-flash`; a successful run remains `SUCCESS / CTO acceptance pending` until independent CTO review.
