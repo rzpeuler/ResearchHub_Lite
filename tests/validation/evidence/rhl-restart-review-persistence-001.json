@@ -1,0 +1,191 @@
+{
+  "taskId": "RHL-VALIDATE-RESTART-REVIEW-PERSISTENCE-001",
+  "currentRun": "VALIDATION_HARNESS_DEFECT",
+  "startedAt": "2026-09-07T15:02:13.759Z",
+  "phase": "blocked",
+  "phaseTimestamps": {
+    "baseline": {
+      "startedAt": "2026-09-07T15:02:13.760Z",
+      "completedAt": "2026-09-07T15:02:15.234Z",
+      "durationMs": 1474,
+      "status": "passed"
+    },
+    "docling_preflight": {
+      "startedAt": "2026-09-07T15:02:15.239Z",
+      "completedAt": "2026-09-07T15:02:15.239Z",
+      "durationMs": 0,
+      "status": "passed"
+    },
+    "docling_parse": {
+      "startedAt": "2026-09-07T15:02:15.240Z",
+      "completedAt": "2026-09-07T15:02:23.138Z",
+      "durationMs": 7898,
+      "status": "passed"
+    },
+    "provider_setup": {
+      "startedAt": "2026-09-07T15:02:23.138Z",
+      "completedAt": "2026-09-07T15:02:23.144Z",
+      "durationMs": 6,
+      "status": "passed"
+    },
+    "runtime_a_create": {
+      "startedAt": "2026-09-07T15:02:23.145Z",
+      "completedAt": "2026-09-07T15:02:23.175Z",
+      "durationMs": 30,
+      "status": "passed"
+    },
+    "server_a_create": {
+      "startedAt": "2026-09-07T15:02:23.175Z",
+      "completedAt": "2026-09-07T15:02:23.181Z",
+      "durationMs": 6,
+      "status": "passed"
+    },
+    "production_poll": {
+      "startedAt": "2026-09-07T15:02:23.227Z",
+      "completedAt": "2026-09-07T15:08:04.302Z",
+      "durationMs": 341075,
+      "status": "passed"
+    }
+  },
+  "noProductionReplay": true,
+  "productionFilesModified": false,
+  "secretsIncluded": false,
+  "hiddenReasoningIncluded": false,
+  "rawModelOutputIncluded": false,
+  "baseline": {
+    "expected": "9d52645c9492362afbfa2eb8cfce3202f0a0eb44",
+    "head": "9d52645c9492362afbfa2eb8cfce3202f0a0eb44",
+    "originMain": "9d52645c9492362afbfa2eb8cfce3202f0a0eb44",
+    "productWorkingTreeClean": true,
+    "validationOnlyChanges": [
+      " M package.json",
+      "?? \"20260805-\\350\\245\\277\\351\\203\\250\\350\\257\\201\\345\\210\\270-AI\\347\\256\\227\\345\\212\\233\\350\\241\\214\\344\\270\\232\\357\\274\\232AI\\347\\256\\227\\345\\212\\233\\344\\270\\212\\346\\270\\270\\346\\235\\220\\346\\226\\231\\344\\272\\247\\344\\270\\232\\351\\223\\276\\347\\240\\224\\347\\251\\266\\346\\212\\245\\345\\221\\212.pdf\"",
+      "?? tests/validation/evidence/RHL_RESTART_REVIEW_PERSISTENCE_001_SUMMARY.md",
+      "?? tests/validation/evidence/rhl-restart-review-persistence-001.json",
+      "?? tests/validation/restart-review-persistence-contract.test.ts",
+      "?? tests/validation/restart-review-persistence-contract.ts",
+      "?? tests/validation/restart-review-persistence.ts"
+    ],
+    "protectedPdf": {
+      "size": 3209114,
+      "sha256": "998703cef102300518bb2edcbcc3e9bc26fa374f157b0714f3986c5028d78d63",
+      "modified": false,
+      "tracked": false
+    },
+    "previousRerun003RawEvidenceImmutable": true
+  },
+  "validationDocument": {
+    "filename": "rhl-restart-review-persistence-001.pdf",
+    "size": 886,
+    "sha256": "b7b3becbc413e368482c5bf5a593f55c34c65253d4f6e4f03382ab57487aa2ee",
+    "pages": 1,
+    "parser": {
+      "id": "docling-local",
+      "version": "2.116.0"
+    },
+    "stats": {
+      "pageCount": 1,
+      "sectionCount": 1,
+      "blockCount": 2,
+      "normalizedCharacters": 250,
+      "tableCount": 0,
+      "headingCount": 0,
+      "listCount": 0,
+      "captionCount": 0
+    }
+  },
+  "provider": {
+    "provider": "zhipu-openapi",
+    "model": "glm-5.3-flash",
+    "real": true,
+    "fauxOrMock": false,
+    "parser": {
+      "id": "docling-local",
+      "version": "2.116.0"
+    }
+  },
+  "runtimeA": {
+    "lifecycleCreated": true,
+    "serverCreated": true,
+    "bootstrap": "PASS",
+    "sameKnowledgeBaseMounted": true
+  },
+  "production": {
+    "runId": "9ffa3169-5e21-4b5c-bf46-e42e7f09b627",
+    "terminalStatus": "completed_with_review",
+    "reviewCount": 0,
+    "reasoningCalls": 2,
+    "reasoningSuccesses": 2,
+    "reasoningFailures": 0,
+    "realReasoning": true,
+    "docling": {
+      "id": "docling-local",
+      "version": "2.116.0"
+    }
+  },
+  "canonicalA": {
+    "revision": 1,
+    "counts": {
+      "themeGroups": 0,
+      "entities": 4,
+      "relations": 3,
+      "claims": 0,
+      "sources": 1,
+      "modules": 0
+    },
+    "refHash": "160fb458a5b4cf2fa7cdf0ce0762c958f2b2ca0f08266b48cb0978790f2bcc8f",
+    "refCount": 8,
+    "validation": "PASS"
+  },
+  "rawA": {
+    "rawRef": "raw-sha256-b7b3becbc413e368482c5bf5a593f55c34c65253d4f6e4f03382ab57487aa2ee",
+    "size": 886,
+    "sizeBytes": 886,
+    "contentHash": "sha256:b7b3becbc413e368482c5bf5a593f55c34c65253d4f6e4f03382ab57487aa2ee",
+    "integrity": true,
+    "contentHashMatchesPdf": true,
+    "storageManifestRead": true
+  },
+  "knowledgeApiA": {
+    "searchHttp": 200,
+    "objectHttp": 200,
+    "directoryHttp": 200,
+    "rootRef": "entity:company-validation-company",
+    "rootExists": true
+  },
+  "graphA": {
+    "rootRef": "entity:company-validation-company",
+    "depthOne": {
+      "nodeRefHash": "fa1af5428c75bf166bd2991c36cc5b32f66b58576f5c3b209b21cc6e36b2514e",
+      "edgeRefHash": "96fbbf9408a67d5eb06a076e70978b06b48602f48e498eb187c5f4e0f4ee5dca",
+      "nodeCount": 4,
+      "edgeCount": 3
+    },
+    "depthTwo": {
+      "nodeRefHash": "fa1af5428c75bf166bd2991c36cc5b32f66b58576f5c3b209b21cc6e36b2514e",
+      "edgeRefHash": "96fbbf9408a67d5eb06a076e70978b06b48602f48e498eb187c5f4e0f4ee5dca",
+      "nodeCount": 4,
+      "edgeCount": 3
+    },
+    "canonicalDirectionChecked": true
+  },
+  "reviewA": {
+    "listHttp": 200,
+    "total": 0,
+    "caseIds": [],
+    "currentProductionRunFound": false,
+    "noReviewGenerated": true,
+    "permittedFreshFixtureRetryUsed": true
+  },
+  "classification": "PRODUCT_DEFECT",
+  "completedAt": "2026-09-07T15:08:04.375Z",
+  "failureStage": "review_api_a_list",
+  "error": "Review API list did not contain the current Production run; terminal=completed_with_review; reviewCount=0",
+  "evidenceIntegrity": {
+    "secretsIncluded": false,
+    "hiddenReasoningIncluded": false,
+    "rawModelOutputIncluded": false,
+    "productionFilesModified": false,
+    "protectedPdfModified": false
+  }
+}

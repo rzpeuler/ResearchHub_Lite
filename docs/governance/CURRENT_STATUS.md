@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Production Application E2E RERUN-003 executed successfully — CTO acceptance pending**
+**Restart/Review persistence validation stopped at a real Review contract defect — CTO acceptance pending**
 
 ## Current Snapshot
 
@@ -33,8 +33,9 @@
 - `RHL-DIAGNOSE-PRODUCTION-WORKFLOW-FAILURE-001`: PASS / CLOSED by CTO decision; the deterministic Windows `INPUT_RESOLUTION` defect was confirmed as an AttachmentService canonical-path to ProductionService lexical-boundary handoff error.
 - `RHL-FIX-ATTACHMENT-PRODUCTION-PATH-BOUNDARY-001`: PASS / CLOSED by CTO decision; AttachmentService exposes only its validated workspace-relative metadata reference for Runtime production handoff, while canonical attachment path APIs and ProductionService's lexical/realpath/Knowledge isolation checks remain unchanged.
 - Targeted real reproduction passed the path boundary and completed with review using real `zhipu-openapi/glm-5.3-flash`, PiReasoningExecutor, and Docling 2.116.0. It produced Raw archive state, ingestion log, canonical revision 1, and no new authoritative failure.
-- `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-003`: SUCCESS / executed; the validation harness persisted Production terminal evidence before terminal classification, corrected Attachment DTO privacy expectations, and the full real Application E2E passed against a fresh KB. Real Provider, Pi ModelRuntime/PiReasoningExecutor, Docling, Free Research HTTP/SSE, Attachment, Workflow/Writer, Raw archive, Canonical Knowledge, Provenance, Knowledge/Graph APIs, Review, Edge/CUA smoke, replay, and security checks passed. Production terminal was `completed_with_review` with one ReviewCase; replay left revision and counts unchanged. Evidence is preserved in `tests/validation/evidence/rhl-production-e2e-001-rerun-003.json` and `tests/validation/evidence/RHL_PRODUCTION_E2E_001_RERUN_003_SUMMARY.md`.
-- Next recommended phase: CTO independent acceptance of RERUN-003; do not start another development task automatically.
+- `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-003`: `VALIDATION_HARNESS_DEFECT / CTO reviewed`; the real Production path through browser smoke succeeded, but its purported replay stayed in the same Runtime and executed a second Production workflow, proving duplicate-ingestion stability rather than Runtime restart persistence. Review UI visibility passed, but Review API list/detail had no independent evidence. RERUN-003 raw evidence remains immutable.
+- `RHL-VALIDATE-RESTART-REVIEW-PERSISTENCE-001`: `PRODUCT_DEFECT / CTO acceptance pending`; two fresh real fixtures were attempted as permitted. The second real Workflow returned `completed_with_review` with `reviewCount=0`; `GET /api/reviews` returned HTTP 200 but no ReviewCase for the current producer run. The task stopped before Runtime B restart per the defect boundary; no Production implementation was modified. Evidence is preserved in `tests/validation/evidence/rhl-restart-review-persistence-001.json` and `tests/validation/evidence/RHL_RESTART_REVIEW_PERSISTENCE_001_SUMMARY.md`.
+- Next recommended phase: CTO review and diagnosis of the Review terminal/list persistence contract; do not start another development task automatically.
 - `docs/governance/ARCHITECTURE.md` remains a frozen CTO-generated summary and is intentionally not rewritten by this admission task; where its older frontend/transport wording conflicts, the normative Runtime/Client architecture and this decision record supersede it until a consolidated replacement is issued.
 
 ## Completed

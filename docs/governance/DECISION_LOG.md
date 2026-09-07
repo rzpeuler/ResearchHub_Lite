@@ -508,10 +508,20 @@ Offline regressions passed, including the Windows canonical/lexical representati
 
 ## RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-003 — 2026-09-07
 
-**Status:** SUCCESS / executed; CTO acceptance pending
+**Status:** VALIDATION_HARNESS_DEFECT / CTO reviewed
 
 RERUN-003 was executed from the accepted harness baseline `e073827a08104f1543ba1f53ddfa4fe58ae7c472` against a fresh Knowledge Base using the real `zhipu-openapi/glm-5.3-flash` Provider, Pi ModelRuntime/PiReasoningExecutor, Docling 2.116.0, Runtime HTTP/SSE, and the complete Application path. The validation-only harness correction persisted a safe Production start/terminal snapshot before terminal classification and correctly treated the public Attachment DTO as invalid only when it exposed internal workspace/path values. No Production implementation was changed.
 
-The run passed Provider and application preflight, Free Research lifecycle/persistence/safe-event checks, Attachment upload and boundary/privacy checks, Production Workflow polling and terminal outcome, real Docling and reasoning (3/3 calls successful), Raw archive, one atomic Writer commit revision 0→1, canonical/provenance/transient-reference checks, Knowledge and Graph APIs, Review path, Edge/CUA smoke for Research/Graph/Reviews, exact replay, and loopback security. The Production terminal was `completed_with_review` with one ReviewCase. Replay returned blocked/no-change semantics, added no duplicate canonical content, and left revision/counts unchanged. Evidence is isolated in `tests/validation/evidence/rhl-production-e2e-001-rerun-003.json` and `tests/validation/evidence/RHL_PRODUCTION_E2E_001_RERUN_003_SUMMARY.md`; RERUN-001/002 evidence remains immutable.
+The real Production path through browser smoke succeeded. However, the purported Stage N replay remained in the same Runtime and executed a second Production workflow; it demonstrated duplicate-ingestion canonical stability rather than Runtime restart persistence. ReviewCase production/UI visibility passed, but Review API list/detail lacked independent evidence. The raw RERUN-003 evidence remains immutable; its governance interpretation is therefore `VALIDATION_HARNESS_DEFECT / CTO reviewed` without changing the successful Production stages.
 
 The browser-harness CLI could not start because the local `browser_harness` module was unavailable. The connected Edge/CUA fallback completed the same required three-page smoke, and the evidence records `method: Edge/CUA`. CTO independent acceptance is still pending; no next development stage is authorized by this validation result.
+
+## RHL-VALIDATE-RESTART-REVIEW-PERSISTENCE-001 — 2026-09-07
+
+**Status:** PRODUCT_DEFECT / CTO acceptance pending
+
+The validation-only harness added deterministic restart/persistence verifiers for Runtime instance identity, revision/counts, canonical ref sets, Raw identity/integrity, Graph node/edge structure, Review API list/detail, and order-independent structural comparison. Offline harness coverage passed 8/8. No Production implementation changed.
+
+Two fresh real fixtures were attempted as permitted because the first real Production terminal was `completed` with no ReviewCase. The retry used the same real Provider/model, Pi ModelRuntime/PiReasoningExecutor, and Docling 2.116.0. Runtime A produced revision 1 with valid Raw, Canonical Knowledge, Knowledge API, and Graph snapshots, but its terminal was `completed_with_review` with `reviewCount=0`; `GET /api/reviews` returned HTTP 200 and no ReviewCase for the current producer run. The task stopped before Runtime A hard close and Runtime B creation, so Runtime lifecycle persistence is not accepted. This is a real Review terminal/list contract defect, not an automatic harness classification.
+
+Evidence is preserved in `tests/validation/evidence/rhl-restart-review-persistence-001.json` and `tests/validation/evidence/RHL_RESTART_REVIEW_PERSISTENCE_001_SUMMARY.md`. CTO acceptance and follow-up diagnosis are pending.
