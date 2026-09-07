@@ -156,7 +156,8 @@ export class ResearchHubRuntimeServer {
       this.runtime = await createResearchHubApplicationRuntime({ cwd: this.options.cwd ?? process.cwd(), agentDir: this.options.agentDir, sessionDir: this.options.sessionDir, mountedKnowledgeBaseRoot: this.options.mountedKnowledgeBaseRoot, workspaceRoot: this.options.workspaceRoot, modelRuntime: this.options.modelRuntime, sessionManager: this.options.sessionManager, model: this.options.model, reasoningExecutor: this.options.reasoningExecutor, settingsManager: this.options.settingsManager, resourceLoader: this.options.resourceLoader })
       this.ownsRuntime = true
     }
-    this.attachmentService ??= new AttachmentService({ workspaceRoot: this.runtime.workspaceRoot, maxBytes: DEFAULT_MAX_ATTACHMENT_BYTES })
+    this.attachmentService ??= new AttachmentService({ workspaceRoot: this.runtime.workspaceRoot, forbiddenRoot: this.runtime.mountedKnowledgeBaseRoot, maxBytes: DEFAULT_MAX_ATTACHMENT_BYTES })
+    if (this.runtime.mountedKnowledgeBaseRoot !== undefined) await this.attachmentService.assertCompatibleWithKnowledgeBase(this.runtime.mountedKnowledgeBaseRoot)
     this.httpServer = createServer((request, response) => { void this.handle(request, response) })
     try {
       const address = await new Promise<{ readonly port: number }>((resolve, reject) => {
@@ -348,8 +349,15 @@ export class ResearchHubRuntimeServer {
     this.ensureRunning()
     const conversationId = this.runtime!.sessionRuntime.getCurrentState().conversationId
     const runId = randomUUID()
-    const command = operation === 'prompt' ? this.runtime!.sessionRuntime.prompt(text) : operation === 'steer' ? this.runtime!.sessionRuntime.steer(text) : this.runtime!.sessionRuntime.followUp(text)
-    this.trackBackground(command, () => this.runtime!.sessionRuntime.abort())
+    if (operation === 'prompt') {
+      const started = this.runtime!.sessionRuntime.startPrompt(text)
+      await started.accepted
+      this.trackBackground(started.completion, () => this.runtime!.sessionRuntime.abort())
+    } else {
+      const command = operation === 'steer' ? this.runtime!.sessionRuntime.steer(text) : this.runtime!.sessionRuntime.followUp(text)
+      await command
+      this.trackBackground(command, () => this.runtime!.sessionRuntime.abort())
+    }
     await this.sendJson(response, 202, { accepted: true, conversationId, run: { runId, operation } })
   }
 
@@ -360,7 +368,7 @@ export class ResearchHubRuntimeServer {
     let input: IngestDocumentInput
     if (attachmentId !== undefined) {
       const attachment = await this.attachmentService!.getAttachment(attachmentId)
-      input = { workflowRunId: randomUUID(), workspaceFile: attachment.workspaceRelativePath, originalFilename: attachment.filename, mediaType: attachment.mediaType, instructions: this.optionalString(body, 'instructions', MAX_MESSAGE_LENGTH), sourceMetadata: this.sourceMetadata(body) }
+      input = { workflowRunId: randomUUID(), workspaceFile: await this.attachmentService!.resolveAttachmentPath(attachmentId), originalFilename: attachment.filename, mediaType: attachment.mediaType, instructions: this.optionalString(body, 'instructions', MAX_MESSAGE_LENGTH), sourceMetadata: this.sourceMetadata(body) }
     } else {
       const text = this.optionalString(body, 'text', 2_000_000)
       if (text === undefined) throw new ApplicationServiceError('invalid_input', 'attachmentId or text is required')

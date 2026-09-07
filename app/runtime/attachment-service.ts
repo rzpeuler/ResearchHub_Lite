@@ -3,6 +3,7 @@ import { lstat, mkdir, open, readFile, realpath, rename, rm, unlink, writeFile }
 import { createReadStream } from 'node:fs'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { ApplicationServiceError } from '../services/contracts.ts'
+import { assertLexicallyDisjointStorageRoots, validateStorageRoots } from './storage-boundary.ts'
 
 export const DEFAULT_MAX_ATTACHMENT_BYTES = 100 * 1024 * 1024
 const MAX_MULTIPART_HEADER_BYTES = 64 * 1024
@@ -18,15 +19,16 @@ export interface AttachmentRef {
   readonly size: number
   readonly sha256: string
   readonly createdAt: string
-  readonly workspaceRelativePath: string
 }
 
 export interface AttachmentServiceOptions {
   readonly workspaceRoot: string
+  /** Canonical Knowledge storage forbidden to attachment writes. */
+  readonly forbiddenRoot?: string
   readonly maxBytes?: number
 }
 
-interface StoredMetadata extends AttachmentRef { readonly version: 1 }
+interface StoredMetadata extends AttachmentRef { readonly version: 1; readonly workspaceRelativePath: string }
 interface ActivePart {
   readonly filename?: string
   readonly mediaType: string
@@ -103,23 +105,38 @@ export class AttachmentService {
   readonly workspaceRoot: string
   readonly maxBytes: number
   private readonly uploadsRoot: string
+  private forbiddenRoot?: string
   private initialized?: Promise<string>
 
   constructor(options: AttachmentServiceOptions) {
     this.workspaceRoot = resolve(options.workspaceRoot)
+    this.forbiddenRoot = options.forbiddenRoot === undefined ? undefined : resolve(options.forbiddenRoot)
     this.maxBytes = options.maxBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES
     if (!Number.isSafeInteger(this.maxBytes) || this.maxBytes < 1 || this.maxBytes > DEFAULT_MAX_ATTACHMENT_BYTES) throw new RangeError('maxBytes is outside the supported attachment limit')
+    if (this.forbiddenRoot !== undefined) assertLexicallyDisjointStorageRoots(this.workspaceRoot, this.forbiddenRoot)
     this.uploadsRoot = join(this.workspaceRoot, 'uploads')
+  }
+
+  /** Anchors an injected service to the Runtime's canonical Knowledge boundary. */
+  async assertCompatibleWithKnowledgeBase(mountedKnowledgeBaseRoot: string): Promise<void> {
+    const forbiddenRoot = resolve(mountedKnowledgeBaseRoot)
+    assertLexicallyDisjointStorageRoots(this.workspaceRoot, forbiddenRoot)
+    if (this.forbiddenRoot !== undefined && this.forbiddenRoot !== forbiddenRoot) throw invalid('AttachmentService forbiddenRoot does not match the mounted Knowledge Base')
+    this.forbiddenRoot = forbiddenRoot
+    await validateStorageRoots(this.workspaceRoot, forbiddenRoot)
   }
 
   private async storageRoot(): Promise<string> {
     if (!this.initialized) {
       this.initialized = (async () => {
+        if (this.forbiddenRoot !== undefined) await validateStorageRoots(this.workspaceRoot, this.forbiddenRoot)
         await mkdir(this.workspaceRoot, { recursive: true })
         const workspaceReal = await assertDirectory(this.workspaceRoot, 'workspaceRoot')
+        if (this.forbiddenRoot !== undefined) await validateStorageRoots(this.workspaceRoot, this.forbiddenRoot)
         await mkdir(this.uploadsRoot, { recursive: true })
         const uploadsReal = await assertDirectory(this.uploadsRoot, 'uploads directory')
         if (!isInside(workspaceReal, uploadsReal)) throw invalid('uploads directory escapes workspaceRoot')
+        if (this.forbiddenRoot !== undefined) await validateStorageRoots(this.workspaceRoot, this.forbiddenRoot)
         return uploadsReal
       })().catch((error) => { this.initialized = undefined; throw error })
     }
@@ -306,7 +323,7 @@ export class AttachmentService {
 }
 
 function toDto(metadata: StoredMetadata): AttachmentRef {
-  return { attachmentId: metadata.attachmentId, filename: metadata.filename, mediaType: metadata.mediaType, size: metadata.size, sha256: metadata.sha256, createdAt: metadata.createdAt, workspaceRelativePath: metadata.workspaceRelativePath }
+  return { attachmentId: metadata.attachmentId, filename: metadata.filename, mediaType: metadata.mediaType, size: metadata.size, sha256: metadata.sha256, createdAt: metadata.createdAt }
 }
 
 export { normalizeFilename }

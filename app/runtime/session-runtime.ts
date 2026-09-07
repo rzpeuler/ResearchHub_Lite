@@ -17,6 +17,11 @@ const PRODUCT_TOOL_SUMMARIES = new Map<string, string>([
   ['get_review_case', 'Review case detail'],
 ])
 
+export interface StartedPrompt {
+  readonly accepted: Promise<void>
+  readonly completion: Promise<void>
+}
+
 function textContent(value: unknown): string {
   if (typeof value === 'string') return value.slice(0, MAX_MESSAGE_TEXT)
   if (!Array.isArray(value)) return ''
@@ -164,7 +169,40 @@ export class ResearchHubSessionRuntime {
   }
 
   async resumeConversation(conversationId: string): Promise<CurrentSessionState> { return this.switchConversation(conversationId) }
-  async prompt(text: string): Promise<void> { this.ensureOpen(); return this.currentSession.prompt(text) }
+  startPrompt(text: string): StartedPrompt {
+    this.ensureOpen()
+    let acceptedSettled = false
+    let resolveAccepted!: () => void
+    let rejectAccepted!: (error: unknown) => void
+    const accepted = new Promise<void>((resolve, reject) => { resolveAccepted = resolve; rejectAccepted = reject })
+    // The runtime owns observation of both branches so a rejected command is
+    // safe even when a caller only needs the acceptance result.
+    void accepted.catch(() => undefined)
+    const settleAccepted = (success: boolean): void => {
+      if (acceptedSettled) return
+      acceptedSettled = true
+      if (success) resolveAccepted()
+      else rejectAccepted(new ApplicationServiceError('conflict', 'Pi rejected the conversation prompt before acceptance'))
+    }
+    let completion: Promise<void>
+    try {
+      completion = Promise.resolve(this.currentSession.prompt(text, { preflightResult: settleAccepted }))
+    } catch (error) {
+      completion = Promise.reject(error)
+    }
+    void completion.catch((error) => {
+      if (!acceptedSettled) {
+        acceptedSettled = true
+        rejectAccepted(error)
+      }
+    })
+    return { accepted, completion }
+  }
+  async prompt(text: string): Promise<void> {
+    const started = this.startPrompt(text)
+    await started.accepted
+    await started.completion
+  }
   async steer(text: string): Promise<void> { this.ensureOpen(); return this.currentSession.steer(text) }
   async followUp(text: string): Promise<void> { this.ensureOpen(); return this.currentSession.followUp(text) }
   async abort(): Promise<void> { this.ensureOpen(); return this.currentSession.abort() }

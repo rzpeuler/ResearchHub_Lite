@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Application Runtime & Client Architecture frozen — Runtime implementation next**
+**Application Runtime v0.1 implemented — CTO acceptance pending**
 
 ## Current Snapshot
 
@@ -17,8 +17,10 @@
 - `RHL-PI-HOST-001-FIX-002`: PASS / CLOSED.
 - `RHL-ARCH-APPLICATION-INTERACTION-001`: PASS / CLOSED.
 - `RHL-IMPLEMENT-APPLICATION-SERVICE-001`: PASS / CLOSED.
-- `RHL-ARCH-APPLICATION-RUNTIME-CLIENT-001`: FROZEN / CTO architecture decision.
-- Next engineering phase: `RHL-IMPLEMENT-APPLICATION-RUNTIME-001` — local Node Runtime, Pi AgentSessionRuntime, persistent Pi sessions, HTTP API, SSE, AttachmentService, local runtime security, and asynchronous production-start semantics.
+- `RHL-ARCH-APPLICATION-RUNTIME-CLIENT-001`: PASS / CLOSED.
+- `RHL-IMPLEMENT-APPLICATION-RUNTIME-001`: implemented / CTO acceptance pending.
+- `RHL-IMPLEMENT-APPLICATION-RUNTIME-001-FIX-001`: implemented / CTO acceptance pending.
+- Next phase after acceptance: `RHL-IMPLEMENT-HOMEPAGE-SHELL-001` — Homepage remains not implemented.
 - `docs/governance/ARCHITECTURE.md` remains a frozen CTO-generated summary and is intentionally not rewritten by this admission task; where its older frontend/transport wording conflicts, the normative Runtime/Client architecture and this decision record supersede it until a consolidated replacement is issued.
 
 ## Completed
@@ -79,7 +81,7 @@
 - `RHL-PI-HOST-001-FIX-001` is PASS / CLOSED: Pi capabilities derive four-way extraction concurrency, the session uses Pi's official global agent directory by default, and canonical nested Knowledge Base path interception covers absolute and cwd-relative references without claiming complete shell isolation.
 - `RHL-PI-HOST-001-FIX-002` is PASS / CLOSED: the default Pi session uses Pi's official file-backed `SettingsManager.create(cwd, agentDir, { projectTrusted: true })`, reusing global and trusted project-local settings while preserving explicit settings-manager injection.
 - Agent context and Workflow semantic context remain separate. ResearchHub `skills/` and Pi Skills remain distinct; Workflow semantic requests do not receive Pi conversation, project-agent, or skill context.
-- Application Runtime & Client Architecture v0.1 is frozen in `docs/architecture/RESEARCHHUB_APPLICATION_RUNTIME_CLIENT_ARCHITECTURE_V0.1.md`: one local Node process, direct Pi SDK embedding, Pi-owned conversation lifecycle/persistence, React + TypeScript + Vite, HTTP JSON + SSE, Workflow polling, AttachmentRef, and loopback-first runtime security. Runtime and browser client implementation remain deferred to `RHL-IMPLEMENT-APPLICATION-RUNTIME-001`.
+- Application Runtime & Client Architecture v0.1 is frozen in `docs/architecture/RESEARCHHUB_APPLICATION_RUNTIME_CLIENT_ARCHITECTURE_V0.1.md`: one local Node process, direct Pi SDK embedding, Pi-owned conversation lifecycle/persistence, React + TypeScript + Vite, HTTP JSON + SSE, Workflow polling, AttachmentRef, and loopback-first runtime security. Runtime v0.1 is implemented pending CTO acceptance; browser client/Homepage implementation remains deferred to `RHL-IMPLEMENT-HOMEPAGE-SHELL-001`.
 
 ## Current Limitations
 

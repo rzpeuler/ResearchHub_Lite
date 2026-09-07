@@ -6,12 +6,14 @@ import { ProductionService } from '../services/production-service.ts'
 import { ReviewService } from '../services/review-service.ts'
 import { WorkflowService } from '../services/workflow-service.ts'
 import { createResearchHubSessionRuntime, ResearchHubSessionRuntime } from './session-runtime.ts'
+import { validateStorageRoots } from './storage-boundary.ts'
 import type { ResearchHubApplicationRuntimeOptions, ResearchHubApplicationServices } from './contracts.ts'
 
 export class ResearchHubApplicationRuntime {
   readonly cwd: string
   readonly agentDir: string
   readonly workspaceRoot: string
+  readonly mountedKnowledgeBaseRoot?: string
   readonly modelRuntime: ModelRuntime
   readonly sessionManager: SessionManager
   readonly services: ResearchHubApplicationServices
@@ -23,6 +25,7 @@ export class ResearchHubApplicationRuntime {
     readonly cwd: string
     readonly agentDir: string
     readonly workspaceRoot: string
+    readonly mountedKnowledgeBaseRoot?: string
     readonly modelRuntime: ModelRuntime
     readonly sessionManager: SessionManager
     readonly services: ResearchHubApplicationServices
@@ -32,6 +35,7 @@ export class ResearchHubApplicationRuntime {
     this.cwd = input.cwd
     this.agentDir = input.agentDir
     this.workspaceRoot = input.workspaceRoot
+    this.mountedKnowledgeBaseRoot = input.mountedKnowledgeBaseRoot
     this.modelRuntime = input.modelRuntime
     this.sessionManager = input.sessionManager
     this.services = input.services
@@ -43,10 +47,11 @@ export class ResearchHubApplicationRuntime {
     const cwd = resolve(options.cwd)
     const agentDir = resolve(options.agentDir ?? getAgentDir())
     const workspaceRoot = resolve(options.workspaceRoot ?? join(cwd, 'workspace'))
+    const mountedKnowledgeBaseRoot = options.mountedKnowledgeBaseRoot === undefined ? undefined : resolve(options.mountedKnowledgeBaseRoot)
+    if (mountedKnowledgeBaseRoot !== undefined) await validateStorageRoots(workspaceRoot, mountedKnowledgeBaseRoot)
     const ownsModelRuntime = options.modelRuntime === undefined
     const modelRuntime = options.modelRuntime ?? await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: join(agentDir, 'models.json'), allowModelNetwork: false, refreshOnCreate: false })
     const reasoningExecutor = options.reasoningExecutor ?? new PiReasoningExecutor({ modelRuntime, model: options.model })
-    const mountedKnowledgeBaseRoot = options.mountedKnowledgeBaseRoot === undefined ? undefined : resolve(options.mountedKnowledgeBaseRoot)
     const knowledgeService = new KnowledgeService(mountedKnowledgeBaseRoot)
     const reviewService = new ReviewService(mountedKnowledgeBaseRoot)
     const workflowService = new WorkflowService()
@@ -55,7 +60,7 @@ export class ResearchHubApplicationRuntime {
     const sessionManager = options.sessionManager ?? SessionManager.create(cwd, options.sessionDir)
     try {
       const sessionRuntime = await createResearchHubSessionRuntime({ cwd, agentDir, modelRuntime, sessionManager, applicationServices: services, mountedKnowledgeBaseRoot, workspaceRoot, model: options.model, reasoningExecutor, settingsManager: options.settingsManager, resourceLoader: options.resourceLoader })
-      return new ResearchHubApplicationRuntime({ cwd, agentDir, workspaceRoot, modelRuntime, sessionManager, services, sessionRuntime, ownsModelRuntime })
+      return new ResearchHubApplicationRuntime({ cwd, agentDir, workspaceRoot, mountedKnowledgeBaseRoot, modelRuntime, sessionManager, services, sessionRuntime, ownsModelRuntime })
     } catch (error) {
       if (ownsModelRuntime) await disposeModelRuntime(modelRuntime)
       throw error

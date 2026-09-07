@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto'
 import { Readable } from 'node:stream'
 import { createServer as createHttpServer } from 'node:http'
 import { EventEmitter } from 'node:events'
-import { fauxProvider } from '@earendil-works/pi-ai'
+import { fauxAssistantMessage, fauxProvider } from '@earendil-works/pi-ai'
 import { ModelRuntime } from '@earendil-works/pi-coding-agent'
 import { AttachmentService, type AttachmentRef } from '../../app/runtime/attachment-service.ts'
 import { createResearchHubApplicationRuntime } from '../../app/runtime/application-runtime.ts'
@@ -16,7 +16,7 @@ import { ProductionService } from '../../app/services/production-service.ts'
 import { WorkflowService } from '../../app/services/workflow-service.ts'
 import type { IngestionWorkflowResult } from '../../workflows/raw-document-knowledge-ingestion/contracts.ts'
 import type { ReasoningCapabilities, ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
-import { createKnowledgeBase, removeKnowledgeBase } from '../knowledge/helpers.ts'
+import { createKnowledgeBase, readManifest, removeKnowledgeBase } from '../knowledge/helpers.ts'
 
 const capabilities: ReasoningCapabilities = { maxContextTokens: 100_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 4 }
 class FixtureExecutor implements ReasoningExecutor { capabilities(): ReasoningCapabilities { return capabilities } async execute(request: Parameters<ReasoningExecutor['execute']>[0]) { return { operation: request.operation, output: {} } as never } }
@@ -44,6 +44,17 @@ async function makeRuntimeFixture() {
   return { root, cwd, agentDir, sessionDir, modelRuntime, runtime, faux }
 }
 
+async function makeMountedRuntimeFixture() {
+  const root = await mkdtemp(join(tmpdir(), 'researchhub-runtime-mounted-c-'))
+  const cwd = join(root, 'cwd'); const agentDir = join(root, 'agent'); const sessionDir = join(root, 'sessions'); const workspaceRoot = join(root, 'workspace'); const mountedKnowledgeBaseRoot = await createKnowledgeBase({ knowledgeBaseId: `kb-mounted-${Date.now()}-${Math.random()}` })
+  await mkdir(cwd, { recursive: true }); await mkdir(agentDir, { recursive: true })
+  const modelRuntime = await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
+  const faux = fauxProvider({ provider: `researchhub-runtime-mounted-${Date.now()}-${Math.random()}`, models: [{ id: 'fixture-model' }] })
+  modelRuntime.registerNativeProvider(faux.provider)
+  const runtime = await createResearchHubApplicationRuntime({ cwd, agentDir, sessionDir, mountedKnowledgeBaseRoot, workspaceRoot, modelRuntime, model: faux.getModel(), reasoningExecutor: new FixtureExecutor() })
+  return { root, cwd, agentDir, sessionDir, workspaceRoot, mountedKnowledgeBaseRoot, modelRuntime, runtime, faux }
+}
+
 async function multipartBody(fields: { readonly name: string; readonly value: Blob; readonly filename?: string }[]): Promise<{ readonly body: AsyncIterable<Uint8Array>; readonly contentType: string }> {
   const form = new FormData()
   for (const field of fields) form.append(field.name, field.value, field.filename)
@@ -61,14 +72,14 @@ test('Slice C AttachmentService streams, hashes, normalizes, and keeps upload ou
     const service = new AttachmentService({ workspaceRoot: root, maxBytes: 100 })
     const request = await multipartBody([{ name: 'file', value: new Blob(['hello'], { type: 'text/plain' }), filename: '../nested\\report.txt' }])
     const attachment = await service.upload(request.body, request.contentType)
-    assert.equal(attachment.filename, 'report.txt'); assert.equal(attachment.workspaceRelativePath, 'uploads/' + attachment.attachmentId + '/report.txt'); assert.equal('path' in attachment, false)
+    assert.equal(attachment.filename, 'report.txt'); assert.deepEqual(Object.keys(attachment).sort(), ['attachmentId', 'createdAt', 'filename', 'mediaType', 'sha256', 'size']); assert.equal('path' in attachment, false); assert.equal('workspaceRelativePath' in attachment, false)
     assert.equal((await service.getAttachment(attachment.attachmentId)).sha256.length, 64)
     assert.deepEqual(await readdir(join(root, 'uploads', attachment.attachmentId)), ['metadata.json', 'report.txt'])
     const reserved = await multipartBody([{ name: 'file', value: new Blob(['reserved content'], { type: 'text/plain' }), filename: 'metadata.json' }])
     const reservedAttachment = await service.upload(reserved.body, reserved.contentType)
     assert.notEqual(reservedAttachment.filename.toLowerCase(), 'metadata.json')
     assert.equal((await service.getAttachment(reservedAttachment.attachmentId)).size, 'reserved content'.length)
-    assert.match(await readFile(join(root, reservedAttachment.workspaceRelativePath), 'utf8'), /reserved content/)
+    assert.match(await readFile((await service.openAttachment(reservedAttachment.attachmentId)).path, 'utf8'), /reserved content/)
     assert.equal((await readdir(root)).includes('raw'), false)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
@@ -81,7 +92,7 @@ test('Slice C AttachmentService preserves multipart boundaries across one-byte c
     const attachment = await service.upload(oneByteChunks(request.body), request.contentType)
     assert.equal(attachment.filename, 'one-byte.txt'); assert.equal(attachment.size, 'one-byte multipart content'.length)
     assert.equal((await service.getAttachment(attachment.attachmentId)).sha256, attachment.sha256)
-    assert.equal(await readFile(join(root, attachment.workspaceRelativePath), 'utf8'), 'one-byte multipart content')
+    assert.equal(await readFile((await service.openAttachment(attachment.attachmentId)).path, 'utf8'), 'one-byte multipart content')
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
@@ -94,7 +105,7 @@ test('Slice C AttachmentService preserves CRLF--abcX pseudo boundaries across on
     const attachment = await service.upload(oneByteChunks(body), `multipart/form-data; boundary=${boundary}`)
     assert.equal(attachment.size, Buffer.byteLength(content))
     assert.equal(attachment.sha256, createHash('sha256').update(content).digest('hex'))
-    assert.equal(await readFile(join(root, attachment.workspaceRelativePath), 'utf8'), content)
+    assert.equal(await readFile((await service.openAttachment(attachment.attachmentId)).path, 'utf8'), content)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
@@ -109,7 +120,7 @@ test('Slice C AttachmentService rejects control names, size overflow, metadata t
     const goodService = new AttachmentService({ workspaceRoot: root, maxBytes: 100 })
     const good = await multipartBody([{ name: 'file', value: new Blob(['safe']), filename: 'safe.txt' }])
     const attachment = await goodService.upload(good.body, good.contentType)
-    const metadataPath = join(root, attachment.workspaceRelativePath.replaceAll('/', '\\').replace(/\\[^\\]+$/, '\\metadata.json'))
+    const metadataPath = join((await goodService.openAttachment(attachment.attachmentId)).path.replace(/\\[^\\]+$/, ''), 'metadata.json')
     const metadata = JSON.parse(await readFile(metadataPath, 'utf8')) as Record<string, unknown>
     metadata.sha256 = '0'.repeat(64); await writeFile(metadataPath, JSON.stringify(metadata))
     await assert.rejects(() => goodService.getAttachment(attachment.attachmentId), /hash/i)
@@ -117,6 +128,54 @@ test('Slice C AttachmentService rejects control names, size overflow, metadata t
     const escapeDir = join(root, 'uploads', 'escape-link'); await symlink(outside, escapeDir)
     await assert.rejects(() => goodService.getAttachment('escape-link'), /invalid|not found/i)
   } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Slice C Runtime rejects overlapping canonical Knowledge and workspace roots', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'researchhub-runtime-boundary-c-')); const kb = join(root, 'kb'); const cwd = join(root, 'cwd'); const agentDir = join(root, 'agent')
+  await mkdir(kb, { recursive: true })
+  const create = (workspaceRoot: string) => createResearchHubApplicationRuntime({ cwd, agentDir, mountedKnowledgeBaseRoot: kb, workspaceRoot, reasoningExecutor: new FixtureExecutor() })
+  try {
+    await assert.rejects(() => create(kb), /disjoint|overlap/i)
+    await assert.rejects(() => create(join(kb, 'workspace')), /disjoint|overlap/i)
+    await assert.rejects(() => create(root), /disjoint|overlap/i)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Slice C Runtime rejects a workspace symlink resolving into canonical Knowledge', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'researchhub-runtime-symlink-c-')); const kb = join(root, 'kb'); const workspace = join(root, 'workspace-link')
+  await mkdir(kb, { recursive: true })
+  try {
+    try { await symlink(kb, workspace, 'junction') } catch { t.skip('junction symlinks are unavailable on this Windows host'); return }
+    await assert.rejects(() => createResearchHubApplicationRuntime({ cwd: join(root, 'cwd'), agentDir: join(root, 'agent'), mountedKnowledgeBaseRoot: kb, workspaceRoot: workspace, reasoningExecutor: new FixtureExecutor() }), /disjoint|overlap|resolved/i)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Slice C AttachmentService accepts sibling roots and keeps uploads outside canonical Knowledge', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'researchhub-attachment-boundary-c-')); const kb = join(root, 'kb'); const workspace = join(root, 'workspace'); const marker = join(kb, 'marker.txt')
+  await mkdir(kb, { recursive: true }); await writeFile(marker, 'unchanged')
+  try {
+    const service = new AttachmentService({ workspaceRoot: workspace, forbiddenRoot: kb, maxBytes: 100 })
+    const request = await multipartBody([{ name: 'file', value: new Blob(['outside canonical'], { type: 'text/plain' }), filename: 'outside.txt' }])
+    const attachment = await service.upload(request.body, request.contentType)
+    const stored = await service.openAttachment(attachment.attachmentId)
+    assert.equal((await readFile(marker, 'utf8')), 'unchanged')
+    assert.equal(stored.path.startsWith(kb), false)
+    assert.equal((await readdir(kb)).includes('marker.txt'), true)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Slice C server rejects an injected AttachmentService with an unsafe workspace', async () => {
+  const fixture = await makeMountedRuntimeFixture(); const unsafe = new AttachmentService({ workspaceRoot: join(fixture.mountedKnowledgeBaseRoot, 'unsafe') }); const server = new ResearchHubRuntimeServer({ runtime: fixture.runtime, attachmentService: unsafe, port: 0 })
+  try { await assert.rejects(() => server.start(), /disjoint|overlap/i) } finally { await server.close(); await fixture.runtime.close(); await rm(fixture.root, { recursive: true, force: true }); await removeKnowledgeBase(fixture.mountedKnowledgeBaseRoot) }
+})
+
+test('Slice C HTTP upload returns only the public Attachment DTO and leaves canonical Knowledge unchanged', async () => {
+  const fixture = await makeMountedRuntimeFixture(); const server = new ResearchHubRuntimeServer({ runtime: fixture.runtime, port: 0 })
+  try {
+    const beforeManifest = await readManifest(fixture.mountedKnowledgeBaseRoot); const beforeFiles = (await readdir(fixture.mountedKnowledgeBaseRoot, { recursive: true })).sort(); const info = await server.start(); const form = new FormData(); form.append('file', new Blob(['not canonical'], { type: 'text/plain' }), 'upload.txt')
+    const response = await fetch(`${info.origin}/api/attachments`, { method: 'POST', headers: { origin: info.origin, 'x-researchhub-runtime-token': info.runtimeToken }, body: form })
+    assert.equal(response.status, 201); const payload = await response.json() as { attachment: Record<string, unknown> }; assert.deepEqual(Object.keys(payload.attachment).sort(), ['attachmentId', 'createdAt', 'filename', 'mediaType', 'sha256', 'size']); assert.equal('workspaceRelativePath' in payload.attachment, false); assert.equal('path' in payload.attachment, false); assert.deepEqual(await readManifest(fixture.mountedKnowledgeBaseRoot), beforeManifest); assert.deepEqual((await readdir(fixture.mountedKnowledgeBaseRoot, { recursive: true })).sort(), beforeFiles)
+  } finally { await server.close(); await fixture.runtime.close(); await rm(fixture.root, { recursive: true, force: true }); await removeKnowledgeBase(fixture.mountedKnowledgeBaseRoot) }
 })
 
 test('Slice C ProductionService exposes asynchronous start, failure, and cancellation with one workflow path', async () => {
@@ -157,6 +216,37 @@ test('Slice C HTTP server provides bootstrap/security/202/product APIs, no-KB ma
     const attachmentRead = await fetch(`${info.origin}/api/attachments/${uploadedJson.attachment.attachmentId}`); assert.equal(attachmentRead.status, 200); assert.equal((await attachmentRead.json()).attachment.attachmentId, uploadedJson.attachment.attachmentId)
   } finally { await server.close(); await fixture.runtime.close(); await rm(fixture.root, { recursive: true, force: true }) }
   assert.equal(server.address, undefined); await assert.rejects(() => fetch(`${info!.origin}/api/bootstrap`))
+})
+
+test('Slice C HTTP conversation commands honor Pi preflight and preserve queue paths', async () => {
+  const fixture = await makeRuntimeFixture(); const server = new ResearchHubRuntimeServer({ runtime: fixture.runtime, port: 0 }); let release!: () => void; let entered!: () => void
+  const enteredPromise = new Promise<void>((resolve) => { entered = resolve }); const gate = new Promise<void>((resolve) => { release = resolve }); const unhandled: unknown[] = []; const onUnhandled = (reason: unknown) => { unhandled.push(reason) }
+  fixture.faux.setResponses([
+    async () => { entered(); await gate; return fauxAssistantMessage('first completed') },
+    fauxAssistantMessage('steer completed'),
+    fauxAssistantMessage('follow-up completed'),
+  ])
+  process.on('unhandledRejection', onUnhandled)
+  try {
+    const info = await server.start(); const headers = { 'content-type': 'application/json', origin: info.origin, 'x-researchhub-runtime-token': info.runtimeToken }
+    const first = await fetch(`${info.origin}/api/conversations/prompt`, { method: 'POST', headers, body: JSON.stringify({ text: 'first prompt' }) })
+    assert.equal(first.status, 202)
+    await enteredPromise
+    const second = await fetch(`${info.origin}/api/conversations/prompt`, { method: 'POST', headers, body: JSON.stringify({ text: 'ordinary while busy' }) })
+    assert.notEqual(second.status, 202); assert.equal((await second.json()).code, 'conflict')
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    assert.equal((server as unknown as { backgroundOperations: Set<unknown> }).backgroundOperations.size, 1)
+    const steer = await fetch(`${info.origin}/api/conversations/steer`, { method: 'POST', headers, body: JSON.stringify({ text: 'steer while busy' }) })
+    assert.equal(steer.status, 202)
+    const followUp = await fetch(`${info.origin}/api/conversations/follow_up`, { method: 'POST', headers, body: JSON.stringify({ text: 'follow up while busy' }) })
+    assert.equal(followUp.status, 202)
+    release()
+    await new Promise<void>((resolve) => setImmediate(resolve)); await new Promise<void>((resolve) => setImmediate(resolve))
+    assert.equal(unhandled.length, 0)
+    assert.equal(fixture.runtime.sessionRuntime.getCurrentMessages().some((message) => message.content === 'first prompt'), true)
+  } finally {
+    release(); process.off('unhandledRejection', onUnhandled); await server.close(); await fixture.runtime.close(); await rm(fixture.root, { recursive: true, force: true })
+  }
 })
 
 test('Slice C server does not dispose an injected runtime on close', async () => {
@@ -288,7 +378,7 @@ test('Slice C close cancels and settles pending 202 operations before owned runt
   const unhandled: unknown[] = []; const onUnhandled = (reason: unknown) => { unhandled.push(reason) }; process.on('unhandledRejection', onUnhandled)
   try {
     await server.start(); const ownedRuntime = server.applicationRuntime!; const sessionRuntime = ownedRuntime.sessionRuntime
-    sessionRuntime.prompt = async () => new Promise<void>((_resolve, reject) => { conversationReject = reject })
+    sessionRuntime.startPrompt = () => ({ accepted: Promise.resolve(), completion: new Promise<void>((_resolve, reject) => { conversationReject = reject }) })
     sessionRuntime.abort = async () => { conversationCancelled = true; conversationReject(new Error('conversation cancelled')) }
     ownedRuntime.productionService.startIngestDocument = ((_input, signal) => ({ runId: 'production-background-c', completion: new Promise<never>((_resolve, reject) => { signal?.addEventListener('abort', () => { productionCancelled = true; reject(new Error('production cancelled')) }, { once: true }) }) })) as typeof ownedRuntime.productionService.startIngestDocument
     const originalClose = ownedRuntime.close.bind(ownedRuntime)
