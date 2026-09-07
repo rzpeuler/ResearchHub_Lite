@@ -1,45 +1,55 @@
 {
-  "taskId": "RHL-VALIDATE-PRODUCTION-E2E-001",
-  "startedAt": "2026-09-07T13:01:35.344Z",
+  "taskId": "RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001",
+  "previousRun": "RHL-VALIDATE-PRODUCTION-E2E-001: ENVIRONMENT_BLOCKED / CTO reviewed",
+  "currentRun": "PRODUCT_DEFECT",
+  "startedAt": "2026-09-07T13:05:00.856Z",
   "phase": "blocked",
   "phaseTimestamps": {
     "preflight": {
-      "startedAt": "2026-09-07T13:01:35.344Z",
-      "completedAt": "2026-09-07T13:01:35.413Z",
-      "durationMs": 69,
+      "startedAt": "2026-09-07T13:05:00.857Z",
+      "completedAt": "2026-09-07T13:05:00.929Z",
+      "durationMs": 72,
       "status": "passed"
     },
     "docling_preflight": {
-      "startedAt": "2026-09-07T13:01:35.415Z",
-      "completedAt": "2026-09-07T13:01:35.415Z",
+      "startedAt": "2026-09-07T13:05:00.932Z",
+      "completedAt": "2026-09-07T13:05:00.932Z",
       "durationMs": 0,
       "status": "passed"
     },
     "docling_preflight_parse": {
-      "startedAt": "2026-09-07T13:01:35.415Z",
-      "completedAt": "2026-09-07T13:01:42.339Z",
-      "durationMs": 6924,
+      "startedAt": "2026-09-07T13:05:00.932Z",
+      "completedAt": "2026-09-07T13:05:07.574Z",
+      "durationMs": 6642,
       "status": "passed"
     },
     "real_provider_preflight": {
-      "startedAt": "2026-09-07T13:01:42.339Z",
-      "completedAt": "2026-09-07T13:01:42.345Z",
+      "startedAt": "2026-09-07T13:05:07.574Z",
+      "completedAt": "2026-09-07T13:05:07.580Z",
       "durationMs": 6,
       "status": "passed"
     },
     "real_provider_completion_preflight": {
-      "startedAt": "2026-09-07T13:01:42.346Z",
-      "completedAt": "2026-09-07T13:01:44.362Z",
-      "durationMs": 2016,
+      "startedAt": "2026-09-07T13:05:07.581Z",
+      "completedAt": "2026-09-07T13:05:10.627Z",
+      "durationMs": 3046,
       "status": "passed"
     },
     "fresh_kb": {
-      "startedAt": "2026-09-07T13:01:44.366Z",
-      "completedAt": "2026-09-07T13:01:44.366Z",
-      "durationMs": 0,
+      "startedAt": "2026-09-07T13:05:10.633Z",
+      "completedAt": "2026-09-07T13:05:10.634Z",
+      "durationMs": 1,
       "status": "passed"
+    },
+    "free_research": {
+      "startedAt": "2026-09-07T13:05:10.669Z",
+      "status": "failed",
+      "completedAt": "2026-09-07T13:05:15.661Z",
+      "durationMs": 4992,
+      "error": "Free Research did not produce a safe normalized assistant SSE response"
     }
   },
+  "fullProductionE2ERun": true,
   "offlineRegression": {
     "rootTypecheck": "PASS",
     "clientTypecheck": "PASS",
@@ -54,8 +64,8 @@
   "rawHiddenReasoningIncluded": false,
   "fauxOrMockUsed": false,
   "baseline": {
-    "head": "57d2a4bec03262872aadeae254cf28c984f17be7",
-    "originMain": "57d2a4bec03262872aadeae254cf28c984f17be7",
+    "head": "ed4c3769235c7d730fb9e25b6460c1b5a36235b9",
+    "originMain": "ed4c3769235c7d730fb9e25b6460c1b5a36235b9",
     "trackedWorkingTreeClean": true,
     "protectedPdf": "pre-existing untracked and unstaged; not read or modified"
   },
@@ -109,7 +119,7 @@
     "fullValidation": "passed"
   },
   "freeResearch": {
-    "conversation": "01a07bf5-d831-731b-8005-30baee4140b9",
+    "conversation": "01a07bf8-fdee-7226-9e0e-c11819c3aa50",
     "promptAccepted": true,
     "sseObserved": true,
     "assistantResponse": true,
@@ -125,11 +135,11 @@
     "normalizedEvents": true,
     "rawHiddenReasoningExposed": false,
     "rawToolPayloadExposed": false,
-    "eventPayloadBytes": 14700
+    "eventPayloadBytes": 10327
   },
   "classification": "PRODUCT_DEFECT",
-  "completedAt": "2026-09-07T13:01:50.161Z",
-  "failureStage": "unknown",
+  "completedAt": "2026-09-07T13:05:15.661Z",
+  "failureStage": "free_research",
   "error": "Free Research did not produce a safe normalized assistant SSE response",
   "evidenceIntegrity": {
     "secretsIncluded": false,

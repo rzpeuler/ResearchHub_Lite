@@ -2,6 +2,10 @@
 
 ## 2026-09-07
 
+- Executed `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001` on real `zhipu-openapi/glm-5.3-flash` with real Pi ModelRuntime, PiReasoningExecutor, Docling 2.116.0, and a fresh Knowledge Base. Production boot and preflights passed, but Free Research reproducibly received an assistant completion without the requested marker in normalized SSE; classification is `PRODUCT_DEFECT`. Later stages were not run and no production code was modified.
+
+- `RHL-CONFIGURE-PI-MULTI-PROVIDER-001` is now recorded as `PASS / CLOSED` by CTO decision; both configured provider gates remain cleared.
+
 - Executed `RHL-CONFIGURE-PI-MULTI-PROVIDER-001`: configured local Pi `zhipu-openapi/glm-5.3-flash` and Pi-native `openai-codex` OAuth without writing credentials to the repository. Both providers passed the Native Pi and PiReasoningExecutor gates; the multi-provider result is `MULTI_PROVIDER_GATE_CLEARED / CTO acceptance pending`. The full Production Application E2E remains intentionally not run.
 
 - Implemented Knowledge Graph Projection v0.1 and admitted the frozen architecture artifact byte-for-byte.

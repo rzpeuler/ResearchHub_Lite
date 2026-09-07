@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Pi multi-provider configuration executed — CTO acceptance pending**
+**Production Application E2E rerun blocked by Free Research product defect — CTO acceptance pending**
 
 ## Current Snapshot
 
@@ -24,10 +24,11 @@
 - `RHL-IMPLEMENT-HOMEPAGE-SHELL-001-FIX-001`: PASS / CLOSED; Workflow polling is bounded to one non-overlapping request per approximately one-second interval, terminal states stop polling, and old-run responses are ignored after replacement.
 - `RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001`: PASS / CLOSED by CTO decision; the frozen Graph Projection Architecture is admitted byte-for-byte, Directory and rooted read-only graph APIs are available, and `/graph` provides Directory, Search, React Flow canvas, Dagre layout, filters, focus/re-root, depth, and canonical Inspector reads.
 - `RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001-FIX-001`: PASS / CLOSED by CTO decision; ThemeGroup taxonomy toggles, bounded structured canonical/evidence Inspector views, deterministic five-profile/depth/bounds/API/UI contract tests, and Homepage governance reconciliation are complete.
-- `RHL-VALIDATE-PRODUCTION-E2E-001`: `ENVIRONMENT_BLOCKED / CTO reviewed`; the real Pi provider completion preflight was blocked by the authentication environment. Docling 2.116.0 and the fresh-KB preflight passed; Application Free Research, Attachment, Writer, Graph, browser smoke, and replay were not run after that authoritative block.
+- `RHL-VALIDATE-PRODUCTION-E2E-001`: `ENVIRONMENT_BLOCKED / CTO reviewed`; historical run. The real Pi provider completion preflight was blocked by the authentication environment; the provider blocker was subsequently cleared. Docling 2.116.0 and the fresh-KB preflight passed; Application Free Research, Attachment, Writer, Graph, browser smoke, and replay were not run in that historical run.
 - `RHL-DIAGNOSE-PI-PROVIDER-ENVIRONMENT-001`: PASS / CLOSED; the provider-neutral native Pi and PiReasoningExecutor validation seam is available, and the historical DeepSeek authentication block remains preserved as evidence.
-- `RHL-CONFIGURE-PI-MULTI-PROVIDER-001`: executed / CTO acceptance pending; local Pi `models.json` and `auth.json` are configured for `zhipu-openapi/glm-5.3-flash` and Pi-native `openai-codex` OAuth. Both providers passed Native Pi and PiReasoningExecutor gates; the full Production E2E was intentionally not run.
-- Next recommended phase: CTO review of the cleared multi-provider gate; only after separate authorization should the full Production Application E2E be run.
+- `RHL-CONFIGURE-PI-MULTI-PROVIDER-001`: PASS / CLOSED by CTO decision; local Pi `models.json` and `auth.json` are configured for `zhipu-openapi/glm-5.3-flash` and Pi-native `openai-codex` OAuth. Both providers passed Native Pi and PiReasoningExecutor gates.
+- `RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001`: `PRODUCT_DEFECT / CTO acceptance pending`; real Production Application boot, Zhipu provider preflight, Docling preflight, and fresh-KB validation passed, but Free Research received an assistant completion without the requested deterministic marker in normalized SSE. Attachment, Writer, Knowledge API, Graph, Review, browser smoke, and replay were not run after this authoritative failure.
+- Next recommended phase: CTO review of the Free Research output-contract defect; after an approved corrective fix, rerun the Production Application E2E.
 - `docs/governance/ARCHITECTURE.md` remains a frozen CTO-generated summary and is intentionally not rewritten by this admission task; where its older frontend/transport wording conflicts, the normative Runtime/Client architecture and this decision record supersede it until a consolidated replacement is issued.
 
 ## Completed

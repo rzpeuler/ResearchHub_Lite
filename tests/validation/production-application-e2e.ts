@@ -206,7 +206,7 @@ async function writeSummary(evidence: Dict): Promise<void> {
   const lines = [
     `# ${taskId}`, '',
     `Classification: **${String(evidence.classification ?? 'IN_PROGRESS')}**`, '',
-    `- Previous run: ${String(evidence.previousRun ?? previousRun)}`, `- Current run: ${String(evidence.currentRun ?? evidence.classification ?? 'IN_PROGRESS')}`, `- Baseline: HEAD=${String(baseline.head ?? 'n/a')}; origin/main=${String(baseline.originMain ?? 'n/a')}`, `- Offline regression: ${JSON.stringify(offline)}`,
+    `- Previous run: ${String(evidence.previousRun ?? previousRun)}`, `- Current run: ${String(evidence.currentRun ?? evidence.classification ?? 'IN_PROGRESS')}`, `- Failure stage: ${String(evidence.failureStage ?? 'none')}`, `- Baseline: HEAD=${String(baseline.head ?? 'n/a')}; origin/main=${String(baseline.originMain ?? 'n/a')}`, `- Offline regression: ${JSON.stringify(offline)}`,
     `- Provider/model: ${String(runtime.provider ?? 'n/a')} / ${String(runtime.model ?? 'n/a')}; real=${String(runtime.realProviderConfirmed ?? 'n/a')}; faux/mock=${String(runtime.fauxOrMockUsed ?? 'n/a')}`,
     `- Free Research: accepted=${String(free.promptAccepted ?? 'n/a')}; SSE=${String(free.sseObserved ?? 'n/a')}; assistant=${String(free.assistantResponse ?? 'n/a')}; marker=${String(free.markerObserved ?? 'n/a')}`,
     `- PDF: ${String(pdf.filename ?? 'n/a')}; bytes=${String(pdf.bytes ?? 'n/a')}; SHA-256=${String(pdf.sha256 ?? 'n/a')}; pages=${String(pdf.pages ?? 'n/a')}`,

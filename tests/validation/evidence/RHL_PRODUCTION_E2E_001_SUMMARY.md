@@ -1,8 +1,10 @@
-# RHL-VALIDATE-PRODUCTION-E2E-001
+# RHL-VALIDATE-PRODUCTION-E2E-001-RERUN-001
 
 Classification: **PRODUCT_DEFECT**
 
-- Baseline: HEAD=57d2a4bec03262872aadeae254cf28c984f17be7; origin/main=57d2a4bec03262872aadeae254cf28c984f17be7
+- Previous run: RHL-VALIDATE-PRODUCTION-E2E-001: ENVIRONMENT_BLOCKED / CTO reviewed
+- Current run: PRODUCT_DEFECT
+- Baseline: HEAD=ed4c3769235c7d730fb9e25b6460c1b5a36235b9; origin/main=ed4c3769235c7d730fb9e25b6460c1b5a36235b9
 - Offline regression: {"rootTypecheck":"PASS","clientTypecheck":"PASS","clientTests":"PASS","clientBuild":"PASS","npmTest":"PASS","audit":"PASS","diffCheck":"PASS","note":"Executed before the real E2E invocation on the accepted baseline"}
 - Provider/model: zhipu-openapi / glm-5.3-flash; real=true; faux/mock=false
 - Free Research: accepted=true; SSE=true; assistant=true; marker=false
