@@ -1,0 +1,111 @@
+{
+  "taskId": "RHL-DIAGNOSE-PRODUCTION-WORKFLOW-FAILURE-001",
+  "startedAt": "2026-09-07T13:44:35.922Z",
+  "baselineExpected": "f5676c81db18c1599ffa8459ad98dc0c9eb14a82",
+  "provider": "zhipu-openapi",
+  "model": "glm-5.3-flash",
+  "secretsIncluded": false,
+  "rawHiddenReasoningIncluded": false,
+  "credentialValuesExposed": false,
+  "authHeadersExposed": false,
+  "baseline": {
+    "head": "f5676c81db18c1599ffa8459ad98dc0c9eb14a82",
+    "originMain": "f5676c81db18c1599ffa8459ad98dc0c9eb14a82",
+    "expected": "f5676c81db18c1599ffa8459ad98dc0c9eb14a82",
+    "matchesExpected": true,
+    "trackedWorkingTreeClean": false
+  },
+  "attachment": {
+    "filename": "rhl-production-e2e-001.pdf",
+    "bytes": 886,
+    "sha256": "b7b3becbc413e368482c5bf5a593f55c34c65253d4f6e4f03382ab57487aa2ee",
+    "docling": {
+      "parser": {
+        "id": "docling-local",
+        "version": "2.116.0"
+      },
+      "stats": {
+        "pageCount": 1,
+        "sectionCount": 1,
+        "blockCount": 2,
+        "normalizedCharacters": 250,
+        "tableCount": 0,
+        "headingCount": 0,
+        "listCount": 0,
+        "captionCount": 0
+      }
+    },
+    "attachmentId": "f8d7bd06-186a-4663-a602-5ebce22cb187",
+    "uploadSucceeded": true,
+    "controlledStorageContentMatches": true,
+    "canonicalMutationByUpload": false
+  },
+  "pathBoundary": {
+    "runtimeProductionWorkspaceSame": true,
+    "attachmentInsideRuntimeWorkspace": true,
+    "attachmentInsideProductionWorkspace": true,
+    "attachmentOutsideCanonicalKnowledge": true,
+    "attachmentPathMatchesResolvedPath": false,
+    "resolvedAttachmentInsideProductionWorkspace": false
+  },
+  "productionStart": {
+    "runId": "84109474-f5f6-462e-a1d4-ab57fa897088",
+    "initialWorkflow": {
+      "runId": "84109474-f5f6-462e-a1d4-ab57fa897088",
+      "workflowType": "raw_document_knowledge_ingestion",
+      "objective": "rhl-production-e2e-001.pdf",
+      "status": "running",
+      "progressSummary": "raw_document_knowledge_ingestion is running",
+      "startedAt": "2026-09-07T13:44:43.547Z",
+      "updatedAt": "2026-09-07T13:44:43.548Z"
+    },
+    "httpStatus": 202,
+    "accepted": true
+  },
+  "productionTerminal": {
+    "runId": "84109474-f5f6-462e-a1d4-ab57fa897088",
+    "workflowType": "raw_document_knowledge_ingestion",
+    "objective": "rhl-production-e2e-001.pdf",
+    "status": "failed",
+    "progressSummary": "Workflow failed",
+    "errorSummary": {
+      "present": true,
+      "category": "deterministic_production_failure",
+      "safeMessage": "workspaceFile must remain inside workspaceRoot and outside the canonical Knowledge Base"
+    },
+    "startedAt": "2026-09-07T13:44:43.547Z",
+    "updatedAt": "2026-09-07T13:44:43.552Z",
+    "completedAt": "2026-09-07T13:44:43.552Z"
+  },
+  "workflowDurationMs": 5,
+  "reasoningCalls": [],
+  "rawArchive": {
+    "directoryPresent": false,
+    "fileOrDirectoryCount": 0,
+    "rawRefs": []
+  },
+  "ingestionLog": {
+    "present": false
+  },
+  "canonicalKnowledge": {
+    "revision": 0,
+    "counts": {
+      "themeGroups": 0,
+      "entities": 0,
+      "relations": 0,
+      "claims": 0,
+      "sources": 0,
+      "modules": 0
+    },
+    "validation": "passed"
+  },
+  "review": {
+    "count": 0,
+    "source": "sanitized ingestion log metadata"
+  },
+  "failurePhase": "INPUT_RESOLUTION",
+  "rootCauseClassification": "PRODUCT_DEFECT",
+  "rootCauseSummary": "AttachmentService returned a canonical attachment path that ProductionService rejected against its lexical workspace boundary on Windows; the failure is deterministic INPUT_RESOLUTION path canonicalization/wiring",
+  "completedAt": "2026-09-07T13:44:44.659Z",
+  "status": "executed"
+}
