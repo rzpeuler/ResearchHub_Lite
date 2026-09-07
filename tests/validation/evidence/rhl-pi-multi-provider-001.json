@@ -1,0 +1,113 @@
+{
+  "taskId": "RHL-CONFIGURE-PI-MULTI-PROVIDER-001",
+  "startedAt": "2026-09-07T12:51:31.021Z",
+  "phase": "completed",
+  "agentDirectory": "default Pi agent directory (~/.pi/agent)",
+  "primaryProductionReasoningModel": {
+    "providerId": "zhipu-openapi",
+    "modelId": "glm-5.3-flash"
+  },
+  "modelsJsonUpdated": true,
+  "authJsonUpdated": true,
+  "secretsIncluded": false,
+  "credentialValuesExposed": false,
+  "authHeadersExposed": false,
+  "fullProductionE2ERun": false,
+  "governance": {
+    "previousPiProviderDiagnosis": "PASS / CLOSED",
+    "previousProductionE2E": "ENVIRONMENT_BLOCKED / CTO reviewed",
+    "currentTask": "executed / CTO acceptance pending"
+  },
+  "providers": [
+    {
+      "provider": "zhipu-openapi",
+      "requestedModel": "glm-5.3-flash",
+      "configurationLoaded": true,
+      "credentialMetadata": {
+        "credentialPresent": true,
+        "credentialType": "api_key",
+        "oauthConfigured": false,
+        "subscriptionConfigured": false,
+        "authReady": true,
+        "authSource": "stored credential"
+      },
+      "availableModelCount": 1,
+      "nativePiProbe": {
+        "executed": true,
+        "result": "PASS",
+        "durationMs": 1380,
+        "markerObserved": true,
+        "attempts": [
+          {
+            "model": "glm-5.3-flash",
+            "result": "PASS",
+            "durationMs": 1380
+          }
+        ]
+      },
+      "reasoningExecutorProbe": {
+        "executed": true,
+        "result": "PASS",
+        "durationMs": 1292,
+        "markerObserved": true
+      },
+      "selectedModel": "glm-5.3-flash",
+      "finalGateClassification": "PROVIDER_GATE_CLEARED"
+    },
+    {
+      "provider": "openai-codex",
+      "requestedModel": "current available model",
+      "configurationLoaded": true,
+      "credentialMetadata": {
+        "credentialPresent": true,
+        "credentialType": "oauth",
+        "oauthConfigured": false,
+        "subscriptionConfigured": false,
+        "authReady": true,
+        "authSource": "OAuth"
+      },
+      "availableModelCount": 8,
+      "nativePiProbe": {
+        "executed": true,
+        "result": "PASS",
+        "durationMs": 2655,
+        "markerObserved": true,
+        "attempts": [
+          {
+            "model": "gpt-5.3-codex-spark",
+            "result": "FAIL",
+            "durationMs": 1881,
+            "diagnosis": {
+              "category": "unknown_external_failure",
+              "safeMessage": "Completion failed with an unclassified external error"
+            }
+          },
+          {
+            "model": "gpt-5.4",
+            "result": "FAIL",
+            "durationMs": 1457,
+            "diagnosis": {
+              "category": "unknown_external_failure",
+              "safeMessage": "Completion failed with an unclassified external error"
+            }
+          },
+          {
+            "model": "gpt-5.4-mini",
+            "result": "PASS",
+            "durationMs": 2655
+          }
+        ]
+      },
+      "reasoningExecutorProbe": {
+        "executed": true,
+        "result": "PASS",
+        "durationMs": 3911,
+        "markerObserved": true
+      },
+      "selectedModel": "gpt-5.4-mini",
+      "finalGateClassification": "PROVIDER_GATE_CLEARED"
+    }
+  ],
+  "classification": "MULTI_PROVIDER_GATE_CLEARED",
+  "completedAt": "2026-09-07T12:51:43.605Z"
+}

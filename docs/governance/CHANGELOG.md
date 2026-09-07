@@ -2,6 +2,8 @@
 
 ## 2026-09-07
 
+- Executed `RHL-CONFIGURE-PI-MULTI-PROVIDER-001`: configured local Pi `zhipu-openapi/glm-5.3-flash` and Pi-native `openai-codex` OAuth without writing credentials to the repository. Both providers passed the Native Pi and PiReasoningExecutor gates; the multi-provider result is `MULTI_PROVIDER_GATE_CLEARED / CTO acceptance pending`. The full Production Application E2E remains intentionally not run.
+
 - Implemented Knowledge Graph Projection v0.1 and admitted the frozen architecture artifact byte-for-byte.
 - Added bounded deterministic Directory and rooted graph read APIs.
 - Replaced the `/graph` placeholder with a read-only React Flow + Dagre page with search, filters, depth, focus/re-root, URL state, and canonical Inspector detail.

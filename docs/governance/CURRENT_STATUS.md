@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Knowledge Graph Page v0.1 corrective implementation complete — CTO acceptance pending**
+**Pi multi-provider configuration executed — CTO acceptance pending**
 
 ## Current Snapshot
 
@@ -25,8 +25,9 @@
 - `RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001`: PASS / CLOSED by CTO decision; the frozen Graph Projection Architecture is admitted byte-for-byte, Directory and rooted read-only graph APIs are available, and `/graph` provides Directory, Search, React Flow canvas, Dagre layout, filters, focus/re-root, depth, and canonical Inspector reads.
 - `RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001-FIX-001`: PASS / CLOSED by CTO decision; ThemeGroup taxonomy toggles, bounded structured canonical/evidence Inspector views, deterministic five-profile/depth/bounds/API/UI contract tests, and Homepage governance reconciliation are complete.
 - `RHL-VALIDATE-PRODUCTION-E2E-001`: `ENVIRONMENT_BLOCKED / CTO reviewed`; the real Pi provider completion preflight was blocked by the authentication environment. Docling 2.116.0 and the fresh-KB preflight passed; Application Free Research, Attachment, Writer, Graph, browser smoke, and replay were not run after that authoritative block.
-- `RHL-DIAGNOSE-PI-PROVIDER-ENVIRONMENT-001`: executed / CTO acceptance pending; classification `USER_AUTHORIZATION_REQUIRED` after a real native Pi DeepSeek completion returned HTTP 401 `authentication_failed`. The provider gate remains blocked pending official Pi-native user authorization; the full Production E2E was not rerun.
-- Next recommended phase: after official Pi provider authorization and CTO review, rerun the minimal provider diagnosis before any full Production E2E.
+- `RHL-DIAGNOSE-PI-PROVIDER-ENVIRONMENT-001`: PASS / CLOSED; the provider-neutral native Pi and PiReasoningExecutor validation seam is available, and the historical DeepSeek authentication block remains preserved as evidence.
+- `RHL-CONFIGURE-PI-MULTI-PROVIDER-001`: executed / CTO acceptance pending; local Pi `models.json` and `auth.json` are configured for `zhipu-openapi/glm-5.3-flash` and Pi-native `openai-codex` OAuth. Both providers passed Native Pi and PiReasoningExecutor gates; the full Production E2E was intentionally not run.
+- Next recommended phase: CTO review of the cleared multi-provider gate; only after separate authorization should the full Production Application E2E be run.
 - `docs/governance/ARCHITECTURE.md` remains a frozen CTO-generated summary and is intentionally not rewritten by this admission task; where its older frontend/transport wording conflicts, the normative Runtime/Client architecture and this decision record supersede it until a consolidated replacement is issued.
 
 ## Completed

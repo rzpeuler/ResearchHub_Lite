@@ -1,6 +1,7 @@
 import { join, resolve } from 'node:path'
 import { getAgentDir, ModelRuntime, SessionManager } from '@earendil-works/pi-coding-agent'
 import { PiReasoningExecutor } from '../../plugins/reasoning/pi/executor.ts'
+import { selectProductionReasoningModel } from '../pi/model-selection.ts'
 import { KnowledgeService } from '../services/knowledge-service.ts'
 import { KnowledgeGraphService } from '../services/knowledge-graph-service.ts'
 import { ProductionService } from '../services/production-service.ts'
@@ -52,7 +53,8 @@ export class ResearchHubApplicationRuntime {
     if (mountedKnowledgeBaseRoot !== undefined) await validateStorageRoots(workspaceRoot, mountedKnowledgeBaseRoot)
     const ownsModelRuntime = options.modelRuntime === undefined
     const modelRuntime = options.modelRuntime ?? await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: join(agentDir, 'models.json'), allowModelNetwork: false, refreshOnCreate: false })
-    const reasoningExecutor = options.reasoningExecutor ?? new PiReasoningExecutor({ modelRuntime, model: options.model })
+    const selectedModel = options.model ?? (options.modelRuntime === undefined ? selectProductionReasoningModel(modelRuntime) : undefined)
+    const reasoningExecutor = options.reasoningExecutor ?? new PiReasoningExecutor({ modelRuntime, model: selectedModel })
     const knowledgeService = new KnowledgeService(mountedKnowledgeBaseRoot)
     const knowledgeGraphService = new KnowledgeGraphService(mountedKnowledgeBaseRoot)
     const reviewService = new ReviewService(mountedKnowledgeBaseRoot)
@@ -61,7 +63,7 @@ export class ResearchHubApplicationRuntime {
     const services = { knowledgeService, knowledgeGraphService, reviewService, workflowService, productionService }
     const sessionManager = options.sessionManager ?? SessionManager.create(cwd, options.sessionDir)
     try {
-      const sessionRuntime = await createResearchHubSessionRuntime({ cwd, agentDir, modelRuntime, sessionManager, applicationServices: services, mountedKnowledgeBaseRoot, workspaceRoot, model: options.model, reasoningExecutor, settingsManager: options.settingsManager, resourceLoader: options.resourceLoader })
+      const sessionRuntime = await createResearchHubSessionRuntime({ cwd, agentDir, modelRuntime, sessionManager, applicationServices: services, mountedKnowledgeBaseRoot, workspaceRoot, model: selectedModel, reasoningExecutor, settingsManager: options.settingsManager, resourceLoader: options.resourceLoader })
       return new ResearchHubApplicationRuntime({ cwd, agentDir, workspaceRoot, mountedKnowledgeBaseRoot, modelRuntime, sessionManager, services, sessionRuntime, ownsModelRuntime })
     } catch (error) {
       if (ownsModelRuntime) await disposeModelRuntime(modelRuntime)

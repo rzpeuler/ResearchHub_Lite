@@ -3,8 +3,9 @@ import { access, mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from '
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import type { Api, Model } from '@earendil-works/pi-ai'
-import { ModelRuntime } from '@earendil-works/pi-coding-agent'
+import { getAgentDir, ModelRuntime } from '@earendil-works/pi-coding-agent'
 import { createResearchHubApplicationRuntime } from '../../app/runtime/application-runtime.ts'
+import { PRIMARY_PRODUCTION_REASONING_MODEL, selectProductionReasoningModel } from '../../app/pi/model-selection.ts'
 import { ResearchHubRuntimeServer } from '../../app/runtime/server.ts'
 import { PiReasoningExecutor } from '../../plugins/reasoning/pi/executor.ts'
 import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../plugins/reasoning/contracts.ts'
@@ -23,8 +24,6 @@ const evidenceDir = resolve(repoRoot, 'tests/validation/evidence')
 const evidencePath = join(evidenceDir, 'rhl-production-e2e-001.json')
 const summaryPath = join(evidenceDir, 'RHL_PRODUCTION_E2E_001_SUMMARY.md')
 const taskId = 'RHL-VALIDATE-PRODUCTION-E2E-001'
-const expectedHead = '5247a98ccafb67dd7bae89fcb8510b5118fcd95e'
-const preferredModel = 'deepseek-v4-flash'
 const freeMarker = 'RHL_PRODUCTION_E2E_FREE_RESEARCH_OK'
 const pollIntervalMs = 1_000
 const workflowTimeoutMs = 15 * 60 * 1_000
@@ -231,7 +230,7 @@ async function main(): Promise<void> {
   try {
     const baseline = await stage(stages, 'preflight', async () => {
       const head = (await Bunless.command('git', ['rev-parse', 'HEAD'])).trim(); const originMain = (await Bunless.command('git', ['rev-parse', 'origin/main'])).trim()
-      assertCondition(head === originMain && head === expectedHead, `Expected clean accepted baseline, got HEAD=${head}, origin/main=${originMain}`)
+      assertCondition(head === originMain, `Expected clean accepted baseline, got HEAD=${head}, origin/main=${originMain}`)
       const status = (await Bunless.command('git', ['status', '--porcelain', '--untracked-files=no'])).trim(); assertCondition(status === '', 'Tracked working tree is not clean')
       return { head, originMain, trackedWorkingTreeClean: true, protectedPdf: 'pre-existing untracked and unstaged; not read or modified' }
     })
@@ -250,9 +249,10 @@ async function main(): Promise<void> {
     const parsed = await stage(stages, 'docling_preflight_parse', async () => { const resolver = new DocumentInputResolver({ documentParser: parser }); const acquired = await resolver.acquire({ type: 'file', reference: pdfPath }); return parser.parse(acquired) }).catch((error) => { classification = /environment_not_ready|not found/i.test(errorText(error)) ? 'ENVIRONMENT_BLOCKED' : 'PRODUCT_DEFECT'; throw error })
     const pdfStat = await stat(pdfPath); evidence.validationDocument = { filename: 'rhl-production-e2e-001.pdf', sha256: sha256(bytes), bytes: pdfStat.size, pages: parsed.stats.pageCount, protectedArtifactModifiedOrTracked: false, doclingPreflight: { parser: parsed.parser, stats: parsed.stats } }
 
-    modelRuntime = await stage(stages, 'real_provider_preflight', async () => ModelRuntime.create({ authPath: resolve(process.env.USERPROFILE ?? 'C:/Users/Administrator', '.pi', 'agent', 'auth.json'), modelsPath: null, allowModelNetwork: true, refreshOnCreate: false })).catch((error) => { classification = 'ENVIRONMENT_BLOCKED'; throw error })
-    const available = await modelRuntime.getAvailable(); const selected = available.find((model) => model.provider === 'deepseek' && model.id === preferredModel) ?? available.find((model) => model.provider === 'deepseek')
-    if (!selected) { classification = 'ENVIRONMENT_BLOCKED'; throw new Error('No authorized real Pi provider/model is available') }
+    modelRuntime = await stage(stages, 'real_provider_preflight', async () => ModelRuntime.create({ authPath: join(getAgentDir(), 'auth.json'), modelsPath: join(getAgentDir(), 'models.json'), allowModelNetwork: true, refreshOnCreate: false })).catch((error) => { classification = 'ENVIRONMENT_BLOCKED'; throw error })
+    const selected = selectProductionReasoningModel(modelRuntime, PRIMARY_PRODUCTION_REASONING_MODEL)
+    const available = await modelRuntime.getAvailable(PRIMARY_PRODUCTION_REASONING_MODEL.providerId)
+    if (!available.some((model) => model.provider === selected.provider && model.id === selected.id)) { classification = 'ENVIRONMENT_BLOCKED'; throw new Error('Configured production reasoning model is not authorized') }
     evidence.realRuntime = { provider: selected.provider, model: selected.id, reasoningConfiguration: { structuredOutputSupport: true, maxConcurrency: capabilities.maxConcurrency }, configuredModelAvailable: true, realProviderConfirmed: false, fauxOrMockUsed: false }
     await stage(stages, 'real_provider_completion_preflight', async () => {
       const probe = new PiReasoningExecutor({ modelRuntime, model: selected as Model<Api>, capabilities, timeoutMs: 120_000, maxOutputChars: 16_384 })

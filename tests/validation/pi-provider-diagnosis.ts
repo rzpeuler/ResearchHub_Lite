@@ -1,6 +1,7 @@
 import type { ModelRuntime } from '@earendil-works/pi-coding-agent'
 
 export type PiFailureCategory =
+  | 'credential_missing'
   | 'authentication_failed'
   | 'authorization_failed'
   | 'quota_or_billing'
@@ -30,7 +31,7 @@ function codeOf(error: unknown): string | undefined {
 }
 
 function statusOf(message: string): number | undefined {
-  const match = message.match(/(?:HTTP\s*)?\b(401|403|408|409|429|500|502|503|504)\b/i)
+  const match = message.match(/(?:HTTP\s*)?\b(400|401|403|408|409|422|429|435|500|502|503|504)\b/i)
   return match === null ? undefined : Number(match[1])
 }
 
@@ -52,6 +53,7 @@ function categoryOf(error: unknown, message: string, status: number | undefined)
 
 function safeMessage(category: PiFailureCategory): string {
   const messages: Record<PiFailureCategory, string> = {
+    credential_missing: 'Provider credentials were not configured',
     authentication_failed: 'Provider authentication was rejected',
     authorization_failed: 'Provider authorization was rejected',
     quota_or_billing: 'Provider quota or billing prevented completion',

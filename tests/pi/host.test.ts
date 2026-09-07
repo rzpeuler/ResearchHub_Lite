@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from '@earendil-works/pi-ai'
 import { ModelRuntime } from '@earendil-works/pi-coding-agent'
 import { createResearchHubPiSession } from '../../app/pi/session.ts'
+import { selectProductionReasoningModel } from '../../app/pi/model-selection.ts'
 import { BASH_ISOLATION_GAP, createProtectedBashOperations, createProtectedEditOperations, createProtectedWriteOperations } from '../../app/pi/security.ts'
 import { createResearchHubTools } from '../../app/pi/tools.ts'
 import { KnowledgeService } from '../../app/services/knowledge-service.ts'
@@ -20,6 +21,18 @@ import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { createKnowledgeBase, removeKnowledgeBase } from '../knowledge/helpers.ts'
 
 const capabilities: ReasoningCapabilities = { maxContextTokens: 100_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 4 }
+
+test('production reasoning model selection stays inside Pi ModelRuntime', async () => {
+  const agentDir = await mkdtemp(join(tmpdir(), 'researchhub-pi-selection-agent-'))
+  try {
+    const runtime = await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
+    const faux = fauxProvider({ provider: 'researchhub-selection-faux', models: [{ id: 'selection-model' }] })
+    runtime.registerNativeProvider(faux.provider)
+    const selected = selectProductionReasoningModel(runtime, { providerId: 'researchhub-selection-faux', modelId: 'selection-model' })
+    assert.equal(selected.provider, 'researchhub-selection-faux')
+    assert.equal(selected.id, 'selection-model')
+  } finally { await rm(agentDir, { recursive: true, force: true }) }
+})
 
 class FixtureExecutor implements ReasoningExecutor {
   readonly calls: ReasoningRequest[] = []
