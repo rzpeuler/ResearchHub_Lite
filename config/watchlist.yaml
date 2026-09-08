@@ -1,0 +1,10 @@
+{
+  "companies": [
+    {"symbol":"600519","name":"贵州茅台","exchange":"SSE","focusTags":["consumer","beverage"]},
+    {"symbol":"000858","name":"五粮液","exchange":"SZSE","focusTags":["consumer","beverage"]},
+    {"symbol":"688256","name":"寒武纪","exchange":"SSE","focusTags":["AI-compute","semiconductor"]},
+    {"symbol":"300308","name":"中际旭创","exchange":"SZSE","focusTags":["optical-communication","data-center"]}
+  ],
+  "themes": ["AI-compute", "semiconductor", "PCB", "optical-communication", "data-center", "consumer", "new-energy", "macro"],
+  "industries": ["semiconductor", "consumer", "new-energy", "telecommunications"]
+}
