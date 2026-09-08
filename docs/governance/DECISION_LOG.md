@@ -1,5 +1,13 @@
 # ResearchHub_Lite — Decision Log
 
+## RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001 — Implementation State — 2026-09-09
+
+M3A-2 Valuation is implemented on the frozen Personal Research v1 Research Coverage architecture and remains `IMPLEMENTED / CTO ACCEPTANCE PENDING`. The implementation preserves the existing Workflow / Skill / Plugin / Knowledge boundaries: exact canonical Company coverage is resolved before acquisition, the existing AKShare adapter supplies only structured companyBasic/financialData/historicalMarketData, Workflow owns FY/PIT normalization and deterministic eligibility/calculation, Skill owns bounded two-stage semantic output, and canonical mutation remains behind the existing Knowledge Production Gateway / validated ChangeSet / Writer path.
+
+The product path is exposed through Pi `analyze_valuation` and HTTP `POST /api/production/analyze-valuation` with `/api/analyze-valuation` compatibility alias. It persists only bounded assumption/viewpoint proposals and a `ResearchReport` with `reportType: valuation`; no canonical Valuation object, DCF, consensus, provider framework, generic layer, Schema/Gateway/Writer redesign, or M3A-3/4 work was introduced. The contract document is `docs/architecture/PERSONAL_RESEARCH_V1_VALUATION_V0.1.md`.
+
+Focused V1–V63 tests pass. The real Pi E2E uses the current production model and reports `EXECUTED_PASS`; AKShare provider smoke is non-blocking and records the observed transport/usability state separately. CTO acceptance, rather than engineering completion, is still required before this task may be marked PASS / CLOSED.
+
 This log records only architecture/product decisions that materially constrain future engineering.
 
 ---

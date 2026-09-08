@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-09-08T18:03:38.774Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001",
+  "classification": "EXECUTED_PASS",
+  "model": {
+    "provider": "pi-coding-agent",
+    "requestedModel": "zhipu-openapi/glm-5.3-flash"
+  },
+  "realPiReasoningExecutor": true,
+  "gate": {
+    "realPiReasoningExecutor": true,
+    "operations": [
+      "valuation_assumption_design",
+      "valuation_synthesis"
+    ],
+    "status": "completed",
+    "reportType": "valuation",
+    "sectionCount": 16,
+    "assumptionDesign": {
+      "called": true,
+      "operation": "valuation_assumption_design",
+      "validated": true,
+      "applied": true,
+      "fallbackUsed": false,
+      "repairAttempts": 0
+    },
+    "synthesis": {
+      "called": true,
+      "operation": "valuation_synthesis",
+      "validated": true,
+      "applied": true,
+      "fallbackUsed": false,
+      "repairAttempts": 0
+    },
+    "computation": {
+      "scenarioCount": 3,
+      "calculatedScenarioCount": 3,
+      "sensitivityCellCount": 9,
+      "deterministicRecomputeStatus": "matched"
+    },
+    "acceptedProposalCount": 2,
+    "canonicalSourceCount": 3,
+    "canonicalClaimCount": 2,
+    "provider": {
+      "providerAttempted": true,
+      "transportSucceeded": true,
+      "companyBasicRowCount": 1,
+      "financialRowCount": 1,
+      "marketRowCount": 2,
+      "marketPriceFound": true,
+      "fiscalYearBasisFound": true,
+      "peEligible": true,
+      "pbEligible": true,
+      "evEbitdaEligible": true,
+      "usableForValuation": true
+    },
+    "exactCompanyCoverage": true,
+    "baselineEntityCount": 1,
+    "finalEntityCount": 1
+  },
+  "run": {
+    "status": "completed",
+    "reportId": "valuation-600519-2026-m3a-valuation-pi-001",
+    "errors": null
+  },
+  "canonicalCounts": {
+    "entities": 1,
+    "sources": 4,
+    "claims": 4
+  },
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}

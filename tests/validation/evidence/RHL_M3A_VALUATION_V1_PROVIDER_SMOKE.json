@@ -1,0 +1,44 @@
+{
+  "generatedAt": "2026-09-08T18:04:12.483Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001",
+  "classification": "PROVIDER_TRANSPORT_BLOCKED",
+  "provider": "AKShareDataAdapter",
+  "symbol": "600519",
+  "transportPass": false,
+  "usabilityPass": false,
+  "calls": {
+    "companyBasic": {
+      "transport": "FAIL",
+      "usability": "UNAVAILABLE",
+      "error": "Command failed: python -c import json,sys,akshare as ak\nkind,symbol,start_date,end_date=sys.argv[1:]\nif kind=='basic': value=ak.stock_individual_info_em(symbol=symbol)\nelif kind=='financial': value=ak.stock_financial_analysis_indicator(symbol=symbol)\nelif kind=='index': value=ak.stock_zh_index_daily(symbol=symbol)\nelif kind=='sector': value=ak.stock_board_industry_name_em()\nelif kind=='calendar': value=ak.tool_trade_date_hist_sina()\nelse: value=ak.stock_zh_a_hist(symbol=symbol,period='daily',start_date=start_date or None,end_date=end_date or None,adjust='')\nprint(value.to_json(orient='records',force_ascii=False)) basic 600519  \nC:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\requests\\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.1) or chardet (7.4.3)/charset_normalizer (3.4.4) doesn't match a supported version!\r\n  warnings.warn(\r\nTraceback (most recent call last):\r\n  File \"C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\sit",
+      "latencyMs": 1101
+    },
+    "financialData": {
+      "transport": "PASS",
+      "usability": "empty",
+      "reason": "provider returned an empty payload",
+      "rowCount": 0,
+      "latencyMs": 1113
+    },
+    "historicalMarketData": {
+      "transport": "FAIL",
+      "usability": "UNAVAILABLE",
+      "error": "Command failed: python -c import json,sys,akshare as ak\nkind,symbol,start_date,end_date=sys.argv[1:]\nif kind=='basic': value=ak.stock_individual_info_em(symbol=symbol)\nelif kind=='financial': value=ak.stock_financial_analysis_indicator(symbol=symbol)\nelif kind=='index': value=ak.stock_zh_index_daily(symbol=symbol)\nelif kind=='sector': value=ak.stock_board_industry_name_em()\nelif kind=='calendar': value=ak.tool_trade_date_hist_sina()\nelse: value=ak.stock_zh_a_hist(symbol=symbol,period='daily',start_date=start_date or None,end_date=end_date or None,adjust='')\nprint(value.to_json(orient='records',force_ascii=False)) market 600519  2026-09-09\nC:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\requests\\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.1) or chardet (7.4.3)/charset_normalizer (3.4.4) doesn't match a supported version!\r\n  warnings.warn(\r\nTraceback (most recent call last):\r\n  File \"C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python",
+      "latencyMs": 1070
+    }
+  },
+  "normalizedValuation": {
+    "annualRowCount": 0,
+    "marketFound": false,
+    "basisFiscalYear": null,
+    "publicationStatus": null,
+    "diagnostics": [
+      "VALUATION_FINANCIAL_BASIS_UNAVAILABLE",
+      "VALUATION_MARKET_PRICE_UNAVAILABLE",
+      "POINT_IN_TIME_PUBLICATION_UNVERIFIED"
+    ]
+  },
+  "nonBlocking": true,
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}

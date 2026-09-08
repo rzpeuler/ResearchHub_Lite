@@ -176,3 +176,6 @@ export interface ApplicationResearchResult { readonly runId: string; readonly st
 export type EarningsReviewPeriod = 'Q1' | 'H1' | 'Q3' | 'FY'
 export interface EarningsReviewInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly fiscalYear: number; readonly period: EarningsReviewPeriod; readonly asOf?: string }
 export interface ApplicationEarningsReviewResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string }
+export type ValuationMethod = 'PE' | 'PB' | 'EV_EBITDA'
+export interface ValuationInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly asOf?: string; readonly methods?: readonly ValuationMethod[]; readonly targetFiscalYear?: number }
+export interface ApplicationValuationResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string; readonly providerOutcome?: unknown }

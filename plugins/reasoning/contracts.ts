@@ -7,6 +7,8 @@ export const REASONING_OPERATIONS = [
   'daily_change_assessment',
   'daily_brief_synthesis',
   'earnings_review_synthesis',
+  'valuation_assumption_design',
+  'valuation_synthesis',
 ] as const
 
 export type ReasoningOperation = (typeof REASONING_OPERATIONS)[number]
