@@ -14,6 +14,7 @@ export interface SemanticProductionProposal {
   readonly entityName?: string
   readonly relationType?: string
   readonly targetKey?: string
+  readonly attributes?: Readonly<Record<string, unknown>>
   readonly sourceCandidateIds?: readonly string[]
   readonly temporal?: unknown
   readonly structuredValue?: Readonly<Record<string, unknown>> | null
@@ -22,7 +23,20 @@ export interface SemanticProductionProposal {
   readonly supportsProposalIds?: readonly string[]
   readonly dependsOnProposalIds?: readonly string[]
   readonly contradictsProposalIds?: readonly string[]
+  readonly semanticKey?: string
+  readonly resolution?: 'supersede' | 'contradict' | 'review'
 }
+
+export interface SemanticResolutionDecision {
+  readonly outcome: 'equivalent' | 'supersedes' | 'contradicts' | 'uncertain'
+  readonly reason: string
+}
+
+export type SemanticResolver = (input: {
+  readonly proposal: SemanticProductionProposal
+  readonly existing: readonly Record<string, unknown>[]
+  readonly evidence: readonly Record<string, unknown>[]
+}) => Promise<SemanticResolutionDecision> | SemanticResolutionDecision
 
 export interface ProductionEntityInput {
   readonly localKey: string
@@ -49,6 +63,8 @@ export interface KnowledgeProductionInput {
   readonly evidenceBindings: readonly ProductionEvidenceBinding[]
   readonly asOf?: string
   readonly now?: () => string
+  readonly semanticResolver?: SemanticResolver
+  readonly reviewProducerType?: string
 }
 
 export interface ResolutionIntentSummary {

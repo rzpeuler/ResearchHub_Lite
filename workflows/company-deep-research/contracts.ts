@@ -1,6 +1,6 @@
 import type { KnowledgeBaseHandle } from '../../knowledge/storage/handle.ts'
 import type { CompanyResearchResult } from '../../skills/company-research/contracts.ts'
-import type { ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchSignalStore } from '../../plugins/research-acquisition/contracts.ts'
+import type { ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchSignalStore, ResearchAcquisitionDiagnostic, ResearchProviderOutcome } from '../../plugins/research-acquisition/contracts.ts'
 import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { ResolutionIntentSummary } from '../../knowledge/production/contracts.ts'
@@ -33,4 +33,6 @@ export interface CompanyDeepResearchResult {
   readonly resolutionIntents?: readonly ResolutionIntentSummary[]
   readonly errors: readonly string[]
   readonly research?: CompanyResearchResult
+  readonly acquisitionDiagnostics?: readonly ResearchAcquisitionDiagnostic[]
+  readonly providerOutcomes?: readonly ResearchProviderOutcome[]
 }

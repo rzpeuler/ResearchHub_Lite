@@ -1,4 +1,4 @@
-import type { KnowledgeClaimV03, KnowledgeEntityV03, KnowledgeModuleV03, KnowledgeRelationV03, KnowledgeSourceV03, KnowledgeThemeGroupV03, KnowledgeMetadataV03, SourceTypeV03, SourceReliabilityV03 } from './domain.ts'
+import type { KnowledgeClaimV03, KnowledgeEntityV03, KnowledgeModuleV03, KnowledgeRelationV03, KnowledgeSourceV03, KnowledgeThemeGroupV03, KnowledgeMetadataV03, SourceTypeV03, SourceReliabilityV03, ClaimStructuredValueV03 } from './domain.ts'
 
 export type ClaimTypeV04 = 'fact' | 'forecast' | 'viewpoint' | 'trend' | 'risk' | 'assumption' | 'thesis' | 'catalyst'
 export type ClaimRefV04 = `claim:${string}`
@@ -7,14 +7,23 @@ export type RawRefV04 = `raw-sha256-${string}`
 export type EntityRefV04 = `entity:${string}`
 export type RelationRefV04 = `relation:${string}`
 export type CanonicalKnowledgeRefV04 = `theme-group:${string}` | EntityRefV04 | RelationRefV04 | ClaimRefV04 | SourceRefV04 | `module:${string}` | RawRefV04
+export type ClaimStructuredValueV04 = ClaimStructuredValueV03 & { period?: string | null; fiscalPeriod?: string | null; semanticKey?: string | null }
 
 export interface SourceRightsV04 {
   accessScope: 'public' | 'authenticated' | 'restricted' | 'unknown'
-  retentionAllowed: boolean
-  aiProcessingAllowed: boolean
-  derivativeKnowledgeAllowed: boolean
-  redistributionAllowed: boolean
-  policyBasis?: 'personal_noncommercial_research'
+  providerTermsKnown: boolean
+  redistributionAllowed?: boolean | null
+  retentionAllowed?: boolean | null
+  aiProcessingAllowed?: boolean | null
+  derivativeKnowledgeAllowed?: boolean | null
+}
+
+export interface SourceUsagePolicyV04 {
+  mode: 'personal_noncommercial_research'
+  retainRaw: boolean
+  allowAiProcessing: boolean
+  allowDerivedKnowledge: boolean
+  redistributionAllowed: false
 }
 
 export interface SourceAcquisitionV04 {
@@ -24,8 +33,9 @@ export interface SourceAcquisitionV04 {
   extractor?: string | null
 }
 
-export interface KnowledgeClaimV04 extends Omit<KnowledgeClaimV03, 'claimType' | 'sourceRefs' | 'provenance' | 'confidence' | 'supersedes' | 'supersededBy'> {
+export interface KnowledgeClaimV04 extends Omit<KnowledgeClaimV03, 'claimType' | 'sourceRefs' | 'provenance' | 'confidence' | 'supersedes' | 'supersededBy' | 'structuredValue'> {
   claimType: ClaimTypeV04
+  structuredValue?: ClaimStructuredValueV04 | null
   sourceRefs: SourceRefV04[]
   provenance?: Array<{ sourceRef: SourceRefV04; rawRef: RawRefV04; locator: string | null; chunkRef: string | null }>
   confidence?: number | null
@@ -47,6 +57,7 @@ export interface KnowledgeSourceV04 extends Omit<KnowledgeSourceV03, 'sourceType
   contentHash?: string | null
   acquisition?: SourceAcquisitionV04 | null
   rights: SourceRightsV04
+  usagePolicy: SourceUsagePolicyV04
   metadata?: KnowledgeMetadataV03
 }
 

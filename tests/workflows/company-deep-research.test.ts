@@ -33,7 +33,7 @@ test('Company Deep Research produces atomic canonical Knowledge and a linked rep
     const loaded = await readCanonicalV04Assets(root)
     assert.ok(loaded.objects.some((item) => item.value.id === 'entity:company-600519'))
     assert.ok(loaded.objects.some((item) => item.value.id.startsWith('source:research-')))
-    assert.ok(loaded.objects.some((item) => item.value.id.startsWith('claim:research-')))
+    assert.equal(loaded.objects.filter((item) => item.value.id.startsWith('claim:research-')).length, 0)
     assert.equal(result.knowledgeBaseRevision, 1)
 
     const replay = await runCompanyDeepResearch({ ...input, handle: await new KnowledgeBaseRegistry().mount(root) })
@@ -70,7 +70,7 @@ test('Company Deep Research binds two companies deterministically and is stable 
     const loaded = await readCanonicalV04Assets(root)
     assert.equal(loaded.objects.filter((item) => item.value.id.startsWith('entity:')).length, 2)
     assert.equal(loaded.objects.filter((item) => item.value.id.startsWith('source:')).length, 2)
-    assert.equal(loaded.objects.filter((item) => item.value.id.startsWith('claim:')).length, 2)
+    assert.equal(loaded.objects.filter((item) => item.value.id.startsWith('claim:')).length, 0)
     assert.ok(loaded.objects.every((item) => !item.value.id.includes('proposal-')))
     assert.ok(third.resolutionIntents?.some((item) => item.disposition === 'bound_existing'))
   } finally {
@@ -88,6 +88,10 @@ test('Schema 0.4 shared Writer rejects a forged receipt without Validator runtim
     const result = await writeKnowledgeBase(handle, forged as never, { registry: new Registry(), clock: () => '2026-09-08T00:00:00.000Z' })
     assert.equal(result.status, 'rejected')
     assert.equal(result.error?.code, 'validation_required')
+    const imitation = Object.create(Object.getPrototypeOf(forged)) as unknown
+    Object.assign(imitation as object, forged)
+    const imitationResult = await writeKnowledgeBase(handle, imitation as never, { registry: new Registry(), clock: () => '2026-09-08T00:00:00.000Z' })
+    assert.equal(imitationResult.error?.code, 'validation_required')
   } finally {
     await rm(root, { recursive: true, force: true })
   }

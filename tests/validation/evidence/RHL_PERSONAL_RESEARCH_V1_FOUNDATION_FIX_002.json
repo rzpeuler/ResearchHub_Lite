@@ -1,0 +1,51 @@
+{
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-FOUNDATION-001-FIX-002",
+  "status": "Implemented / CTO acceptance pending",
+  "validationDate": "2026-09-08",
+  "offline": {
+    "payloadSafety": "covered",
+    "rawSourceIdentity": "covered",
+    "claimTemporalIdentity": "covered",
+    "validatorReceiptAuthority": "covered",
+    "claimResolutionAndDurableReview": "covered",
+    "relationCanonicalization": "covered",
+    "companyExchangeNormalization": "covered",
+    "cninfoPdfResolverSeam": "covered"
+  },
+  "providerSmoke": {
+    "scenario": "real-network multi-run company research",
+    "companies": ["600519", "000858"],
+    "sequence": ["600519", "000858", "600519"],
+    "outcomes": [
+      { "provider": "cninfo", "providerAttempted": true, "providerSucceeded": false, "providerEmpty": true, "providerFailed": false, "usableSourceCount": 0 },
+      { "provider": "gdelt", "providerAttempted": true, "providerSucceeded": false, "providerEmpty": false, "providerFailed": true, "usableSourceCount": 0 },
+      { "provider": "akshare", "providerAttempted": true, "providerSucceeded": false, "providerEmpty": true, "providerFailed": true, "usableSourceCount": 0 }
+    ],
+    "aggregateCounts": { "attempted": 3, "succeeded": 0, "empty": 2, "failed": 2, "usable": 0 },
+    "runs": [
+      { "workflowRunId": "real-smoke-600519-1", "status": "completed", "revision": "0->1", "sourceCount": 0, "claimCount": 0 },
+      { "workflowRunId": "real-smoke-000858-1", "status": "completed", "revision": "1->2", "sourceCount": 0, "claimCount": 0 },
+      { "workflowRunId": "real-smoke-600519-2", "status": "completed", "revision": "2->2", "sourceCount": 0, "claimCount": 0 }
+    ],
+    "finalCanonicalCounts": { "entities": 2, "sources": 0, "claims": 0 }
+  },
+  "piReasoningE2E": {
+    "classification": "EXECUTED",
+    "realPiReasoningExecutor": true,
+    "provider": "pi-coding-agent",
+    "model": "zhipu-openapi/glm-5.3-flash",
+    "operation": "company_research_synthesis",
+    "company": "600519",
+    "status": "completed",
+    "sections": 19,
+    "proposalCount": 24,
+    "claimCount": 12,
+    "canonicalCounts": { "entities": 1, "sources": 1, "claims": 12, "relations": 0 },
+    "errors": [],
+    "secretsIncluded": false,
+    "rawBodiesIncluded": false
+  },
+  "noM2": true,
+  "sourceBodiesCommitted": false,
+  "untrackedUserPdfPreserved": true
+}

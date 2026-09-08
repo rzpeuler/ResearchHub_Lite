@@ -63,6 +63,25 @@ export interface ResearchAcquisitionPlugin {
   normalize(source: ResearchFetchedSource): Promise<NormalizedResearchSource>
 }
 
+export type AcquisitionPayloadStatus = 'usable' | 'empty' | 'failed'
+
+export interface ResearchAcquisitionDiagnostic {
+  readonly provider: string
+  readonly candidateId?: string
+  readonly kind?: ResearchSourceKind
+  readonly status: AcquisitionPayloadStatus
+  readonly reason: string
+}
+
+export interface ResearchProviderOutcome {
+  readonly provider: string
+  readonly providerAttempted: boolean
+  readonly providerSucceeded: boolean
+  readonly providerEmpty: boolean
+  readonly providerFailed: boolean
+  readonly usableSourceCount: number
+}
+
 export interface ResearchSignal {
   readonly signalId: string
   readonly kind: 'news' | 'announcement' | 'institutional_view' | 'community' | 'social_attention'

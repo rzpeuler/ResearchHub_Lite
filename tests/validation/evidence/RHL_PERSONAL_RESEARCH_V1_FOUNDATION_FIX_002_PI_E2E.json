@@ -1,0 +1,26 @@
+{
+  "classification": "EXECUTED",
+  "host": {
+    "provider": "pi-coding-agent",
+    "requestedModel": "zhipu-openapi/glm-5.3-flash"
+  },
+  "operation": "company_research_synthesis",
+  "realPiReasoningExecutor": true,
+  "run": {
+    "status": "completed",
+    "reportId": "company-research-600519-pi-e2e-2026-09-08T08-06-18-540Z",
+    "sections": 19,
+    "proposalCount": 24,
+    "claimCount": 12,
+    "knowledgeRevision": 1,
+    "errors": []
+  },
+  "canonicalCounts": {
+    "entities": 1,
+    "sources": 1,
+    "claims": 12,
+    "relations": 0
+  },
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}

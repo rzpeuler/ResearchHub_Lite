@@ -5,12 +5,13 @@ import { DocumentInputResolver } from '../document/input-resolver.ts'
 export interface OfficialDisclosureRecord { readonly title: string; readonly url: string; readonly publishedAt: string; readonly issuer?: string; readonly content?: string }
 export interface OfficialDisclosureDocument { readonly content: string; readonly bytes: Uint8Array; readonly mediaType: string }
 export interface OfficialDisclosureClient { list(request: ResearchAcquisitionRequest): Promise<readonly OfficialDisclosureRecord[]>; fetch(record: OfficialDisclosureRecord): Promise<string>; fetchDocument?(record: OfficialDisclosureRecord): Promise<OfficialDisclosureDocument> }
-export interface CninfoOfficialDisclosureClientOptions { readonly fetchImpl?: typeof fetch; readonly endpoint?: string; readonly pageSize?: number }
+export interface CninfoOfficialDisclosureClientOptions { readonly fetchImpl?: typeof fetch; readonly endpoint?: string; readonly pageSize?: number; readonly documentResolver?: Pick<DocumentInputResolver, 'parse'> }
 export class CninfoOfficialDisclosureClient implements OfficialDisclosureClient {
   private readonly fetchImpl: typeof fetch
   private readonly endpoint: string
   private readonly pageSize: number
-  constructor(options: CninfoOfficialDisclosureClientOptions = {}) { this.fetchImpl = options.fetchImpl ?? fetch; this.endpoint = options.endpoint ?? 'https://www.cninfo.com.cn/new/hisAnnouncement/query'; this.pageSize = options.pageSize ?? 20 }
+  private readonly documentResolver: Pick<DocumentInputResolver, 'parse'>
+  constructor(options: CninfoOfficialDisclosureClientOptions = {}) { this.fetchImpl = options.fetchImpl ?? fetch; this.endpoint = options.endpoint ?? 'https://www.cninfo.com.cn/new/hisAnnouncement/query'; this.pageSize = options.pageSize ?? 20; this.documentResolver = options.documentResolver ?? new DocumentInputResolver() }
   async list(request: ResearchAcquisitionRequest): Promise<readonly OfficialDisclosureRecord[]> {
     const exchange = request.company.exchange?.toLowerCase(); const column = exchange === 'sse' || exchange === 'szse' ? exchange : request.company.symbol.startsWith('6') ? 'sse' : 'szse'; const form = new URLSearchParams({ stock: request.company.symbol, pageNum: '1', pageSize: String(this.pageSize), tabName: 'fulltext', column }); const response = await this.fetchImpl(this.endpoint, { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'ResearchHub/PersonalResearchV1' }, body: form }); if (!response.ok) throw new Error(`CNINFO request failed with HTTP ${response.status}`); const payload = await response.json() as Record<string, unknown>; const rows = Array.isArray(payload.announcements) ? payload.announcements : []; return rows.flatMap((row) => { if (!row || typeof row !== 'object') return []; const value = row as Record<string, unknown>; const title = typeof value.announcementTitle === 'string' ? value.announcementTitle : typeof value.title === 'string' ? value.title : ''; const adjunctUrl = typeof value.adjunctUrl === 'string' ? value.adjunctUrl : ''; const url = adjunctUrl.startsWith('http') ? adjunctUrl : adjunctUrl ? `https://static.cninfo.com.cn/${adjunctUrl.replace(/^\/+/, '')}` : ''; const publishedAt = typeof value.announcementTime === 'string' ? value.announcementTime : ''; return title && url && publishedAt ? [{ title, url, publishedAt, issuer: typeof value.secName === 'string' ? value.secName : undefined }] : [] })
   }
@@ -25,7 +26,7 @@ export class CninfoOfficialDisclosureClient implements OfficialDisclosureClient 
     const bytes = new Uint8Array(await response.arrayBuffer())
     const mediaType = response.headers.get('content-type')?.split(';', 1)[0] ?? (record.url.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'text/html')
     const filename = record.url.toLowerCase().endsWith('.pdf') ? 'cninfo-disclosure.pdf' : 'cninfo-disclosure.html'
-    const document = await new DocumentInputResolver().parse({ bytes, filename, mediaType })
+    const document = await this.documentResolver.parse({ bytes, filename, mediaType })
     return { content: document.normalizedText, bytes, mediaType }
   }
 }

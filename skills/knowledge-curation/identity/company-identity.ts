@@ -33,6 +33,13 @@ function clean(value: string): string { return value.trim().replace(/\s+/gu, ' '
 function normalized(value: string): string { return normalizeSemanticText(value) }
 function exchange(value: string): string { const upper = clean(value).toLocaleUpperCase('en-US'); return EXCHANGE_ALIASES[upper] ?? upper }
 function isSupportedSecurityExchange(value: string): boolean { return SUPPORTED_SECURITY_EXCHANGES.has(clean(value).toLocaleUpperCase('en-US')) }
+function inferExchange(ticker: string | undefined): string | undefined {
+  if (ticker === undefined || !/^\d{6}$/u.test(ticker)) return undefined
+  if (ticker.startsWith('6')) return 'SH'
+  if (ticker.startsWith('0') || ticker.startsWith('3')) return 'SZ'
+  if (ticker.startsWith('4') || ticker.startsWith('8')) return 'BJ'
+  return undefined
+}
 function isCompanyField(value: string): value is typeof COMPANY_FIELDS[number] { return (COMPANY_FIELDS as readonly string[]).includes(value) }
 function fieldValue(value: unknown, field: string, diagnostics: CompanyIdentityDiagnostic[]): string | undefined {
   if (value === undefined || value === null) return undefined
@@ -73,7 +80,7 @@ export function normalizeCompanyCandidateIdentity(candidate: EntityCandidate, al
   const suppliedExchange = fieldValue(rawFields.exchange, 'exchange', diagnostics)
   const legalName = fieldValue(rawFields.legalName, 'legalName', diagnostics)
   const normalizedTicker = ticker
-  const normalizedExchange = suppliedExchange === undefined ? undefined : exchange(suppliedExchange)
+  const normalizedExchange = suppliedExchange === undefined ? inferExchange(ticker) : exchange(suppliedExchange)
 
   let name = clean(candidate.name)
   let bilingualAlias: string | undefined

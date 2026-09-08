@@ -10,10 +10,7 @@ export class CompanyResearchSkill {
 
   /** Offline-safe deterministic baseline retained for tests and provider-degraded runs. */
   run(input: CompanyResearchInput): CompanyResearchResult {
-    const proposals: SemanticKnowledgeProposal[] = [
-      { proposalId: 'proposal-company', kind: 'entity', subjectKey: 'company', entityType: 'company', entityName: input.company.name ?? input.company.symbol },
-      ...input.sources.slice(0, 12).map((source, index) => ({ proposalId: `proposal-fact-${index + 1}`, kind: 'claim' as const, claimType: 'fact' as const, subjectKey: 'company', statement: `${source.title}: ${source.content.slice(0, 280)}`, sourceCandidateIds: [source.candidate.candidateId], confidence: source.candidate.tier === 1 ? 0.9 : 0.7 })),
-    ]
+    const proposals: SemanticKnowledgeProposal[] = [{ proposalId: 'proposal-company', kind: 'entity', subjectKey: 'company', entityType: 'company', entityName: input.company.name ?? input.company.symbol }]
     const sections = COMPANY_RESEARCH_SECTIONS.map((title) => {
       const relevant = input.sources.filter((source) => title === 'Company Overview' || source.content.toLowerCase().includes(title.split(' ')[0]!.toLowerCase())).slice(0, 3)
       const text = relevant.length ? relevant.map((source) => `- ${source.content.slice(0, 500)}`).join('\n') : gap(title)
@@ -59,8 +56,12 @@ function validateSynthesis(value: Record<string, unknown>, input: CompanyResearc
   const rawProposals = Array.isArray(value.proposals) ? value.proposals : []
   const proposals = rawProposals.map((item, index) => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error(`Invalid company research proposal at index ${index}`)
-    const proposal = item as SemanticKnowledgeProposal
-    if (!LOCAL_ID.test(proposal.proposalId) || /^(?:entity|relation|claim|source|raw):/.test(proposal.proposalId)) throw new Error('Company research proposal IDs must remain local and non-canonical')
+    const raw = item as Record<string, unknown>
+    const suppliedId = typeof raw.proposalId === 'string' ? raw.proposalId : typeof raw.id === 'string' ? raw.id : `model-proposal-${index + 1}`
+    const suppliedSubjectKey = typeof raw.subjectKey === 'string' ? raw.subjectKey : typeof raw.localKey === 'string' ? raw.localKey : typeof raw.subject === 'string' ? raw.subject : 'company'
+    const proposal = { ...raw, proposalId: suppliedId, subjectKey: suppliedSubjectKey } as SemanticKnowledgeProposal
+    if (typeof proposal.proposalId !== 'string' || !LOCAL_ID.test(proposal.proposalId) || /^(?:entity|relation|claim|source|raw):/.test(proposal.proposalId)) throw new Error('Company research proposal IDs must remain local and non-canonical')
+    if (typeof proposal.subjectKey !== 'string' || !LOCAL_ID.test(proposal.subjectKey)) throw new Error('Company research proposal subjectKey must remain local')
     if (!['entity', 'claim', 'relation'].includes(proposal.kind)) throw new Error(`Unsupported company research proposal kind: ${proposal.kind}`)
     for (const sourceId of proposal.sourceCandidateIds ?? []) if (!sourceIds.has(sourceId)) throw new Error(`Proposal references unknown source candidate: ${sourceId}`)
     return proposal

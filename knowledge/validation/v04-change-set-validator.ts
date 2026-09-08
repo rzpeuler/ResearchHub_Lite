@@ -9,7 +9,7 @@ import { hashKnowledgeObject } from '../storage/canonical-hash.ts'
 import type { KnowledgeBaseHandle } from '../storage/handle.ts'
 import type { KnowledgeAssetV04 } from '../schema/domain-v04.ts'
 import { assertKnowledgeV04Objects } from './v04-validator.ts'
-import { ValidatedKnowledgeChangeSetV04, type KnowledgeChangeSetV04, type KnowledgeOperationV04 } from '../schema/mutation-v04.ts'
+import type { ValidatedKnowledgeChangeSetV04, KnowledgeChangeSetV04, KnowledgeOperationV04 } from '../schema/mutation-v04.ts'
 
 export interface V04ChangeSetValidationDiagnostic { readonly code: string; readonly message: string; readonly operationId?: string; readonly assetId?: string }
 export interface V04ChangeSetValidationReport { readonly status: 'passed' | 'failed'; readonly errors: readonly V04ChangeSetValidationDiagnostic[] }
@@ -21,6 +21,11 @@ const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 const HASH = /^sha256:[0-9a-f]{64}$/
 const RAW = /^raw-sha256-[0-9a-f]{64}$/
 const record = (value: unknown): value is Dict => typeof value === 'object' && value !== null && !Array.isArray(value)
+const issuedReceipts = new WeakSet<object>()
+
+export function isValidatorIssuedV04Receipt(value: unknown): value is ValidatedKnowledgeChangeSetV04 {
+  return record(value) && issuedReceipts.has(value)
+}
 
 function add(errors: V04ChangeSetValidationDiagnostic[], code: string, message: string, operationId?: string, assetId?: string): void {
   errors.push({ code, message, ...(operationId === undefined ? {} : { operationId }), ...(assetId === undefined ? {} : { assetId }) })
@@ -102,7 +107,8 @@ export async function validateKnowledgeChangeSetV04(handle: KnowledgeBaseHandle,
   validateEvidence(objects.values(), knownRawRefs, errors)
   const report = { status: errors.length === 0 ? 'passed' as const : 'failed' as const, errors }
   if (report.status === 'failed' || mode === 'dry_run') return { report }
-  const validatedChangeSet = new ValidatedKnowledgeChangeSetV04({ changeSet, knowledgeBaseId: changeSet.knowledgeBaseId, baseRevision: changeSet.expectedBaseRevision, changeSetId: changeSet.changeSetId, changeSetHash: hashKnowledgeObject(changeSet), validatedAt: options.now?.() ?? new Date().toISOString() })
+  const validatedChangeSet = Object.freeze({ changeSet: structuredClone(changeSet), knowledgeBaseId: changeSet.knowledgeBaseId, schemaVersion: '0.4' as const, baseRevision: changeSet.expectedBaseRevision, changeSetId: changeSet.changeSetId, changeSetHash: hashKnowledgeObject(changeSet), validatedAt: options.now?.() ?? new Date().toISOString() })
+  issuedReceipts.add(validatedChangeSet)
   return { report, validatedChangeSet }
 }
 

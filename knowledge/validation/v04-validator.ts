@@ -1,5 +1,6 @@
 import { KNOWLEDGE_SCHEMA_V04 } from '../schema/executable-schema-v04.ts'
-import type { ClaimTypeV04, KnowledgeAssetV04, KnowledgeClaimV04, KnowledgeSourceV04 } from '../schema/domain-v04.ts'
+import type { ClaimTypeV04, KnowledgeAssetV04, KnowledgeClaimV04, KnowledgeRelationV04, KnowledgeSourceV04 } from '../schema/domain-v04.ts'
+import { validateRelationAttributesV03 } from './v03-validation-core.ts'
 
 export interface KnowledgeV04Diagnostic {
   readonly code: string
@@ -19,6 +20,7 @@ const RAW_PATTERN = /^raw-sha256-[0-9a-f]{64}$/
 const HASH_PATTERN = /^[0-9a-f]{64}$/
 const DATE = (value: unknown): boolean => typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Date.parse(value))
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+type Dict = Record<string, unknown>
 
 function add(errors: KnowledgeV04Diagnostic[], code: string, message: string, assetId?: string): void { errors.push({ code, message, ...(assetId === undefined ? {} : { assetId }) }) }
 function inRange(value: unknown): boolean { return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 }
@@ -36,8 +38,14 @@ function validateSource(source: KnowledgeSourceV04, errors: KnowledgeV04Diagnost
   if (!record(source.rights)) { add(errors, 'V04_SOURCE_RIGHTS', 'Source rights metadata is required', id); return }
   const rights = source.rights
   if (!['public', 'authenticated', 'restricted', 'unknown'].includes(rights.accessScope as string)) add(errors, 'V04_SOURCE_RIGHTS', 'rights.accessScope is invalid', id)
-  for (const field of ['retentionAllowed', 'aiProcessingAllowed', 'derivativeKnowledgeAllowed', 'redistributionAllowed']) if (typeof rights[field] !== 'boolean') add(errors, 'V04_SOURCE_RIGHTS', `rights.${field} must be boolean`, id)
-  if (rights.policyBasis !== undefined && rights.policyBasis !== 'personal_noncommercial_research') add(errors, 'V04_SOURCE_RIGHTS', 'rights.policyBasis is invalid', id)
+  if (typeof rights.providerTermsKnown !== 'boolean') add(errors, 'V04_SOURCE_RIGHTS', 'rights.providerTermsKnown must be boolean', id)
+  for (const field of ['retentionAllowed', 'aiProcessingAllowed', 'derivativeKnowledgeAllowed', 'redistributionAllowed']) if (rights[field] !== undefined && rights[field] !== null && typeof rights[field] !== 'boolean') add(errors, 'V04_SOURCE_RIGHTS', `rights.${field} must be boolean or null`, id)
+  if (!record(source.usagePolicy)) add(errors, 'V04_USAGE_POLICY', 'Source usagePolicy metadata is required', id)
+  else {
+    const policy = source.usagePolicy
+    if (policy.mode !== 'personal_noncommercial_research') add(errors, 'V04_USAGE_POLICY', 'usagePolicy.mode is invalid', id)
+    if (typeof policy.retainRaw !== 'boolean' || typeof policy.allowAiProcessing !== 'boolean' || typeof policy.allowDerivedKnowledge !== 'boolean' || policy.redistributionAllowed !== false) add(errors, 'V04_USAGE_POLICY', 'usagePolicy contains invalid operational values', id)
+  }
   if (source.acquisition !== undefined && source.acquisition !== null && !record(source.acquisition)) add(errors, 'V04_ACQUISITION', 'acquisition must be an object or null', id)
   for (const rawRef of source.rawRefs ?? []) if (!RAW_PATTERN.test(rawRef)) add(errors, 'V04_RAW_REF', `Source rawRef is invalid: ${rawRef}`, id)
 }
@@ -57,11 +65,27 @@ function validateClaim(claim: KnowledgeClaimV04, sources: ReadonlySet<string>, c
     if (!sources.has(provenance.sourceRef)) add(errors, 'V04_MISSING_PROVENANCE_SOURCE', `Provenance sourceRef does not resolve: ${provenance.sourceRef}`, id)
     if (!RAW_PATTERN.test(provenance.rawRef)) add(errors, 'V04_PROVENANCE_RAW_REF', 'Provenance rawRef is invalid', id)
   }
+  if (claim.structuredValue !== undefined && claim.structuredValue !== null) {
+    const structured = claim.structuredValue as unknown as Dict
+    if (Object.keys(structured).some((key) => !(KNOWLEDGE_SCHEMA_V04.claim.structuredValueFields as readonly string[]).includes(key)) || typeof structured.metric !== 'string' || structured.metric.trim() === '' || !('value' in structured) || !('unit' in structured) || (structured.unit !== null && typeof structured.unit !== 'string') || !('comparator' in structured) || (structured.comparator !== null && !KNOWLEDGE_SCHEMA_V04.claim.comparators.includes(structured.comparator as never)) || ['period', 'fiscalPeriod', 'semanticKey'].some((field) => structured[field] !== undefined && structured[field] !== null && typeof structured[field] !== 'string')) add(errors, 'V04_STRUCTURED_VALUE', 'Claim structuredValue is not valid for Schema 0.4', id)
+  }
   const fields = ['supportsClaimRefs', 'dependsOnClaimRefs', 'contradictsClaimRefs'] as const
   for (const field of fields) for (const ref of claim[field] ?? []) {
     if (!claims.has(ref)) add(errors, 'V04_MISSING_CLAIM_REF', `${field} does not resolve: ${ref}`, id)
     if (ref === id) add(errors, 'V04_SELF_REFERENCE', `${field} cannot reference the same claim`, id)
   }
+}
+
+function validateRelation(relation: KnowledgeRelationV04, entities: ReadonlyMap<string, string>, sources: ReadonlySet<string>, claims: ReadonlySet<string>, errors: KnowledgeV04Diagnostic[]): void {
+  const id = relation.id
+  const definition = typeof relation.type === 'string' ? KNOWLEDGE_SCHEMA_V04.relation.definitions[relation.type as keyof typeof KNOWLEDGE_SCHEMA_V04.relation.definitions] : undefined
+  if (!definition || !KNOWLEDGE_SCHEMA_V04.relation.types.includes(relation.type as never)) add(errors, 'V04_RELATION_TYPE', 'Relation type is not declared by Schema 0.4', id)
+  const sourceType = entities.get(relation.sourceRef); const targetType = entities.get(relation.targetRef)
+  if (!sourceType || !targetType) add(errors, 'V04_RELATION_ENDPOINT', 'Relation endpoints must resolve to Entity objects', id)
+  if (definition && sourceType && targetType && (!(definition.sourceTypes as readonly string[]).includes(sourceType) || !(definition.targetTypes as readonly string[]).includes(targetType) || ('endpointConstraint' in definition && definition.endpointConstraint === 'same_entity_type_on_both_sides' && sourceType !== targetType))) add(errors, 'V04_RELATION_SEMANTICS', 'Relation endpoint types violate the Schema 0.4 semantic definition', id)
+  if (relation.sourceRefs?.some((ref) => !sources.has(ref))) add(errors, 'V04_RELATION_SOURCE_REF', 'Relation sourceRefs must resolve to Source objects', id)
+  if (relation.supportingClaimRefs?.some((ref) => !claims.has(ref))) add(errors, 'V04_RELATION_CLAIM_REF', 'Relation supportingClaimRefs must resolve to Claim objects', id)
+  if (!validateRelationAttributesV03(relation.type, relation.attributes).valid) add(errors, 'V04_RELATION_ATTRIBUTES', 'Relation attributes are not admissible for the declared Schema 0.4 relation type', id)
 }
 
 function validateCycles(claims: ReadonlyMap<string, KnowledgeClaimV04>, errors: KnowledgeV04Diagnostic[]): void {
@@ -91,17 +115,22 @@ export function validateKnowledgeV04Objects(objects: readonly KnowledgeAssetV04[
   const ids = new Set<string>()
   const sources = new Map<string, KnowledgeSourceV04>()
   const claims = new Map<string, KnowledgeClaimV04>()
+  const relations = new Map<string, KnowledgeRelationV04>()
+  const entities = new Map<string, string>()
   for (const object of objects) {
     if (!record(object) || typeof object.id !== 'string') { add(errors, 'V04_OBJECT', 'Canonical object must have a string id'); continue }
     if (ids.has(object.id)) add(errors, 'V04_DUPLICATE_ID', `Duplicate canonical id: ${object.id}`, object.id)
     ids.add(object.id)
     if (object.id.startsWith('source:')) sources.set(object.id, object as KnowledgeSourceV04)
     if (object.id.startsWith('claim:')) claims.set(object.id, object as KnowledgeClaimV04)
+    if (object.id.startsWith('relation:')) relations.set(object.id, object as KnowledgeRelationV04)
+    if (object.id.startsWith('entity:') && typeof (object as unknown as Dict).type === 'string') entities.set(object.id, String((object as unknown as Dict).type))
   }
   for (const source of sources.values()) validateSource(source, errors)
   const sourceIds = new Set(sources.keys())
   const claimIds = new Set(claims.keys())
   for (const claim of claims.values()) validateClaim(claim, sourceIds, claimIds, errors)
+  for (const relation of relations.values()) validateRelation(relation, entities, sourceIds, claimIds, errors)
   validateCycles(claims, errors)
   return { status: errors.length === 0 ? 'passed' : 'failed', errors }
 }

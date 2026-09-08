@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import type { KnowledgeAssetV04 } from '../schema/domain-v04.ts'
-import { ValidatedKnowledgeChangeSetV04, type KnowledgeChangeSetV04, type KnowledgeWriteResultV04 } from '../schema/mutation-v04.ts'
+import type { ValidatedKnowledgeChangeSetV04, KnowledgeChangeSetV04, KnowledgeWriteResultV04 } from '../schema/mutation-v04.ts'
 import { canonicalSerialize, hashKnowledgeObject } from '../storage/canonical-hash.ts'
 import { readCanonicalV04Assets } from '../storage/canonical-v04-loader.ts'
 import { loadKnowledgeBaseManifest } from '../storage/manifest-loader.ts'
@@ -9,7 +9,7 @@ import { withKnowledgeBaseMutationLock } from '../storage/mutation-lock.ts'
 import { recoverKnowledgeBaseRoot, runKnowledgeRootTransaction } from '../storage/root-transaction.ts'
 import { KnowledgeBaseRegistry } from '../registry/registry.ts'
 import { assertKnowledgeV04Objects } from '../validation/v04-validator.ts'
-import { validateKnowledgeBaseV04State } from '../validation/v04-change-set-validator.ts'
+import { isValidatorIssuedV04Receipt, validateKnowledgeBaseV04State } from '../validation/v04-change-set-validator.ts'
 import { allocateKnowledgeStorageRefV04, kindForKnowledgeV04 } from './path-allocation-v04.ts'
 import type { KnowledgeBaseHandle } from '../storage/handle.ts'
 
@@ -70,9 +70,9 @@ export async function writeKnowledgeBaseV04(
   registry: KnowledgeBaseRegistry,
   clock: () => string = () => new Date().toISOString(),
 ): Promise<KnowledgeWriteResultV04> {
-  const changeSet = receipt.changeSet
+  const changeSet = receipt && typeof receipt === 'object' && 'changeSet' in receipt ? (receipt as ValidatedKnowledgeChangeSetV04).changeSet : { changeSetId: 'invalid-receipt', workflowRunId: 'invalid-receipt', knowledgeBaseId: handle.knowledgeBaseId } as unknown as KnowledgeChangeSetV04
   const base = result(changeSet, handle)
-  if (!(receipt instanceof ValidatedKnowledgeChangeSetV04)) return { ...base, error: { code: 'validation_required', message: 'Schema 0.4 Writer accepts only a runtime Validator-issued receipt' } }
+  if (!isValidatorIssuedV04Receipt(receipt)) return { ...base, error: { code: 'validation_required', message: 'Schema 0.4 Writer accepts only a runtime Validator-issued receipt' } }
   if (
     receipt.knowledgeBaseId !== handle.knowledgeBaseId ||
     changeSet.knowledgeBaseId !== handle.knowledgeBaseId ||
