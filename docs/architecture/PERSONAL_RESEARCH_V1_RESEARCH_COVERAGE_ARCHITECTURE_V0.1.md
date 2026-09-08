@@ -255,6 +255,6 @@ No M3A-1 implementation is authorized by this document. Each implementation stag
 
 ## Governance and Acceptance Boundary
 
-M1 Personal Research Foundation remains PASS / CLOSED. M2 Daily Intelligence remains PASS / CLOSED. M3 Research Coverage Architecture is PASS / FROZEN; M3A implementation is NOT STARTED.
+M1 Personal Research Foundation remains PASS / CLOSED. M2 Daily Intelligence remains PASS / CLOSED. M3 Research Coverage Architecture is PASS / FROZEN; M3A-1 Earnings Review implementation is governed by the separate implementation contract and remains subject to CTO acceptance.
 
 This document freezes scope and boundaries only. It does not constitute implementation acceptance, does not change the Knowledge schema, does not authorize new providers, and does not authorize any M3 product code.

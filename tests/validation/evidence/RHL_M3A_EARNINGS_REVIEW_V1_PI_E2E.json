@@ -1,0 +1,37 @@
+{
+  "classification": "REAL_MODEL_CONTRACT_BLOCKED",
+  "host": {
+    "provider": "pi-coding-agent",
+    "requestedModel": "zhipu-openapi/glm-5.3-flash"
+  },
+  "operation": "earnings_review_synthesis",
+  "realPiReasoningExecutor": true,
+  "gate": {
+    "earnings_review_synthesisCalled": true,
+    "structuredOutputValidated": false,
+    "reasoningApplied": false,
+    "fallbackUsed": true,
+    "modelDerivedSectionCount": 0,
+    "validAssessmentCount": 0,
+    "durableAssessmentCount": 0,
+    "acceptedProposalCount": 0,
+    "diagnostic": "Invalid earnings assessment at index 0",
+    "reportType": "earnings_review",
+    "workflowTerminalStatus": "completed"
+  },
+  "run": {
+    "status": "completed",
+    "reportId": "earnings-review-600519-2026-H1-pi-earnings-review-001",
+    "sectionCount": 14,
+    "sourceRefs": 0,
+    "claimRefs": 0,
+    "errors": []
+  },
+  "canonicalCounts": {
+    "entities": 1,
+    "sources": 1,
+    "claims": 2
+  },
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}

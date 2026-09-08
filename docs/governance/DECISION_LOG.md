@@ -4,6 +4,16 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001 — 2026-09-08
+
+**Status:** IMPLEMENTED / CTO ACCEPTANCE PENDING
+
+M3A-1 Earnings Review is implemented on the frozen Personal Research v1 Research Coverage architecture. It requires exactly one existing canonical Schema 0.4 Company, selects exact-period CNINFO evidence under `asOf`, normalizes only period-scoped AKShare financial data, computes verified/derived metrics deterministically, and limits Pi input to bounded filing excerpts, metrics, and Company-only Claims. Durable changes remain behind local assessment/proposal gates and the existing Knowledge Production Gateway / validated ChangeSet / Writer path. Persisted reports use `reportType: earnings_review` and explicitly state `Consensus unavailable`.
+
+No Schema change, Provider framework, Coverage Framework, Writer redesign, M3A-2/3/4 implementation, M3B Industry Research, or Theme Framework work was introduced. Focused offline evidence is recorded; real Pi semantic evidence must retain its actual model outcome and is not PASS when classified `REAL_MODEL_CONTRACT_BLOCKED`. M1 and M2 remain PASS / CLOSED, and M3 Architecture remains PASS / FROZEN.
+
+---
+
 ## RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001 — 2026-09-08
 
 **Status:** PASS / FROZEN by CTO decision

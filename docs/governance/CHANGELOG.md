@@ -2,6 +2,8 @@
 
 ## 2026-09-08
 
+- Implemented `RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001` pending CTO acceptance: exact fiscal-period contract and filing selection, period-aware AKShare normalization, deterministic earnings computation, existing-company coverage gate, bounded Earnings Review reasoning/assessment gate, proposal-referenced-only Gateway evidence, `earnings_review` ResearchReport support, ResearchService/Pi/HTTP entrypoints, focused executable regressions, and committed Pi/provider evidence. M3A-2/3/4, M3B, and Theme Framework remain out of scope.
+
 - CTO accepted `RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001` as `PASS / FROZEN`. Corrected the normative Report type list to preserve persisted `company_research` and `daily_brief`, add future M3A types `earnings_review`, `valuation`, `event_research`, and `thesis_red_team`, and retain `company_deep_research` only as Workflow/capability naming. M3A implementation remains NOT STARTED; M3B remains separate architecture approval required; Theme Framework remains DEFERRED.
 
 - Froze `RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001` as `ARCHITECTURE FROZEN / IMPLEMENTATION NOT STARTED` in `docs/architecture/PERSONAL_RESEARCH_V1_RESEARCH_COVERAGE_ARCHITECTURE_V0.1.md`. M3A is limited to Earnings Review, Valuation, Event Research, and Thesis Red Team; M3B Industry Deep Research requires separate architecture approval; Theme Framework remains deferred. No M3 product code, new Provider, Schema change, or generic Coverage Framework was introduced.

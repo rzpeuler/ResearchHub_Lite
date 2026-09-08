@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-09-08T15:09:43.790Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001",
+  "company": {
+    "symbol": "600519",
+    "name": "贵州茅台",
+    "exchange": "SSE"
+  },
+  "requestedPeriod": {
+    "fiscalYear": 2025,
+    "period": "FY",
+    "key": "2025-FY",
+    "endDate": "2025-12-31"
+  },
+  "asOf": "2026-09-08T23:59:59.000Z",
+  "providers": [
+    {
+      "provider": "CNINFO",
+      "providerAttempted": true,
+      "providerSucceeded": true,
+      "providerEmpty": true,
+      "providerFailed": false,
+      "periodEvidenceFound": false,
+      "usableForEarningsReview": false
+    },
+    {
+      "provider": "AKShare",
+      "providerAttempted": true,
+      "providerSucceeded": true,
+      "providerEmpty": true,
+      "providerFailed": false,
+      "periodEvidenceFound": false,
+      "usableForEarningsReview": false,
+      "error": "Exact financial period 2025-FY was not found"
+    }
+  ],
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}

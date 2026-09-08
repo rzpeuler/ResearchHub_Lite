@@ -6,7 +6,7 @@ ResearchHub_Lite is the active clean foundation for the ResearchHub Agent-first 
 
 Personal Research v1 Daily Intelligence M2 is PASS / CLOSED by CTO acceptance: Morning and Evening Briefs are bounded by the configured watchlist and public-source catalog, use the shared Runtime/CLI/Scheduler/Pi composition, expose real semantic telemetry with explicit unavailable provider states and no fabricated consensus, and require Change Assessment durable eligibility before canonical proposal submission.
 
-Personal Research v1 Research Coverage Architecture v0.1 is PASS / FROZEN by CTO decision in [`PERSONAL_RESEARCH_V1_RESEARCH_COVERAGE_ARCHITECTURE_V0.1.md`](../architecture/PERSONAL_RESEARCH_V1_RESEARCH_COVERAGE_ARCHITECTURE_V0.1.md); M3A implementation is not started. M3A is limited to Earnings Review, Valuation, Event Research, and Thesis Red Team. M3B Industry Deep Research requires separate architecture approval, and Theme Framework remains deferred.
+Personal Research v1 Research Coverage Architecture v0.1 is PASS / FROZEN by CTO decision in [`PERSONAL_RESEARCH_V1_RESEARCH_COVERAGE_ARCHITECTURE_V0.1.md`](../architecture/PERSONAL_RESEARCH_V1_RESEARCH_COVERAGE_ARCHITECTURE_V0.1.md). M3A-1 Earnings Review is implemented pending CTO acceptance; M3A-2/3/4 remain not started. M3B Industry Deep Research requires separate architecture approval, and Theme Framework remains deferred.
 
 Pi Coding Agent is the canonical application host. ResearchHub directly reuses Pi's Agent loop, ModelRuntime, settings, authentication, provider/model catalog, Skills/Extensions, and session/runtime facilities. Agent-host portability is not a current product requirement.
 
