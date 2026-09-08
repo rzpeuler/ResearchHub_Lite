@@ -1,8 +1,8 @@
 # Personal Research v1 Earnings Review v0.1
 
-Status: IMPLEMENTED / CTO ACCEPTANCE PENDING
+Status: FIX-001 IMPLEMENTED / CTO ACCEPTANCE PENDING
 Architecture baseline: Personal Research v1 Research Coverage Architecture v0.1
-Implementation task: `RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001`
+Implementation task: `RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-001`
 
 ## Product intent
 
@@ -42,13 +42,13 @@ The Earnings Review Skill owns a narrow deterministic computation module. Direct
 
 ## Skill, reasoning, and assessments
 
-`EarningsReviewSkill` emits exactly the 14 required report sections, local impact assessments, and local claim-only proposals. The only reasoning operation is `earnings_review_synthesis`. Model input is bounded to company identity, period, selected filing excerpts, deterministic metrics, and company-only existing Claims ordered by thesis, assumption, risk, catalyst, fact/viewpoint/trend priority.
+`EarningsReviewSkill` emits exactly the 14 required report sections, local impact assessments, and local claim-only proposals. The only reasoning operation is `earnings_review_synthesis`. Model input is bounded to company identity, period, selected filing excerpts, deterministic metrics, and company-only existing Claims ordered by thesis, assumption, risk, catalyst, fact/viewpoint/trend priority. The request explicitly supplies allowed source candidate IDs, existing Claim refs, assumption Claim refs, thesis Claim refs, deterministic metric names and exact metric values; the output contract explicitly enumerates dispositions, claim types, local IDs, section titles, and structured-value equality.
 
 Every existing knowledge reference must be a current canonical Claim in that projection and must include the covered Company in its subject set. Assessment dispositions are `new_fact`, `supports_existing`, `contradicts_existing`, `changes_assumption`, `affects_thesis`, `new_catalyst`, `new_risk`, `no_change`, or `research_gap`.
 
 Local deterministic validation calculates durable eligibility. `no_change` and `research_gap` are never durable. Assumption changes require an assumption Claim; thesis impacts require a thesis Claim; support/contradiction requires an existing Claim; every durable assessment requires evidence from the current exact-period review.
 
-Invalid model serialization supports JSON strings, fenced JSON, and one shallow wrapper. At most one bounded repair retry is attempted for invalid structured semantic output. Remaining failures preserve sanitized diagnostics and use deterministic gap sections with zero unauthorized proposals. A reasoning call is not counted as applied unless structured output is validated.
+Invalid model serialization supports JSON strings, fenced JSON, and documented shallow wrappers with bounded depth. At most one bounded repair retry is attempted for invalid structured semantic output. The repair request includes only bounded prior normalized output, deterministic shape diagnostics, the same exact contract, and the allowed-reference sets; it excludes hidden reasoning, secrets, credentials, full transcripts, unrestricted filings, and the full Knowledge Base. Remaining failures preserve sanitized diagnostics and use deterministic gap sections with zero unauthorized proposals. A reasoning call is not counted as applied unless structured output is validated.
 
 ## Durable proposal gate
 
@@ -64,7 +64,7 @@ Product entrypoints are `ResearchService.startEarningsReview`, Pi `review_earnin
 
 ## Validation evidence
 
-Focused executable tests are in `tests/workflows/earnings-review.test.ts` and `tests/app/runtime/earnings-review-route.test.ts`. Regression coverage continues through the existing Company Deep Research, Daily Intelligence, and Raw Document Knowledge Production suites. Committed evidence files are:
+Focused executable tests are in `tests/workflows/earnings-review.test.ts` and `tests/app/runtime/earnings-review-route.test.ts`; they include actual bounded-request inspection, repair-context verification, executable Pi-tool routing, and assessment-to-proposal-to-Gateway section provenance. Regression coverage continues through the existing Company Deep Research, Daily Intelligence, and Raw Document Knowledge Production suites. Committed evidence files are:
 
 - `tests/validation/evidence/RHL_M3A_EARNINGS_REVIEW_V1.json`
 - `tests/validation/evidence/RHL_M3A_EARNINGS_REVIEW_V1_SUMMARY.md`

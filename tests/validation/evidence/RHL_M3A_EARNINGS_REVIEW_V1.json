@@ -1,22 +1,32 @@
 {
-  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001",
-  "classification": "IMPLEMENTED_CTO_ACCEPTANCE_PENDING",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-001",
+  "classification": "FIX-001_IMPLEMENTED_CTO_ACCEPTANCE_PENDING",
   "architecture": "PASS / FROZEN",
-  "focusedTests": "36/36 PASS",
-  "nodeTests": "384/384 PASS",
+  "focusedTests": "38/38 PASS",
+  "nodeTests": "386/386 PASS",
   "clientTests": "21/21 PASS",
   "typecheck": "PASS",
   "clientTypecheck": "PASS",
   "clientBuild": "PASS",
   "realPi": {
-    "classification": "REAL_MODEL_CONTRACT_BLOCKED",
+    "classification": "EXECUTED / PASS GATE",
     "model": "zhipu-openapi/glm-5.3-flash",
     "operation": "earnings_review_synthesis",
-    "fallbackUsed": true
+    "called": true,
+    "validated": true,
+    "applied": true,
+    "fallbackUsed": false,
+    "repairAttempts": 0,
+    "modelDerivedSectionCount": 14,
+    "validAssessmentCount": 9,
+    "durableAssessmentCount": 5,
+    "acceptedProposalCount": 9,
+    "canonicalSourceCountDelta": 2,
+    "canonicalClaimCountDelta": 9
   },
   "providerSmoke": {
-    "CNINFO": { "attempted": true, "succeeded": true, "empty": true, "failed": false, "periodEvidenceFound": false, "usable": false },
-    "AKShare": { "attempted": true, "succeeded": true, "empty": true, "failed": false, "periodEvidenceFound": false, "usable": false }
+    "CNINFO": { "attempted": true, "succeeded": true, "transportSucceeded": true, "candidateCount": 0, "empty": true, "failed": false, "periodEvidenceFound": false, "exactPeriodFound": false, "usable": false },
+    "AKShare": { "attempted": true, "succeeded": true, "transportSucceeded": true, "dataRowCount": 0, "empty": true, "failed": false, "periodEvidenceFound": false, "exactPeriodFound": false, "usable": false }
   },
   "secretsIncluded": false,
   "rawBodiesIncluded": false

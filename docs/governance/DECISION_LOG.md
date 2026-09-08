@@ -4,6 +4,16 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-001 — 2026-09-09
+
+**Status:** FIX-001 IMPLEMENTED / CTO ACCEPTANCE PENDING
+
+FIX-001 preserves the frozen M3A-1 architecture while making `earnings_review_synthesis` explicit and repairable: bounded model input now carries exact allowed reference sets and deterministic metric values; one repair request carries bounded prior output plus sanitized shape diagnostics; strict local eligibility remains authoritative. Section-level report Claims now map assessment refs through accepted proposal IDs and Gateway-returned Claim refs. The committed Real Pi harness is the authoritative evidence generator and records `EXECUTED / PASS GATE` for the current production model.
+
+No Schema, Gateway, Writer, Provider framework, Coverage Framework, M3A-2/3/4, M3B, Industry Research, Theme, frontend, scheduler, queue, Redis, Graph DB, Vector DB, or RAG work was introduced. M1 and M2 remain PASS / CLOSED, and M3 Architecture remains PASS / FROZEN.
+
+---
+
 ## RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001 — 2026-09-08
 
 **Status:** IMPLEMENTED / CTO ACCEPTANCE PENDING

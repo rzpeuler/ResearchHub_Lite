@@ -49,6 +49,7 @@ export interface EarningsReviewReasoningTelemetry {
   readonly operation: 'earnings_review_synthesis'
   readonly model?: string
   readonly diagnostic?: string
+  readonly diagnostics?: readonly string[]
 }
 
 export interface EarningsReviewSkillInput {

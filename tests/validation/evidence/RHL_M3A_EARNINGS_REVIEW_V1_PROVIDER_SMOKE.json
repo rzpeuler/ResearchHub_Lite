@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-08T15:09:43.790Z",
-  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001",
+  "generatedAt": "2026-09-08T16:17:11.767Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-001",
   "company": {
     "symbol": "600519",
     "name": "贵州茅台",
@@ -18,18 +18,24 @@
       "provider": "CNINFO",
       "providerAttempted": true,
       "providerSucceeded": true,
+      "transportSucceeded": true,
       "providerEmpty": true,
       "providerFailed": false,
+      "candidateCount": 0,
       "periodEvidenceFound": false,
+      "exactPeriodFound": false,
       "usableForEarningsReview": false
     },
     {
       "provider": "AKShare",
       "providerAttempted": true,
       "providerSucceeded": true,
+      "transportSucceeded": true,
       "providerEmpty": true,
       "providerFailed": false,
+      "dataRowCount": 0,
       "periodEvidenceFound": false,
+      "exactPeriodFound": false,
       "usableForEarningsReview": false,
       "error": "Exact financial period 2025-FY was not found"
     }
