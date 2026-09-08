@@ -1,0 +1,17 @@
+{
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-003",
+  "entries": [
+    { "testId": "I1", "requirement": "Two companies and two durable proposals reach separate Gateway groups", "testFile": "tests/plugins/daily-intelligence-fix-003.test.ts", "testName": "FIX-003 real workflow processes two durable subjects through separate Gateway groups", "status": "PASS" },
+    { "testId": "I2", "requirement": "Wrong-subject proposal is rejected", "testFile": "tests/plugins/daily-intelligence-fix-003.test.ts", "testName": "FIX-003 proposal gate rejects missing, forged, unrelated, community-only, and non-durable assessments", "status": "PASS" },
+    { "testId": "I3", "requirement": "100 acquired candidates do not cause unreferenced canonical Sources", "testFile": "tests/plugins/daily-intelligence-fix-003.test.ts", "testName": "FIX-003 evidence binding keeps 100 acquired candidates bounded to one referenced Raw/Source", "status": "PASS" },
+    { "testId": "I4", "requirement": "Full Raw bytes and provenance are retained", "testFile": "tests/plugins/daily-intelligence-fix-003.test.ts", "testName": "FIX-003 evidence binding keeps 100 acquired candidates bounded to one referenced Raw/Source", "status": "PASS" },
+    { "testId": "I5", "requirement": "Community-only proposals are rejected", "testFile": "tests/plugins/daily-intelligence-fix-003.test.ts", "testName": "FIX-003 proposal gate rejects missing, forged, unrelated, community-only, and non-durable assessments", "status": "PASS" },
+    { "testId": "I6", "requirement": "Missing assessmentRefs are rejected", "testFile": "tests/plugins/daily-intelligence-fix-003.test.ts", "testName": "FIX-003 proposal gate rejects missing, forged, unrelated, community-only, and non-durable assessments", "status": "PASS" },
+    { "testId": "I7", "requirement": "Non-durable assessments are rejected", "testFile": "tests/plugins/daily-intelligence-fix-003.test.ts", "testName": "FIX-003 proposal gate rejects missing, forged, unrelated, community-only, and non-durable assessments", "status": "PASS" },
+    { "testId": "I8", "requirement": "Durable assessment with consistent source/subject/cluster is accepted", "testFile": "tests/plugins/daily-intelligence-fix-003.test.ts", "testName": "FIX-003 proposal gate rejects missing, forged, unrelated, community-only, and non-durable assessments", "status": "PASS" },
+    { "testId": "I9", "requirement": "Daily report has no synthetic canonical references", "testFile": "tests/plugins/daily-intelligence-fix-003.test.ts", "testName": "FIX-003 real workflow processes two durable subjects through separate Gateway groups", "status": "PASS" },
+    { "testId": "I10", "requirement": "Ordinary announcements are excluded from unrelated sections", "testFile": "tests/plugins/daily-intelligence-fix-003.test.ts", "testName": "FIX-003 ordinary announcement is admissible only in announcement sections", "status": "PASS" },
+    { "testId": "I11", "requirement": "Runtime/CLI/shared composition remains one service/calendar graph", "testFile": "tests/plugins/daily-intelligence-fix-002.test.ts", "testName": "FIX-002 shared composition returns one calendar and service graph", "status": "PASS" },
+    { "testId": "I12", "requirement": "Scheduler uses shared trading-calendar truth", "testFile": "tests/plugins/daily-intelligence-scheduler.test.ts", "testName": "scheduler is weekend-aware and restart-safe", "status": "PASS" }
+  ]
+}

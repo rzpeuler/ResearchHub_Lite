@@ -10,3 +10,7 @@ tests/validation/evidence/daily-pi-fix-002-briefs/
 tests/validation/evidence/daily-pi-fix-002-reports/
 tests/validation/evidence/daily-pi-fix-002-signals.jsonl
 tests/validation/evidence/daily-pi-fix-002-kb/
+tests/validation/evidence/daily-pi-fix-003-briefs/
+tests/validation/evidence/daily-pi-fix-003-reports/
+tests/validation/evidence/daily-pi-fix-003-signals.jsonl
+tests/validation/evidence/daily-pi-fix-003-kb/

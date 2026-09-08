@@ -1,0 +1,127 @@
+{
+  "generatedAt": "2026-09-08T12:10:57.973Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-003",
+  "classification": "EXECUTED",
+  "realPiReasoningExecutor": true,
+  "operations": [
+    "daily_signal_enrichment",
+    "daily_change_assessment",
+    "daily_change_assessment",
+    "daily_change_assessment",
+    "daily_brief_synthesis",
+    "daily_signal_enrichment",
+    "daily_change_assessment",
+    "daily_change_assessment",
+    "daily_change_assessment",
+    "daily_brief_synthesis"
+  ],
+  "model": {
+    "provider": "pi-coding-agent",
+    "requestedModel": "zhipu-openapi/glm-5.3-flash"
+  },
+  "operationCoverage": {
+    "enrichment": true,
+    "changeAssessment": true,
+    "synthesis": true
+  },
+  "gate": true,
+  "contractClosure": {
+    "daily_signal_enrichment": {
+      "called": true,
+      "validated": true,
+      "applied": true,
+      "appliedCount": 6,
+      "fallbackCount": 0
+    },
+    "daily_change_assessment": {
+      "called": true,
+      "validated": true,
+      "applied": true,
+      "appliedCount": 4,
+      "fallbackCount": 2
+    },
+    "daily_brief_synthesis": {
+      "called": true,
+      "validated": true,
+      "applied": true,
+      "modelDerivedItemCount": 6,
+      "fallbackCount": 0
+    }
+  },
+  "runs": [
+    {
+      "status": "completed",
+      "briefType": "morning",
+      "sectionCount": 14,
+      "signalCount": 3,
+      "reportItemCount": 15,
+      "enrichmentReasoningUsed": true,
+      "enrichmentAppliedCount": 3,
+      "enrichmentFallbackCount": 0,
+      "changeAssessmentReasoningUsed": true,
+      "changeAssessmentAppliedCount": 2,
+      "changeAssessmentFallbackCount": 1,
+      "briefReasoningUsed": true,
+      "modelDerivedItemCount": 3,
+      "briefFallbackCount": 0,
+      "reasoningDiagnostics": {
+        "daily_signal_enrichment": [
+          "output_keys_signals",
+          "rows_count_3",
+          "rows_applied_3"
+        ],
+        "daily_change_assessment": [
+          "output_keys_clusterId,disposition,durableCandidate,rationale,relatedKnowledgeRefs",
+          "cluster_id_match_true",
+          "disposition_valid_false",
+          "refs_array_true",
+          "refs_count_0",
+          "refs_allowed_true",
+          "rationale_valid_true",
+          "durable_flag_true",
+          "validation_shape_or_reference_rejected"
+        ],
+        "daily_brief_synthesis": []
+      },
+      "errors": []
+    },
+    {
+      "status": "completed",
+      "briefType": "evening",
+      "sectionCount": 13,
+      "signalCount": 3,
+      "reportItemCount": 14,
+      "enrichmentReasoningUsed": true,
+      "enrichmentAppliedCount": 3,
+      "enrichmentFallbackCount": 0,
+      "changeAssessmentReasoningUsed": true,
+      "changeAssessmentAppliedCount": 2,
+      "changeAssessmentFallbackCount": 1,
+      "briefReasoningUsed": true,
+      "modelDerivedItemCount": 3,
+      "briefFallbackCount": 0,
+      "reasoningDiagnostics": {
+        "daily_signal_enrichment": [
+          "output_keys_signals",
+          "rows_count_3",
+          "rows_applied_3"
+        ],
+        "daily_change_assessment": [
+          "output_keys_clusterId,disposition,durableCandidate,rationale,relatedKnowledgeRefs,subjectKey",
+          "cluster_id_match_true",
+          "disposition_valid_false",
+          "refs_array_true",
+          "refs_count_0",
+          "refs_allowed_true",
+          "rationale_valid_true",
+          "durable_flag_true",
+          "validation_shape_or_reference_rejected"
+        ],
+        "daily_brief_synthesis": []
+      },
+      "errors": []
+    }
+  ],
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}

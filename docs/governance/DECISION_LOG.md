@@ -4,6 +4,12 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-003 — 2026-09-08
+
+**Status:** Implemented / CTO acceptance pending
+
+FIX-003 keeps Daily Intelligence inside the frozen Workflow/Skill/Plugin/Knowledge boundaries. Structured model output may receive only bounded serialization normalization; operation Skills retain strict schema, local-reference, subject, cluster, and section validation. `DailySynthesisProposal.assessmentRefs` is required, and Workflow deterministic validation accepts canonical persistence only when a current Change Assessment is durable-eligible, source/subject/cluster consistent, and not community-only. Empty or rejected model sections become deterministic Research Gaps. M2 remains unmerged to `main`; M3 is not started.
+
 ## RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001 — 2026-09-08
 
 **Status:** Implemented / CTO acceptance pending

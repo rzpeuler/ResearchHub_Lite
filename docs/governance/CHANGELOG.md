@@ -2,6 +2,8 @@
 
 ## 2026-09-08
 
+- Implemented `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-003` pending CTO acceptance: bounded serialization normalization for the three Daily Intelligence reasoning operations, partial-field enrichment fallback, Change Assessment durable eligibility authority for Synthesis proposals, exact section admissibility, executable multi-company/evidence regressions, and sanitized real-Pi Product telemetry/evidence. M2 remains unmerged to `main`; M3 was not started.
+
 - Implemented `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001` pending CTO acceptance: Morning/Evening Brief contracts and sections, 43-entry public source catalog, explicit watchlist, bounded Web/Institutional/Community acquisition seams, ResearchSignal v2 store/dedup/enrich/cluster/rank, report persistence, trading-day scheduler, CLI/Task Scheduler scripts, Pi tools, HTTP routes, client API/card surface, offline regression tests, live provider probes, and real PiReasoningExecutor Morning/Evening evidence. M2 is not merged to `main`; M3 was not started.
 
 - Implemented `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-002` pending CTO acceptance: asynchronous enrichment application, bounded four-state change assessment, strict proposal/evidence admissibility, per-company Gateway grouping, canonical-only report subjects, shared Runtime/CLI/Scheduler/Pi composition, active-only automatic catalog wiring, manual calendar precedence, and real product telemetry/evidence harnesses. M2 remains unmerged to `main`; M3 was not started.

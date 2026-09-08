@@ -146,6 +146,9 @@ export interface DailyQualityTelemetry {
   readonly enrichmentFallbackCount?: number
   readonly changeAssessmentReasoningUsed?: boolean
   readonly changeAssessmentAppliedCount?: number
+  readonly changeAssessmentFallbackCount?: number
+  readonly briefFallbackCount?: number
+  readonly reasoningDiagnostics?: readonly string[]
 }
 export interface DailyBriefReport {
   readonly reportId: string
@@ -171,7 +174,10 @@ export interface DailyBriefReport {
   readonly enrichmentFallbackCount?: number
   readonly changeAssessmentReasoningUsed?: boolean
   readonly changeAssessmentAppliedCount?: number
+  readonly changeAssessmentFallbackCount?: number
+  readonly briefFallbackCount?: number
   readonly briefReasoningUsed?: boolean
+  readonly reasoningDiagnostics?: Readonly<Record<string, readonly string[]>>
 }
 
 export interface DailyIntelligenceInput {
@@ -214,6 +220,9 @@ export interface DailyIntelligenceResult {
   readonly enrichmentFallbackCount?: number
   readonly changeAssessmentReasoningUsed?: boolean
   readonly changeAssessmentAppliedCount?: number
+  readonly changeAssessmentFallbackCount?: number
   readonly briefReasoningUsed?: boolean
+  readonly briefFallbackCount?: number
   readonly modelDerivedItemCount?: number
+  readonly reasoningDiagnostics?: Readonly<Record<string, readonly string[]>>
 }

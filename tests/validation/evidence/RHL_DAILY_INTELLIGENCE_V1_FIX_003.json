@@ -1,0 +1,37 @@
+{
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-003",
+  "classification": "OFFLINE_EXECUTABLE_REGRESSIONS_PASS",
+  "focusedTestFile": "tests/plugins/daily-intelligence-fix-003.test.ts",
+  "focusedTestCount": 7,
+  "focusedTestsPassed": 7,
+  "negativeSafety": {
+    "communityOnly": "PASS",
+    "missingAssessment": "PASS",
+    "nonDurableAssessment": "PASS",
+    "wrongSubject": "PASS",
+    "forgedAssessment": "PASS",
+    "crossClusterReference": "PASS"
+  },
+  "multiCompany": {
+    "subjects": ["600519", "000858"],
+    "gatewaySubmittedProposalCount": 2,
+    "separateSubjectGroups": true
+  },
+  "evidenceFiltering": {
+    "acquiredCandidateCount": 100,
+    "proposalReferencedSourceCount": 1,
+    "gatewayCanonicalSourceCount": 1,
+    "rawBytesPreserved": true,
+    "rawByteCount": 1000
+  },
+  "sectionAdmissibility": {
+    "ordinaryAnnouncementIntoAnnouncementSection": "PASS",
+    "ordinaryAnnouncementIntoOvernightGlobal": "PASS",
+    "ordinaryAnnouncementIntoMacro": "PASS",
+    "ordinaryAnnouncementIntoMarket": "PASS",
+    "ordinaryAnnouncementIntoCommunity": "PASS"
+  },
+  "testMatrix": "tests/validation/evidence/RHL_DAILY_INTELLIGENCE_V1_FIX_003_TEST_MATRIX.json",
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}
