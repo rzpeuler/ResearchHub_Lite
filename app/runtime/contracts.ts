@@ -7,6 +7,7 @@ import type { ReviewService } from '../services/review-service.ts'
 import type { WorkflowService } from '../services/workflow-service.ts'
 import type { ResearchService } from '../services/research-service.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
+import type { DailyIntelligenceService } from '../services/daily-intelligence-service.ts'
 
 export interface SafeConversationSummary {
   readonly conversationId: string
@@ -41,6 +42,7 @@ export interface ResearchHubApplicationServices {
   readonly workflowService: WorkflowService
   readonly productionService: ProductionService
   readonly researchService?: ResearchService
+  readonly dailyIntelligenceService?: DailyIntelligenceService
 }
 
 export interface ResearchHubSessionRuntimeOptions {
@@ -56,6 +58,7 @@ export interface ResearchHubSessionRuntimeOptions {
   readonly settingsManager?: SettingsManager
   readonly resourceLoader?: DefaultResourceLoader
   readonly researchService?: ResearchService
+  readonly dailyIntelligenceService?: DailyIntelligenceService
 }
 
 export interface ResearchHubApplicationRuntimeOptions {
@@ -71,4 +74,5 @@ export interface ResearchHubApplicationRuntimeOptions {
   readonly settingsManager?: SettingsManager
   readonly resourceLoader?: DefaultResourceLoader
   readonly researchService?: ResearchService
+  readonly dailyIntelligenceService?: DailyIntelligenceService
 }

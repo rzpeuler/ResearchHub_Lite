@@ -16,6 +16,8 @@ User
 
 Review is downstream governance for Knowledge Production, not a fourth research mode. Canonical persistence requires explicit Knowledge Production intent; an upload or attachment is not automatically ingestion.
 
+Daily Intelligence v1 is implemented pending CTO acceptance. It provides Asia/Shanghai Morning (08:00) and Evening (20:30) Briefs from the configured public-source catalog and watchlist, with explicit unavailable states and no fabricated consensus. Use `npm run brief:morning` / `npm run brief:evening`, the Pi Daily Intelligence tools, or the `/api/daily-briefs` routes.
+
 ## Current architecture
 
 Pi Coding Agent is the canonical application host. ResearchHub directly reuses Pi's Agent loop, `ModelRuntime`, authentication, provider/model catalog, file-backed settings, Skills/Extensions, normal coding-agent tools, and session/runtime facilities. Agent-host portability is not a current product requirement.

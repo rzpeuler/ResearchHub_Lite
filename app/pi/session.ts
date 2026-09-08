@@ -28,6 +28,7 @@ export interface ResearchHubPiSessionOptions {
   /** Runtime-scoped services reused when Pi replaces the active conversation. */
   readonly applicationServices?: ResearchHubApplicationServices
   readonly researchService?: import('../services/research-service.ts').ResearchService
+  readonly dailyIntelligenceService?: import('../services/daily-intelligence-service.ts').DailyIntelligenceService
   readonly sessionStartEvent?: import('@earendil-works/pi-coding-agent').SessionStartEvent
 }
 
@@ -78,7 +79,7 @@ export async function createResearchHubPiSession(options: ResearchHubPiSessionOp
     return { knowledgeService, knowledgeGraphService, productionService, reviewService, workflowService }
   })()
   const { knowledgeService, productionService, reviewService, workflowService } = applicationServices
-  const customTools = createResearchHubTools({ knowledgeService, productionService, reviewService, workflowService, researchService: options.researchService ?? applicationServices.researchService })
+  const customTools = createResearchHubTools({ knowledgeService, productionService, reviewService, workflowService, researchService: options.researchService ?? applicationServices.researchService, dailyIntelligenceService: options.dailyIntelligenceService ?? applicationServices.dailyIntelligenceService })
   const settingsManager = options.settingsManager ?? SettingsManager.create(options.cwd, agentDir, { projectTrusted: true })
   const loader = options.resourceLoader ?? new DefaultResourceLoader({ cwd: options.cwd, agentDir, settingsManager, systemPrompt: RESEARCHHUB_PI_SYSTEM_PROMPT, extensionFactories: mountedKnowledgeBaseRoot ? [protectionExtension(mountedKnowledgeBaseRoot, options.cwd)] : [] })
   if (!options.resourceLoader) await loader.reload()

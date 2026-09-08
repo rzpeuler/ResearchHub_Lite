@@ -6,6 +6,8 @@ import type { ProductionService } from '../services/production-service.ts'
 import type { ReviewService } from '../services/review-service.ts'
 import type { WorkflowService } from '../services/workflow-service.ts'
 import type { ResearchService } from '../services/research-service.ts'
+import type { DailyIntelligenceService } from '../services/daily-intelligence-service.ts'
+import type { DailyBriefInput } from '../services/daily-intelligence-service.ts'
 
 export interface ResearchHubPiToolContext {
   readonly knowledgeService: KnowledgeService
@@ -13,6 +15,7 @@ export interface ResearchHubPiToolContext {
   readonly reviewService: ReviewService
   readonly workflowService: WorkflowService
   readonly researchService?: ResearchService
+  readonly dailyIntelligenceService?: DailyIntelligenceService
 }
 
 function textResult(value: unknown, isError = false) { return { content: [{ type: 'text' as const, text: JSON.stringify(value) }], details: undefined, isError } }
@@ -51,6 +54,12 @@ export function createResearchHubTools(context: ResearchHubPiToolContext): ToolD
   if (context.researchService) {
     tools.push(defineTool({ name: 'research_company', label: 'Research company', description: 'Start bounded A-share Company Deep Research and return its linked Report and Knowledge outcome.', promptSnippet: 'Research an A-share company through the governed production Workflow', parameters: Type.Object({ workflowRunId: Type.String(), symbol: Type.String(), name: Type.Optional(Type.String()), exchange: Type.Optional(Type.String()), asOf: Type.Optional(Type.String()) }), execute: async (_toolCallId, params, signal) => invoke(() => context.researchService!.startResearchCompany(params as ResearchCompanyInput, signal).completion, signal) }))
     tools.push(defineTool({ name: 'get_research_report', label: 'Get research report', description: 'Read one bounded persisted Company Research Report by report ID.', promptSnippet: 'Read a Company Research Report', parameters: Type.Object({ reportId: Type.String() }), execute: async (_toolCallId, params) => invoke(() => context.researchService!.getResearchReport(params.reportId)) }))
+  }
+  if (context.dailyIntelligenceService) {
+    const start = (briefType: 'morning' | 'evening') => defineTool({ name: `generate_${briefType}_brief`, label: `Generate ${briefType} brief`, description: `Generate a bounded ${briefType} Daily Intelligence Brief from configured public sources.`, promptSnippet: `Generate ${briefType} Daily Intelligence Brief`, parameters: Type.Object({ workflowRunId: Type.String(), tradeDate: Type.String(), asOf: Type.Optional(Type.String()), forceRefresh: Type.Optional(Type.Boolean()) }), execute: async (_toolCallId, params, signal) => invoke(() => context.dailyIntelligenceService!.startBrief({ ...(params as Omit<DailyBriefInput, 'briefType'>), briefType }, signal).completion, signal) })
+    tools.push(start('morning')); tools.push(start('evening'))
+    tools.push(defineTool({ name: 'get_daily_brief', label: 'Get daily brief', description: 'Read one bounded persisted Daily Intelligence Brief.', promptSnippet: 'Read a Daily Intelligence Brief', parameters: Type.Object({ reportId: Type.String() }), execute: async (_toolCallId, params) => invoke(() => context.dailyIntelligenceService!.getBrief(params.reportId)) }))
+    tools.push(defineTool({ name: 'list_daily_briefs', label: 'List daily briefs', description: 'List recent persisted Daily Intelligence Briefs.', promptSnippet: 'List Daily Intelligence Briefs', parameters: Type.Object({ limit: Type.Optional(Type.Number()) }), execute: async (_toolCallId, params) => invoke(async () => { integerParam(params.limit, 'limit'); return context.dailyIntelligenceService!.listBriefs(params.limit) }) }))
   }
   return tools
 }

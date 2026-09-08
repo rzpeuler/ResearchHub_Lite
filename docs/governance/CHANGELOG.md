@@ -2,6 +2,8 @@
 
 ## 2026-09-08
 
+- Implemented `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001` pending CTO acceptance: Morning/Evening Brief contracts and sections, 43-entry public source catalog, explicit watchlist, bounded Web/Institutional/Community acquisition seams, ResearchSignal v2 store/dedup/enrich/cluster/rank, report persistence, trading-day scheduler, CLI/Task Scheduler scripts, Pi tools, HTTP routes, client API/card surface, offline regression tests, live provider probes, and real PiReasoningExecutor Morning/Evening evidence. M2 is not merged to `main`; M3 was not started.
+
 - Implemented `RHL-PERSONAL-RESEARCH-V1-FOUNDATION-001-FIX-001` pending independent CTO acceptance: Company Research now emits local semantic proposals to a producer-neutral Knowledge Production Gateway; canonical identity, Knowledge State Diff, bounded ResolutionIntent policy, ChangeSet planning/validation, and one shared Writer authority are centralized. Raw evidence uses the existing archive/verification seam, V04 receipts carry runtime Validator identity, temporal/as-of filtering and source rights policy are explicit, report retrieval is available through Application API/Pi tool, and offline plus real-network multi-run regressions are recorded in `tests/validation/evidence/RHL_PERSONAL_RESEARCH_V1_FOUNDATION_FIX_001.*`.
 - Added Personal Research v1 Company Deep Research foundation: Schema 0.4 contracts and validation, bounded official/AKShare/GDELT/RSS acquisition, ResearchSignal and Markdown ResearchReport contracts, deterministic valuation utilities, Company Research Skill, Company Deep Research Workflow, and `research_company` Application Service/Product API integration. Schema 0.3 runtime data and Raw Document Ingestion remain unchanged.
 

@@ -1,0 +1,49 @@
+{
+  "generatedAt": "2026-09-08T09:12:03.667Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001",
+  "classification": "EXECUTED_WITH_PROVIDER_LIMITATIONS",
+  "providers": [
+    {
+      "provider": "cninfo",
+      "attempted": true,
+      "status": "empty",
+      "usable": false
+    },
+    {
+      "provider": "gdelt",
+      "attempted": true,
+      "status": "failed",
+      "usable": false,
+      "diagnostics": "GDELT request failed with HTTP 429"
+    },
+    {
+      "provider": "rss",
+      "attempted": true,
+      "status": "empty",
+      "usable": false
+    },
+    {
+      "provider": "akshare",
+      "attempted": true,
+      "status": "failed",
+      "usable": false,
+      "diagnostics": "Command failed: python -c import json,sys,akshare as ak\nkind,symbol,start_date,end_date=sys.argv[1:]\nif kind=='basic': value=ak.stock_individual_info_em(symbol=symbol)\nelif kind=='financial': value=ak"
+    },
+    {
+      "provider": "public-institutional",
+      "attempted": true,
+      "status": "succeeded",
+      "usable": true
+    },
+    {
+      "provider": "xueqiu-eastmoney-guba-community",
+      "attempted": true,
+      "status": "succeeded",
+      "usable": true
+    }
+  ],
+  "sourceCatalogCount": 43,
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false,
+  "caveat": "Provider probes are live public checks; a successful discovery does not assert legal redistribution or consensus availability."
+}

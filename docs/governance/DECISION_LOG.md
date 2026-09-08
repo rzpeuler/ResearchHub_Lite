@@ -4,6 +4,12 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001 — 2026-09-08
+
+**Status:** Implemented / CTO acceptance pending
+
+Daily Intelligence v1 adds Morning and Evening Brief workflows, a bounded public-source catalog/watchlist, non-canonical ResearchSignal aggregation, explicit provider availability, deterministic deduplication/clustering/ranking, and Report persistence. Institutional observations remain attributable observations rather than consensus; community signals are bounded to configured entities; durable Knowledge changes remain optional and governed by the existing Gateway/Validated ChangeSet/Writer path. M2 is not merged to `main`, and M3 is not started.
+
 ## RHL-PERSONAL-RESEARCH-V1-FOUNDATION-001 — 2026-09-08
 
 **Status:** PASS / CLOSED by CTO acceptance at `7a1453179979ef2680165f79c3119656ee03c3a1`

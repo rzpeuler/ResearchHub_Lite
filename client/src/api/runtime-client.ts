@@ -35,6 +35,7 @@ export interface ReviewDetail { readonly reviewCaseId: string; readonly producer
 export interface AttachmentRef { readonly attachmentId: string; readonly filename: string; readonly mediaType: string; readonly size: number; readonly sha256: string; readonly createdAt: string }
 export interface ClientEvent { readonly eventId: string; readonly conversationId: string; readonly timestamp: string; readonly type: string; readonly role?: 'user' | 'assistant'; readonly summary?: string; readonly status?: string; readonly toolCallId?: string; readonly name?: string; readonly isError?: boolean; readonly steeringCount?: number; readonly followUpCount?: number; readonly code?: string }
 export interface BootstrapResponse { readonly runtime: { readonly origin: string; readonly runtimeToken: string }; readonly origin: string; readonly session: SessionState; readonly conversations: readonly ConversationSummary[]; readonly knowledgeBase?: KnowledgeBaseStatus; readonly openReviewCases?: number; readonly knowledgeError?: RuntimeErrorBody }
+export interface DailyBriefSummary { readonly reportId: string; readonly briefType: 'morning' | 'evening'; readonly tradeDate: string; readonly generatedAt: string; readonly quality: { readonly topCount: number; readonly reportItemWithSourceRatio: number }; readonly sections: readonly { readonly title: string; readonly unavailable?: boolean }[] }
 
 type FetchResponseLike = Pick<Response, 'ok' | 'status' | 'json'>
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<FetchResponseLike>
@@ -152,6 +153,7 @@ export class RuntimeClient {
   async cancelWorkflow(runId: string): Promise<unknown> { return this.mutate('/api/workflows/cancel', { runId }) }
   async uploadAttachment(file: File): Promise<AttachmentRef> { const form = new FormData(); form.append('file', file, file.name); const value = await this.request<{ attachment: AttachmentRef }>('/api/attachments', { method: 'POST', body: form }, true); return value.attachment }
   async startProduction(attachmentId: string): Promise<{ readonly accepted: boolean; readonly runId: string; readonly workflow?: WorkflowRun }> { return this.mutate('/api/production/ingest', { attachmentId }) }
+  async listDailyBriefs(limit = 10): Promise<readonly DailyBriefSummary[]> { return (await this.request<{ briefs: readonly DailyBriefSummary[] }>(`/api/daily-briefs?limit=${limit}`)).briefs }
   openEvents(onEvent: (event: ClientEvent) => void, onReconnect: () => void, eventSourceFactory: EventSourceFactory = defaultEventSourceFactory): () => void {
     const source = eventSourceFactory('/api/events')
     const eventTypes = ['agent.started', 'agent.completed', 'message.started', 'message.delta', 'message.completed', 'tool.started', 'tool.updated', 'tool.completed', 'queue.updated', 'session.changed', 'thinking.status', 'error']

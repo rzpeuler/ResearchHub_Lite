@@ -13,6 +13,8 @@
     "client:test": "vitest run --config client/vitest.config.ts",
     "researchhub/runtime": "tsx app/runtime/cli.ts",
     "researchhub": "npm run client:build && npm run researchhub/runtime",
+    "brief:morning": "tsx scripts/daily-brief-cli.ts morning",
+    "brief:evening": "tsx scripts/daily-brief-cli.ts evening",
     "test": "npm run client:test && npm run test:node",
     "test:node": "node tests/run-node-tests.mjs"
   },

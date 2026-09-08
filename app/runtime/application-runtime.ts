@@ -16,6 +16,10 @@ import { loadKnowledgeBaseManifest } from '../../knowledge/storage/manifest-load
 import { createResearchHubSessionRuntime, ResearchHubSessionRuntime } from './session-runtime.ts'
 import { validateStorageRoots } from './storage-boundary.ts'
 import type { ResearchHubApplicationRuntimeOptions, ResearchHubApplicationServices } from './contracts.ts'
+import { DailyIntelligenceService } from '../services/daily-intelligence-service.ts'
+import { RssResearchPlugin } from '../../plugins/research-acquisition/rss.ts'
+import { PublicInstitutionalViewAcquisition, CommunitySignalAcquisition } from '../../plugins/daily-intelligence/acquisition.ts'
+import { loadSourceCatalog } from '../../plugins/daily-intelligence/config.ts'
 
 export class ResearchHubApplicationRuntime {
   readonly cwd: string
@@ -67,13 +71,17 @@ export class ResearchHubApplicationRuntime {
     const workflowService = new WorkflowService()
     const productionService = new ProductionService({ mountedKnowledgeBaseRoot, workspaceRoot, cwd, reasoningExecutor, workflowService })
     let researchService = options.researchService
+    const catalog = await loadSourceCatalog(join(cwd, 'config', 'research-sources', 'catalog.yaml')).catch(() => [])
+    const institutionalUrls = catalog.filter((item) => item.category === 'institution' || item.category === 'analyst').slice(0, 8).map((item) => item.evidenceUrl)
+    const communityUrls = catalog.filter((item) => item.category === 'community').slice(0, 4).map((item) => item.evidenceUrl)
+    const dailyIntelligenceService = options.dailyIntelligenceService ?? new DailyIntelligenceService({ cwd, workflowService, reasoningExecutor, mountedKnowledgeBaseRoot, providers: [new OfficialDisclosureResearchPlugin(new CninfoOfficialDisclosureClient()), new GdeltResearchPlugin(), new RssResearchPlugin({ feedUrls: ['https://www.gov.cn/rss/zhengce.xml'] }), ...(institutionalUrls.length ? [new PublicInstitutionalViewAcquisition({ provider: 'public-institutional', urls: institutionalUrls, tier: 2 })] : []), ...(communityUrls.length ? [new CommunitySignalAcquisition({ provider: 'community-public', urls: communityUrls, tier: 4 })] : [])] })
     if (researchService === undefined && mountedKnowledgeBaseRoot !== undefined) {
       try { const manifest = await loadKnowledgeBaseManifest(mountedKnowledgeBaseRoot); if (manifest.schemaVersion === '0.4' && manifest.storageFormatVersion === '1') researchService = new ResearchService({ mountedKnowledgeBaseRoot, cwd, workflowService, reasoningExecutor, signalStore: new FileResearchSignalStore(join(cwd, 'runtime-data', 'research-signals.jsonl')), acquisitionPlugins: [new OfficialDisclosureResearchPlugin(new CninfoOfficialDisclosureClient()), new GdeltResearchPlugin()], akshare: new AkshareDataAdapter() }) } catch { /* the normal v0.3 runtime remains available without Company Research */ }
     }
-    const services = { knowledgeService, knowledgeGraphService, reviewService, workflowService, productionService, ...(researchService === undefined ? {} : { researchService }) }
+    const services = { knowledgeService, knowledgeGraphService, reviewService, workflowService, productionService, ...(researchService === undefined ? {} : { researchService }), dailyIntelligenceService }
     const sessionManager = options.sessionManager ?? SessionManager.create(cwd, options.sessionDir)
     try {
-      const sessionRuntime = await createResearchHubSessionRuntime({ cwd, agentDir, modelRuntime, sessionManager, applicationServices: services, mountedKnowledgeBaseRoot, workspaceRoot, model: selectedModel, reasoningExecutor, settingsManager: options.settingsManager, resourceLoader: options.resourceLoader, researchService })
+      const sessionRuntime = await createResearchHubSessionRuntime({ cwd, agentDir, modelRuntime, sessionManager, applicationServices: services, mountedKnowledgeBaseRoot, workspaceRoot, model: selectedModel, reasoningExecutor, settingsManager: options.settingsManager, resourceLoader: options.resourceLoader, researchService, dailyIntelligenceService })
       return new ResearchHubApplicationRuntime({ cwd, agentDir, workspaceRoot, mountedKnowledgeBaseRoot, modelRuntime, sessionManager, services, sessionRuntime, ownsModelRuntime })
     } catch (error) {
       if (ownsModelRuntime) await disposeModelRuntime(modelRuntime)
@@ -87,6 +95,7 @@ export class ResearchHubApplicationRuntime {
   get workflowService(): WorkflowService { return this.services.workflowService }
   get productionService(): ProductionService { return this.services.productionService }
   get researchService() { return this.services.researchService }
+  get dailyIntelligenceService() { return this.services.dailyIntelligenceService }
 
   async close(): Promise<void> {
     if (this.closed) return

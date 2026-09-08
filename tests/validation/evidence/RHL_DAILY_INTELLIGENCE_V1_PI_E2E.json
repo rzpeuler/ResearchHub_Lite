@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-09-08T09:12:33.102Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001",
+  "classification": "EXECUTED",
+  "realPiReasoningExecutor": true,
+  "runs": [
+    {
+      "status": "completed",
+      "briefType": "morning",
+      "sectionCount": 14,
+      "signalCount": 1,
+      "claimCount": 0,
+      "reasoningCalls": 1,
+      "errors": []
+    },
+    {
+      "status": "completed",
+      "briefType": "evening",
+      "sectionCount": 13,
+      "signalCount": 1,
+      "claimCount": 0,
+      "reasoningCalls": 1,
+      "errors": []
+    }
+  ],
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}
