@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Personal Research v1 Daily Intelligence M2 — PASS / CLOSED by CTO acceptance**
+**Personal Research v1 M3 Research Coverage architecture frozen — implementation not started**
 
 ## Current Snapshot
 
@@ -14,6 +14,7 @@
 - `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-001`: PASS / CLOSED by the same CTO acceptance. The bounded catalog/watchlist, source preservation, signal lifecycle, scheduler, report, and shared product composition remain accepted; M3 was not started.
 - `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-002`: PASS / CLOSED by the same CTO acceptance. FIX-002 closes async enrichment application, bounded change intelligence, proposal/evidence admissibility, multi-company Gateway grouping, canonical-only report provenance, shared Runtime/CLI/Scheduler/Pi composition, immediate 60-second Scheduler checks, active-only catalog wiring, and real product telemetry. Provider and Pi evidence remain explicit about environment limitations.
 - `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-003`: PASS / CLOSED by the same CTO acceptance. FIX-003 adds bounded structured-output normalization, strict partial-field enrichment, Change Assessment durable eligibility as the pre-Gateway authority, exact section admissibility, executable multi-company/evidence regressions, and direct Product telemetry for real Pi validation/application. M2 is closed; M3 was not started.
+- `RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001`: ARCHITECTURE FROZEN / IMPLEMENTATION NOT STARTED. M3 is Personal Research v1 Research Coverage; M3A is Company Research Coverage with Earnings Review, Valuation, Event Research, and Thesis Red Team. M3B Industry Deep Research requires separate architecture approval; Theme Framework remains DEFERRED. No M3 product code is authorized by the architecture freeze.
 - Production Baseline v1 is established by CTO decision. Product implementation baseline: `5319d130952f4c784f5829890591b64dcd5f72a4`; accepted pre-freeze repository/governance baseline: `3d6f0212b7500b11d806b444dadbf550af1e80de`; freeze decision commit: `0697dee129b539857b9104ffffef85693a4382e5`.
 - `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001`: PASS / CLOSED by CTO decision. Ordinary tests mirror app/plugins/skills/workflows ownership, the engineering spec is under `docs/engineering/specs/`, and Node discovery is stable.
 - `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001-FIX-001`: PASS / CLOSED by CTO decision. The Workflow public barrel has an explicit collision-free planner export surface, root TypeScript checks all `workflows/**/*.ts`, and Node discovery explicitly excludes `tests/validation/evidence/` with deterministic regression coverage.

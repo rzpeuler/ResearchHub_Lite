@@ -2,6 +2,8 @@
 
 ## 2026-09-08
 
+- Froze `RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001` as `ARCHITECTURE FROZEN / IMPLEMENTATION NOT STARTED` in `docs/architecture/PERSONAL_RESEARCH_V1_RESEARCH_COVERAGE_ARCHITECTURE_V0.1.md`. M3A is limited to Earnings Review, Valuation, Event Research, and Thesis Red Team; M3B Industry Deep Research requires separate architecture approval; Theme Framework remains deferred. No M3 product code, new Provider, Schema change, or generic Coverage Framework was introduced.
+
 - CTO accepted `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001`, `...-FIX-001`, `...-FIX-002`, and `...-FIX-003` as `PASS / CLOSED` on 2026-09-08 at accepted implementation commit `218280579cdd7b6cfdf67506150cfa82cef4322e`. M2 is merged to `main`; M3 was not started.
 
 - Final local validation record: FIX-003 focused executable suite `7/7 PASS`; FIX-003 acceptance requirement matrix `12/12 PASS`; Full Node `348/348 PASS`; Client `21/21 PASS`; `typecheck`, `client:typecheck`, `client:build`, and `git diff --check` PASS. Real Pi used `zhipu-openapi/glm-5.3-flash`; Morning and Evening completed with `gate=true`, enrichment `6/0`, Change Assessment `4/2`, and Synthesis `6/0` for applied/fallback counts. No GitHub CI status is claimed.

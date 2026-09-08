@@ -4,6 +4,18 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001 — 2026-09-08
+
+**Status:** ARCHITECTURE FROZEN / IMPLEMENTATION NOT STARTED
+
+Personal Research v1 M3 is frozen as Research Coverage. M3A is Company Research Coverage with four producer-specific capabilities in order: Earnings Review, Valuation, Event Research, and Thesis Red Team. M3B Industry Deep Research is NOT STARTED / ARCHITECTURE REQUIRED and requires separate architecture approval. Theme Framework remains DEFERRED.
+
+Research coverage is composed from existing canonical Knowledge, Research Reports, Workflow Runs, and non-canonical ResearchSignals. M3 does not create a canonical `CoverageState` object or generic Coverage Framework. All M3A producers preserve the existing Workflow / Skill / Plugin / Knowledge boundaries and the Semantic Proposal -> Knowledge Production Gateway -> Binding/Diff/Resolution -> ResolutionIntent -> ChangeSet -> Validation -> Writer path.
+
+The architecture uses existing Schema 0.4 / Storage Format 1 whenever possible; no Schema 0.4 change, automatic Schema 0.3 migration, new Provider, source architecture, canonical M3A Knowledge kind, or new Agent Runtime is authorized. M3A report types are ResearchReport concepts, not canonical Knowledge kinds. No M3 product code, tools, routes, UI, or Application Service was implemented by this task.
+
+The normative architecture is `docs/architecture/PERSONAL_RESEARCH_V1_RESEARCH_COVERAGE_ARCHITECTURE_V0.1.md`. Each M3A implementation requires a separate engineering task, validation evidence, and independent review. M1 and M2 remain PASS / CLOSED.
+
 ## RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001 — CTO Acceptance Closure — 2026-09-08
 
 **Status:** PASS / CLOSED by CTO decision
