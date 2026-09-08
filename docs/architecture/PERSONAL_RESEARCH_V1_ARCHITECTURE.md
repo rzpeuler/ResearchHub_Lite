@@ -12,7 +12,10 @@ Company Deep Research
  -> free public acquisition
  -> Research Report
  -> Semantic Knowledge Proposal
- -> Binding / Resolution / ChangeSet / Validation / Writer
+ -> Proposal Validation / Canonical Binding / Knowledge State Diff
+ -> bounded semantic resolution / deterministic Resolution Policy
+ -> ResolutionIntent / ChangeSet Planning / ChangeSet Validation
+ -> shared Writer
  -> canonical Knowledge
 ```
 
@@ -28,20 +31,22 @@ Objective
  -> normalize and archive Raw evidence
  -> Company Research Skill
  -> Markdown Report draft + Semantic Proposals
- -> canonical binding and deterministic resolution
- -> validated Schema 0.4 ChangeSet
- -> atomic Writer
+ -> Knowledge Production Gateway
+ -> canonical binding and Knowledge State Diff
+ -> bounded semantic resolution and deterministic Resolution Policy
+ -> ResolutionIntent / ChangeSet Planning / ChangeSet Validation
+ -> shared Writer
  -> reload/verify
  -> finalize Report references
 ```
 
-Workflow owns lifecycle, cancellation, source bounds, deterministic IDs, validation gates, Writer authorization, and terminal status. Skill owns semantic methodology and interpretation. Plugin owns external I/O. No Skill may allocate canonical IDs or call Writer.
+Workflow owns lifecycle, cancellation, source bounds, and terminal status. Skill owns semantic methodology and interpretation. Plugin owns external I/O. The producer-neutral Knowledge Production Gateway owns canonical binding, state diff, ResolutionIntent policy, ChangeSet planning, and the single Writer entry. Canonical IDs are allocated only from canonical identity and existing state; no local proposal ID is durable. No Skill or Workflow may call a schema-specific Writer.
 
 ## Schema and storage
 
 Schema 0.4 continues Storage Format 1 and adds claim types `assumption`, `thesis`, and `catalyst`; canonical claim dependency references; forecast `probability` distinct from `confidence`; and source acquisition/rights metadata. A fresh v0.4 Knowledge Base is selected explicitly by its manifest. Existing v0.3 runtime directories are readable only through their v0.3 path and are not automatically migrated or rewritten.
 
-Claim dependencies must resolve to canonical Claims. Self-references and cycles are rejected deterministically; validation uses an iterative graph algorithm so malformed cycles cannot crash Loader or Writer. Source rights are explicit and default public/non-commercial policy still denies redistribution.
+Claim dependencies must resolve to canonical Claims. Self-references and cycles are rejected deterministically; validation uses an iterative graph algorithm so malformed cycles cannot crash Loader or Writer. Source rights are explicit, carry the personal non-commercial research policy basis, and default public/non-commercial policy still denies redistribution. Every committed Source/Claim evidence path is Raw-backed and Raw integrity is verified before commit.
 
 ## Report and Signal boundary
 

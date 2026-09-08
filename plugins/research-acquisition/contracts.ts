@@ -26,6 +26,8 @@ export interface ResearchFetchedSource {
   readonly contentType?: string
   readonly contentHash?: string
   readonly rawReference?: string
+  readonly rawBytes?: Uint8Array
+  readonly mediaType?: string
 }
 
 export interface NormalizedResearchSource {
@@ -35,6 +37,7 @@ export interface NormalizedResearchSource {
   readonly content: string
   readonly canonicalUrl?: string
   readonly contentHash: string
+  readonly rawBytes?: Uint8Array
   readonly author?: string
   readonly publisher: string
   readonly rights: {
@@ -43,6 +46,7 @@ export interface NormalizedResearchSource {
     readonly aiProcessingAllowed: boolean
     readonly derivativeKnowledgeAllowed: boolean
     readonly redistributionAllowed: boolean
+    readonly policyBasis?: 'personal_noncommercial_research'
   }
 }
 

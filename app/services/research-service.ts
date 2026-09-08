@@ -5,6 +5,8 @@ import type { ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchSignal
 import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
 import { ApplicationServiceError, type ApplicationResearchResult, type ResearchCompanyInput } from './contracts.ts'
 import { WorkflowService } from './workflow-service.ts'
+import { readResearchReport } from './research-report.ts'
+import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 
 export interface ResearchServiceOptions {
   readonly mountedKnowledgeBaseRoot: string
@@ -14,6 +16,7 @@ export interface ResearchServiceOptions {
   readonly signalStore?: ResearchSignalStore
   readonly workflowService: WorkflowService
   readonly cwd?: string
+  readonly reasoningExecutor?: ReasoningExecutor
 }
 
 export class ResearchService {
@@ -52,6 +55,7 @@ export class ResearchService {
           reportRoot: resolve(this.options.reportRoot ?? join(this.options.cwd ?? process.cwd(), 'runtime-data', 'reports')),
           signal: combined.signal,
           signalStore: this.options.signalStore,
+          reasoningExecutor: this.options.reasoningExecutor,
         })
         if (result.status === 'completed') {
           this.options.workflowService.markAuthoritativeTerminal(input.workflowRunId, 'completed', { summary: `Company research completed for ${input.symbol}` })
@@ -82,5 +86,14 @@ export class ResearchService {
     }))
     completion.catch(() => undefined)
     return { runId: input.workflowRunId, completion }
+  }
+
+  async getResearchReport(reportId: string) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(reportId)) throw new ApplicationServiceError('invalid_input', 'reportId is invalid')
+    const reportRoot = resolve(this.options.reportRoot ?? join(this.options.cwd ?? process.cwd(), 'runtime-data', 'reports'))
+    try { return await readResearchReport(join(reportRoot, `${reportId}.md.json`)) } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw new ApplicationServiceError('not_found', 'Research report not found', { cause: error })
+      throw error
+    }
   }
 }

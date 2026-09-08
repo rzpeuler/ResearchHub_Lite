@@ -14,6 +14,7 @@ export interface SourceRightsV04 {
   aiProcessingAllowed: boolean
   derivativeKnowledgeAllowed: boolean
   redistributionAllowed: boolean
+  policyBasis?: 'personal_noncommercial_research'
 }
 
 export interface SourceAcquisitionV04 {

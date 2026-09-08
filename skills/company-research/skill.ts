@@ -1,19 +1,93 @@
-import { relativeValuation, scenarioValuation } from './valuation.ts'
+import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
+import { relativeValuation } from './valuation.ts'
 import type { CompanyResearchInput, CompanyResearchResult, SemanticKnowledgeProposal } from './contracts.ts'
 
-const REQUIRED_SECTIONS = ['Company Overview', 'Business Model', 'Business Segments', 'Revenue / Profit Drivers', 'Products', 'Technologies', 'Industry Exposure', 'Supply Chain', 'Competition', 'Financial Quality', 'Growth Drivers', 'Management / Capital Allocation', 'Catalysts', 'Risks', 'Valuation', 'Bull / Base / Bear', 'Variant Perception', 'Investment Thesis', 'Monitoring Checklist'] as const
+export const COMPANY_RESEARCH_SECTIONS = ['Company Overview', 'Business Model', 'Business Segments', 'Revenue / Profit Drivers', 'Products', 'Technologies', 'Industry Exposure', 'Supply Chain', 'Competition', 'Financial Quality', 'Growth Drivers', 'Management / Capital Allocation', 'Catalysts', 'Risks', 'Valuation', 'Bull / Base / Bear', 'Variant Perception', 'Investment Thesis', 'Monitoring Checklist'] as const
+const LOCAL_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
 export class CompanyResearchSkill {
-  constructor(private readonly now: () => string = () => new Date().toISOString()) {}
+  constructor(private readonly now: () => string = () => new Date().toISOString(), private readonly executor?: ReasoningExecutor) {}
+
+  /** Offline-safe deterministic baseline retained for tests and provider-degraded runs. */
   run(input: CompanyResearchInput): CompanyResearchResult {
-    const sourceIds = input.sources.map((source) => source.candidate.candidateId)
-    const proposals: SemanticKnowledgeProposal[] = [{ proposalId: 'company', kind: 'entity', subjectKey: 'company', entityType: 'company', entityName: input.company.name ?? input.company.symbol }, ...input.sources.slice(0, 12).map((source, index) => ({ proposalId: `fact-${index + 1}`, kind: 'claim' as const, claimType: 'fact' as const, subjectKey: 'company', statement: `${source.title}: ${source.content.slice(0, 280)}`, sourceCandidateIds: [source.candidate.candidateId], confidence: source.candidate.tier === 1 ? 0.9 : 0.7 }))]
-    const sections = REQUIRED_SECTIONS.map((title, index) => { const relevant = input.sources.filter((source) => index === 0 || source.content.toLowerCase().includes(title.split(' ')[0]!.toLowerCase())).slice(0, 3); const text = relevant.length ? relevant.map((source) => `- ${source.content.slice(0, 500)}`).join('\n') : 'No bounded source evidence was available for this section; treat this as an explicit research gap.'; return { id: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), title, markdown: text, sourceCandidateIds: relevant.map((source) => source.candidate.candidateId), proposalIds: proposals.filter((proposal) => proposal.sourceCandidateIds?.some((id) => relevant.some((source) => source.candidate.candidateId === id))).map((proposal) => proposal.proposalId) } })
-    let valuation: unknown
-    const metric = extractMetric(input.financialData)
-    if (metric !== undefined) valuation = relativeValuation({ metric, peerMultiples: [10, 12, 15] })
-    else valuation = scenarioValuation([{ name: 'base', earnings: 1, multiple: 12, probability: 1 }])
-    return { company: input.company, generatedAt: this.now(), asOf: input.asOf, sections, proposals, sourceCandidateIds: sourceIds, valuation }
+    const proposals: SemanticKnowledgeProposal[] = [
+      { proposalId: 'proposal-company', kind: 'entity', subjectKey: 'company', entityType: 'company', entityName: input.company.name ?? input.company.symbol },
+      ...input.sources.slice(0, 12).map((source, index) => ({ proposalId: `proposal-fact-${index + 1}`, kind: 'claim' as const, claimType: 'fact' as const, subjectKey: 'company', statement: `${source.title}: ${source.content.slice(0, 280)}`, sourceCandidateIds: [source.candidate.candidateId], confidence: source.candidate.tier === 1 ? 0.9 : 0.7 })),
+    ]
+    const sections = COMPANY_RESEARCH_SECTIONS.map((title) => {
+      const relevant = input.sources.filter((source) => title === 'Company Overview' || source.content.toLowerCase().includes(title.split(' ')[0]!.toLowerCase())).slice(0, 3)
+      const text = relevant.length ? relevant.map((source) => `- ${source.content.slice(0, 500)}`).join('\n') : gap(title)
+      return { id: sectionId(title), title, markdown: text, sourceCandidateIds: relevant.map((source) => source.candidate.candidateId), proposalIds: proposals.filter((proposal) => proposal.sourceCandidateIds?.some((id) => relevant.some((source) => source.candidate.candidateId === id))).map((proposal) => proposal.proposalId) }
+    })
+    return finalizeResearch(input, { sections, proposals }, this.now())
+  }
+
+  async synthesize(input: CompanyResearchInput): Promise<CompanyResearchResult> {
+    if (!this.executor) return this.run(input)
+    const response = await this.executor.execute({
+      operation: 'company_research_synthesis',
+      instruction: 'Synthesize the bounded company research into the exact local proposal contract. Use only supplied evidence and structured data. Emit explicit gaps. Never emit canonical IDs, ChangeSets, storage refs, or mutation actions.',
+      input: {
+        company: input.company,
+        objective: `A-share company deep research for ${input.company.symbol}`,
+        asOf: input.asOf,
+        boundedSources: input.sources.slice(0, 20).map((source) => ({ candidateId: source.candidate.candidateId, kind: source.candidate.kind, tier: source.candidate.tier, title: source.title, publisher: source.publisher, publishedAt: source.candidate.publishedAt ?? null, content: source.content.slice(0, 1_200) })),
+        structuredFinancialData: input.financialData ?? null,
+        structuredMarketData: input.marketData ?? null,
+        existingKnowledgeProjection: input.existingKnowledgeProjection ?? [],
+        methodology: 'Evidence-bounded fundamental company research with explicit uncertainty and deterministic valuation recomputation.',
+      },
+      outputContract: { sections: 'exactly 19 local sections with id,title,markdown,sourceCandidateIds,proposalIds', proposals: 'local entity/claim/relation proposals only', allowedClaimTypes: ['fact', 'forecast', 'viewpoint', 'trend', 'risk', 'assumption', 'thesis', 'catalyst'], links: 'proposal-local supports/dependsOn/contradicts links' },
+      metadata: { operationFamily: 'personal-research-v1', companySymbol: input.company.symbol },
+    })
+    const parsed = parseOutput(response.output)
+    const candidate = validateSynthesis(parsed, input)
+    return finalizeResearch(input, candidate, this.now())
   }
 }
-function extractMetric(value: unknown): number | undefined { if (!Array.isArray(value) || value.length === 0) return undefined; const first = value[0]; if (typeof first !== 'object' || first === null) return undefined; const candidate = (first as Record<string, unknown>).metric ?? (first as Record<string, unknown>).value; return typeof candidate === 'number' && Number.isFinite(candidate) && candidate >= 0 ? candidate : undefined }
+
+function parseOutput(value: unknown): Record<string, unknown> {
+  if (typeof value === 'string') {
+    try { return JSON.parse(value.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')) as Record<string, unknown> } catch { throw new Error('company_research_synthesis returned invalid JSON') }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('company_research_synthesis must return an object')
+  return value as Record<string, unknown>
+}
+
+function validateSynthesis(value: Record<string, unknown>, input: CompanyResearchInput): { sections: CompanyResearchResult['sections']; proposals: readonly SemanticKnowledgeProposal[] } {
+  const sourceIds = new Set(input.sources.map((source) => source.candidate.candidateId))
+  const rawProposals = Array.isArray(value.proposals) ? value.proposals : []
+  const proposals = rawProposals.map((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error(`Invalid company research proposal at index ${index}`)
+    const proposal = item as SemanticKnowledgeProposal
+    if (!LOCAL_ID.test(proposal.proposalId) || /^(?:entity|relation|claim|source|raw):/.test(proposal.proposalId)) throw new Error('Company research proposal IDs must remain local and non-canonical')
+    if (!['entity', 'claim', 'relation'].includes(proposal.kind)) throw new Error(`Unsupported company research proposal kind: ${proposal.kind}`)
+    for (const sourceId of proposal.sourceCandidateIds ?? []) if (!sourceIds.has(sourceId)) throw new Error(`Proposal references unknown source candidate: ${sourceId}`)
+    return proposal
+  })
+  const proposalIds = new Set(proposals.map((proposal) => proposal.proposalId))
+  for (const proposal of proposals) for (const ref of [...proposal.supportsProposalIds ?? [], ...proposal.dependsOnProposalIds ?? [], ...proposal.contradictsProposalIds ?? []]) if (!proposalIds.has(ref)) throw new Error(`Proposal link does not resolve locally: ${ref}`)
+  const rawSections = Array.isArray(value.sections) ? value.sections : []
+  const byTitle = new Map(rawSections.map((section) => [typeof section === 'object' && section !== null && !Array.isArray(section) && typeof (section as Record<string, unknown>).title === 'string' ? (section as Record<string, unknown>).title : '', section]))
+  const sections = COMPANY_RESEARCH_SECTIONS.map((title) => {
+    const section = byTitle.get(title)
+    if (!section || typeof section !== 'object' || Array.isArray(section)) return { id: sectionId(title), title, markdown: gap(title), sourceCandidateIds: [], proposalIds: [] }
+    const value = section as Record<string, unknown>
+    const sourceCandidateIds = Array.isArray(value.sourceCandidateIds) ? value.sourceCandidateIds.filter((id): id is string => typeof id === 'string') : []
+    const linkedProposalIds = Array.isArray(value.proposalIds) ? value.proposalIds.filter((id): id is string => typeof id === 'string') : []
+    if (sourceCandidateIds.some((id) => !sourceIds.has(id)) || linkedProposalIds.some((id) => !proposalIds.has(id))) throw new Error(`Section ${title} has unresolved local references`)
+    return { id: sectionId(title), title, markdown: typeof value.markdown === 'string' && value.markdown.trim() ? value.markdown.trim() : gap(title), sourceCandidateIds, proposalIds: linkedProposalIds }
+  })
+  return { sections, proposals }
+}
+
+function finalizeResearch(input: CompanyResearchInput, partial: { sections: CompanyResearchResult['sections']; proposals: readonly SemanticKnowledgeProposal[] }, generatedAt: string): CompanyResearchResult {
+  const metric = extractMetric(input.financialData)
+  const valuation = metric === undefined
+    ? { status: 'insufficient_data' as const, missingFields: ['verified earnings metric'], note: 'No verified structured earnings metric was supplied; implied value is unavailable.' }
+    : { status: 'available' as const, method: 'relative', result: relativeValuation({ metric, peerMultiples: [10, 12, 15] }) }
+  return { company: input.company, generatedAt, asOf: input.asOf, sections: partial.sections, proposals: partial.proposals, sourceCandidateIds: input.sources.map((source) => source.candidate.candidateId), valuation }
+}
+function sectionId(title: string): string { return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }
+function gap(title: string): string { return `Research gap: no bounded evidence was supplied for ${title}; no conclusion is asserted.` }
+function extractMetric(value: unknown): number | undefined { if (!Array.isArray(value) || value.length === 0) return undefined; const first = value[0]; if (!first || typeof first !== 'object' || Array.isArray(first)) return undefined; const candidate = (first as Record<string, unknown>).metric ?? (first as Record<string, unknown>).value; return typeof candidate === 'number' && Number.isFinite(candidate) && candidate >= 0 ? candidate : undefined }

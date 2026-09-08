@@ -7,6 +7,8 @@ import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { createFreshKnowledgeBaseV04, readCanonicalV04Assets } from '../../knowledge/storage/index.ts'
 import { runCompanyDeepResearch } from '../../workflows/company-deep-research/index.ts'
 import type { ResearchAcquisitionPlugin, ResearchSignal, ResearchSignalStore } from '../../plugins/research-acquisition/contracts.ts'
+import { writeKnowledgeBase } from '../../knowledge/writer/writer.ts'
+import { KnowledgeBaseRegistry as Registry } from '../../knowledge/registry/registry.ts'
 
 test('Company Deep Research produces atomic canonical Knowledge and a linked report', async () => {
   const root = await mkdtemp(join(tmpdir(), 'researchhub-company-'))
@@ -42,5 +44,51 @@ test('Company Deep Research produces atomic canonical Knowledge and a linked rep
   } finally {
     await rm(root, { recursive: true, force: true })
     await rm(reports, { recursive: true, force: true })
+  }
+})
+
+test('Company Deep Research binds two companies deterministically and is stable on a third run', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'researchhub-company-multi-'))
+  const reports = await mkdtemp(join(tmpdir(), 'researchhub-company-multi-reports-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-company-multi-test', now: '2026-09-08T00:00:00.000Z' })
+    const plugin: ResearchAcquisitionPlugin = {
+      name: 'fixture-official',
+      discover: async (request) => [{ candidateId: `official-${request.company.symbol}`, kind: 'official_disclosure', tier: 1, title: `${request.company.symbol} filing`, url: `https://example.com/${request.company.symbol}`, provider: 'cninfo', publishedAt: '2026-09-07T00:00:00.000Z', metadata: { companySymbol: request.company.symbol } }],
+      fetch: async (candidate) => ({ candidate, retrievedAt: '2026-09-08T00:00:00.000Z', content: `${candidate.candidateId} reported stable revenue.`, contentHash: candidate.candidateId.includes('600519') ? 'c'.repeat(64) : 'd'.repeat(64) }),
+      normalize: async (fetched) => ({ candidate: fetched.candidate, retrievedAt: fetched.retrievedAt, title: fetched.candidate.title, content: fetched.content, contentHash: fetched.contentHash!, canonicalUrl: fetched.candidate.url, publisher: fetched.candidate.provider, rights: { accessScope: 'public', retentionAllowed: true, aiProcessingAllowed: true, derivativeKnowledgeAllowed: true, redistributionAllowed: false } }),
+    }
+    const first = await runCompanyDeepResearch({ workflowRunId: 'multi-600519-1', handle: await new Registry().mount(root), company: { symbol: '600519', name: 'Company A' }, acquisitionPlugins: [plugin], reportRoot: reports, now: () => '2026-09-08T00:00:00.000Z' })
+    const second = await runCompanyDeepResearch({ workflowRunId: 'multi-000858-1', handle: await new Registry().mount(root), company: { symbol: '000858', name: 'Company B' }, acquisitionPlugins: [plugin], reportRoot: reports, now: () => '2026-09-08T00:00:00.000Z' })
+    const third = await runCompanyDeepResearch({ workflowRunId: 'multi-600519-2', handle: await new Registry().mount(root), company: { symbol: '600519', name: 'Company A' }, acquisitionPlugins: [plugin], reportRoot: reports, now: () => '2026-09-08T00:00:00.000Z' })
+    assert.equal(first.status, 'completed', first.errors.join('; '))
+    assert.equal(second.status, 'completed', second.errors.join('; '))
+    assert.equal(third.status, 'completed', third.errors.join('; '))
+    assert.equal(first.knowledgeBaseRevision, 1)
+    assert.equal(second.knowledgeBaseRevision, 2)
+    assert.equal(third.knowledgeBaseRevision, 2)
+    const loaded = await readCanonicalV04Assets(root)
+    assert.equal(loaded.objects.filter((item) => item.value.id.startsWith('entity:')).length, 2)
+    assert.equal(loaded.objects.filter((item) => item.value.id.startsWith('source:')).length, 2)
+    assert.equal(loaded.objects.filter((item) => item.value.id.startsWith('claim:')).length, 2)
+    assert.ok(loaded.objects.every((item) => !item.value.id.includes('proposal-')))
+    assert.ok(third.resolutionIntents?.some((item) => item.disposition === 'bound_existing'))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(reports, { recursive: true, force: true })
+  }
+})
+
+test('Schema 0.4 shared Writer rejects a forged receipt without Validator runtime identity', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'researchhub-writer-token-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-writer-token-test', now: '2026-09-08T00:00:00.000Z' })
+    const handle = await new Registry().mount(root)
+    const forged = { changeSet: { changeSetId: 'forged', workflowRunId: 'forged-run', knowledgeBaseId: handle.knowledgeBaseId, schemaVersion: '0.4', storageFormatVersion: '1', expectedBaseRevision: 0, operations: [] }, knowledgeBaseId: handle.knowledgeBaseId, schemaVersion: '0.4', baseRevision: 0, changeSetId: 'forged', changeSetHash: '0'.repeat(64) }
+    const result = await writeKnowledgeBase(handle, forged as never, { registry: new Registry(), clock: () => '2026-09-08T00:00:00.000Z' })
+    assert.equal(result.status, 'rejected')
+    assert.equal(result.error?.code, 'validation_required')
+  } finally {
+    await rm(root, { recursive: true, force: true })
   }
 })

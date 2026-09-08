@@ -37,6 +37,7 @@ function validateSource(source: KnowledgeSourceV04, errors: KnowledgeV04Diagnost
   const rights = source.rights
   if (!['public', 'authenticated', 'restricted', 'unknown'].includes(rights.accessScope as string)) add(errors, 'V04_SOURCE_RIGHTS', 'rights.accessScope is invalid', id)
   for (const field of ['retentionAllowed', 'aiProcessingAllowed', 'derivativeKnowledgeAllowed', 'redistributionAllowed']) if (typeof rights[field] !== 'boolean') add(errors, 'V04_SOURCE_RIGHTS', `rights.${field} must be boolean`, id)
+  if (rights.policyBasis !== undefined && rights.policyBasis !== 'personal_noncommercial_research') add(errors, 'V04_SOURCE_RIGHTS', 'rights.policyBasis is invalid', id)
   if (source.acquisition !== undefined && source.acquisition !== null && !record(source.acquisition)) add(errors, 'V04_ACQUISITION', 'acquisition must be an object or null', id)
   for (const rawRef of source.rawRefs ?? []) if (!RAW_PATTERN.test(rawRef)) add(errors, 'V04_RAW_REF', `Source rawRef is invalid: ${rawRef}`, id)
 }

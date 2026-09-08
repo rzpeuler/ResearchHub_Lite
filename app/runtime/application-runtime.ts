@@ -11,6 +11,7 @@ import { ResearchService } from '../services/research-service.ts'
 import { CninfoOfficialDisclosureClient, OfficialDisclosureResearchPlugin } from '../../plugins/research-acquisition/official.ts'
 import { GdeltResearchPlugin } from '../../plugins/research-acquisition/gdelt.ts'
 import { AkshareDataAdapter } from '../../plugins/research-acquisition/akshare.ts'
+import { FileResearchSignalStore } from '../../plugins/research-acquisition/signal-store.ts'
 import { loadKnowledgeBaseManifest } from '../../knowledge/storage/manifest-loader.ts'
 import { createResearchHubSessionRuntime, ResearchHubSessionRuntime } from './session-runtime.ts'
 import { validateStorageRoots } from './storage-boundary.ts'
@@ -67,7 +68,7 @@ export class ResearchHubApplicationRuntime {
     const productionService = new ProductionService({ mountedKnowledgeBaseRoot, workspaceRoot, cwd, reasoningExecutor, workflowService })
     let researchService = options.researchService
     if (researchService === undefined && mountedKnowledgeBaseRoot !== undefined) {
-      try { const manifest = await loadKnowledgeBaseManifest(mountedKnowledgeBaseRoot); if (manifest.schemaVersion === '0.4' && manifest.storageFormatVersion === '1') researchService = new ResearchService({ mountedKnowledgeBaseRoot, cwd, workflowService, acquisitionPlugins: [new OfficialDisclosureResearchPlugin(new CninfoOfficialDisclosureClient()), new GdeltResearchPlugin()], akshare: new AkshareDataAdapter() }) } catch { /* the normal v0.3 runtime remains available without Company Research */ }
+      try { const manifest = await loadKnowledgeBaseManifest(mountedKnowledgeBaseRoot); if (manifest.schemaVersion === '0.4' && manifest.storageFormatVersion === '1') researchService = new ResearchService({ mountedKnowledgeBaseRoot, cwd, workflowService, reasoningExecutor, signalStore: new FileResearchSignalStore(join(cwd, 'runtime-data', 'research-signals.jsonl')), acquisitionPlugins: [new OfficialDisclosureResearchPlugin(new CninfoOfficialDisclosureClient()), new GdeltResearchPlugin()], akshare: new AkshareDataAdapter() }) } catch { /* the normal v0.3 runtime remains available without Company Research */ }
     }
     const services = { knowledgeService, knowledgeGraphService, reviewService, workflowService, productionService, ...(researchService === undefined ? {} : { researchService }) }
     const sessionManager = options.sessionManager ?? SessionManager.create(cwd, options.sessionDir)

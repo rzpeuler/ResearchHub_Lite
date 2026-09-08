@@ -1,0 +1,16 @@
+{
+  "scenario": "real-network multi-run company research",
+  "providersAttempted": ["cninfo", "gdelt", "akshare"],
+  "runs": [
+    {"workflowRunId":"real-smoke-600519-1","symbol":"600519","status":"completed","beforeRevision":0,"afterRevision":1,"reportId":"company-research-600519-real-smoke-600519-1","createdCount":3,"updatedCount":0,"sourceCount":1,"claimCount":1,"errors":[]},
+    {"workflowRunId":"real-smoke-000858-1","symbol":"000858","status":"completed","beforeRevision":1,"afterRevision":2,"reportId":"company-research-000858-real-smoke-000858-1","createdCount":2,"updatedCount":0,"sourceCount":1,"claimCount":1,"errors":[]},
+    {"workflowRunId":"real-smoke-600519-2","symbol":"600519","status":"completed","beforeRevision":2,"afterRevision":2,"reportId":"company-research-600519-real-smoke-600519-2","createdCount":0,"updatedCount":0,"sourceCount":1,"claimCount":1,"errors":[]}
+  ],
+  "final": {
+    "knowledgeBaseRevision": 2,
+    "canonicalCounts": {"entities": 2, "sources": 1, "claims": 2},
+    "sources": [{"id":"source:research-27668a3275c1ed23","provider":"akshare","sourceType":"industry_database","contentHash":"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945","rawRef":"raw-sha256-4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"}],
+    "rawIntegrity": [{"rawRef":"raw-sha256-4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945","valid":true,"contentHash":"sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945","sizeBytes":2}]
+  },
+  "sanitization": {"fullSourceBodiesIncluded": false, "absolutePathsIncluded": false, "privateCredentialsIncluded": false}
+}

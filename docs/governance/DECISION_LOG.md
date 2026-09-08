@@ -603,3 +603,11 @@ CTO independently accepted `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-B-001` at commit
 Phase C Code Decomposition is `NOT STARTED / DEFERRED`. Phase B completion does not authorize Phase C, Workflow/Skill refactor, Client/Runtime refactor, or Knowledge Production implementation. No automatic Phase C task is authorized. Future decomposition requires a concrete Knowledge Production or product-evolution requirement that justifies an ownership change; file size alone is not sufficient justification.
 
 Production Baseline v1 remains unchanged. The next active project focus is `Knowledge Production / Knowledge Architecture iteration`.
+
+## RHL-PERSONAL-RESEARCH-V1-FOUNDATION-001-FIX-001 — 2026-09-08
+
+**Status:** Implemented / CTO acceptance pending
+
+The Company Research foundation drift fix preserves the approved A-share product surface, Schema 0.4 / Storage 1 fresh-KB lane, v0.3 compatibility, bounded acquisition, ResearchReport, ResearchSignal, and deterministic valuation boundaries. Company Research now stops at local Semantic Knowledge Proposals. The producer-neutral Knowledge Production Gateway performs proposal validation, canonical binding, Knowledge State Diff, bounded semantic resolution, deterministic ResolutionIntent policy, ChangeSet planning and validation, and dispatch through the shared Writer authority. V04 Writer receipts are runtime Validator-issued objects, so structural imitation cannot authorize canonical mutation.
+
+The fix also routes evidence through the existing Raw archive and integrity verifier, enforces Raw-backed Source/Claim evidence, filters future evidence by `asOf`, records explicit personal non-commercial research rights policy metadata, passes the runtime ReasoningExecutor into Company Research, persists a default signal store, and exposes bounded report retrieval through HTTP and Pi. No M2/Daily/Morning/Evening/Industry/Theme scope, generic framework, DSH, Pi RPC, or custom Agent Runtime was introduced. Offline regressions and a real-network `600519 -> 000858 -> 600519` run passed; the live run returned only AKShare structured data, so CNINFO/GDELT provider availability remains an environment risk. Evidence is sanitized and preserved under `tests/validation/evidence/RHL_PERSONAL_RESEARCH_V1_FOUNDATION_FIX_001.*`.

@@ -35,4 +35,4 @@ ResearchHub Lite keeps its current Workflow / Skill / Plugin / Knowledge boundar
 
 ## Resulting implementation boundary
 
-The implemented Lite assets are small adapters and contracts under `plugins/research-acquisition/`, a deterministic Company Research Skill under `skills/company-research/`, and a Company Deep Research Workflow under `workflows/company-deep-research/`. External network tests remain separate from the normal offline suite.
+The implemented Lite assets are small adapters and contracts under `plugins/research-acquisition/`, a deterministic Company Research Skill under `skills/company-research/`, a thin acquisition/reporting Workflow under `workflows/company-deep-research/`, and the producer-neutral canonical binding/validation seam under `knowledge/production/`. External network tests remain separate from the normal offline suite.

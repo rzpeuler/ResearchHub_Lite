@@ -12,7 +12,7 @@ export const KNOWLEDGE_SCHEMA_V04 = {
   source: {
     ...KNOWLEDGE_SCHEMA_V03.source,
     fields: [...KNOWLEDGE_SCHEMA_V03.source.fields, 'provider', 'canonicalUrl', 'retrievedAt', 'contentHash', 'acquisition', 'rights'] as const,
-    rights: ['accessScope', 'retentionAllowed', 'aiProcessingAllowed', 'derivativeKnowledgeAllowed', 'redistributionAllowed'] as const,
+    rights: ['accessScope', 'retentionAllowed', 'aiProcessingAllowed', 'derivativeKnowledgeAllowed', 'redistributionAllowed', 'policyBasis'] as const,
   },
 } as const
 

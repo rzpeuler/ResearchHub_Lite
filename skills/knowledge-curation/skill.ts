@@ -9,7 +9,7 @@ import { UNDERSTAND_AND_PLAN_PROMPT, PLAN_REPAIR_PROMPT } from './prompts/unders
 import { EXTRACT_KNOWLEDGE_PROMPT } from './prompts/extract-knowledge.ts'
 import { RESOLVE_SEMANTIC_CASE_PROMPT } from './prompts/resolve-semantic-case.ts'
 import { buildUnderstandAndPlanOutputContract, buildExtractKnowledgeOutputContract, buildResolveSemanticCaseOutputContract } from './model/output-contracts.ts'
-import type { ExtractKnowledgeInput, ResolveSemanticCaseInput, SemanticResolutionResult, UnderstandAndPlanInput, UnderstandAndPlanOutput, ValidatedExtractKnowledgeResult } from './contracts.ts'
+import type { CurationOperation, ExtractKnowledgeInput, ResolveSemanticCaseInput, SemanticResolutionResult, UnderstandAndPlanInput, UnderstandAndPlanOutput, ValidatedExtractKnowledgeResult } from './contracts.ts'
 
 export interface KnowledgeCurationSkillOptions { readonly executor: ReasoningExecutor }
 
@@ -41,7 +41,7 @@ export class KnowledgeCurationSkill {
     return validateSemanticResolutionResult(result, { ...input, schemaContext })
   }
 
-  private async invoke(request: ReasoningRequest): Promise<unknown> {
+  private async invoke(request: Omit<ReasoningRequest, 'operation'> & { readonly operation: CurationOperation }): Promise<unknown> {
     try {
       const result = await this.options.executor.execute(request)
       return parseOutput(result.output, request.operation)
@@ -53,7 +53,7 @@ export class KnowledgeCurationSkill {
   }
 }
 
-function parseOutput(value: unknown, operation: ReasoningRequest['operation']): unknown {
+function parseOutput(value: unknown, operation: CurationOperation): unknown {
   if (typeof value === 'string') {
     const trimmed = value.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
     try { return JSON.parse(trimmed) } catch (error) { throw new KnowledgeCurationError('invalid_model_output', `Reasoning output for ${operation} is not valid JSON`, operation, { cause: error }) }

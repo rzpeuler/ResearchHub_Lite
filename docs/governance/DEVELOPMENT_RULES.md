@@ -6,6 +6,8 @@
 - Schema 0.4 is additive and fresh-KB only; never silently migrate or rewrite Schema 0.3 runtime data.
 - ResearchSignal and Reports are runtime/application artifacts, not canonical Registry objects or source-controlled runtime data.
 - External source integrations remain narrow, bounded, fixture-testable, and must carry provenance and explicit rights metadata.
+- Producers emit local semantic proposals only. Canonical identity allocation, state diff, ResolutionIntent policy, ChangeSet planning/validation, and Writer dispatch belong to the shared Knowledge Production Gateway/Writer path.
+- V04 Writer receipts are runtime Validator products; plain-object or forged receipts must be rejected.
 
 These rules are mandatory unless explicitly superseded by a recorded architecture decision.
 
