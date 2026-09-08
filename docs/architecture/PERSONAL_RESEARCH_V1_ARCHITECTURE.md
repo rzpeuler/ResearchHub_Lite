@@ -1,6 +1,6 @@
 # ResearchHub Lite — Personal Research v1 Architecture
 
-Status: FROZEN for the first Company Research production slice; Foundation Fix 002 implemented / CTO acceptance pending
+Status: FROZEN for the first Company Research production slice; M1 PASS / CLOSED by CTO acceptance at `7a1453179979ef2680165f79c3119656ee03c3a1`
 Date: 2026-09-08
 
 ## Product scope

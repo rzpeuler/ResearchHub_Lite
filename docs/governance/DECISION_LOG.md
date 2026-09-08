@@ -6,11 +6,13 @@ This log records only architecture/product decisions that materially constrain f
 
 ## RHL-PERSONAL-RESEARCH-V1-FOUNDATION-001 — 2026-09-08
 
+**Status:** PASS / CLOSED by CTO acceptance at `7a1453179979ef2680165f79c3119656ee03c3a1`
+
 Company Deep Research is the first additional Knowledge Producer. It uses a bounded Plugin acquisition layer, a semantic Company Research Skill, an application Report plus non-canonical ResearchSignal boundary, and the existing deterministic canonical integrity path. Schema 0.4 / Storage 1 is an explicit fresh-KB baseline; Schema 0.3 runtime data is not automatically migrated. No Provider Registry, Capability Framework, Generic Workflow Engine, DSH, queue, vector store, or trading behavior is introduced.
 
 ## RHL-PERSONAL-RESEARCH-V1-FOUNDATION-001-FIX-002 — 2026-09-08
 
-**Status:** Implemented / CTO acceptance pending
+**Status:** PASS / CLOSED by CTO acceptance at `7a1453179979ef2680165f79c3119656ee03c3a1`
 
 This correctness closure keeps the first Company Research slice on the explicit Schema 0.4 / Storage 1 fresh-KB lane. It makes empty structured acquisition non-canonical, separates content-addressed Raw from contextual Source identity, keeps workflow `asOf` out of Claim temporal semantics, makes Validator receipts opaque, and routes semantic changes through deterministic resolution or durable ReviewCase. Relation proposals and A-share exchange identity are normalized and validated through existing authorities; CNINFO PDF bytes use the DocumentInputResolver seam. Real Provider Smoke records attempted/succeeded/empty/failed/usable outcomes, and real Pi E2E evidence records a completed `company_research_synthesis` run with 19 sections and evidence-backed Claims. M2 remains out of scope; CTO acceptance is pending.
 
