@@ -2,6 +2,7 @@
 
 ## 2026-09-08
 
+- CTO accepted `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-B-001` as `PASS / CLOSED`. Repository Layout v1 physical migration through Phase B is complete; Phase C is `NOT STARTED / DEFERRED` with no automatic Phase C authorization. Production Baseline v1 remains unchanged, and the next active focus is Knowledge Production / Knowledge Architecture iteration.
 - Executed `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-B-001`: moved Workflow internals into planning/extraction/resolution/review/changeset/shared, Knowledge Curation internals into identity/model/validation, and Document Plugin parsers into `parsers/text/` and `parsers/docling/`. Updated only import/export paths and preserved all root public entrypoints; Phase A and its FIX are recorded as PASS / CLOSED by CTO decision, and Phase C remains unstarted.
 - CTO accepted `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001` and `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001-FIX-001` as PASS / CLOSED; their historical commits and scope remain unchanged.
 - Executed `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001-FIX-001`: resolved the Workflow public barrel `EntityResolution` collision with explicit planner exports, removed the root TypeScript exclusion for the Workflow barrel, and made `tests/validation/evidence/` an explicit Node discovery boundary with one deterministic infrastructure regression test. Root/client typechecks and the existing suites remain green; Phase A remains CTO acceptance pending.

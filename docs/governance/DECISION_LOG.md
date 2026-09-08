@@ -589,3 +589,13 @@ Workflow internals moved by `git mv` into `planning/`, `extraction/`, `resolutio
 All active consumers were updated with import-path-only changes. The three root public entrypoints remain in place and preserve their pre-migration export surfaces, including the explicit Workflow ChangeSet planner exports. Moved-file semantic diff audit found no algorithm, condition, loop, signature, type-field, error-code, validation-policy, status, review-policy, planner, or reasoning changes. Docling `import.meta.url` bridge resolution remains a sibling `bridge/docling_bridge.py` path after the move.
 
 No new sub-barrels or architecture layers were added. `client/`, `package.json`, `package-lock.json`, `tsconfig.json`, frozen architecture documents, and `tests/validation/evidence/` were not modified. Phase C code decomposition, Client/Runtime refactor, provider changes, Knowledge schema changes, Writer changes, Review behavior changes, and API changes remain unstarted.
+
+## RHL-CLOSE-REPOSITORY-LAYOUT-MIGRATION-V1-001 — 2026-09-08
+
+**Status:** PASS / CLOSED by CTO decision
+
+CTO independently accepted `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-B-001` at commit `2613e0e6ddbc0df53b9c944ce72c14745ec75e71`. Repository Layout v1 physical migration through Phase B is therefore complete for the currently authorized scope. Workflow, Knowledge Curation Skill, and Document Plugin ownership now match the frozen Repository Layout v1; stable public entrypoints remain preserved, Production logic was not refactored, Docling bridge relative resolution remains valid, and the historical evidence subtree is unchanged.
+
+Phase C Code Decomposition is `NOT STARTED / DEFERRED`. Phase B completion does not authorize Phase C, Workflow/Skill refactor, Client/Runtime refactor, or Knowledge Production implementation. No automatic Phase C task is authorized. Future decomposition requires a concrete Knowledge Production or product-evolution requirement that justifies an ownership change; file size alone is not sufficient justification.
+
+Production Baseline v1 remains unchanged. The next active project focus is `Knowledge Production / Knowledge Architecture iteration`.
