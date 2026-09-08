@@ -4,17 +4,41 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001 — CTO Acceptance Closure — 2026-09-08
+
+**Status:** PASS / CLOSED by CTO decision
+
+The CTO accepted `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001`, `...-FIX-001`, `...-FIX-002`, and `...-FIX-003` as PASS / CLOSED. The accepted M2 implementation head is `218280579cdd7b6cfdf67506150cfa82cef4322e`; governance closure and repository merge follow this decision. M3 remains NOT STARTED.
+
+The local validation record is: FIX-003 focused executable suite `7/7 PASS`; FIX-003 acceptance requirement matrix `12/12 PASS`; Full Node `348/348 PASS`; Client `21/21 PASS`; `typecheck`, `client:typecheck`, `client:build`, and `git diff --check` PASS. No GitHub CI status is claimed because the repository has no attached combined commit checks.
+
+Real Pi validation used model `zhipu-openapi/glm-5.3-flash`. Morning and Evening completed with `gate=true`; Daily Signal Enrichment appliedCount `6`, fallbackCount `0`; Daily Change Assessment appliedCount `4`, fallbackCount `2`; Daily Brief Synthesis modelDerivedItemCount `6`, fallbackCount `0`. Invalid semantic output remained fail-closed and sanitized diagnostics were preserved.
+
+Remaining non-blocking operational risks are free public provider availability/HTTP reliability, limited automatic active-source coverage, model semantic quality variance, and deterministic fallback when semantic output is rejected. CNINFO transient failure, GDELT rate limits, AKShare environment dependency, Xueqiu authentication, and metadata-only catalog entries do not reopen M2.
+
 ## RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-003 — 2026-09-08
 
-**Status:** Implemented / CTO acceptance pending
+**Status:** PASS / CLOSED by CTO acceptance at `218280579cdd7b6cfdf67506150cfa82cef4322e`
 
-FIX-003 keeps Daily Intelligence inside the frozen Workflow/Skill/Plugin/Knowledge boundaries. Structured model output may receive only bounded serialization normalization; operation Skills retain strict schema, local-reference, subject, cluster, and section validation. `DailySynthesisProposal.assessmentRefs` is required, and Workflow deterministic validation accepts canonical persistence only when a current Change Assessment is durable-eligible, source/subject/cluster consistent, and not community-only. Empty or rejected model sections become deterministic Research Gaps. M2 remains unmerged to `main`; M3 is not started.
+FIX-003 keeps Daily Intelligence inside the frozen Workflow/Skill/Plugin/Knowledge boundaries. Structured model output may receive only bounded serialization normalization; operation Skills retain strict schema, local-reference, subject, cluster, and section validation. `DailySynthesisProposal.assessmentRefs` is required, and Workflow deterministic validation accepts canonical persistence only when a current Change Assessment is durable-eligible, source/subject/cluster consistent, and not community-only. Empty or rejected model sections become deterministic Research Gaps. M2 is PASS / CLOSED and merged to `main`; M3 is not started.
+
+## RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-002 — 2026-09-08
+
+**Status:** PASS / CLOSED by CTO acceptance at `218280579cdd7b6cfdf67506150cfa82cef4322e`
+
+FIX-002 closes the asynchronous enrichment, bounded Change Assessment, proposal/evidence admissibility, per-company Gateway grouping, canonical-only report provenance, shared Runtime/CLI/Scheduler/Pi composition, and real product telemetry acceptance gaps.
+
+## RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-001 — 2026-09-08
+
+**Status:** PASS / CLOSED by CTO acceptance at `218280579cdd7b6cfdf67506150cfa82cef4322e`
+
+FIX-001 remains accepted as the bounded catalog/watchlist, source-preserving signal lifecycle, report, scheduler, and shared product composition baseline for Daily Intelligence.
 
 ## RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001 — 2026-09-08
 
-**Status:** Implemented / CTO acceptance pending
+**Status:** PASS / CLOSED by CTO acceptance at `218280579cdd7b6cfdf67506150cfa82cef4322e`
 
-Daily Intelligence v1 adds Morning and Evening Brief workflows, a bounded public-source catalog/watchlist, non-canonical ResearchSignal aggregation, explicit provider availability, deterministic deduplication/clustering/ranking, and Report persistence. Institutional observations remain attributable observations rather than consensus; community signals are bounded to configured entities; durable Knowledge changes remain optional and governed by the existing Gateway/Validated ChangeSet/Writer path. FIX-002 additionally requires real async semantic enrichment/change assessment, strict proposal/evidence validation, canonical-only report refs, and one shared product composition. M2 is not merged to `main`, and M3 is not started.
+Daily Intelligence v1 adds Morning and Evening Brief workflows, a bounded public-source catalog/watchlist, non-canonical ResearchSignal aggregation, explicit provider availability, deterministic deduplication/clustering/ranking, and Report persistence. Institutional observations remain attributable observations rather than consensus; community signals are bounded to configured entities; durable Knowledge changes remain optional and governed by the existing Gateway/Validated ChangeSet/Writer path. FIX-002 additionally requires real async semantic enrichment/change assessment, strict proposal/evidence validation, canonical-only report refs, and one shared product composition. M2 is PASS / CLOSED and merged to `main`, and M3 is not started.
 
 ## RHL-PERSONAL-RESEARCH-V1-FOUNDATION-001 — 2026-09-08
 

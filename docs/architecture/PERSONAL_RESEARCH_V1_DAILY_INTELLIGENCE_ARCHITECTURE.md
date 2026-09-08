@@ -1,6 +1,6 @@
 # ResearchHub Lite — Personal Research v1 Daily Intelligence Architecture
 
-Status: FROZEN for M2 implementation; Implemented / CTO acceptance pending
+Status: FROZEN for M2 implementation; PASS / CLOSED by CTO acceptance at `218280579cdd7b6cfdf67506150cfa82cef4322e`
 Date: 2026-09-08
 
 ## Scope
@@ -77,7 +77,7 @@ The idempotency key is `briefType + tradeDate`. Repeating it returns the existin
 
 `TradingCalendarService` first attempts a configured public/AKShare calendar adapter, then uses the most recent local cache, then manual overrides, then a deterministic weekday fallback with explicit confidence. `DailyBriefScheduler` uses China-local due times (08:00/20:30), persists last successful runs, is restart-safe, catches up only the bounded same-day slots, and shares the same Application Workflow as CLI/manual/Pi/HTTP triggers. It uses a closable local timer only; no Redis, queue, worker, or scheduler framework is introduced.
 
-FIX-002 closes the semantic and composition correctness gaps: Workflow calls asynchronous enrichment and bounded change assessment before synthesis; proposal subject/source/entity admissibility is deterministic; multi-company proposals are submitted separately with `<workflowRunId>-<subjectKey>`; and the report exposes only Gateway-returned canonical subject refs. FIX-003 adds bounded transport normalization for Pi structured output, strict partial-field fallback, `assessmentRefs` on Synthesis proposals, and a deterministic durable-eligibility gate before Gateway submission. Empty model sections finalize to Research Gaps and exact section guards prevent cross-domain announcement leakage. Runtime performs one immediate due check at startup and then checks every 60 seconds; `close()` clears the timer. M2 remains Implemented / CTO acceptance pending and M3 is not started.
+FIX-002 closes the semantic and composition correctness gaps: Workflow calls asynchronous enrichment and bounded change assessment before synthesis; proposal subject/source/entity admissibility is deterministic; multi-company proposals are submitted separately with `<workflowRunId>-<subjectKey>`; and the report exposes only Gateway-returned canonical subject refs. FIX-003 adds bounded transport normalization for Pi structured output, strict partial-field fallback, `assessmentRefs` on Synthesis proposals, and a deterministic durable-eligibility gate before Gateway submission. Empty model sections finalize to Research Gaps and exact section guards prevent cross-domain announcement leakage. Runtime performs one immediate due check at startup and then checks every 60 seconds; `close()` clears the timer. M2 is PASS / CLOSED and M3 is not started.
 
 ## FIX-001 closure
 
