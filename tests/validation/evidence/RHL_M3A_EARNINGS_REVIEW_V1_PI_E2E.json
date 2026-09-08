@@ -2,9 +2,9 @@
   "classification": "EXECUTED / PASS GATE",
   "generator": "tests/validation/earnings-review-pi-e2e.ts",
   "implementationCommit": "pre-commit-working-tree",
-  "sourceBaseline": "a323ee91751a51d1208231c38645a153f1605178",
+  "sourceBaseline": "88ed7947aa2818d1afd57b16dad5fb63aade547c",
   "workingTreeDiffCleanAfterGeneration": false,
-  "generatedAt": "2026-09-08T16:13:38.753Z",
+  "generatedAt": "2026-09-08T16:30:46.565Z",
   "host": {
     "provider": "pi-coding-agent",
     "requestedModel": "zhipu-openapi/glm-5.3-flash"
@@ -16,12 +16,12 @@
     "structuredOutputValidated": true,
     "reasoningApplied": true,
     "fallbackUsed": false,
-    "repairAttempts": 0,
+    "repairAttempts": 1,
     "modelDerivedSectionCount": 14,
-    "validAssessmentCount": 9,
-    "durableAssessmentCount": 5,
+    "validAssessmentCount": 15,
+    "durableAssessmentCount": 11,
     "acceptedProposalCount": 9,
-    "canonicalSourceCountDelta": 2,
+    "canonicalSourceCountDelta": 1,
     "canonicalClaimCountDelta": 9,
     "reportType": "earnings_review",
     "workflowTerminalStatus": "completed"
@@ -30,13 +30,13 @@
     "status": "completed",
     "reportId": "earnings-review-600519-2026-H1-pi-earnings-review-001",
     "sectionCount": 14,
-    "sourceRefs": 2,
+    "sourceRefs": 1,
     "claimRefs": 9,
     "errors": []
   },
   "canonicalCounts": {
     "entities": 1,
-    "sources": 3,
+    "sources": 2,
     "claims": 11
   },
   "secretsIncluded": false,

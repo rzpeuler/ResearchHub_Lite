@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Personal Research v1 M3A-1 Earnings Review FIX-001 — IMPLEMENTED / CTO ACCEPTANCE PENDING; M3 Architecture PASS / FROZEN**
+**Personal Research v1 M3A-1 Earnings Review FIX-002 — IMPLEMENTED / CTO ACCEPTANCE PENDING; M3 Architecture PASS / FROZEN**
 
 ## Current Snapshot
 
@@ -17,6 +17,7 @@
 - `RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001`: PASS / FROZEN by CTO decision. M3A-1 Earnings Review is implemented pending CTO acceptance; M3A-2/3/4 remain NOT STARTED. M3B Industry Deep Research is NOT STARTED / ARCHITECTURE REQUIRED; Theme Framework remains DEFERRED.
 - `RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001`: implementation is complete pending CTO acceptance. The path requires an existing canonical Company, exact-period CNINFO/AKShare evidence, deterministic financial computation, bounded Earnings Review reasoning, local durable gates, Gateway-mediated mutation, and `earnings_review` ResearchReport persistence.
 - `RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-001`: FIX-001 is implemented pending CTO acceptance. It closes the explicit real-model contract, bounded repair context and diagnostics, section Claim provenance mapping, executable evidence reproducibility, and ER24/ER33 proof gaps. Real Pi evidence is `EXECUTED / PASS GATE`; provider smoke remains non-blocking and separately reported.
+- `RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-002`: FIX-002 is implemented pending CTO acceptance. It corrects the Real Pi harness success exit contract, adds executable pass/fail exit regression coverage, and regenerates evidence from the harness with the unchanged semantic gate.
 - Production Baseline v1 is established by CTO decision. Product implementation baseline: `5319d130952f4c784f5829890591b64dcd5f72a4`; accepted pre-freeze repository/governance baseline: `3d6f0212b7500b11d806b444dadbf550af1e80de`; freeze decision commit: `0697dee129b539857b9104ffffef85693a4382e5`.
 - `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001`: PASS / CLOSED by CTO decision. Ordinary tests mirror app/plugins/skills/workflows ownership, the engineering spec is under `docs/engineering/specs/`, and Node discovery is stable.
 - `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001-FIX-001`: PASS / CLOSED by CTO decision. The Workflow public barrel has an explicit collision-free planner export surface, root TypeScript checks all `workflows/**/*.ts`, and Node discovery explicitly excludes `tests/validation/evidence/` with deterministic regression coverage.

@@ -1,5 +1,5 @@
 {
-  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-001",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-002",
   "rows": [
     { "testId": "ER1", "requirement": "period mapping", "testFile": "tests/workflows/earnings-review.test.ts", "testName": "ER1 period mapping covers Q1/H1/Q3/FY", "status": "PASS" },
     { "testId": "ER2", "requirement": "exact-period filing selection", "testFile": "tests/workflows/earnings-review.test.ts", "testName": "ER2 exact-period official filing is selected", "status": "PASS" },
@@ -38,6 +38,8 @@
     { "testId": "ER35", "requirement": "cancellation", "testFile": "tests/workflows/earnings-review.test.ts", "testName": "ER35 cancellation is respected before acquisition", "status": "PASS" },
     { "testId": "ER36", "requirement": "repair request carries bounded prior output, diagnostics, and allowed sets", "testFile": "tests/workflows/earnings-review.test.ts", "testName": "ER36 repair request carries prior output, safe diagnostics, and explicit allowed sets", "status": "PASS" },
     { "testId": "ER37", "requirement": "section canonical Claim provenance follows assessment to proposal to Gateway mapping", "testFile": "tests/workflows/earnings-review.test.ts", "testName": "ER37 section claimRefs map assessmentId through accepted proposalId to Gateway Claim ref", "status": "PASS" },
+    { "testId": "ER41", "requirement": "Real Pi PASS gate exit contract", "testFile": "tests/validation/earnings-review-pi-e2e-gate.test.ts", "testName": "Real Pi PASS gate produces PASS classification and zero exit decision", "status": "PASS" },
+    { "testId": "ER42", "requirement": "Real Pi failed gate exit contract", "testFile": "tests/validation/earnings-review-pi-e2e-gate.test.ts", "testName": "Real Pi failed gate produces blocked classification and non-zero exit decision", "status": "PASS" },
     { "testId": "ER38", "requirement": "Company Deep Research regression", "testFile": "tests/workflows/company-deep-research.test.ts", "testName": "Company Deep Research produces atomic canonical Knowledge and a linked report", "status": "PASS" },
     { "testId": "ER39", "requirement": "Daily Intelligence regression", "testFile": "tests/workflows/daily-intelligence.test.ts", "testName": "empty providers still complete with explicit unavailable sections", "status": "PASS" },
     { "testId": "ER40", "requirement": "Raw Document Knowledge Production regression", "testFile": "tests/workflows/raw-document-knowledge-ingestion/raw-document-knowledge-ingestion.test.ts", "testName": "offline ingestion archives Raw before parsing, writes canonical objects once, and replays idempotently", "status": "PASS" }
