@@ -37,6 +37,7 @@ ResearchSignal, EventSignalCluster, ResearchChangeAssessment, and Daily Brief ar
 - `skills/daily-intelligence/`: bounded signal enrichment and brief synthesis. Reasoning receives projections and may return local labels, narrative, and local proposals only. Deterministic fallbacks remain available when a provider or model is unavailable.
 - `workflows/daily-intelligence/`: lifecycle, cancellation, provider outcome accounting, stage ordering, idempotency, report finalization, and the optional Gateway call.
 - `app/services/daily-intelligence-service.ts`: product-level start/list/get operations shared by Pi and HTTP.
+- `app/services/daily-intelligence-composition.ts`: one narrow product composition shared by Runtime, CLI, Scheduler, and Pi entrypoints; it owns active catalog provider wiring, watchlist paths, AKShare calendar/cache/manual overrides, and the Pi executor supplied by the host.
 - `app/pi/` and `app/runtime/server.ts`: thin product surfaces for brief generation and bounded report retrieval; no host paths or internal objects are exposed.
 - `runtime-data/daily-intelligence/`: signal JSONL, brief metadata/content, and scheduler state. These are runtime artifacts, never canonical Knowledge.
 
@@ -75,6 +76,8 @@ The idempotency key is `briefType + tradeDate`. Repeating it returns the existin
 ## Calendar and scheduler
 
 `TradingCalendarService` first attempts a configured public/AKShare calendar adapter, then uses the most recent local cache, then manual overrides, then a deterministic weekday fallback with explicit confidence. `DailyBriefScheduler` uses China-local due times (08:00/20:30), persists last successful runs, is restart-safe, catches up only the bounded same-day slots, and shares the same Application Workflow as CLI/manual/Pi/HTTP triggers. It uses a closable local timer only; no Redis, queue, worker, or scheduler framework is introduced.
+
+FIX-002 closes the semantic and composition correctness gaps: Workflow calls asynchronous enrichment and bounded change assessment before synthesis; proposal subject/source/entity admissibility is deterministic; multi-company proposals are submitted separately with `<workflowRunId>-<subjectKey>`; and the report exposes only Gateway-returned canonical subject refs. Runtime performs one immediate due check at startup and then checks every 60 seconds; `close()` clears the timer. M2 remains Implemented / CTO acceptance pending and M3 is not started.
 
 ## FIX-001 closure
 

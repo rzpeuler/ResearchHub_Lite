@@ -16,7 +16,7 @@ User
 
 Review is downstream governance for Knowledge Production, not a fourth research mode. Canonical persistence requires explicit Knowledge Production intent; an upload or attachment is not automatically ingestion.
 
-Daily Intelligence v1 and FIX-001 are implemented pending CTO acceptance. They provide Asia/Shanghai Morning (08:00) and Evening (20:30) Briefs from item-level public acquisition over the 43-entry catalog and four-company watchlist, with source-stage telemetry, explicit unavailable/blocked states, non-canonical signal evidence, and no fabricated consensus. Use `npm run brief:morning` / `npm run brief:evening`, the Pi Daily Intelligence tools, or the `/api/daily-briefs` routes.
+Daily Intelligence v1 and FIX-002 are implemented pending CTO acceptance. They provide Asia/Shanghai Morning (08:00) and Evening (20:30) Briefs from item-level public acquisition over the 43-entry catalog and four-company watchlist, with real async semantic enrichment/change assessment/synthesis, source-stage telemetry, canonical-only report provenance, explicit unavailable/blocked states, and no fabricated consensus. Runtime, CLI, Scheduler, and Pi entrypoints share one narrow product composition. Use `npm run brief:morning` / `npm run brief:evening`, the Pi Daily Intelligence tools, or the `/api/daily-briefs` routes.
 
 ## Current architecture
 

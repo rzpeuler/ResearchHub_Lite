@@ -4,7 +4,7 @@
 
 Status: **FROZEN — Current Product Baseline**
 
-Daily Intelligence v1 is implemented / CTO acceptance pending under `docs/architecture/PERSONAL_RESEARCH_V1_DAILY_INTELLIGENCE_ARCHITECTURE.md`; this does not change the frozen Runtime or Knowledge mutation boundaries.
+Daily Intelligence v1 FIX-002 is implemented / CTO acceptance pending under `docs/architecture/PERSONAL_RESEARCH_V1_DAILY_INTELLIGENCE_FIX_002.md`; it adds no new Runtime or Knowledge mutation boundary.
 
 This governance document summarizes the current ResearchHub_Lite architecture after adoption of Pi Coding Agent as the canonical application host and the freeze of Application Interaction Architecture v0.1.
 

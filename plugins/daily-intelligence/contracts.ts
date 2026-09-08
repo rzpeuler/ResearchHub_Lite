@@ -96,6 +96,7 @@ export interface DailySignalCluster {
 export type ResearchChangeDisposition = 'new' | 'supports' | 'contradicts' | 'changes_assumption' | 'affects_thesis' | 'catalyst' | 'risk' | 'noise'
 export interface ResearchChangeAssessment {
   readonly clusterId: string
+  readonly subjectKey?: string
   readonly disposition: ResearchChangeDisposition
   readonly rationale: string
   readonly relatedKnowledgeRefs: readonly string[]
@@ -133,6 +134,18 @@ export interface DailyQualityTelemetry {
   readonly reportItemCount: number
   readonly semanticProposalCount: number
   readonly committedClaimCount: number
+  readonly supportedProposalCount?: number
+  readonly gatewaySubmittedProposalCount?: number
+  readonly boundExistingClaimCount?: number
+  readonly createdClaimCount?: number
+  readonly updatedClaimCount?: number
+  readonly canonicalSourceCreatedCount?: number
+  readonly canonicalRawReferencedCount?: number
+  readonly enrichmentReasoningUsed?: boolean
+  readonly enrichmentAppliedCount?: number
+  readonly enrichmentFallbackCount?: number
+  readonly changeAssessmentReasoningUsed?: boolean
+  readonly changeAssessmentAppliedCount?: number
 }
 export interface DailyBriefReport {
   readonly reportId: string
@@ -153,6 +166,12 @@ export interface DailyBriefReport {
   readonly reviewCaseCount: number
   readonly calendarConfidence: 'provider' | 'cache' | 'manual' | 'fallback'
   readonly modelDerivedItemCount?: number
+  readonly enrichmentReasoningUsed?: boolean
+  readonly enrichmentAppliedCount?: number
+  readonly enrichmentFallbackCount?: number
+  readonly changeAssessmentReasoningUsed?: boolean
+  readonly changeAssessmentAppliedCount?: number
+  readonly briefReasoningUsed?: boolean
 }
 
 export interface DailyIntelligenceInput {
@@ -190,4 +209,11 @@ export interface DailyIntelligenceResult {
   readonly committedKnowledgeRefs: readonly string[]
   readonly reviewCaseCount: number
   readonly errors: readonly string[]
+  readonly enrichmentReasoningUsed?: boolean
+  readonly enrichmentAppliedCount?: number
+  readonly enrichmentFallbackCount?: number
+  readonly changeAssessmentReasoningUsed?: boolean
+  readonly changeAssessmentAppliedCount?: number
+  readonly briefReasoningUsed?: boolean
+  readonly modelDerivedItemCount?: number
 }

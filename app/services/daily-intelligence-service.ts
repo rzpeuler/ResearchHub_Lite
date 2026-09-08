@@ -15,6 +15,7 @@ export interface DailyBriefInput { readonly workflowRunId: string; readonly brie
 export interface DailyIntelligenceServiceOptions { readonly cwd: string; readonly providers: readonly ResearchAcquisitionPlugin[]; readonly workflowService: WorkflowService; readonly reasoningExecutor?: ReasoningExecutor; readonly watchlistPath?: string; readonly runtimeRoot?: string; readonly mountedKnowledgeBaseRoot?: string; readonly calendar?: TradingCalendarService }
 export class DailyIntelligenceService {
   constructor(private readonly options: DailyIntelligenceServiceOptions) {}
+  get calendar(): TradingCalendarService | undefined { return this.options.calendar }
   startBrief(input: DailyBriefInput, callerSignal?: AbortSignal): { readonly runId: string; readonly completion: Promise<DailyIntelligenceResult> } {
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(input.workflowRunId) || !/^\d{4}-\d{2}-\d{2}$/.test(input.tradeDate)) throw new ApplicationServiceError('invalid_input', 'daily brief input is invalid')
     this.options.workflowService.register({ runId: input.workflowRunId, workflowType: `${input.briefType}_brief`, objective: `${input.briefType} daily intelligence ${input.tradeDate}` })

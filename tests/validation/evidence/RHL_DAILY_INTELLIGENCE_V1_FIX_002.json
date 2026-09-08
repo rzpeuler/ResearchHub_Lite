@@ -1,0 +1,322 @@
+{
+  "generatedAt": "2026-09-08T10:34:13.214Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-002",
+  "classification": "EXECUTED_WITH_PROVIDER_LIMITATIONS",
+  "sourceCatalog": {
+    "total": 43,
+    "active": 2,
+    "experimental": 0,
+    "metadataOnly": 41,
+    "blocked": 0
+  },
+  "composition": {
+    "providerCount": 2,
+    "sharedCalendar": true,
+    "sharedWatchlist": true,
+    "sharedCatalog": true
+  },
+  "catalogCoverage": [
+    {
+      "platform": "cninfo",
+      "operationalStatus": "active",
+      "automatic": true,
+      "reason": "active provider eligible for automatic acquisition"
+    },
+    {
+      "platform": "sse",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "szse",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "csrc",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "pbc",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "nbs",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "ndrc",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "miit",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "mof",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "safe",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "samr",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "gov.cn",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "moutai",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "wuliangye",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "smic",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "boe",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "cambricon",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "luxshare",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "innolight",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "naura",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "zte",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "catl",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "byd",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "gdelt",
+      "operationalStatus": "active",
+      "automatic": true,
+      "reason": "active provider eligible for automatic acquisition"
+    },
+    {
+      "platform": "xinhua",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "yicai",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "cls",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "36kr",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "sina-finance",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "china-securities",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "securities-times",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "cnstock",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "caixin",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "eastmoney",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "sina-tech",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "tencent-tech",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "huxiu",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "cicc",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "citics",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "htsec",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "xueqiu",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "eastmoney-guba",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    },
+    {
+      "platform": "akshare",
+      "operationalStatus": "metadata_only",
+      "automatic": false,
+      "reason": "not automatically instantiated"
+    }
+  ],
+  "providers": [
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "stages": {
+        "discover": "not_attempted",
+        "fetch": "not_attempted",
+        "normalize": "not_attempted"
+      },
+      "discoverAttempted": true,
+      "fetchAttempted": false,
+      "normalizeAttempted": false,
+      "discoveredCount": 0,
+      "fetchSucceededCount": 0,
+      "normalizeSucceededCount": 0,
+      "usableCount": 0,
+      "rawByteCount": 0,
+      "status": "failed",
+      "diagnostics": [
+        "CNINFO request failed with HTTP 504"
+      ]
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "stages": {
+        "discover": "not_attempted",
+        "fetch": "not_attempted",
+        "normalize": "not_attempted"
+      },
+      "discoverAttempted": true,
+      "fetchAttempted": false,
+      "normalizeAttempted": false,
+      "discoveredCount": 0,
+      "fetchSucceededCount": 0,
+      "normalizeSucceededCount": 0,
+      "usableCount": 0,
+      "rawByteCount": 0,
+      "status": "blocked",
+      "diagnostics": [
+        "GDELT request failed with HTTP 429"
+      ]
+    }
+  ],
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}

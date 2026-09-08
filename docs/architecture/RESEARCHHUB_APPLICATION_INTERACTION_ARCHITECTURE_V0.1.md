@@ -1,5 +1,7 @@
 # ResearchHub Application Interaction Architecture v0.1
 
+Daily Intelligence FIX-002 uses the existing Pi Application Tool/Application Service surface and shared Workflow boundary. Semantic enrichment, change assessment, and brief synthesis remain bounded `ReasoningExecutor` operations; durable Knowledge mutation remains exclusively Gateway/Validated ChangeSet/Writer mediated.
+
 **Status:** FROZEN  
 **Version:** v0.1  
 **Date:** 2026-09-06  

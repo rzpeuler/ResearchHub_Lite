@@ -8,7 +8,7 @@ This log records only architecture/product decisions that materially constrain f
 
 **Status:** Implemented / CTO acceptance pending
 
-Daily Intelligence v1 adds Morning and Evening Brief workflows, a bounded public-source catalog/watchlist, non-canonical ResearchSignal aggregation, explicit provider availability, deterministic deduplication/clustering/ranking, and Report persistence. Institutional observations remain attributable observations rather than consensus; community signals are bounded to configured entities; durable Knowledge changes remain optional and governed by the existing Gateway/Validated ChangeSet/Writer path. M2 is not merged to `main`, and M3 is not started.
+Daily Intelligence v1 adds Morning and Evening Brief workflows, a bounded public-source catalog/watchlist, non-canonical ResearchSignal aggregation, explicit provider availability, deterministic deduplication/clustering/ranking, and Report persistence. Institutional observations remain attributable observations rather than consensus; community signals are bounded to configured entities; durable Knowledge changes remain optional and governed by the existing Gateway/Validated ChangeSet/Writer path. FIX-002 additionally requires real async semantic enrichment/change assessment, strict proposal/evidence validation, canonical-only report refs, and one shared product composition. M2 is not merged to `main`, and M3 is not started.
 
 ## RHL-PERSONAL-RESEARCH-V1-FOUNDATION-001 — 2026-09-08
 

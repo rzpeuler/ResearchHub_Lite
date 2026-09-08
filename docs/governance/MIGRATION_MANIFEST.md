@@ -21,6 +21,8 @@ Every migrated asset must be classified as one of:
 
 ResearchHub_Lite is a selective port, not a repository clone.
 
+Daily Intelligence FIX-002 is an additive current-product implementation. It reuses the existing Pi ModelRuntime/ReasoningExecutor, acquisition/document seams, TradingCalendarService, Knowledge Production Gateway, validated ChangeSet, and Writer; it does not migrate or introduce a custom Agent Runtime, DSH, generic provider registry, or canonical Intelligence schema.
+
 ---
 
 # 2. COPY

@@ -8,19 +8,15 @@ import { ProductionService } from '../services/production-service.ts'
 import { ReviewService } from '../services/review-service.ts'
 import { WorkflowService } from '../services/workflow-service.ts'
 import { ResearchService } from '../services/research-service.ts'
+import { FileResearchSignalStore } from '../../plugins/research-acquisition/signal-store.ts'
 import { CninfoOfficialDisclosureClient, OfficialDisclosureResearchPlugin } from '../../plugins/research-acquisition/official.ts'
 import { GdeltResearchPlugin } from '../../plugins/research-acquisition/gdelt.ts'
 import { AkshareDataAdapter } from '../../plugins/research-acquisition/akshare.ts'
-import { FileResearchSignalStore } from '../../plugins/research-acquisition/signal-store.ts'
 import { loadKnowledgeBaseManifest } from '../../knowledge/storage/manifest-loader.ts'
 import { createResearchHubSessionRuntime, ResearchHubSessionRuntime } from './session-runtime.ts'
 import { validateStorageRoots } from './storage-boundary.ts'
 import type { ResearchHubApplicationRuntimeOptions, ResearchHubApplicationServices } from './contracts.ts'
-import { DailyIntelligenceService } from '../services/daily-intelligence-service.ts'
-import { RssResearchPlugin } from '../../plugins/research-acquisition/rss.ts'
-import { PublicInstitutionalViewAcquisition, CommunitySignalAcquisition } from '../../plugins/daily-intelligence/acquisition.ts'
-import { loadSourceCatalog } from '../../plugins/daily-intelligence/config.ts'
-import { AkshareDailyMarketAcquisition } from '../../plugins/daily-intelligence/market.ts'
+import { createDailyIntelligenceComposition } from '../services/daily-intelligence-composition.ts'
 import { DailyBriefScheduler } from '../../plugins/daily-intelligence/scheduler.ts'
 import { TradingCalendarService } from '../../plugins/daily-intelligence/calendar.ts'
 
@@ -80,10 +76,8 @@ export class ResearchHubApplicationRuntime {
     const workflowService = new WorkflowService()
     const productionService = new ProductionService({ mountedKnowledgeBaseRoot, workspaceRoot, cwd, reasoningExecutor, workflowService })
     let researchService = options.researchService
-    const catalog = await loadSourceCatalog(join(cwd, 'config', 'research-sources', 'catalog.yaml')).catch(() => [])
-    const institutional = catalog.filter((item) => (item.category === 'institution' || item.category === 'analyst') && item.operationalStatus !== 'blocked').slice(0, 8).map((item) => new PublicInstitutionalViewAcquisition({ provider: item.platform, accountRef: `${item.platform}:${item.accountId}`, urls: item.discoveryUrl ? [item.discoveryUrl] : [item.evidenceUrl], tier: item.reliabilityTier, scope: 'broad' }))
-    const community = catalog.filter((item) => item.category === 'community' && item.platform !== 'xueqiu').slice(0, 4).map((item) => new CommunitySignalAcquisition({ provider: item.platform, accountRef: `${item.platform}:${item.accountId}`, urls: item.discoveryUrl ? [item.discoveryUrl] : [item.evidenceUrl], tier: item.reliabilityTier }))
-    const dailyIntelligenceService = options.dailyIntelligenceService ?? new DailyIntelligenceService({ cwd, workflowService, reasoningExecutor, mountedKnowledgeBaseRoot, providers: [new OfficialDisclosureResearchPlugin(new CninfoOfficialDisclosureClient()), new GdeltResearchPlugin(), new RssResearchPlugin({ feedUrls: ['https://www.gov.cn/rss/zhengce.xml'] }), new AkshareDailyMarketAcquisition(new AkshareDataAdapter()), ...institutional, ...community] })
+    const dailyComposition = options.dailyIntelligenceService === undefined ? await createDailyIntelligenceComposition({ cwd, workflowService, reasoningExecutor, modelRuntime, mountedKnowledgeBaseRoot }) : undefined
+    const dailyIntelligenceService = options.dailyIntelligenceService ?? dailyComposition!.service
     if (researchService === undefined && mountedKnowledgeBaseRoot !== undefined) {
       try { const manifest = await loadKnowledgeBaseManifest(mountedKnowledgeBaseRoot); if (manifest.schemaVersion === '0.4' && manifest.storageFormatVersion === '1') researchService = new ResearchService({ mountedKnowledgeBaseRoot, cwd, workflowService, reasoningExecutor, signalStore: new FileResearchSignalStore(join(cwd, 'runtime-data', 'research-signals.jsonl')), acquisitionPlugins: [new OfficialDisclosureResearchPlugin(new CninfoOfficialDisclosureClient()), new GdeltResearchPlugin()], akshare: new AkshareDataAdapter() }) } catch { /* the normal v0.3 runtime remains available without Company Research */ }
     }
@@ -91,8 +85,8 @@ export class ResearchHubApplicationRuntime {
     const sessionManager = options.sessionManager ?? SessionManager.create(cwd, options.sessionDir)
     try {
       const sessionRuntime = await createResearchHubSessionRuntime({ cwd, agentDir, modelRuntime, sessionManager, applicationServices: services, mountedKnowledgeBaseRoot, workspaceRoot, model: selectedModel, reasoningExecutor, settingsManager: options.settingsManager, resourceLoader: options.resourceLoader, researchService, dailyIntelligenceService })
-      const dailyScheduler = new DailyBriefScheduler({ statePath: join(cwd, 'runtime-data', 'daily-scheduler.json'), calendar: new TradingCalendarService({ cachePath: join(cwd, 'runtime-data', 'trading-calendar.json') }), run: async (briefType, tradeDate) => { const run = dailyIntelligenceService.startBrief({ workflowRunId: `scheduled-${briefType}-${tradeDate}`, briefType, tradeDate }); const result = await run.completion; return { status: result.status } } })
-      const dailySchedulerTimer = setInterval(() => { void dailyScheduler.tick(new Date()) }, 60_000); dailySchedulerTimer.unref?.()
+      const dailyScheduler = new DailyBriefScheduler({ statePath: join(cwd, 'runtime-data', 'daily-scheduler.json'), calendar: dailyComposition?.calendar ?? dailyIntelligenceService.calendar ?? new TradingCalendarService({ cachePath: join(cwd, 'runtime-data', 'trading-calendar.json') }), run: async (briefType, tradeDate) => { const run = dailyIntelligenceService.startBrief({ workflowRunId: `scheduled-${briefType}-${tradeDate}`, briefType, tradeDate }); const result = await run.completion; return { status: result.status } } })
+      const dailySchedulerTimer = setInterval(() => { void dailyScheduler.tick(new Date()).catch(() => undefined) }, 60_000); dailySchedulerTimer.unref?.(); void dailyScheduler.tick(new Date()).catch(() => undefined)
       return new ResearchHubApplicationRuntime({ cwd, agentDir, workspaceRoot, mountedKnowledgeBaseRoot, modelRuntime, sessionManager, services, sessionRuntime, ownsModelRuntime, dailyScheduler, dailySchedulerTimer })
     } catch (error) {
       if (ownsModelRuntime) await disposeModelRuntime(modelRuntime)

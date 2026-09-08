@@ -4,7 +4,7 @@
 
 ResearchHub_Lite is the active clean foundation for the ResearchHub Agent-first investment research application. It preserves the useful Knowledge architecture and deterministic integrity of the Lite workstream without restoring the runtime and product complexity of the original ResearchHub.
 
-Personal Research v1 Daily Intelligence is implemented pending CTO acceptance: Morning and Evening Briefs are bounded by the configured watchlist and public-source catalog, with explicit unavailable provider states and no fabricated consensus.
+Personal Research v1 Daily Intelligence FIX-002 is implemented pending CTO acceptance: Morning and Evening Briefs are bounded by the configured watchlist and public-source catalog, use the shared Runtime/CLI/Scheduler/Pi composition, and expose real semantic telemetry with explicit unavailable provider states and no fabricated consensus.
 
 Pi Coding Agent is the canonical application host. ResearchHub directly reuses Pi's Agent loop, ModelRuntime, settings, authentication, provider/model catalog, Skills/Extensions, and session/runtime facilities. Agent-host portability is not a current product requirement.
 

@@ -8,6 +8,9 @@
 - External source integrations remain narrow, bounded, fixture-testable, and must carry provenance and explicit rights metadata.
 - Producers emit local semantic proposals only. Canonical identity allocation, state diff, ResolutionIntent policy, ChangeSet planning/validation, and Writer dispatch belong to the shared Knowledge Production Gateway/Writer path.
 - V04 Writer receipts are runtime Validator products; plain-object or forged receipts must be rejected.
+- Daily Intelligence semantic calls must pass through `ReasoningExecutor`; asynchronous enrichment/change/synthesis output is local and strictly validated before any Gateway submission.
+- Daily Intelligence Runtime, CLI, Scheduler, and Pi entrypoints must use the narrow shared composition factory; only active catalog entries may be instantiated for automatic acquisition.
+- Daily reports may expose canonical subjects only when returned by Gateway; non-canonical signals use local signal references/evidence links, and provider limitations remain explicit telemetry.
 
 These rules are mandatory unless explicitly superseded by a recorded architecture decision.
 

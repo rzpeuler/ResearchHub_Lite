@@ -1,5 +1,7 @@
 # ResearchHub Application Runtime & Client Architecture v0.1
 
+Daily Intelligence FIX-002 integration note: the Runtime uses the narrow shared Daily product composition for active catalog providers, watchlist, Pi semantic executor, AKShare calendar/cache/manual overrides, and the shared Daily service. Startup performs an immediate due check followed by a closable 60-second timer; this remains inside the frozen one-process Runtime and does not add a scheduler framework.
+
 **Status:** FROZEN  
 **Version:** v0.1  
 **Date:** 2026-09-06  

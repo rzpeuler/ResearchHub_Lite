@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-09-08T10:33:30.526Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-002",
+  "classification": "EXECUTED",
+  "realPiReasoningExecutor": true,
+  "operations": [
+    "daily_signal_enrichment",
+    "daily_change_assessment",
+    "daily_change_assessment",
+    "daily_change_assessment",
+    "daily_brief_synthesis",
+    "daily_signal_enrichment",
+    "daily_change_assessment",
+    "daily_change_assessment",
+    "daily_change_assessment",
+    "daily_brief_synthesis"
+  ],
+  "model": {
+    "provider": "pi-coding-agent",
+    "requestedModel": "zhipu-openapi/glm-5.3-flash"
+  },
+  "operationCoverage": {
+    "enrichment": true,
+    "changeAssessment": true,
+    "synthesis": true
+  },
+  "runs": [
+    {
+      "status": "completed",
+      "briefType": "morning",
+      "sectionCount": 14,
+      "signalCount": 3,
+      "reportItemCount": 16,
+      "enrichmentReasoningUsed": false,
+      "enrichmentAppliedCount": 0,
+      "enrichmentFallbackCount": 3,
+      "changeAssessmentReasoningUsed": true,
+      "changeAssessmentAppliedCount": 0,
+      "briefReasoningUsed": false,
+      "modelDerivedItemCount": 0,
+      "errors": []
+    },
+    {
+      "status": "completed",
+      "briefType": "evening",
+      "sectionCount": 13,
+      "signalCount": 3,
+      "reportItemCount": 17,
+      "enrichmentReasoningUsed": false,
+      "enrichmentAppliedCount": 0,
+      "enrichmentFallbackCount": 3,
+      "changeAssessmentReasoningUsed": true,
+      "changeAssessmentAppliedCount": 0,
+      "briefReasoningUsed": false,
+      "modelDerivedItemCount": 0,
+      "errors": []
+    }
+  ],
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}
