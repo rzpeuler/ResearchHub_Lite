@@ -1,6 +1,6 @@
 # ResearchHub Lite — Personal Research v1 Research Coverage Architecture v0.1
 
-Status: ARCHITECTURE FROZEN / IMPLEMENTATION NOT STARTED
+Status: PASS / FROZEN by CTO decision
 Date: 2026-09-08
 Baseline: `main@0b2d97a04d48b4c078ade8789efbf6fd5cfd2ca5`
 
@@ -201,13 +201,16 @@ Expected existing Claim semantics are sufficient for facts, assumptions, thesis,
 
 Those are Report or Workflow concepts. Canonical persistence remains governed exclusively by the existing Semantic Proposal -> Gateway -> validated ChangeSet -> Writer path.
 
-Research Reports may use the following report types at the implementation-contract level:
+Research Reports use the following persisted report types at the implementation-contract level:
 
-- `company_deep_research`;
+- `company_research`;
+- `daily_brief`;
 - `earnings_review`;
 - `valuation`;
 - `event_research`;
 - `thesis_red_team`.
+
+The existing distinction is intentional: `company_deep_research` is the Workflow type and research capability name, while `company_research` is the persisted `ResearchReport.reportType`. M3A adds only the four future report types listed above.
 
 An implementation task must extend the existing narrow ResearchReport contract deliberately; it must not persist an entire Report into canonical Knowledge. A Report may contain many observations while only a bounded, evidence-backed subset becomes durable.
 
@@ -252,6 +255,6 @@ No M3A-1 implementation is authorized by this document. Each implementation stag
 
 ## Governance and Acceptance Boundary
 
-M1 Personal Research Foundation remains PASS / CLOSED. M2 Daily Intelligence remains PASS / CLOSED. M3 is ARCHITECTURE FROZEN / IMPLEMENTATION NOT STARTED.
+M1 Personal Research Foundation remains PASS / CLOSED. M2 Daily Intelligence remains PASS / CLOSED. M3 Research Coverage Architecture is PASS / FROZEN; M3A implementation is NOT STARTED.
 
 This document freezes scope and boundaries only. It does not constitute implementation acceptance, does not change the Knowledge schema, does not authorize new providers, and does not authorize any M3 product code.

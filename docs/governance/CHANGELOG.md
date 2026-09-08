@@ -2,6 +2,8 @@
 
 ## 2026-09-08
 
+- CTO accepted `RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001` as `PASS / FROZEN`. Corrected the normative Report type list to preserve persisted `company_research` and `daily_brief`, add future M3A types `earnings_review`, `valuation`, `event_research`, and `thesis_red_team`, and retain `company_deep_research` only as Workflow/capability naming. M3A implementation remains NOT STARTED; M3B remains separate architecture approval required; Theme Framework remains DEFERRED.
+
 - Froze `RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001` as `ARCHITECTURE FROZEN / IMPLEMENTATION NOT STARTED` in `docs/architecture/PERSONAL_RESEARCH_V1_RESEARCH_COVERAGE_ARCHITECTURE_V0.1.md`. M3A is limited to Earnings Review, Valuation, Event Research, and Thesis Red Team; M3B Industry Deep Research requires separate architecture approval; Theme Framework remains deferred. No M3 product code, new Provider, Schema change, or generic Coverage Framework was introduced.
 
 - CTO accepted `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001`, `...-FIX-001`, `...-FIX-002`, and `...-FIX-003` as `PASS / CLOSED` on 2026-09-08 at accepted implementation commit `218280579cdd7b6cfdf67506150cfa82cef4322e`. M2 is merged to `main`; M3 was not started.

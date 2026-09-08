@@ -6,7 +6,7 @@ Status: **FROZEN — Current Product Baseline**
 
 Daily Intelligence v1 M2 is PASS / CLOSED by CTO acceptance at `218280579cdd7b6cfdf67506150cfa82cef4322e`; it adds no new Runtime or Knowledge mutation boundary.
 
-Personal Research v1 Research Coverage M3 is ARCHITECTURE FROZEN / IMPLEMENTATION NOT STARTED under `docs/architecture/PERSONAL_RESEARCH_V1_RESEARCH_COVERAGE_ARCHITECTURE_V0.1.md`; M3A is limited to four company-coverage producers, M3B Industry Research requires separate architecture approval, and Theme Framework remains deferred.
+Personal Research v1 Research Coverage Architecture v0.1 is PASS / FROZEN by CTO decision under `docs/architecture/PERSONAL_RESEARCH_V1_RESEARCH_COVERAGE_ARCHITECTURE_V0.1.md`; M3A implementation is NOT STARTED and limited to four company-coverage producers, M3B Industry Research requires separate architecture approval, and Theme Framework remains deferred.
 
 This governance document summarizes the current ResearchHub_Lite architecture after adoption of Pi Coding Agent as the canonical application host and the freeze of Application Interaction Architecture v0.1.
 

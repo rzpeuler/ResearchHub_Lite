@@ -6,9 +6,9 @@ This log records only architecture/product decisions that materially constrain f
 
 ## RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001 — 2026-09-08
 
-**Status:** ARCHITECTURE FROZEN / IMPLEMENTATION NOT STARTED
+**Status:** PASS / FROZEN by CTO decision
 
-Personal Research v1 M3 is frozen as Research Coverage. M3A is Company Research Coverage with four producer-specific capabilities in order: Earnings Review, Valuation, Event Research, and Thesis Red Team. M3B Industry Deep Research is NOT STARTED / ARCHITECTURE REQUIRED and requires separate architecture approval. Theme Framework remains DEFERRED.
+Personal Research v1 M3 is frozen as Research Coverage. M3A is Company Research Coverage with four producer-specific capabilities in order: Earnings Review, Valuation, Event Research, and Thesis Red Team. The corrected ResearchReport contract distinguishes Workflow/capability type `company_deep_research` from persisted reportType `company_research`; existing `daily_brief` and future `earnings_review`, `valuation`, `event_research`, and `thesis_red_team` remain the Report type set. M3A implementation remains NOT STARTED. M3B Industry Deep Research is NOT STARTED / ARCHITECTURE REQUIRED and requires separate architecture approval. Theme Framework remains DEFERRED.
 
 Research coverage is composed from existing canonical Knowledge, Research Reports, Workflow Runs, and non-canonical ResearchSignals. M3 does not create a canonical `CoverageState` object or generic Coverage Framework. All M3A producers preserve the existing Workflow / Skill / Plugin / Knowledge boundaries and the Semantic Proposal -> Knowledge Production Gateway -> Binding/Diff/Resolution -> ResolutionIntent -> ChangeSet -> Validation -> Writer path.
 
