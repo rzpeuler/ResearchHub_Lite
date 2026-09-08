@@ -1,5 +1,12 @@
 # ResearchHub_Lite — Development Rules
 
+## Personal Research v1 implementation rules
+
+- Company Research must use the product-level `research_company` entry and the shared Workflow/Knowledge integrity path.
+- Schema 0.4 is additive and fresh-KB only; never silently migrate or rewrite Schema 0.3 runtime data.
+- ResearchSignal and Reports are runtime/application artifacts, not canonical Registry objects or source-controlled runtime data.
+- External source integrations remain narrow, bounded, fixture-testable, and must carry provenance and explicit rights metadata.
+
 These rules are mandatory unless explicitly superseded by a recorded architecture decision.
 
 ## 1. Runtime and Host

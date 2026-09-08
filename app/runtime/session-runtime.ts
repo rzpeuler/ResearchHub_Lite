@@ -91,6 +91,7 @@ export class ResearchHubSessionRuntime {
         settingsManager: options.settingsManager,
         resourceLoader: options.resourceLoader,
         applicationServices: options.applicationServices,
+        researchService: options.researchService,
         sessionStartEvent,
       })
       return { session: created.session, extensionsResult: created.extensionsResult, modelFallbackMessage: created.modelFallbackMessage, services: created.services, diagnostics: created.services.diagnostics }

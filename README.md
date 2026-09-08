@@ -34,6 +34,8 @@ ResearchHub owns the product semantics:
 
 Application Runtime v0.1: PASS / CLOSED. Homepage Shell v0.1 is implemented pending CTO acceptance. It provides a local Node.js runtime with persistent Pi conversations, HTTP JSON APIs, normalized SSE, controlled workspace attachments, Workflow observation/cancellation, and loopback/origin/runtime-token protection, plus a same-origin React + TypeScript + Vite browser client. See [Application Runtime & Client Architecture v0.1](docs/architecture/RESEARCHHUB_APPLICATION_RUNTIME_CLIENT_ARCHITECTURE_V0.1.md).
 
+Personal Research v1 Company Research foundation is implemented on an explicit Schema 0.4 / Storage 1 fresh-KB lane. The `research_company` Application Service, Pi tool, and optional HTTP Product API run bounded official-disclosure, AKShare, GDELT, and RSS acquisition, produce a Markdown report and non-canonical ResearchSignals, then commit semantic proposals through the Schema 0.4 ChangeSet/Validation/Writer path. See [Personal Research v1 Architecture](docs/architecture/PERSONAL_RESEARCH_V1_ARCHITECTURE.md) and [Reuse Audit](docs/engineering/PERSONAL_RESEARCH_V1_REUSE_AUDIT.md).
+
 ## Run the local Homepage
 
 ```text
@@ -42,7 +44,7 @@ npm run client:build
 npm run researchhub
 ```
 
-The Runtime prints its loopback URL. Open it in a browser; the client is served by the same Runtime origin. The Application Shell provides Research (`/` and `/research`), a read-only Knowledge Graph Projection page (`/graph`), and a read-only Review Inbox (`/reviews`). Graph uses the bounded Directory and rooted graph APIs over active canonical Entities and Relations; Claims and Sources remain Inspector detail. Research contains the Agent conversation shell, Attachments, Workflow observation, and Review notifications. The product does not claim Theme Research, Industry Research, Company Research, or ReviewDecision capabilities.
+The Runtime prints its loopback URL. Open it in a browser; the client is served by the same Runtime origin. The Application Shell provides Research (`/` and `/research`), a read-only Knowledge Graph Projection page (`/graph`), and a read-only Review Inbox (`/reviews`). Graph uses the bounded Directory and rooted graph APIs over active canonical Entities and Relations; Claims and Sources remain Inspector detail. Research contains the Agent conversation shell, Attachments, Workflow observation, Review notifications, and Company Research when a Schema 0.4 Knowledge Base is mounted. Theme Research, Industry Research, and ReviewDecision remain separate capabilities.
 
 `ReasoningExecutor` remains the Workflow semantic-operation boundary and deterministic testing seam. It is not a product-level host-portability architecture. Conversation context and Workflow semantic context remain separate even when they share Pi `ModelRuntime`.
 

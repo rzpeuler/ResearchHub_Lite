@@ -2,6 +2,8 @@
 
 ## 2026-09-08
 
+- Added Personal Research v1 Company Deep Research foundation: Schema 0.4 contracts and validation, bounded official/AKShare/GDELT/RSS acquisition, ResearchSignal and Markdown ResearchReport contracts, deterministic valuation utilities, Company Research Skill, Company Deep Research Workflow, and `research_company` Application Service/Product API integration. Schema 0.3 runtime data and Raw Document Ingestion remain unchanged.
+
 - CTO accepted `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-B-001` as `PASS / CLOSED`. Repository Layout v1 physical migration through Phase B is complete; Phase C is `NOT STARTED / DEFERRED` with no automatic Phase C authorization. Production Baseline v1 remains unchanged, and the next active focus is Knowledge Production / Knowledge Architecture iteration.
 - Executed `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-B-001`: moved Workflow internals into planning/extraction/resolution/review/changeset/shared, Knowledge Curation internals into identity/model/validation, and Document Plugin parsers into `parsers/text/` and `parsers/docling/`. Updated only import/export paths and preserved all root public entrypoints; Phase A and its FIX are recorded as PASS / CLOSED by CTO decision, and Phase C remains unstarted.
 - CTO accepted `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001` and `RHL-MIGRATE-REPOSITORY-LAYOUT-PHASE-A-001-FIX-001` as PASS / CLOSED; their historical commits and scope remain unchanged.

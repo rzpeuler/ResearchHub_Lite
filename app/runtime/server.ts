@@ -4,7 +4,7 @@ import { pipeline } from 'node:stream/promises'
 import { createReadStream } from 'node:fs'
 import { lstat, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve } from 'node:path'
-import { ApplicationServiceError, type IngestDocumentInput, type KnowledgeGraphProjectionInput, type KnowledgeSearchInput, type ReviewCaseListInput } from '../services/contracts.ts'
+import { ApplicationServiceError, type IngestDocumentInput, type KnowledgeGraphProjectionInput, type KnowledgeSearchInput, type ReviewCaseListInput, type ResearchCompanyInput } from '../services/contracts.ts'
 import { createResearchHubApplicationRuntime, ResearchHubApplicationRuntime } from './application-runtime.ts'
 import { AttachmentService, DEFAULT_MAX_ATTACHMENT_BYTES } from './attachment-service.ts'
 import { ClientEventStream } from './event-stream.ts'
@@ -166,7 +166,7 @@ export class ResearchHubRuntimeServer {
 
   private async startInternal(): Promise<RuntimeServerInfo> {
     if (!this.runtime) {
-      this.runtime = await createResearchHubApplicationRuntime({ cwd: this.options.cwd ?? process.cwd(), agentDir: this.options.agentDir, sessionDir: this.options.sessionDir, mountedKnowledgeBaseRoot: this.options.mountedKnowledgeBaseRoot, workspaceRoot: this.options.workspaceRoot, modelRuntime: this.options.modelRuntime, sessionManager: this.options.sessionManager, model: this.options.model, reasoningExecutor: this.options.reasoningExecutor, settingsManager: this.options.settingsManager, resourceLoader: this.options.resourceLoader })
+      this.runtime = await createResearchHubApplicationRuntime({ cwd: this.options.cwd ?? process.cwd(), agentDir: this.options.agentDir, sessionDir: this.options.sessionDir, mountedKnowledgeBaseRoot: this.options.mountedKnowledgeBaseRoot, workspaceRoot: this.options.workspaceRoot, modelRuntime: this.options.modelRuntime, sessionManager: this.options.sessionManager, model: this.options.model, reasoningExecutor: this.options.reasoningExecutor, settingsManager: this.options.settingsManager, resourceLoader: this.options.resourceLoader, researchService: this.options.researchService })
       this.ownsRuntime = true
     }
     this.assertClientRootBoundary()
@@ -387,6 +387,7 @@ export class ResearchHubRuntimeServer {
     if (method === 'POST' && (path === '/api/attachments' || path === '/api/attachments/upload')) { const contentType = request.headers['content-type']; if (typeof contentType !== 'string') throw new ApplicationServiceError('invalid_input', 'multipart Content-Type is required'); const length = Number(request.headers['content-length']); if (Number.isFinite(length) && length > (this.attachmentService?.maxBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES) + 1024 * 1024) throw new ApplicationServiceError('invalid_input', 'attachment request is too large'); const attachment = await this.attachmentService!.upload(request, contentType); await this.sendJson(response, 201, { attachment }); return }
     if (method === 'GET' && path.startsWith('/api/attachments/')) { const pieces = path.split('/'); const id = decodeSegment(pieces[3] ?? ''); if (pieces[4] === 'content') { await this.streamAttachment(response, id); return } await this.sendJson(response, 200, { attachment: await this.attachmentService!.getAttachment(id) }); return }
     if (method === 'POST' && (path === '/api/production/ingest' || path === '/api/production/ingest-document' || path === '/api/production/start-ingest' || path === '/api/workflows/ingest' || path === '/api/ingest-document' || path === '/api/ingestion')) { await this.startIngestion(request, response); return }
+    if (method === 'POST' && (path === '/api/production/research-company' || path === '/api/research-company')) { await this.startCompanyResearch(request, response); return }
     this.sendError(response, new ApplicationServiceError('not_found', 'Runtime route not found'))
   }
 
@@ -443,6 +444,11 @@ export class ResearchHubRuntimeServer {
     const started = this.runtime!.productionService.startIngestDocument(input, controller.signal)
     this.trackBackground(started.completion, () => { controller.abort() })
     await this.sendJson(response, 202, { accepted: true, runId: started.runId, workflow: this.runtime!.workflowService.getWorkflowStatus(started.runId) })
+  }
+  private async startCompanyResearch(request: IncomingMessage, response: ServerResponse): Promise<void> {
+    const service = this.runtime!.researchService
+    if (!service) throw new ApplicationServiceError('failed', 'Company Research is not configured for this runtime')
+    const body = await this.readJson(request); this.ensureRunning(); const symbol = this.stringField(body, 'symbol', 6); const name = this.optionalString(body, 'name', 500); const exchange = this.optionalString(body, 'exchange', 50); const asOf = this.optionalString(body, 'asOf', 100); const input: ResearchCompanyInput = { workflowRunId: randomUUID(), symbol, ...(name === undefined ? {} : { name }), ...(exchange === undefined ? {} : { exchange }), ...(asOf === undefined ? {} : { asOf }) }; const controller = new AbortController(); const started = service.startResearchCompany(input, controller.signal); this.trackBackground(started.completion, () => controller.abort()); await this.sendJson(response, 202, { accepted: true, runId: started.runId, workflow: this.runtime!.workflowService.getWorkflowStatus(started.runId) })
   }
 
   private sourceMetadata(value: Record<string, unknown>): IngestDocumentInput['sourceMetadata'] | undefined { const raw = value.sourceMetadata; if (raw === undefined) return undefined; if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new ApplicationServiceError('invalid_input', 'sourceMetadata must be an object'); const input = raw as Record<string, unknown>; return { ...(this.optionalString(input, 'title', 500) === undefined ? {} : { title: this.optionalString(input, 'title', 500) }), ...(this.optionalString(input, 'institution', 500) === undefined ? {} : { institution: this.optionalString(input, 'institution', 500) }), ...(this.optionalString(input, 'author', 500) === undefined ? {} : { author: this.optionalString(input, 'author', 500) }), ...(this.optionalString(input, 'publishedAt', 100) === undefined ? {} : { publishedAt: this.optionalString(input, 'publishedAt', 100) }), ...(this.optionalString(input, 'sourceUrl', 2_000) === undefined ? {} : { sourceUrl: this.optionalString(input, 'sourceUrl', 2_000) }) } }

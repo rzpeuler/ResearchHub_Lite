@@ -2,6 +2,8 @@ import { KnowledgeIndexV03 } from '../../knowledge/query/index.ts'
 import type { KnowledgeClaimV03, KnowledgeEntityV03, KnowledgeModuleV03, KnowledgeRelationV03, KnowledgeSourceV03, KnowledgeThemeGroupV03 } from '../../knowledge/schema/domain.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { KnowledgeBaseLoaderV03 } from '../../knowledge/storage/loader.ts'
+import { readCanonicalV04Assets } from '../../knowledge/storage/canonical-v04-loader.ts'
+import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
 import { ApplicationServiceError, type ApplicationKnowledgeKind, type ApplicationKnowledgeSearchResult, type KnowledgeBaseStatusView, type KnowledgeObjectView, type KnowledgeSearchInput, type KnowledgeSearchResult, type ApplicationLimit } from './contracts.ts'
 
 const DEFAULT_SEARCH_LIMIT = 20
@@ -59,6 +61,7 @@ export class KnowledgeService {
     if (!this.mountedKnowledgeBaseRoot) throw new ApplicationServiceError('no_kb_mounted', 'No canonical Knowledge Base is mounted')
     try {
       const handle = await this.registry.mount(this.mountedKnowledgeBaseRoot)
+      if (handle.schemaVersion === '0.4') { const assets = await readCanonicalV04Assets(handle.rootRef); const projected = { rootDir: assets.rootDir, themeGroups: assets.objects.filter((item) => item.kind === 'theme_group').map((item) => ({ kind: item.kind, value: item.value, filePath: item.filePath, storageRef: item.storageRef })), entities: assets.objects.filter((item) => item.kind === 'entity').map((item) => ({ kind: item.kind, value: item.value, filePath: item.filePath, storageRef: item.storageRef })), relations: assets.objects.filter((item) => item.kind === 'relation').map((item) => ({ kind: item.kind, value: item.value, filePath: item.filePath, storageRef: item.storageRef })), claims: assets.objects.filter((item) => item.kind === 'claim').map((item) => ({ kind: item.kind, value: item.value, filePath: item.filePath, storageRef: item.storageRef })), modules: assets.objects.filter((item) => item.kind === 'module').map((item) => ({ kind: item.kind, value: item.value, filePath: item.filePath, storageRef: item.storageRef })), sources: assets.objects.filter((item) => item.kind === 'source').map((item) => ({ kind: item.kind, value: item.value, filePath: item.filePath, storageRef: item.storageRef })), registry: assets.registry }; return { handle, index: KnowledgeIndexV03.fromAssets(projected as unknown as KnowledgeAssetCollectionV03) } }
       return { handle, index: KnowledgeIndexV03.fromAssets(await this.loader.readAssets(handle)) }
     } catch (error) {
       if (error instanceof ApplicationServiceError) throw error

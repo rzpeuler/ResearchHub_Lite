@@ -27,7 +27,7 @@ export class KnowledgeBaseHandle {
     Object.freeze(this)
   }
 
-  get writable(): boolean { return this.schemaVersion === '0.3' && this.storageFormatVersion === '1' && this.status === 'active' }
+  get writable(): boolean { return (this.schemaVersion === '0.3' || this.schemaVersion === '0.4') && this.storageFormatVersion === '1' && this.status === 'active' }
 }
 
 export function createKnowledgeBaseHandle(manifest: KnowledgeBaseManifest, rootRef: string): KnowledgeBaseHandle {

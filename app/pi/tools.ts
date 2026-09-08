@@ -1,16 +1,18 @@
 import { Type } from '@earendil-works/pi-ai'
 import { defineTool, type ToolDefinition } from '@earendil-works/pi-coding-agent'
-import { ApplicationServiceError, type IngestDocumentInput, type ReviewCaseListInput } from '../services/contracts.ts'
+import { ApplicationServiceError, type IngestDocumentInput, type ReviewCaseListInput, type ResearchCompanyInput } from '../services/contracts.ts'
 import type { KnowledgeService } from '../services/knowledge-service.ts'
 import type { ProductionService } from '../services/production-service.ts'
 import type { ReviewService } from '../services/review-service.ts'
 import type { WorkflowService } from '../services/workflow-service.ts'
+import type { ResearchService } from '../services/research-service.ts'
 
 export interface ResearchHubPiToolContext {
   readonly knowledgeService: KnowledgeService
   readonly productionService: ProductionService
   readonly reviewService: ReviewService
   readonly workflowService: WorkflowService
+  readonly researchService?: ResearchService
 }
 
 function textResult(value: unknown, isError = false) { return { content: [{ type: 'text' as const, text: JSON.stringify(value) }], details: undefined, isError } }
@@ -45,5 +47,7 @@ export function createResearchHubTools(context: ResearchHubPiToolContext): ToolD
   const cancel = defineTool({ name: 'cancel_workflow', label: 'Cancel Workflow', description: 'Request cancellation of an active Knowledge Production Workflow.', promptSnippet: 'Cancel an active Workflow', parameters: Type.Object({ runId: Type.String() }), execute: async (_toolCallId, params) => invoke(async () => context.workflowService.cancelWorkflow(params.runId)) })
   const reviewList = defineTool({ name: 'list_review_cases', label: 'List ReviewCases', description: 'Read bounded open durable ReviewCase summaries.', promptSnippet: 'List open ReviewCases', parameters: Type.Object({ limit: Type.Optional(Type.Number()), actionability: Type.Optional(Type.String()), category: Type.Optional(Type.String()), producerRunId: Type.Optional(Type.String()) }), execute: async (_toolCallId, params) => invoke(async () => { integerParam(params.limit, 'limit'); return context.reviewService.listOpenReviewCases(params as ReviewCaseListInput) }) })
   const reviewGet = defineTool({ name: 'get_review_case', label: 'Get ReviewCase', description: 'Read one safe bounded durable ReviewCase detail without mutation.', promptSnippet: 'Inspect a ReviewCase', parameters: Type.Object({ reviewCaseId: Type.String(), dependentLimit: Type.Optional(Type.Number()) }), execute: async (_toolCallId, params) => invoke(async () => { integerParam(params.dependentLimit, 'dependentLimit'); return context.reviewService.getReviewCase(params.reviewCaseId, params.dependentLimit) }) })
-  return [status, search, object, ingest, workflowStatus, cancel, reviewList, reviewGet]
+  const tools = [status, search, object, ingest, workflowStatus, cancel, reviewList, reviewGet]
+  if (context.researchService) tools.push(defineTool({ name: 'research_company', label: 'Research company', description: 'Start bounded A-share Company Deep Research and return its linked Report and Knowledge outcome.', promptSnippet: 'Research an A-share company through the governed production Workflow', parameters: Type.Object({ workflowRunId: Type.String(), symbol: Type.String(), name: Type.Optional(Type.String()), exchange: Type.Optional(Type.String()), asOf: Type.Optional(Type.String()) }), execute: async (_toolCallId, params, signal) => invoke(() => context.researchService!.startResearchCompany(params as ResearchCompanyInput, signal).completion, signal) }))
+  return tools
 }

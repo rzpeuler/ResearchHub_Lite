@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { readResearchReport, writeResearchReport, type ResearchReport } from '../../../app/services/research-report.ts'
+
+test('ResearchReport writes Markdown plus validated metadata', async () => { const root = await mkdtemp(join(tmpdir(), 'researchhub-report-')); try { const report: ResearchReport = { reportId: 'report-test', reportType: 'company_research', subjectRefs: ['entity:company-test'], generatedAt: '2026-09-08T00:00:00.000Z', asOf: '2026-09-08T00:00:00.000Z', workflowRunId: 'run-test', knowledgeBaseRevision: 1, sourceRefs: ['source:test'], claimRefs: ['claim:test'], methodology: 'fixture', sections: [{ id: 'overview', title: 'Company Overview', markdown: 'Evidence-backed overview.', sourceRefs: ['source:test'], claimRefs: ['claim:test'] }], outputPath: 'report-test.md' }; const output = await writeResearchReport(report, root); assert.match(await readFile(output, 'utf8'), /Company Overview/); assert.equal((await readResearchReport(`${output}.json`)).reportId, 'report-test') } finally { await rm(root, { recursive: true, force: true }) } })

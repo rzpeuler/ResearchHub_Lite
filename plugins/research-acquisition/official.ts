@@ -1,0 +1,23 @@
+import type { ResearchAcquisitionPlugin, ResearchAcquisitionRequest, ResearchFetchedSource, ResearchSourceCandidate, NormalizedResearchSource } from './contracts.ts'
+import { sha256 } from './hash.ts'
+
+export interface OfficialDisclosureRecord { readonly title: string; readonly url: string; readonly publishedAt: string; readonly issuer?: string; readonly content?: string }
+export interface OfficialDisclosureClient { list(request: ResearchAcquisitionRequest): Promise<readonly OfficialDisclosureRecord[]>; fetch(record: OfficialDisclosureRecord): Promise<string> }
+export interface CninfoOfficialDisclosureClientOptions { readonly fetchImpl?: typeof fetch; readonly endpoint?: string; readonly pageSize?: number }
+export class CninfoOfficialDisclosureClient implements OfficialDisclosureClient {
+  private readonly fetchImpl: typeof fetch
+  private readonly endpoint: string
+  private readonly pageSize: number
+  constructor(options: CninfoOfficialDisclosureClientOptions = {}) { this.fetchImpl = options.fetchImpl ?? fetch; this.endpoint = options.endpoint ?? 'https://www.cninfo.com.cn/new/hisAnnouncement/query'; this.pageSize = options.pageSize ?? 20 }
+  async list(request: ResearchAcquisitionRequest): Promise<readonly OfficialDisclosureRecord[]> {
+    const exchange = request.company.exchange?.toLowerCase(); const column = exchange === 'sse' || exchange === 'szse' ? exchange : request.company.symbol.startsWith('6') ? 'sse' : 'szse'; const form = new URLSearchParams({ stock: request.company.symbol, pageNum: '1', pageSize: String(this.pageSize), tabName: 'fulltext', column }); const response = await this.fetchImpl(this.endpoint, { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'ResearchHub/PersonalResearchV1' }, body: form }); if (!response.ok) throw new Error(`CNINFO request failed with HTTP ${response.status}`); const payload = await response.json() as Record<string, unknown>; const rows = Array.isArray(payload.announcements) ? payload.announcements : []; return rows.flatMap((row) => { if (!row || typeof row !== 'object') return []; const value = row as Record<string, unknown>; const title = typeof value.announcementTitle === 'string' ? value.announcementTitle : typeof value.title === 'string' ? value.title : ''; const adjunctUrl = typeof value.adjunctUrl === 'string' ? value.adjunctUrl : ''; const url = adjunctUrl.startsWith('http') ? adjunctUrl : adjunctUrl ? `https://static.cninfo.com.cn/${adjunctUrl.replace(/^\/+/, '')}` : ''; const publishedAt = typeof value.announcementTime === 'string' ? value.announcementTime : ''; return title && url && publishedAt ? [{ title, url, publishedAt, issuer: typeof value.secName === 'string' ? value.secName : undefined }] : [] })
+  }
+  async fetch(record: OfficialDisclosureRecord): Promise<string> { if (record.content) return record.content; const response = await this.fetchImpl(record.url, { headers: { accept: 'text/html, application/pdf' } }); if (!response.ok) throw new Error(`CNINFO disclosure fetch failed with HTTP ${response.status}`); return await response.text() }
+}
+export class OfficialDisclosureResearchPlugin implements ResearchAcquisitionPlugin {
+  readonly name = 'official-disclosure-research-acquisition'
+  constructor(private readonly client: OfficialDisclosureClient, private readonly now: () => string = () => new Date().toISOString()) {}
+  async discover(request: ResearchAcquisitionRequest): Promise<readonly ResearchSourceCandidate[]> { return (await this.client.list(request)).slice(0, request.limitPerKind ?? 5).map((record) => ({ candidateId: `official-${sha256(record.url).slice(0, 16)}`, kind: 'official_disclosure', tier: 1, title: record.title, url: record.url, provider: 'cninfo', publishedAt: record.publishedAt, metadata: { companySymbol: request.company.symbol, issuer: record.issuer } })) }
+  async fetch(candidate: ResearchSourceCandidate): Promise<ResearchFetchedSource> { const record: OfficialDisclosureRecord = { title: candidate.title, url: candidate.url!, publishedAt: candidate.publishedAt ?? this.now() }; const content = await this.client.fetch(record); return { candidate, retrievedAt: this.now(), content, contentHash: sha256(content) } }
+  async normalize(source: ResearchFetchedSource): Promise<NormalizedResearchSource> { return { candidate: source.candidate, retrievedAt: source.retrievedAt, title: source.candidate.title, content: source.content, canonicalUrl: source.candidate.url, contentHash: source.contentHash ?? sha256(source.content), publisher: source.candidate.provider, rights: { accessScope: 'public', retentionAllowed: true, aiProcessingAllowed: true, derivativeKnowledgeAllowed: true, redistributionAllowed: false } } }
+}

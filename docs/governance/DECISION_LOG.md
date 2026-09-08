@@ -4,6 +4,10 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-PERSONAL-RESEARCH-V1-FOUNDATION-001 — 2026-09-08
+
+Company Deep Research is the first additional Knowledge Producer. It uses a bounded Plugin acquisition layer, a semantic Company Research Skill, an application Report plus non-canonical ResearchSignal boundary, and the existing deterministic canonical integrity path. Schema 0.4 / Storage 1 is an explicit fresh-KB baseline; Schema 0.3 runtime data is not automatically migrated. No Provider Registry, Capability Framework, Generic Workflow Engine, DSH, queue, vector store, or trading behavior is introduced.
+
 ## RHL-IMPLEMENT-KNOWLEDGE-GRAPH-PAGE-001 — 2026-09-07
 
 **Status:** implemented / CTO acceptance pending

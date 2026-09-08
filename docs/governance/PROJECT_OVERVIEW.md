@@ -34,7 +34,6 @@ The following remain deferred unless separately approved:
 
 - Theme Framework implementation;
 - Industry Deep Research;
-- Company Deep Research;
 - ReviewDecision;
 - Graph Database;
 - Vector Database;
@@ -62,6 +61,8 @@ The implemented thin `app/services/` layer is shared by Pi Application Tools and
 The local Application Runtime, Homepage Shell, read-only Knowledge Graph, and read-only Review surface are implemented under the frozen architecture. The Runtime owns Pi session lifecycle, HTTP JSON, SSE, attachments, and local runtime security; the browser consumes Product APIs and shared Application Services rather than accessing filesystem or Knowledge storage directly.
 
 The next phase is Knowledge Production / Knowledge Architecture iteration. Production stabilization is complete for Baseline v1; do not automatically start Production E2E reruns, provider architecture work, Runtime refactors, or harness expansion.
+
+Personal Research v1 Company Deep Research is now the first additional Knowledge Producer. It is implemented only for the A-share company slice and requires an explicit Schema 0.4 / Storage 1 fresh Knowledge Base; existing Schema 0.3 runtime data is not automatically migrated.
 
 ### Application Tools
 

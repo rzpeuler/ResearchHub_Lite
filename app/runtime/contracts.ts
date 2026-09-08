@@ -5,6 +5,7 @@ import type { KnowledgeGraphService } from '../services/knowledge-graph-service.
 import type { ProductionService } from '../services/production-service.ts'
 import type { ReviewService } from '../services/review-service.ts'
 import type { WorkflowService } from '../services/workflow-service.ts'
+import type { ResearchService } from '../services/research-service.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 
 export interface SafeConversationSummary {
@@ -39,6 +40,7 @@ export interface ResearchHubApplicationServices {
   readonly reviewService: ReviewService
   readonly workflowService: WorkflowService
   readonly productionService: ProductionService
+  readonly researchService?: ResearchService
 }
 
 export interface ResearchHubSessionRuntimeOptions {
@@ -53,6 +55,7 @@ export interface ResearchHubSessionRuntimeOptions {
   readonly reasoningExecutor?: ReasoningExecutor
   readonly settingsManager?: SettingsManager
   readonly resourceLoader?: DefaultResourceLoader
+  readonly researchService?: ResearchService
 }
 
 export interface ResearchHubApplicationRuntimeOptions {
@@ -67,4 +70,5 @@ export interface ResearchHubApplicationRuntimeOptions {
   readonly reasoningExecutor?: ReasoningExecutor
   readonly settingsManager?: SettingsManager
   readonly resourceLoader?: DefaultResourceLoader
+  readonly researchService?: ResearchService
 }

@@ -579,7 +579,11 @@ A Pi Skill does not gain canonical Knowledge mutation authority.
 
 ---
 
-## 20. Current Non-Goals / Deferred Architecture
+## 20. Personal Research v1 Company Research Slice
+
+The first additional Knowledge Producer is the bounded A-share `research_company` path described in [`PERSONAL_RESEARCH_V1_ARCHITECTURE.md`](../architecture/PERSONAL_RESEARCH_V1_ARCHITECTURE.md). It uses an explicit Schema 0.4 / Storage 1 fresh-KB lane, preserves the v0.3 path, and keeps Report, ResearchSignal, Source, and canonical Knowledge as separate boundaries.
+
+## 21. Current Non-Goals / Deferred Architecture
 
 Unless separately approved, do not introduce:
 
