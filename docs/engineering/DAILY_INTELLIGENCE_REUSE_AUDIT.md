@@ -32,3 +32,4 @@ This audit is the required gate before adding Daily Intelligence acquisition cod
 
 The initial catalog uses stable public evidence pages for CNINFO, SSE, SZSE, Chinese regulators and ministries, public company IR pages, public market/news sites, GDELT, AKShare documentation, Xueqiu, and Eastmoney Guba. URLs were probed from the Windows environment on 2026-09-08; a response may be 403/521 or TLS-blocked while still being retained only when the public domain and evidence page are known. Entries with unverifiable identity are excluded rather than invented. The catalog is configuration, not canonical Knowledge.
 
+FIX-001 verification additionally distinguishes catalog count from active operational count, records per-provider discover/fetch/normalize/usable stages, rejects homepage-only candidates, treats Xueqiu authentication as blocked, and retains provider limitations as explicit evidence rather than fabricated success.

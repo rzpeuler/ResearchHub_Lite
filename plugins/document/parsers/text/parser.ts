@@ -10,7 +10,9 @@ export class PlainTextDocumentParser implements DocumentParser {
   supports(input: Pick<DocumentParserInput, 'filename' | 'mediaType'>): boolean { return input.mediaType.startsWith('text/') || /\.(csv|html?|json|md|text|txt|xml)$/i.test(input.filename) }
 
   async parse(input: DocumentParserInput): Promise<StructuredDocument> {
-    const text = new TextDecoder().decode(input.bytes).replace(/\r\n?/g, '\n').trim()
+    const html = input.mediaType.includes('html') || /\.html?$/i.test(input.filename)
+    const decoded = new TextDecoder().decode(input.bytes)
+    const text = (html ? decoded.replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/[ \t]+/g, ' ') : decoded).replace(/\r\n?/g, '\n').trim()
     if (!text) throw new DocumentPluginError('document_text_extraction_insufficient', 'document_text_extraction_insufficient: text input is empty', this.id)
     const sections: MutableSection[] = []
     const blocks: DocumentBlock[] = []

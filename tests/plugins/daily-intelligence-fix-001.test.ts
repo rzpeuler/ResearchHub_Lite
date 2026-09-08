@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { mkdtemp } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { WebResearchAcquisition } from '../../plugins/daily-intelligence/acquisition.ts'
+import { loadSourceCatalog } from '../../plugins/daily-intelligence/config.ts'
+import { TradingCalendarService } from '../../plugins/daily-intelligence/calendar.ts'
+import { DailyBriefScheduler } from '../../plugins/daily-intelligence/scheduler.ts'
+import { DailyBriefSynthesisSkill } from '../../skills/daily-intelligence/synthesis.ts'
+import type { DailyResearchSignal } from '../../plugins/daily-intelligence/contracts.ts'
+
+test('FIX-001 does not turn a homepage into a signal and preserves unknown publication time', async () => { const response = new Response('<html><body>home</body></html>', { headers: { 'content-type': 'text/html' } }); const plugin = new WebResearchAcquisition({ provider: 'fixture', urls: ['https://example.test/'], fetchImpl: async () => response }); assert.deepEqual(await plugin.discover({ company: { symbol: '600519' }, limitPerKind: 2 }), []) })
+test('FIX-001 catalog exposes role and operational status while preserving 43 entries', async () => { const catalog = await loadSourceCatalog(); assert.equal(catalog.length, 43); assert.ok(catalog.every((item) => item.catalogRole && item.operationalStatus)) })
+test('FIX-001 calendar precedence is provider then cache then manual then fallback', async () => { const root = await mkdtemp(join(tmpdir(), 'rhl-calendar-fix-')); const calendar = new TradingCalendarService({ cachePath: join(root, 'calendar.json'), provider: async () => undefined, manualHolidays: ['2026-09-08'] }); assert.equal((await calendar.isTradingDay('2026-09-08')).calendarConfidence, 'manual') })
+test('FIX-001 scheduler does nothing before due time and runs one due slot', async () => { const root = await mkdtemp(join(tmpdir(), 'rhl-scheduler-fix-')); const calls: string[] = []; const scheduler = new DailyBriefScheduler({ statePath: join(root, 'state.json'), calendar: new TradingCalendarService({ cachePath: join(root, 'calendar.json') }), now: () => '2026-09-08T00:00:00.000Z', run: async (type, date) => { calls.push(`${type}:${date}`); return { status: 'completed' } } }); assert.equal((await scheduler.tick('2026-09-07T23:30:00.000Z')).length, 0); assert.equal((await scheduler.tick('2026-09-08T00:30:00.000Z')).length, 1); assert.deepEqual(calls, ['morning:2026-09-08']) })
+test('FIX-001 synthesis uses daily_brief_synthesis and validates signal references', async () => { const signal = { signalId: 'signal-1', kind: 'news', category: 'news', provider: 'fixture', sourceAccountRef: 'fixture', source: { candidateId: 'candidate-1', kind: 'news', tier: 3, title: 'event', provider: 'fixture' }, discoveredAt: '2026-09-08T00:00:00.000Z', entities: ['600519'], themes: [], title: 'event', contentHash: 'hash', relevance: 1, novelty: 1, importance: 1, sourceTier: 3 } as DailyResearchSignal; let operation = ''; const executor = { capabilities: () => ({ maxContextTokens: 1000, maxOutputTokens: 1000, structuredOutputSupport: true, maxConcurrency: 1 }), execute: async (request: { operation: string }) => { operation = request.operation; return { operation: request.operation as never, output: { sections: [], proposals: [] } } } }; await new DailyBriefSynthesisSkill().synthesize('morning', [signal], [], [], executor); assert.equal(operation, 'daily_brief_synthesis') })

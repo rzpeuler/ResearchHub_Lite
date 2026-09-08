@@ -2,8 +2,10 @@ import type { ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchSource
 
 export type DailyBriefType = 'morning' | 'evening'
 export type DailySignalKind = 'news' | 'announcement' | 'institutional_view' | 'market' | 'community' | 'social_attention'
-export type DailySignalCategory = 'announcement' | 'earnings' | 'investor_relations' | 'institutional_research' | 'management_guidance' | 'macro' | 'market' | 'community' | 'technology' | 'industry' | 'news'
+export type DailySignalCategory = 'announcement' | 'earnings' | 'performance_forecast' | 'investor_relations' | 'institutional_research' | 'management_guidance' | 'macro' | 'market' | 'community' | 'technology' | 'industry' | 'news'
 export type DailyProviderStatus = 'succeeded' | 'empty' | 'blocked' | 'failed'
+export type DailyCatalogRole = 'identity' | 'active_feed' | 'discovery_source' | 'reference_only'
+export type DailyOperationalStatus = 'active' | 'blocked' | 'metadata_only' | 'experimental'
 
 export interface DailySourceAccount {
   readonly platform: string
@@ -17,6 +19,9 @@ export interface DailySourceAccount {
   readonly evidenceUrl: string
   readonly enabled: boolean
   readonly notes: string
+  readonly catalogRole: DailyCatalogRole
+  readonly operationalStatus: DailyOperationalStatus
+  readonly discoveryUrl?: string
 }
 
 export interface DailyWatchlistCompany extends ResearchCompanyIdentity { readonly focusTags?: readonly string[] }
@@ -32,6 +37,12 @@ export interface DailyProviderOutcome {
   readonly failed: boolean
   readonly usable: number
   readonly diagnostics: readonly string[]
+  readonly discoveredCount: number
+  readonly fetchSucceededCount: number
+  readonly normalizeSucceededCount: number
+  readonly emptyCount: number
+  readonly blockedCount: number
+  readonly failedCount: number
 }
 
 export interface DailyResearchSignal {
@@ -49,6 +60,7 @@ export interface DailyResearchSignal {
   readonly contentRef?: string
   readonly contentHash: string
   readonly excerpt?: string
+  readonly narrative?: string
   readonly relevance: number
   readonly novelty: number
   readonly sentiment?: number
@@ -59,6 +71,7 @@ export interface DailyResearchSignal {
   readonly clusterKey?: string
   readonly score?: number
   readonly scoreReasons?: readonly string[]
+  readonly temporalConfidence?: 'source' | 'discovery' | 'unknown'
 }
 
 export interface DailySignalStore {
@@ -95,6 +108,8 @@ export interface DailyBriefItem {
   readonly markdown: string
   readonly signalRefs: readonly string[]
   readonly sourceRefs: readonly string[]
+  readonly evidenceLinks?: readonly string[]
+  readonly assessmentRefs?: readonly string[]
   readonly kind: 'signal' | 'gap' | 'interpretation'
   readonly rank: number
 }
@@ -114,6 +129,10 @@ export interface DailyQualityTelemetry {
   readonly reportItemWithSourceRatio: number
   readonly durableChangeCount: number
   readonly reviewCount: number
+  readonly storedSignalCount: number
+  readonly reportItemCount: number
+  readonly semanticProposalCount: number
+  readonly committedClaimCount: number
 }
 export interface DailyBriefReport {
   readonly reportId: string
@@ -132,7 +151,8 @@ export interface DailyBriefReport {
   readonly knowledgeBaseRevision?: number
   readonly committedKnowledgeRefs: readonly string[]
   readonly reviewCaseCount: number
-  readonly calendarConfidence: 'provider' | 'cache' | 'fallback'
+  readonly calendarConfidence: 'provider' | 'cache' | 'manual' | 'fallback'
+  readonly modelDerivedItemCount?: number
 }
 
 export interface DailyIntelligenceInput {
@@ -152,8 +172,9 @@ export interface DailyIntelligenceInput {
   readonly signal?: AbortSignal
   readonly now?: () => string
   readonly reasoningExecutor?: import('../reasoning/contracts.ts').ReasoningExecutor
-  readonly calendarConfidence?: 'provider' | 'cache' | 'fallback'
+  readonly calendarConfidence?: 'provider' | 'cache' | 'manual' | 'fallback'
   readonly calendar?: import('./calendar.ts').TradingCalendarService
+  readonly maxDurableKnowledgeProposals?: number
 }
 
 export interface DailyIntelligenceResult {

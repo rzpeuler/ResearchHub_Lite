@@ -1,0 +1,38 @@
+{
+  "generatedAt": "2026-09-08T09:52:20.340Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-001",
+  "classification": "EXECUTED",
+  "realPiReasoningExecutor": true,
+  "operations": [
+    "daily_brief_synthesis",
+    "daily_brief_synthesis"
+  ],
+  "outputValidatedByExecutor": true,
+  "reasoningOutputApplied": true,
+  "model": {
+    "provider": "pi-coding-agent",
+    "requestedModel": "zhipu-openapi/glm-5.3-flash"
+  },
+  "runs": [
+    {
+      "status": "completed",
+      "briefType": "morning",
+      "sectionCount": 14,
+      "signalCount": 1,
+      "modelDerivedItemCount": 14,
+      "reportItemCount": 14,
+      "errors": []
+    },
+    {
+      "status": "completed",
+      "briefType": "evening",
+      "sectionCount": 13,
+      "signalCount": 1,
+      "modelDerivedItemCount": 13,
+      "reportItemCount": 13,
+      "errors": []
+    }
+  ],
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}

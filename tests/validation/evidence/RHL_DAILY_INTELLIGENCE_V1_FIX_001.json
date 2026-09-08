@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-09-08T09:51:02.266Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-001",
+  "classification": "EXECUTED_WITH_PROVIDER_LIMITATIONS",
+  "sourceCatalogCount": 43,
+  "activeSourceCount": 2,
+  "providers": [
+    {
+      "provider": "cninfo",
+      "stages": {
+        "discover": "empty",
+        "fetch": "not_attempted",
+        "normalize": "not_attempted"
+      },
+      "usable": 0,
+      "status": "empty",
+      "diagnostics": []
+    },
+    {
+      "provider": "gdelt",
+      "stages": {
+        "discover": "not_attempted",
+        "fetch": "not_attempted",
+        "normalize": "not_attempted"
+      },
+      "usable": 0,
+      "status": "failed",
+      "diagnostics": [
+        "fetch failed"
+      ]
+    },
+    {
+      "provider": "rss",
+      "stages": {
+        "discover": "empty",
+        "fetch": "not_attempted",
+        "normalize": "not_attempted"
+      },
+      "usable": 0,
+      "status": "empty",
+      "diagnostics": []
+    },
+    {
+      "provider": "akshare-market",
+      "stages": {
+        "discover": "succeeded",
+        "fetch": "failed",
+        "normalize": "not_attempted"
+      },
+      "usable": 0,
+      "status": "failed",
+      "diagnostics": [
+        "Command failed: python -c import json,sys,akshare as ak\nkind,symbol,start_date,end_date=sys.argv[1:]\nif kind=='basic': value=ak.stock_individual_info_em(symbol="
+      ]
+    },
+    {
+      "provider": "institution:cicc",
+      "stages": {
+        "discover": "not_attempted",
+        "fetch": "not_attempted",
+        "normalize": "not_attempted"
+      },
+      "usable": 0,
+      "status": "failed",
+      "diagnostics": [
+        "cicc discovery failed with HTTP 521"
+      ]
+    },
+    {
+      "provider": "eastmoney-guba",
+      "stages": {
+        "discover": "empty",
+        "fetch": "not_attempted",
+        "normalize": "not_attempted"
+      },
+      "usable": 0,
+      "status": "empty",
+      "diagnostics": []
+    },
+    {
+      "provider": "xueqiu",
+      "status": "authentication_required",
+      "diagnostics": "authentication_required: Xueqiu public feed requires an authenticated public endpoint"
+    }
+  ],
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}

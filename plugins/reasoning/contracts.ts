@@ -3,6 +3,9 @@ export const REASONING_OPERATIONS = [
   'extractKnowledge',
   'resolveSemanticCase',
   'company_research_synthesis',
+  'daily_signal_enrichment',
+  'daily_change_assessment',
+  'daily_brief_synthesis',
 ] as const
 
 export type ReasoningOperation = (typeof REASONING_OPERATIONS)[number]

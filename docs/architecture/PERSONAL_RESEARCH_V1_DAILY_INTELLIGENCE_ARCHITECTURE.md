@@ -74,11 +74,14 @@ The idempotency key is `briefType + tradeDate`. Repeating it returns the existin
 
 ## Calendar and scheduler
 
-`TradingCalendarService` first attempts a configured public/AKShare calendar adapter, then uses the most recent local cache, then a deterministic weekday fallback with `calendarConfidence: fallback`. Manual holiday overrides win over all automatic sources. `DailyBriefScheduler` persists last successful runs, is restart-safe, detects missed trading-day runs, and shares the same Application Workflow as CLI/manual/Pi/HTTP triggers. It uses local timers only; no Redis, queue, worker, or scheduler framework is introduced.
+`TradingCalendarService` first attempts a configured public/AKShare calendar adapter, then uses the most recent local cache, then manual overrides, then a deterministic weekday fallback with explicit confidence. `DailyBriefScheduler` uses China-local due times (08:00/20:30), persists last successful runs, is restart-safe, catches up only the bounded same-day slots, and shares the same Application Workflow as CLI/manual/Pi/HTTP triggers. It uses a closable local timer only; no Redis, queue, worker, or scheduler framework is introduced.
+
+## FIX-001 closure
+
+FIX-001 makes the catalog's 43 entries runtime-classified as identity, active feed, discovery source, or reference-only, with operational status. Company-scoped acquisition fans out across the four configured watchlist companies; broad feeds carry no fabricated company identity. Discovery retains item title, URL, provider object ID, and source publication time when present; unknown publication time remains unknown. HTML/PDF/text normalization passes through `DocumentInputResolver` and retains full normalized-source content and raw bytes for any later Gateway evidence binding. Daily reasoning uses `daily_signal_enrichment`, `daily_change_assessment`, and `daily_brief_synthesis`; all model references are validated against local signal/assessment IDs, and deterministic gaps are emitted when output is unavailable or invalid. Daily reports use non-canonical signal references/evidence links and never manufacture canonical Source refs.
 
 Windows scripts install/remove current-user Task Scheduler entries without credentials or an administrator-only assumption. Installation is idempotent; inability to install in the current environment is recorded as an environment limitation, not an M2 product failure.
 
 ## Non-goals
 
 No Industry/Theme/Earnings/Portfolio Research, trading or broker execution, multi-agent orchestration, DSH, ResearchManager, Capability/Provider/Planner framework, generic crawler/RAG, Graph DB, Vector DB, Redis, distributed worker, automatic full-market crawl, or canonical ConsensusSnapshot is part of M2.
-
