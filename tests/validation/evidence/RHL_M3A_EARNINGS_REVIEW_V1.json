@@ -1,13 +1,13 @@
 {
   "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-002",
-  "classification": "FIX-002_IMPLEMENTED_CTO_ACCEPTANCE_PENDING",
+  "classification": "PASS / CLOSED / CTO ACCEPTED",
   "architecture": "PASS / FROZEN",
   "focusedTests": "40/40 PASS",
   "nodeTests": "388/388 PASS",
   "clientTests": "21/21 PASS",
   "typecheck": "PASS",
-  "clientTypecheck": "PASS",
-  "clientBuild": "PASS",
+  "clientTypecheck": { "status": "PASS", "provenance": "FIX-001", "rerunInFix002": false },
+  "clientBuild": { "status": "PASS", "provenance": "FIX-001", "rerunInFix002": false },
   "realPi": {
     "classification": "EXECUTED / PASS GATE",
     "model": "zhipu-openapi/glm-5.3-flash",

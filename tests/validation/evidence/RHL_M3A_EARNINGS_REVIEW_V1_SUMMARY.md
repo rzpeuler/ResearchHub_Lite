@@ -4,14 +4,16 @@ Task: `RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-002`
 
 ## Classification
 
-FIX-002 validation-only work is implemented and pending CTO acceptance. It corrects the Real Pi harness exit contract, adds executable pass/fail exit regression coverage, and preserves the full semantic gate. M3 Research Coverage Architecture remains `PASS / FROZEN`. No product logic, Schema, Writer, Provider framework, Coverage Framework, or unrelated M3 implementation was introduced.
+M3A-1 Earnings Review is `PASS / CLOSED / CTO ACCEPTED`. The accepted implementation head is `cf4e4154df5a57aea0525286423b260ab9d2eaeb`; the implementation lineage is `a323ee91751a51d1208231c38645a153f1605178` → `88ed7947aa2818d1afd57b16dad5fb63aade547c` → `cf4e4154df5a57aea0525286423b260ab9d2eaeb`. FIX-002 corrected the Real Pi harness exit contract, added executable pass/fail exit regression coverage, and preserved the full semantic gate. M3 Research Coverage Architecture remains `PASS / FROZEN`. No product logic, Schema, Writer, Provider framework, Coverage Framework, or unrelated M3 implementation was introduced.
 
 ## Offline validation
 
 - Focused Earnings Review, HTTP route, and validation-harness tests: **40/40 PASS**.
 - Full Node suite: **388/388 PASS**.
-- Client suite: **21/21 PASS**.
-- Root typecheck, client typecheck, client build, and `git diff --check`: **PASS**.
+- Client suite: **21/21 PASS** — rerun during FIX-002.
+- Client typecheck: **PASS** — inherited from FIX-001; not rerun during FIX-002.
+- Client build: **PASS** — inherited from FIX-001; not rerun during FIX-002.
+- Root typecheck and `git diff --check`: **PASS**.
 
 The focused suite covers exact period mapping, filing selection and as-of filtering, period-aware financial normalization and deterministic calculations, coverage blocking, assessment/reference/proposal gates, source filtering, Raw preservation plus actual bounded ReasoningRequest inspection, report semantics including section Claim provenance, replay, service/Pi/HTTP entrypoints, cancellation, and the bounded repair protocol.
 

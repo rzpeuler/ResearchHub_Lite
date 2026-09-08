@@ -4,6 +4,20 @@ This log records only architecture/product decisions that materially constrain f
 
 ---
 
+## RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001 — CTO Acceptance Closure — 2026-09-09
+
+**Status:** PASS / CLOSED by CTO acceptance
+
+The CTO accepted M3A-1 Earnings Review and authorized merge. The accepted implementation head is `cf4e4154df5a57aea0525286423b260ab9d2eaeb`, preserving the lineage `a323ee91751a51d1208231c38645a153f1605178` → `88ed7947aa2818d1afd57b16dad5fb63aade547c` → `cf4e4154df5a57aea0525286423b260ab9d2eaeb`.
+
+Accepted guarantees include existing canonical Company coverage; exact fiscal-period semantics; CNINFO and AKShare only in v1; deterministic financial computation; bounded real Pi reasoning with an explicit structured contract and one bounded repair retry; company-only Existing Knowledge comparison; deterministic assessment durability; assessment-bound proposal gating; proposal-referenced-only canonical evidence; preserved Gateway / ChangeSet / Validation / Writer authority; `reportType=earnings_review`; canonical Company/Source/Claim provenance; Consensus unavailable policy; safe zero-durable-change and deterministic fallback paths; and an executable Real Pi acceptance gate.
+
+Operational risks remain non-blocking: the tested CNINFO smoke returned zero exact-period candidates, the tested AKShare smoke returned zero rows for `2025-FY`, model output may vary and require bounded repair, and deterministic fail-closed fallback remains required. These are not architecture blockers.
+
+M1 and M2 remain PASS / CLOSED, and M3 Architecture remains PASS / FROZEN. M3A-2/3/4 remain NOT STARTED; M3B remains NOT STARTED / ARCHITECTURE REQUIRED; Theme Framework remains DEFERRED.
+
+---
+
 ## RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-002 — 2026-09-09
 
 **Status:** FIX-002 IMPLEMENTED / CTO ACCEPTANCE PENDING
