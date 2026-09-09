@@ -56,7 +56,3 @@ async function runThesisRedTeamInternal(input: ThesisRedTeamWorkflowInput): Prom
 }
 export const runThesisRedTeam = async (input: ThesisRedTeamWorkflowInput): Promise<ThesisRedTeamWorkflowResult> => { const result = await runThesisRedTeamInternal(input); const integrityChanged = result.telemetry.targetThesisChanged || result.telemetry.companyChanged === true; if (!integrityChanged) return result; const diagnostic = 'THESIS_RED_TEAM_IMMUTABILITY_VIOLATION'; return { ...result, status: 'blocked', errors: [...result.errors, diagnostic], diagnostics: [...result.diagnostics, diagnostic], telemetry: { ...result.telemetry, diagnostics: [...result.telemetry.diagnostics, diagnostic] } } }
 export const runThesisRedTeamWorkflow = runThesisRedTeam
-
-
-
-
