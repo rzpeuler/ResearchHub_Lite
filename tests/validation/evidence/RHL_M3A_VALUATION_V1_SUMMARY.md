@@ -1,6 +1,6 @@
 # RHL M3A-2 Valuation v1 — FIX-001 Validation Summary
 
-Status: `FIX-001 IMPLEMENTED / CTO ACCEPTANCE PENDING`
+Status: `FIX-001 PASS / CLOSED by CTO acceptance`
 
 FIX-001 preserves the accepted Valuation path: Pi/HTTP -> ResearchService ->
 existing Company coverage -> AKShare -> bounded Stage A -> deterministic

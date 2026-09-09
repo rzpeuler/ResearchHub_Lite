@@ -2,6 +2,17 @@
 
 ## 2026-09-09
 
+- Closed `RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001` and
+  `RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001-FIX-001` as `PASS / CLOSED by CTO
+  acceptance`. Accepted implementation head:
+  `7dbc835e65713ce0e037a48cf98c77600a4280cf`; lineage:
+  `2e8948cecabe19f14c461b1df4a39d48a09c9860` →
+  `7dbc835e65713ce0e037a48cf98c77600a4280cf`.
+- Preserved the accepted Valuation architecture and recorded AKShare
+  `PROVIDER_TRANSPORT_BLOCKED` as a non-blocking operational/provider-
+  availability risk. M3A-3/4 remain NOT STARTED, M3B remains architecture
+  required, and Theme Framework remains DEFERRED.
+
 - Implemented `RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001-FIX-001` pending CTO acceptance: stabilized existing Gateway valuation Claim slots across run dates, separated actual Source retrieval time from historical valuation context, made Source identity evidence-snapshot based, excluded unused companyBasic from durable evidence, tightened local proposal/evidence/dependency gates, mapped section-level Report provenance precisely, and added executable Pi/HTTP/Real Pi/delta/test-matrix validation. No Schema, Gateway, Writer, Provider Framework, M3A-3/4, M3B, or Theme scope was introduced.
 
 ## 2026-09-08

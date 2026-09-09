@@ -1,8 +1,45 @@
 # ResearchHub_Lite — Decision Log
 
+## RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001 — CTO Acceptance Closure — 2026-09-09
+
+**Status:** PASS / CLOSED by CTO acceptance
+
+Accepted implementation head: `7dbc835e65713ce0e037a48cf98c77600a4280cf`.
+Implementation lineage: `2e8948cecabe19f14c461b1df4a39d48a09c9860` →
+`7dbc835e65713ce0e037a48cf98c77600a4280cf`.
+
+M3A-2 Valuation is accepted on the frozen Personal Research v1 Research
+Coverage architecture. Accepted guarantees include exact existing canonical
+Company coverage; AKShare-only v1 acquisition; FY-only basis with explicit
+point-in-time semantics; historical `asOf` separated from Source `retrievedAt`;
+evidence-snapshot Source identity; exclusion of unused acquired data from
+durable evidence; PE/PB/conditional EV_EBITDA eligibility; bounded two-stage Pi
+reasoning; code-authoritative arithmetic, deterministic reference multiples,
+Bear/Base/Bull calculation, and 3×3 sensitivity; strict structured-value
+equality; stable Claim slots using structured metric plus period without a
+Valuation-specific semantic key; bounded assumptions/viewpoints; at most three
+durable proposals; accepted-only dependencies; proposal-referenced-only
+Gateway evidence; zero durable proposals producing zero valuation Sources and
+Claims; precise section provenance; `reportType=valuation`; Consensus
+unavailable; DCF deferred; and an executable Real Pi acceptance gate.
+
+`RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001-FIX-001` is also PASS / CLOSED by
+the same CTO acceptance. The accepted evidence remains `EXECUTED / PASS GATE`
+for Real Pi; AKShare provider smoke remains `PROVIDER_TRANSPORT_BLOCKED` as a
+non-blocking operational/provider-availability risk, with no provider added by
+this closure.
+
+M1 and M2 remain PASS / CLOSED, and M3 Architecture remains PASS / FROZEN.
+M3A-3 Event Research and M3A-4 Thesis Red Team remain NOT STARTED; M3B
+Industry Research remains NOT STARTED / ARCHITECTURE REQUIRED; Theme Framework
+remains DEFERRED.
+
 ## RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001-FIX-001 — Implementation State — 2026-09-09
 
 Status: `FIX-001 IMPLEMENTED / CTO ACCEPTANCE PENDING`
+
+Historical implementation-state record; superseded by the CTO acceptance
+closure entry above.
 
 FIX-001 preserves the accepted Valuation architecture and closes state
 maintenance and provenance gaps. Valuation proposals now rely on the existing
