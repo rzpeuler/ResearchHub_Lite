@@ -1,5 +1,50 @@
 # ResearchHub_Lite — Decision Log
 
+## RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001 — Implementation State — 2026-09-09
+
+**Status:** IMPLEMENTED / CTO ACCEPTANCE PENDING
+
+M3A-3 Event Research is implemented on the frozen Personal Research v1
+Research Coverage architecture. The vertical investigates one already selected
+material event for one existing canonical A-share Company. It resolves a Daily
+Signal through the narrow exact `getById` bridge or accepts bounded article,
+URL, and user-event anchors; validates absolute HTTP/HTTPS targets and rejects
+private/loopback/credential-bearing/unsafe URLs before fetch; targets only the
+existing CNINFO Official and GDELT plugins with six-per-provider and twelve
+global source bounds; and preserves point-in-time, event-window, URL/content
+deduplication, and provider transport/fetch/usable-evidence distinctions.
+
+Workflow owns exact Company coverage, anchor resolution, deterministic
+`eventFingerprint` and `eventDate`, source roles, verification, cancellation,
+structured values, proposal admissibility, and Gateway authority. Skill owns
+bounded `event_evidence_assessment` and `event_research_synthesis` contracts,
+one repair per stage, and semantic impact methodology. Canonical mutation
+remains exclusively Gateway -> validated ChangeSet -> Writer. Weak, conflicted,
+unverified, or fallback reasoning cannot create durable event evidence; strong
+verification may create one stable event-occurrence Claim plus bounded
+viewpoint/risk/catalyst/assumption proposals with proposal-referenced-only
+evidence. Thesis impact is report-level.
+
+The authoritative entrypoints are the shared ResearchService Event Research
+path, Pi `research_event`, and the corresponding HTTP product action. No Event
+Research manager, generic provider/URL framework, Pi RPC subprocess, browser
+filesystem access, Schema/Gateway/Writer redesign, or Daily discovery/scheduler
+change was introduced. M3A-4 remains not started, M3B remains architecture
+required, and Theme remains deferred.
+
+Validation evidence records 51/51 focused Event Research Skill/Workflow tests,
+the observed full Node suite with two concurrent route-test timing failures and
+the 21/21 Client suite, root typecheck, and
+`git diff --check` as passing observations. The executable Real Pi harness used
+the actual `PiReasoningExecutor`, selected model
+`zhipu-openapi/glm-5.3-flash`, fresh Schema 0.4 / Storage 1 Knowledge, seeded
+Daily Signal, official/supporting/irrelevant fixtures, and classified
+`REAL_MODEL_CONTRACT_BLOCKED`: Stage B required fallback, although the report
+was persisted through the existing report writer. The separate provider smoke
+recorded CNINFO transport success with zero candidates and GDELT HTTP 429 as
+non-blocking operational availability evidence. This record does not mark
+M3A-3 PASS / CLOSED.
+
 ## RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001 — CTO Acceptance Closure — 2026-09-09
 
 **Status:** PASS / CLOSED by CTO acceptance

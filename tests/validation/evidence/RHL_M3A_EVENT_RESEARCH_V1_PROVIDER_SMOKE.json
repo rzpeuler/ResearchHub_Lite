@@ -1,0 +1,49 @@
+{
+  "generatedAt": "2026-09-09T06:44:02.961Z",
+  "startedAt": "2026-09-09T06:43:52.210Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001",
+  "classification": "NON_BLOCKING_PROVIDER_SMOKE",
+  "company": {
+    "symbol": "600519",
+    "name": "贵州茅台",
+    "exchange": "SSE"
+  },
+  "asOf": "2026-09-08T23:59:59.000Z",
+  "bounds": {
+    "providers": [
+      "CNINFO Official",
+      "GDELT"
+    ],
+    "limitPerProvider": 6,
+    "globalNormalizedSourceCap": 12,
+    "eventWindowDaysMaximum": 30
+  },
+  "providers": [
+    {
+      "provider": "CNINFO",
+      "attempted": true,
+      "transportSucceeded": true,
+      "fetchAttempted": false,
+      "fetchSucceeded": false,
+      "normalizeSucceeded": false,
+      "candidateCount": 0,
+      "usableCandidateCount": 0,
+      "classification": "TRANSPORT_SUCCEEDED / EMPTY"
+    },
+    {
+      "provider": "GDELT",
+      "attempted": true,
+      "transportSucceeded": false,
+      "fetchAttempted": false,
+      "fetchSucceeded": false,
+      "normalizeSucceeded": false,
+      "candidateCount": 0,
+      "usableCandidateCount": 0,
+      "classification": "PROVIDER_TRANSPORT_BLOCKED",
+      "error": "fetch failed"
+    }
+  ],
+  "nonBlocking": true,
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}

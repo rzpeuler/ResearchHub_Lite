@@ -71,7 +71,7 @@ export interface EventResearchTelemetry {
   readonly canonicalSourceCount: number
   readonly canonicalClaimCount: number
   readonly canonicalDeltaCount: number
-  readonly reportPersistence: 'deferred_report_contract'
+  readonly reportPersistence: 'persisted'
   readonly diagnostics: readonly string[]
 }
 
@@ -124,4 +124,4 @@ export interface EventResearchWorkflowResult {
  * and validateResearchReport's accepted report types before this draft can be
  * persisted through writeResearchReport.
  */
-export const EVENT_RESEARCH_REPORT_CONTRACT_NOTE = 'Extend app/services/research-report.ts: ResearchReport.reportType, validateResearchReport, and renderResearchReport must accept event_research.'
+export const EVENT_RESEARCH_REPORT_CONTRACT_NOTE = 'ResearchReport accepts event_research and is persisted through the existing report writer.'

@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-09-09T06:43:37.000Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001",
+  "classification": "REAL_MODEL_CONTRACT_BLOCKED",
+  "processExitCode": 1,
+  "implementationCommit": "pre-commit-working-tree",
+  "sourceBaseline": "37b4a0e664441f0c3cdc4dc5bd42c238649a9dce",
+  "workingTreeDiffCleanAfterGeneration": false,
+  "realPiReasoningExecutor": true,
+  "host": {
+    "provider": "pi-coding-agent",
+    "requestedModel": "zhipu-openapi/glm-5.3-flash"
+  },
+  "operations": [
+    "event_evidence_assessment",
+    "event_research_synthesis",
+    "event_research_synthesis"
+  ],
+  "gate": {
+    "executed": true,
+    "realPiReasoningExecutor": true,
+    "operations": [
+      "event_evidence_assessment",
+      "event_research_synthesis",
+      "event_research_synthesis"
+    ],
+    "assessmentCalled": true,
+    "assessmentValidated": true,
+    "assessmentApplied": true,
+    "synthesisCalled": true,
+    "synthesisValidated": false,
+    "synthesisApplied": false,
+    "fallbackUsed": true,
+    "strongVerification": true,
+    "reportType": "event_research",
+    "reportSectionCount": 16,
+    "reportPersisted": true,
+    "acceptedProposalCount": 1,
+    "canonicalSourceCountDelta": 2,
+    "canonicalClaimCountDelta": 1,
+    "irrelevantSourceCanonicalized": false,
+    "workflowTerminalStatus": "completed"
+  },
+  "run": {
+    "status": "completed",
+    "reportId": "event-research-600519-event-387e5266580723ba3d257054-pi-event-research-001",
+    "reportPath": "event-research-600519-event-387e5266580723ba3d257054-pi-event-research-001.md",
+    "errors": [],
+    "diagnostics": []
+  },
+  "verification": {
+    "verificationLevel": "official_verified",
+    "strongVerification": true,
+    "supportingSourceCandidateIds": [
+      "pi-event-official",
+      "pi-event-supporting"
+    ],
+    "contradictingSourceCandidateIds": []
+  },
+  "canonicalCounts": {
+    "entities": 1,
+    "sources": 3,
+    "claims": 3
+  },
+  "reportContract": {
+    "persisted": true,
+    "workflowState": "persisted",
+    "note": "event_research is admitted by app/services/research-report.ts and persisted by the existing report writer; the Real Pi gate remains blocked by bounded Stage B fallback"
+  },
+  "irrelevantSourceCanonicalized": false,
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}

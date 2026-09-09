@@ -2,6 +2,17 @@
 
 ## 2026-09-09
 
+- Implemented `RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001` pending CTO
+  acceptance: added the Event Research architecture record, bounded anchor and
+  Daily Signal bridge documentation, CNINFO/GDELT bounds, deterministic
+  fingerprint/date and verification/proposal gates, fallback/report contract
+  notes, row-level evidence, an executable Real Pi gate/harness, and a separate
+  non-blocking provider smoke. Focused Event Research validation observed
+  `43/43 PASS`; Real Pi is honestly `REAL_MODEL_CONTRACT_BLOCKED` because Stage B
+  fell back, although the admitted `event_research` report was persisted;
+  provider smoke observed CNINFO empty and GDELT HTTP 429. Task 5 did
+  not modify Task 2/3/app integration code, Schema, Gateway, or Writer.
+
 - Closed `RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001` and
   `RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001-FIX-001` as `PASS / CLOSED by CTO
   acceptance`. Accepted implementation head:

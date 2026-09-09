@@ -33,7 +33,7 @@ export function validateResearchReport(report: ResearchReport): ResearchReport {
   if (typeof report.methodology !== 'string' || report.methodology.trim() === '') throw new TypeError('methodology is required')
   if (!report.sections || report.sections.length === 0 || report.sections.some((section: ResearchReportSection) => !safeId.test(section.id) || section.title.trim() === '' || section.markdown.trim() === '')) throw new TypeError('sections must contain non-empty Markdown sections')
   if (report.sections.some((section: ResearchReportSection) => (section.sourceRefs ?? []).some((item: string) => !/^source:[^\s]+$/.test(item)) || (section.claimRefs ?? []).some((item: string) => !/^claim:[^\s]+$/.test(item)))) throw new TypeError('section references must be canonical Source/Claim references')
-  if (report.sections.some((section: ResearchReportSection) => (section.signalRefs ?? []).some((item: string) => !/^signal-[^\s]+$/.test(item)))) throw new TypeError('signalRefs must contain ResearchSignal references')
+  if (report.sections.some((section: ResearchReportSection) => (section.signalRefs ?? []).some((item: string) => !safeId.test(item)))) throw new TypeError('signalRefs must contain safe ResearchSignal references')
   if (typeof report.outputPath !== 'string' || report.outputPath.trim() === '' || isAbsolute(report.outputPath) || report.outputPath.split(/[\\/]+/).includes('..')) throw new TypeError('outputPath must be a safe relative file path')
   return report
 }

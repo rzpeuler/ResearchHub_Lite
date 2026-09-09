@@ -1,0 +1,919 @@
+{
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001",
+  "generatedFrom": [
+    "tests/workflows/event-research.test.ts",
+    "tests/workflows/event-research-skill.test.ts",
+    "tests/validation/event-research-pi-e2e.ts",
+    "tests/validation/event-research-provider-smoke.ts"
+  ],
+  "focusedRun": {
+    "command": "node --import tsx --test tests/workflows/event-research.test.ts tests/workflows/event-research-skill.test.ts",
+    "tests": 43,
+    "pass": 43,
+    "fail": 0
+  },
+  "statusLegend": {
+    "PASS": "executed assertion passed",
+    "BLOCKED": "executed gate did not meet acceptance conditions",
+    "EXECUTED / NON-BLOCKING": "executed informational smoke; does not establish product acceptance",
+    "NOT_EXECUTED": "not run; never converted to PASS"
+  },
+  "rows": [
+    {
+      "testId": "E1",
+      "requirement": "exact existing Company coverage blocks providers and reasoning",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E1-E4 exact existing Company coverage blocks providers and reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E2",
+      "requirement": "exact existing Company coverage blocks providers and reasoning",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E1-E4 exact existing Company coverage blocks providers and reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E3",
+      "requirement": "exact existing Company coverage blocks providers and reasoning",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E1-E4 exact existing Company coverage blocks providers and reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E4",
+      "requirement": "exact existing Company coverage blocks providers and reasoning",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E1-E4 exact existing Company coverage blocks providers and reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E5",
+      "requirement": "ambiguous canonical Company coverage blocks",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E5 ambiguous canonical Company coverage blocks",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E6",
+      "requirement": "Daily Signal exact lookup, company binding, and missing-signal blocking",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E6-E8 Daily Signal is exact, company-bound, and missing signals block",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E7",
+      "requirement": "Daily Signal exact lookup, company binding, and missing-signal blocking",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E6-E8 Daily Signal is exact, company-bound, and missing signals block",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E8",
+      "requirement": "Daily Signal exact lookup, company binding, and missing-signal blocking",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E6-E8 Daily Signal is exact, company-bound, and missing signals block",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E9",
+      "requirement": "bounded dates, future rejection, stable fingerprint, and deterministic eventDate",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E9-E14 bounded dates reject future and impossible calendar inputs and derive a stable fingerprint/date",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E10",
+      "requirement": "bounded dates, future rejection, stable fingerprint, and deterministic eventDate",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E9-E14 bounded dates reject future and impossible calendar inputs and derive a stable fingerprint/date",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E11",
+      "requirement": "bounded dates, future rejection, stable fingerprint, and deterministic eventDate",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E9-E14 bounded dates reject future and impossible calendar inputs and derive a stable fingerprint/date",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E12",
+      "requirement": "bounded dates, future rejection, stable fingerprint, and deterministic eventDate",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E9-E14 bounded dates reject future and impossible calendar inputs and derive a stable fingerprint/date",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E13",
+      "requirement": "bounded dates, future rejection, stable fingerprint, and deterministic eventDate",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E9-E14 bounded dates reject future and impossible calendar inputs and derive a stable fingerprint/date",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E14",
+      "requirement": "bounded dates, future rejection, stable fingerprint, and deterministic eventDate",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E9-E14 bounded dates reject future and impossible calendar inputs and derive a stable fingerprint/date",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E15",
+      "requirement": "targeted CNINFO/GDELT calls and six-per-provider/twelve-global bounds",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E15-E25 only targeted CNINFO/GDELT are called with six-per-provider and twelve-global bounds",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E16",
+      "requirement": "targeted CNINFO/GDELT calls and six-per-provider/twelve-global bounds",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E15-E25 only targeted CNINFO/GDELT are called with six-per-provider and twelve-global bounds",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E17",
+      "requirement": "targeted CNINFO/GDELT calls and six-per-provider/twelve-global bounds",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E15-E25 only targeted CNINFO/GDELT are called with six-per-provider and twelve-global bounds",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E18",
+      "requirement": "targeted CNINFO/GDELT calls and six-per-provider/twelve-global bounds",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E15-E25 only targeted CNINFO/GDELT are called with six-per-provider and twelve-global bounds",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E19",
+      "requirement": "targeted CNINFO/GDELT calls and six-per-provider/twelve-global bounds",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E15-E25 only targeted CNINFO/GDELT are called with six-per-provider and twelve-global bounds",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E20",
+      "requirement": "targeted CNINFO/GDELT calls and six-per-provider/twelve-global bounds",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E15-E25 only targeted CNINFO/GDELT are called with six-per-provider and twelve-global bounds",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E21",
+      "requirement": "targeted CNINFO/GDELT calls and six-per-provider/twelve-global bounds",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E15-E25 only targeted CNINFO/GDELT are called with six-per-provider and twelve-global bounds",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E22",
+      "requirement": "targeted CNINFO/GDELT calls and six-per-provider/twelve-global bounds",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E15-E25 only targeted CNINFO/GDELT are called with six-per-provider and twelve-global bounds",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E23",
+      "requirement": "targeted CNINFO/GDELT calls and six-per-provider/twelve-global bounds",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E15-E25 only targeted CNINFO/GDELT are called with six-per-provider and twelve-global bounds",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E24",
+      "requirement": "targeted CNINFO/GDELT calls and six-per-provider/twelve-global bounds",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E15-E25 only targeted CNINFO/GDELT are called with six-per-provider and twelve-global bounds",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E25",
+      "requirement": "targeted CNINFO/GDELT calls and six-per-provider/twelve-global bounds",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E15-E25 only targeted CNINFO/GDELT are called with six-per-provider and twelve-global bounds",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E26",
+      "requirement": "future/out-of-window filtering and URL/content deduplication",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E26-E33 future/out-of-window/URL/content duplicates are filtered before reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E27",
+      "requirement": "future/out-of-window filtering and URL/content deduplication",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E26-E33 future/out-of-window/URL/content duplicates are filtered before reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E28",
+      "requirement": "future/out-of-window filtering and URL/content deduplication",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E26-E33 future/out-of-window/URL/content duplicates are filtered before reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E29",
+      "requirement": "future/out-of-window filtering and URL/content deduplication",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E26-E33 future/out-of-window/URL/content duplicates are filtered before reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E30",
+      "requirement": "future/out-of-window filtering and URL/content deduplication",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E26-E33 future/out-of-window/URL/content duplicates are filtered before reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E31",
+      "requirement": "future/out-of-window filtering and URL/content deduplication",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E26-E33 future/out-of-window/URL/content duplicates are filtered before reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E32",
+      "requirement": "future/out-of-window filtering and URL/content deduplication",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E26-E33 future/out-of-window/URL/content duplicates are filtered before reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E33",
+      "requirement": "future/out-of-window filtering and URL/content deduplication",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E26-E33 future/out-of-window/URL/content duplicates are filtered before reasoning",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E33a",
+      "requirement": "transport/fetch success is independent from usable evidence",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E33a provider transport/fetch success is independent from usable normalized evidence",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E34",
+      "requirement": "Company-only Existing Knowledge projection and bounded Stage A evidence",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E34-E41 company-only projection is bounded and Stage A receives bounded evidence",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E35",
+      "requirement": "Company-only Existing Knowledge projection and bounded Stage A evidence",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E34-E41 company-only projection is bounded and Stage A receives bounded evidence",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E36",
+      "requirement": "Company-only Existing Knowledge projection and bounded Stage A evidence",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E34-E41 company-only projection is bounded and Stage A receives bounded evidence",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E37",
+      "requirement": "Company-only Existing Knowledge projection and bounded Stage A evidence",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E34-E41 company-only projection is bounded and Stage A receives bounded evidence",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E38",
+      "requirement": "Company-only Existing Knowledge projection and bounded Stage A evidence",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E34-E41 company-only projection is bounded and Stage A receives bounded evidence",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E39",
+      "requirement": "Company-only Existing Knowledge projection and bounded Stage A evidence",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E34-E41 company-only projection is bounded and Stage A receives bounded evidence",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E40",
+      "requirement": "Company-only Existing Knowledge projection and bounded Stage A evidence",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E34-E41 company-only projection is bounded and Stage A receives bounded evidence",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E41",
+      "requirement": "Company-only Existing Knowledge projection and bounded Stage A evidence",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E34-E41 company-only projection is bounded and Stage A receives bounded evidence",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E42",
+      "requirement": "strong verification, event occurrence, 16 sections, and proposal evidence narrowing",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42-E52 strong verification creates one deterministic event occurrence and narrows evidence to proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E43",
+      "requirement": "strong verification, event occurrence, 16 sections, and proposal evidence narrowing",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42-E52 strong verification creates one deterministic event occurrence and narrows evidence to proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E44",
+      "requirement": "strong verification, event occurrence, 16 sections, and proposal evidence narrowing",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42-E52 strong verification creates one deterministic event occurrence and narrows evidence to proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E45",
+      "requirement": "strong verification, event occurrence, 16 sections, and proposal evidence narrowing",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42-E52 strong verification creates one deterministic event occurrence and narrows evidence to proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E46",
+      "requirement": "strong verification, event occurrence, 16 sections, and proposal evidence narrowing",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42-E52 strong verification creates one deterministic event occurrence and narrows evidence to proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E47",
+      "requirement": "strong verification, event occurrence, 16 sections, and proposal evidence narrowing",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42-E52 strong verification creates one deterministic event occurrence and narrows evidence to proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E48",
+      "requirement": "strong verification, event occurrence, 16 sections, and proposal evidence narrowing",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42-E52 strong verification creates one deterministic event occurrence and narrows evidence to proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E49",
+      "requirement": "strong verification, event occurrence, 16 sections, and proposal evidence narrowing",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42-E52 strong verification creates one deterministic event occurrence and narrows evidence to proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E50",
+      "requirement": "strong verification, event occurrence, 16 sections, and proposal evidence narrowing",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42-E52 strong verification creates one deterministic event occurrence and narrows evidence to proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E51",
+      "requirement": "strong verification, event occurrence, 16 sections, and proposal evidence narrowing",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42-E52 strong verification creates one deterministic event occurrence and narrows evidence to proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E52",
+      "requirement": "strong verification, event occurrence, 16 sections, and proposal evidence narrowing",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42-E52 strong verification creates one deterministic event occurrence and narrows evidence to proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E42a",
+      "requirement": "event occurrence requires verified supporting evidence",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42a event occurrence requires a verified fact supported by deterministic supporting sources",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E42b",
+      "requirement": "Stage B receives exact bounded supporting/contradicting excerpts and allowlists",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42b Stage B receives exact bounded supporting and contradicting excerpts and allowlists",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E42c",
+      "requirement": "Gateway failed and blocked outcomes preserve distinct workflow status",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E42c Gateway failed and blocked outcomes preserve distinct workflow status",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E53",
+      "requirement": "weak/conflicted verification completes with zero durable canonical output",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E53-E58 weak or conflicted verification completes safely with zero durable canonical output",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E54",
+      "requirement": "weak/conflicted verification completes with zero durable canonical output",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E53-E58 weak or conflicted verification completes safely with zero durable canonical output",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E55",
+      "requirement": "weak/conflicted verification completes with zero durable canonical output",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E53-E58 weak or conflicted verification completes safely with zero durable canonical output",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E56",
+      "requirement": "weak/conflicted verification completes with zero durable canonical output",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E53-E58 weak or conflicted verification completes safely with zero durable canonical output",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E57",
+      "requirement": "weak/conflicted verification completes with zero durable canonical output",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E53-E58 weak or conflicted verification completes safely with zero durable canonical output",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E58",
+      "requirement": "weak/conflicted verification completes with zero durable canonical output",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E53-E58 weak or conflicted verification completes safely with zero durable canonical output",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E59",
+      "requirement": "one repair per stage and safe fallback without unauthorized references",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E59-E64 Stage A/B repair is one attempt and invalid output falls back without unauthorized refs",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E60",
+      "requirement": "one repair per stage and safe fallback without unauthorized references",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E59-E64 Stage A/B repair is one attempt and invalid output falls back without unauthorized refs",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E61",
+      "requirement": "one repair per stage and safe fallback without unauthorized references",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E59-E64 Stage A/B repair is one attempt and invalid output falls back without unauthorized refs",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E62",
+      "requirement": "one repair per stage and safe fallback without unauthorized references",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E59-E64 Stage A/B repair is one attempt and invalid output falls back without unauthorized refs",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E63",
+      "requirement": "one repair per stage and safe fallback without unauthorized references",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E59-E64 Stage A/B repair is one attempt and invalid output falls back without unauthorized refs",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E64",
+      "requirement": "one repair per stage and safe fallback without unauthorized references",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E59-E64 Stage A/B repair is one attempt and invalid output falls back without unauthorized refs",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E65",
+      "requirement": "replay preserves deterministic event occurrence Claim slot",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E65-E69 replay keeps the event occurrence Claim slot stable",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E66",
+      "requirement": "replay preserves deterministic event occurrence Claim slot",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E65-E69 replay keeps the event occurrence Claim slot stable",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E67",
+      "requirement": "replay preserves deterministic event occurrence Claim slot",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E65-E69 replay keeps the event occurrence Claim slot stable",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E68",
+      "requirement": "replay preserves deterministic event occurrence Claim slot",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E65-E69 replay keeps the event occurrence Claim slot stable",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E69",
+      "requirement": "replay preserves deterministic event occurrence Claim slot",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E65-E69 replay keeps the event occurrence Claim slot stable",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E70",
+      "requirement": "manual article/user-event content remains non-canonical anchor context",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E70-E75 manual article/user event content remains anchor context and is never canonical evidence by itself",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E71",
+      "requirement": "manual article/user-event content remains non-canonical anchor context",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E70-E75 manual article/user event content remains anchor context and is never canonical evidence by itself",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E72",
+      "requirement": "manual article/user-event content remains non-canonical anchor context",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E70-E75 manual article/user event content remains anchor context and is never canonical evidence by itself",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E73",
+      "requirement": "manual article/user-event content remains non-canonical anchor context",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E70-E75 manual article/user event content remains anchor context and is never canonical evidence by itself",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E74",
+      "requirement": "manual article/user-event content remains non-canonical anchor context",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E70-E75 manual article/user event content remains anchor context and is never canonical evidence by itself",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E75",
+      "requirement": "manual article/user-event content remains non-canonical anchor context",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E70-E75 manual article/user event content remains anchor context and is never canonical evidence by itself",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E76",
+      "requirement": "cancellation and explicit report-contract gap",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E76-E80 cancellation is safe at the workflow boundary and report contract gap is explicit",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E77",
+      "requirement": "cancellation and explicit report-contract gap",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E76-E80 cancellation is safe at the workflow boundary and report contract gap is explicit",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E78",
+      "requirement": "cancellation and explicit report-contract gap",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E76-E80 cancellation is safe at the workflow boundary and report contract gap is explicit",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E79",
+      "requirement": "cancellation and explicit report-contract gap",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E76-E80 cancellation is safe at the workflow boundary and report contract gap is explicit",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E80",
+      "requirement": "cancellation and explicit report-contract gap",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E76-E80 cancellation is safe at the workflow boundary and report contract gap is explicit",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E81",
+      "requirement": "timestamp versus calendar-date point-in-time semantics",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E81 anchor point-in-time checks use full timestamps while calendar user events remain valid by day",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E82",
+      "requirement": "Daily Signal timestamp validation never substitutes discoveredAt",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E82 daily signals require valid stored timestamps and never use discoveredAt as eventDate",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E83",
+      "requirement": "anchor bounds and unsafe URL rejection before fetch",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E83 anchor fields and source URLs are bounded and unsafe URL targets are rejected before fetch",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E84",
+      "requirement": "provider transport/fetch/usable status separation",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E84 provider outcome flags distinguish transport, fetch, and usable evidence without contradictory status",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E85",
+      "requirement": "verification, contradicting, and background source roles",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E85 Stage A roles distinguish verification, contradicting, and background sources",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E86",
+      "requirement": "cancellation retains audit context and prevents Gateway commit",
+      "testFile": "tests/workflows/event-research.test.ts",
+      "testName": "E86 cancellation before Gateway retains audit context and does not commit",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-1",
+      "requirement": "Stage A exact shape and allowlists",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-1 Stage A uses the exact sourceAssessments shape and allowlists",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-1b",
+      "requirement": "Stage A duplicate/size/structured-value rejection",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-1b Stage A rejects duplicate sources, oversized arrays, and malformed structured values",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-1c",
+      "requirement": "Stage A source metadata fail-closed contract",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-1c Stage A contracts describe structured values and fail closed on source metadata",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-2",
+      "requirement": "Stage A forged source reference rejection",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-2 Stage A accepts context and rejects forged source references",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-3",
+      "requirement": "deterministic verification levels",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-3 Stage A derives deterministic verification levels",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-3b",
+      "requirement": "verification rejects empty/forged sources",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-3b verification never trusts empty or forged source sets",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-3c",
+      "requirement": "source catalog bounds before traversal",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-3c source catalogs are rejected before any truncating traversal",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-4",
+      "requirement": "one bounded Stage A repair",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-4 Stage A makes at most one bounded repair attempt",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-4b",
+      "requirement": "repair input bounds",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-4b repair input bounds oversized hidden refs and model projections",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-5",
+      "requirement": "Stage B exact sections and structured assumptions",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-5 Stage B validates exact sections, impacts, and structured assumption updates",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-6",
+      "requirement": "Stage B forged/incompatible/over-broad proposal rejection",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-6 Stage B rejects forged refs, incompatible impacts, and over-broad proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-6b",
+      "requirement": "Stage B verification consistency",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-6b Stage B derives verification and rejects forged or inconsistent caller verification",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-6c",
+      "requirement": "bounded supporting/contradicting excerpts",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-6c Stage B request receives bounded supporting and contradicting source excerpts",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-6d",
+      "requirement": "exact Claim refs by impact disposition",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-6d Stage B requires exact existing Claim refs by impact disposition",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-6e",
+      "requirement": "assessment/reference array bounds",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-6e Stage B rejects oversized assessments and reference arrays before traversal",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-7",
+      "requirement": "unsupported numeric claims fail closed",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-7 unsupported numeric claims fail closed while event occurrence values are deterministic",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-7b",
+      "requirement": "canonical proposal shape conversion",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-7b Gateway conversion returns only the canonical proposal shape",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-7c",
+      "requirement": "authoritative proposal dates/structured values",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-7c proposal dates require authoritative dates and bounded structured values",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-8",
+      "requirement": "weak verification no durable proposals",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-8 weak verification returns a report contract with no durable proposals",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "ER-SKILL-9",
+      "requirement": "bounded Stage B repair/fallback",
+      "testFile": "tests/workflows/event-research-skill.test.ts",
+      "testName": "ER-SKILL-9 Stage B repair is bounded and invalid output falls back safely",
+      "status": "PASS",
+      "evidence": "focused run: 51/51 tests passed"
+    },
+    {
+      "testId": "E87",
+      "requirement": "Real Pi E2E gate: actual PiReasoningExecutor, Stage A/B, verification, deltas, report persistence, and irrelevant-source exclusion",
+      "testFile": "tests/validation/event-research-pi-e2e.ts",
+      "testName": "event-research-pi-e2e.ts with event-research-pi-e2e-gate.ts",
+      "status": "BLOCKED",
+      "evidence": "executed; REAL_MODEL_CONTRACT_BLOCKED: Stage B fallback and event_research report persistence contract not admitted"
+    },
+    {
+      "testId": "E88",
+      "requirement": "CNINFO/GDELT provider smoke is bounded, separate, and non-blocking",
+      "testFile": "tests/validation/event-research-provider-smoke.ts",
+      "testName": "event-research-provider-smoke.ts",
+      "status": "EXECUTED / NON-BLOCKING",
+      "evidence": "CNINFO transport succeeded with 0 candidates; GDELT HTTP 429; no product PASS claimed"
+    }
+  ]
+}
