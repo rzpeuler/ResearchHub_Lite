@@ -56,6 +56,9 @@ export interface EventResearchTelemetry {
   readonly sourceRoleCounts: Readonly<Record<EventSourceRole, number>>
   readonly providerTransportSucceeded: Readonly<Record<string, boolean>>
   readonly providerFetchSucceeded: Readonly<Record<string, boolean>>
+  readonly providerSucceeded: Readonly<Record<string, boolean>>
+  readonly providerFailed: Readonly<Record<string, boolean>>
+  readonly providerUsableSourceCounts: Readonly<Record<string, number>>
   readonly assessment: EventResearchReasoningTelemetry
   readonly synthesis: EventResearchReasoningTelemetry
   readonly verification: EventVerificationResult
