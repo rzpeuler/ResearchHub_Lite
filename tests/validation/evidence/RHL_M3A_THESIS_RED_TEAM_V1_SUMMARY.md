@@ -1,16 +1,16 @@
-# RHL M3A-4 Thesis Red Team v1 Evidence Summary
+# RHL M3A-4 Thesis Red Team v1 FIX-001 Evidence Summary
 
-- Task: `RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001`
-- Real Pi E2E: `EXECUTED / PASS GATE`
+- Task: `RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-001`
+- Real Pi E2E: `REAL_MODEL_CONTRACT_BLOCKED`
 - Model: `zhipu-openapi/glm-5.3-flash`
-- Stage A/B: both executed; each used at most one bounded repair and passed validation.
-- Exact active Company/Thesis resolution: passed.
-- Dependency projection: 3 Claims; critical assumptions: 1; recent Signals: 1.
-- Attack design: 8 vectors; 1 invalidation condition.
-- Synthesis: 2 disconfirming assessments, 3 challenges, 1 alternative explanation, 1 failure case, 2 affected existing Claims, 3 interpretations.
-- Durable boundary: 3 accepted proposals; canonical Sources +3 and Claims +3; no Thesis proposal; target Thesis hash and lifecycle unchanged.
-- Noncanonical boundary: Daily Signal and irrelevant source were not canonicalized.
-- Report: `thesis_red_team`, exactly 16 sections, persisted.
+- Exact active Company/Thesis resolution: passed; dependency projection 3 Claims, 1 critical assumption, 1 recent Signal.
+- Stage A: model first output and one model repair were both semantically invalid; `fallbackUsed=true`, `validated=false`, `applied=false`.
+- Stage B: model first output and one model repair were both semantically invalid; `fallbackUsed=true`, `validated=false`, `applied=false`.
+- No synthetic semantic fallback was used. No evidence, challenge, interpretation, verdict, or proposal was fabricated after repair failure.
+- Durable write gate: closed; canonical Source/Claim delta 0/0.
+- Actual persisted Thesis hash and lifecycle were unchanged; Company hash was unchanged.
+- Daily Signal, irrelevant source, and unknown-date source were not canonicalized.
+- Report: `thesis_red_team`, exactly 16 sections, persisted as a blocked research-gap report.
 - Raw bodies and secrets: excluded from evidence.
 
-Classification remains `IMPLEMENTED / CTO ACCEPTANCE PENDING`; the real-run gate is evidence, not CTO acceptance.
+This is honest blocked evidence, not a real-model acceptance pass. Final task status remains `IMPLEMENTED / CTO ACCEPTANCE PENDING`.

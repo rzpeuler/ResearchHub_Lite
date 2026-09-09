@@ -5,8 +5,8 @@
 | Skill projection and bounds | `tests/workflows/thesis-red-team-skill.test.ts` | PASS |
 | Stage A / Stage B contracts and legacy report rejection | `tests/workflows/thesis-red-team-skill.test.ts` | PASS |
 | Independent acceptance gate | `tests/validation/thesis-red-team-pi-e2e-gate.test.ts` | 7/7 PASS |
-| Real PiReasoningExecutor product E2E | `tests/validation/thesis-red-team-pi-e2e.ts` | `EXECUTED / PASS GATE` |
+| Real PiReasoningExecutor product E2E | `tests/validation/thesis-red-team-pi-e2e.ts` | `REAL_MODEL_CONTRACT_BLOCKED` after one model repair; no synthetic fallback |
 | CNINFO/GDELT provider seam smoke | `RHL_M3A_THESIS_RED_TEAM_V1_PROVIDER_SMOKE.json` | PASS, non-blocking |
 | TypeScript contracts | `npm run typecheck --silent` | PASS |
 
-Final status: `IMPLEMENTED / CTO ACCEPTANCE PENDING`.
+FIX-001 status: `IMPLEMENTED / CTO ACCEPTANCE PENDING`; CTO acceptance remains blocked by the real model contract result.

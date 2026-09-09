@@ -900,3 +900,8 @@ The fix also routes evidence through the existing Raw archive and integrity veri
 
 RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001 is IMPLEMENTED / CTO ACCEPTANCE PENDING. The implementation is isolated to the approved thesis-red-team Workflow/Skill, narrow Gateway projection, reasoning contracts, Application Service/Pi/HTTP composition, focused tests, and real Pi evidence. No Thesis mutation or replacement is permitted; CTO acceptance remains outstanding.
 
+
+## 2026-09-09 — M3A-4 FIX-001 semantic integrity
+
+RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-001 removes synthetic semantic fallback, separates semantic-core validation from proposal filtering, adds code-owned evidence qualification and verdict consistency, rejects unknown-date durable evidence, verifies persisted Thesis and Company hashes/lifecycles, and adds section-level provenance and regressions. The real Pi run remains REAL_MODEL_CONTRACT_BLOCKED after one repair, so the task remains IMPLEMENTED / CTO ACCEPTANCE PENDING.
+
