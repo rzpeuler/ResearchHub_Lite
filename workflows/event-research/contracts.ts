@@ -14,6 +14,11 @@ export interface EventResearchResolvedAnchor {
   readonly identity: string
 }
 
+export interface EventResearchProviderOutcome extends ResearchProviderOutcome {
+  readonly transportSucceeded: boolean
+  readonly fetchSucceeded: boolean
+}
+
 export interface EventAcquiredSource {
   readonly source: NormalizedResearchSource
   readonly role: EventSourceRole
@@ -49,6 +54,8 @@ export interface EventResearchTelemetry {
   readonly outsideWindowFilteredCount: number
   readonly unknownDateCount: number
   readonly sourceRoleCounts: Readonly<Record<EventSourceRole, number>>
+  readonly providerTransportSucceeded: Readonly<Record<string, boolean>>
+  readonly providerFetchSucceeded: Readonly<Record<string, boolean>>
   readonly assessment: EventResearchReasoningTelemetry
   readonly synthesis: EventResearchReasoningTelemetry
   readonly verification: EventVerificationResult
@@ -96,7 +103,7 @@ export interface EventResearchWorkflowResult {
   readonly errors: readonly string[]
   readonly blockedReason?: 'COMPANY_COVERAGE_NOT_FOUND' | 'COMPANY_COVERAGE_AMBIGUOUS' | 'EVENT_SIGNAL_NOT_FOUND' | 'EVENT_SIGNAL_COMPANY_MISMATCH' | 'EVENT_ASOF_IN_FUTURE' | 'EVENT_DATE_INVALID' | 'EVENT_ANCHOR_INVALID'
   readonly diagnostics: readonly string[]
-  readonly providerOutcomes: readonly ResearchProviderOutcome[]
+  readonly providerOutcomes: readonly EventResearchProviderOutcome[]
   readonly acquiredSources: readonly EventAcquiredSource[]
   readonly existingKnowledge: readonly Record<string, unknown>[]
   readonly evidence?: EventEvidenceAssessmentOutput
