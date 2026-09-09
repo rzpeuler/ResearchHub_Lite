@@ -16,6 +16,8 @@ export interface SemanticProductionProposal {
   readonly targetKey?: string
   readonly attributes?: Readonly<Record<string, unknown>>
   readonly sourceCandidateIds?: readonly string[]
+  /** Optional producer-owned binding to an existing canonical Claim. */
+  readonly existingKnowledgeRefs?: readonly string[]
   readonly temporal?: unknown
   readonly structuredValue?: Readonly<Record<string, unknown>> | null
   readonly confidence?: number

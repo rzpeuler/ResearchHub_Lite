@@ -1,5 +1,5 @@
 {
-  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-001",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-002",
   "classification": "NON_BLOCKING_PROVIDER_SMOKE",
   "providers": [
     { "provider": "CNINFO", "attempted": true, "transportSucceeded": true, "usableSourceCount": 1, "role": "official disclosure" },

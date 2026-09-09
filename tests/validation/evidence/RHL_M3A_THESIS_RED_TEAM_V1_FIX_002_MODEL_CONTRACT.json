@@ -1,0 +1,24 @@
+{
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-002",
+  "model": "zhipu-openapi/glm-5.3-flash",
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false,
+  "stageA": {
+    "initial": { "topLevelKeys": ["attackVectors", "implicitAssumptions", "invalidationConditions"], "attackVectorCount": 8 },
+    "repair": null,
+    "diagnostics": [],
+    "validated": true,
+    "applied": true,
+    "fallbackUsed": false
+  },
+  "stageB": {
+    "initial": { "topLevelKeys": ["challengeAssessments", "evidenceAssessments", "interpretations", "proposals", "thesisVerdict"], "evidenceAssessmentCount": 4, "challengeCount": 10, "proposalCount": 6 },
+    "repair": null,
+    "diagnostics": ["proposal_0_invalid", "proposal_1_invalid", "proposal_2_invalid", "proposal_3_invalid", "proposal_4_invalid", "proposal_5_invalid"],
+    "validated": true,
+    "applied": true,
+    "fallbackUsed": false
+  },
+  "classification": "REAL_MODEL_CONTRACT_BLOCKED",
+  "note": "Structural metadata only; no model raw body or secret was retained."
+}

@@ -905,3 +905,9 @@ RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001 is IMPLEMENTED / CTO ACCEPTANCE
 
 RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-001 removes synthetic semantic fallback, separates semantic-core validation from proposal filtering, adds code-owned evidence qualification and verdict consistency, rejects unknown-date durable evidence, verifies persisted Thesis and Company hashes/lifecycles, and adds section-level provenance and regressions. The real Pi run remains REAL_MODEL_CONTRACT_BLOCKED after one repair, so the task remains IMPLEMENTED / CTO ACCEPTANCE PENDING.
 
+
+## 2026-09-09 — M3A-4 FIX-002 real-model contract closure attempt
+
+FIX-002 now supplies bounded previous model output to the single repair attempt, uses complete structured contracts, performs collection-level evidence corroboration, binds durable proposals to qualified evidence, validates verdict consistency, enforces existing-assumption boundaries, preserves dependency priorities, compares actual persisted Thesis/Company identity and hashes, and emits section-level provenance. Real Pi evidence shows Stage A passed after one repair, while Stage B failed after one repair with challenge_7_invalid; no synthetic semantic fallback or durable write was used. Status remains IMPLEMENTED / CTO ACCEPTANCE PENDING.
+
+FIX-002 final real Pi evidence is `REAL_MODEL_CONTRACT_BLOCKED`: Stage A and Stage B semantic core passed initially, model proposals were rejected by deterministic gates, and no durable Source/Claim write occurred. Status remains `IMPLEMENTED / CTO ACCEPTANCE PENDING`.
