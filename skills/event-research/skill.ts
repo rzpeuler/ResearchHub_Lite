@@ -246,9 +246,9 @@ function validateEvidenceForVerification(input: EventEvidenceAssessmentOutput, s
   const sourceMap = new Map(boundedSources.map((source) => [source.candidateId, source]))
   const assessmentIds = new Set<string>()
   for (const [index, assessment] of input.sourceAssessments.entries()) {
-    if (!isRecord(assessment) || !validSourceId(assessment.sourceCandidateId) || !sourceSet.has(assessment.sourceCandidateId)) throw new EventResearchSemanticError(`Event source assessment ${index} is outside the real source set`, [`source_assessment_${index}_refs_invalid`])
-    if (assessmentIds.has(assessment.sourceCandidateId)) throw new EventResearchSemanticError('Duplicate source assessments are not allowed', ['source_assessment_duplicate'])
-    assessmentIds.add(assessment.sourceCandidateId)
+    const validated = validateSourceAssessment(assessment, index, sourceSet)
+    if (assessmentIds.has(validated.sourceCandidateId)) throw new EventResearchSemanticError('Duplicate source assessments are not allowed', ['source_assessment_duplicate'])
+    assessmentIds.add(validated.sourceCandidateId)
   }
   for (const [index, fact] of input.verifiedFacts.entries()) validatedSourceReferences(fact?.sourceCandidateIds, sourceSet, `verified_fact_${index}`)
   for (const [index, contradiction] of input.contradictions.entries()) validatedSourceReferences(contradiction?.sourceCandidateIds, sourceSet, `contradiction_${index}`)
@@ -302,7 +302,15 @@ export const determineEventVerificationLevel = deriveEventVerification
 export function validateEventVerificationResult(value: unknown): value is EventVerificationResult {
   if (!isRecord(value) || !keysAreAllowed(value, ['verificationLevel', 'strongVerification', 'supportingSourceCandidateIds', 'contradictingSourceCandidateIds']) || !enumValue(value.verificationLevel, ['official_verified', 'corroborated', 'single_source', 'conflicted', 'unverified'] as const) || typeof value.strongVerification !== 'boolean' || !Array.isArray(value.supportingSourceCandidateIds) || !Array.isArray(value.contradictingSourceCandidateIds)) return false
   const supporting = strings(value.supportingSourceCandidateIds); const contradicting = strings(value.contradictingSourceCandidateIds)
-  return supporting.length === value.supportingSourceCandidateIds.length && contradicting.length === value.contradictingSourceCandidateIds.length && new Set(supporting).size === supporting.length && new Set(contradicting).size === contradicting.length && value.strongVerification === (value.verificationLevel === 'official_verified' || value.verificationLevel === 'corroborated')
+  if (supporting.length !== value.supportingSourceCandidateIds.length || contradicting.length !== value.contradictingSourceCandidateIds.length || new Set(supporting).size !== supporting.length || new Set(contradicting).size !== contradicting.length) return false
+  const strong = value.verificationLevel === 'official_verified' || value.verificationLevel === 'corroborated'
+  if (value.strongVerification !== strong) return false
+  if (value.verificationLevel === 'official_verified' && (supporting.length < 1 || contradicting.length > 0)) return false
+  if (value.verificationLevel === 'corroborated' && (supporting.length < 2 || contradicting.length > 0)) return false
+  if (value.verificationLevel === 'single_source' && supporting.length !== 1) return false
+  if (value.verificationLevel === 'conflicted' && (supporting.length < 1 || contradicting.length < 1)) return false
+  if (value.verificationLevel === 'unverified' && (supporting.length !== 0 || contradicting.length !== 0)) return false
+  return true
 }
 
 export function isStrongEventVerification(level: EventVerificationLevel | EventVerificationResult): boolean { return typeof level === 'string' ? level === 'official_verified' || level === 'corroborated' : validateEventVerificationResult(level) && level.strongVerification }
@@ -318,7 +326,7 @@ function validIsoDate(value: string): boolean {
 }
 
 function dateTokens(value: unknown): readonly string[] {
-  return typeof value === 'string' ? [...value.matchAll(/\b\d{4}-\d{2}-\d{2}\b/g)].map((match) => match[0]!) : []
+  return typeof value === 'string' ? [...value.matchAll(/\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:?\d{2})?)?\b/g)].map((match) => match[0]!.slice(0, 10)) : []
 }
 
 function authoritativeDates(input: EventEvidenceAssessmentInput | EventResearchSynthesisInput): ReadonlySet<string> {
@@ -330,7 +338,7 @@ function authoritativeDates(input: EventEvidenceAssessmentInput | EventResearchS
 
 function numericTokens(statement: string, allowedTickers: readonly string[] = []): readonly number[] {
   const tickerSet = new Set(allowedTickers)
-  const masked = statement.replace(/\b\d{4}-\d{2}-\d{2}\b/g, (date) => validIsoDate(date) ? ' ' : date)
+  const masked = statement.replace(/\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:?\d{2})?)?\b/g, (date) => validIsoDate(date.slice(0, 10)) ? ' ' : date)
   return [...masked.matchAll(/[-+]?\d+(?:\.\d+)?/g)].filter((match) => !tickerSet.has(match[0])).map((match) => Number(match[0])).filter((value) => Number.isFinite(value))
 }
 
