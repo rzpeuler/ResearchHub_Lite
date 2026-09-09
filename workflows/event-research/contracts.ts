@@ -71,6 +71,15 @@ export interface EventResearchTelemetry {
   readonly canonicalSourceCount: number
   readonly canonicalClaimCount: number
   readonly canonicalDeltaCount: number
+  readonly directImpactCount: number
+  readonly secondOrderImpactCount: number
+  readonly assumptionImpactCount: number
+  readonly thesisImpactCount: number
+  readonly riskImpactCount: number
+  readonly catalystImpactCount: number
+  readonly affectedExistingClaimCount: number
+  readonly modelDerivedInterpretiveSectionCount: number
+  readonly eventOccurrenceProposalIncluded: boolean
   readonly reportPersistence: 'persisted'
   readonly diagnostics: readonly string[]
 }

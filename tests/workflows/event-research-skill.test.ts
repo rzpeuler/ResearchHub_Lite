@@ -75,7 +75,7 @@ function synthesisInput(strongVerification = true): EventResearchSynthesisInput 
 }
 
 function validSynthesis(overrides: Dict = {}): Dict {
-  const sections = EVENT_RESEARCH_SECTIONS.map((title) => ({ sectionId: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), title, markdown: `Bounded interpretation for ${title}.`, sourceCandidateIds: title === 'Evidence Verification' ? ['official-1'] : [], existingKnowledgeRefs: title === 'Affected Assumptions' ? ['claim:assumption-1'] : [], assessmentRefs: ['impact-1'] }))
+  const sections = EVENT_RESEARCH_SECTIONS.map((title) => ({ sectionId: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), title, markdown: `Bounded interpretation for ${title}.`, sourceCandidateIds: title === 'Source & Evidence Map' ? ['official-1'] : [], existingKnowledgeRefs: title === 'Assumption Impact' ? ['claim:assumption-1'] : [], assessmentRefs: ['impact-1'] }))
   return {
     sections,
     assessments: [{ assessmentId: 'impact-1', disposition: 'changes_assumption', existingKnowledgeRefs: ['claim:assumption-1'], sourceCandidateIds: ['official-1'], rationale: 'The verified event changes the assumption.', directImpact: 'The direct effect is material.', secondOrderImpact: 'The second-order effect requires monitoring.' }],
@@ -243,7 +243,7 @@ test('ER-SKILL-6e Stage B rejects oversized assessments and reference arrays bef
     assert.equal(((contract.assessments as Dict).maxItems), 12)
     assert.equal((((contract.sections as Dict).item as Dict).sourceCandidateIds as Dict).maxItems, 12)
     assert.deepEqual(((contract.sections as Dict).item as Dict).required, ['sectionId', 'title', 'markdown', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs'])
-    assert.deepEqual(((contract.assessments as Dict).item as Dict).required, ['assessmentId', 'disposition', 'existingKnowledgeRefs', 'sourceCandidateIds', 'rationale', 'directImpact', 'secondOrderImpact'])
+    assert.deepEqual(((contract.assessments as Dict).item as Dict).required, ['assessmentId', 'impactType', 'basis', 'direction', 'materiality', 'timeHorizon', 'existingKnowledgeRefs', 'sourceCandidateIds', 'rationale', 'causalChain'])
     assert.deepEqual(((contract.proposals as Dict).item as Dict).required, ['proposalId', 'kind', 'claimType', 'subjectKey', 'statement', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs'])
     assert.deepEqual((((contract.proposals as Dict).item as Dict).claimType as Dict).enum, ['viewpoint', 'risk', 'catalyst', 'assumption'])
     assert.deepEqual((((contract.proposals as Dict).item as Dict).structuredValue as Dict).required, ['metric', 'value', 'unit', 'comparator'])

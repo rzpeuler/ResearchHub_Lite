@@ -1,8 +1,8 @@
 # Personal Research v1 — Event Research Architecture v0.1
 
-Status: `IMPLEMENTED / CTO ACCEPTANCE PENDING`
+Status: `FIX-001 IMPLEMENTED / CTO ACCEPTANCE PENDING`
 
-Task identity: `RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001` (M3A-3)
+Task identity: `RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-001` (M3A-3)
 
 This document records the implemented Event Research vertical on the frozen
 Personal Research v1 Research Coverage architecture. It is additive to the
@@ -94,8 +94,10 @@ not submitted to the Gateway as evidence or a canonical mutation.
 For article/URL anchors, the canonicalized URL is retained as explicit anchor
 metadata. For user events, normalized title, description, and date form the
 bounded identity context. `eventFingerprint` is a deterministic workflow-local
-hash of the exact Company identity plus the strongest available anchor identity
-(`signalId`, canonical URL, or normalized user-event tuple). The model cannot
+hash of the exact Company identity plus event identity. For a Daily Signal, a
+non-empty `clusterKey` is authoritative; otherwise normalized title plus
+authoritative event/published date is used. `signalId` is operational
+provenance only and is never part of durable event identity. The model cannot
 invent or alter it.
 
 `eventDate` is selected by code, in order: explicit valid anchor date,
@@ -170,10 +172,12 @@ complete with zero durable proposals, zero canonical Sources, and zero Claims.
 
 `event_research_synthesis` receives only verified facts, supporting and
 contradicting bounded excerpts, bounded Company-only Knowledge, exact local
-reference allowlists, and deterministic event identity/date. It returns the
-fixed sixteen report sections, impact assessments, and bounded local proposals.
-The model supplies causal interpretation, direct impact, second-order impact,
-affected assumptions, thesis impact, catalysts, risks, and research gaps.
+reference allowlists, and deterministic event identity/date. The model returns
+bounded interpretations, explicit impact assessments, and local proposals;
+code assembles the exact sixteen-section report. Assessments carry explicit
+impact type, basis, direction, materiality, horizon, existing-claim refs,
+source refs, rationale, and causal chain. Second-order assessments require a
+non-empty causal chain; hypothesis-only output is report-only.
 
 Code remains authoritative for evidence validity, canonical identity, numeric
 equality, structured periods/units/comparators, proposal admissibility, and
@@ -202,34 +206,33 @@ proposals means zero canonical event Sources/Claims. Gateway `failed` and
 The report is `reportType: event_research`, subject-scoped to the canonical
 Company, and has exactly these sections:
 
-1. Event Summary
-2. Event Anchor & Scope
-3. Evidence Verification
-4. Verified Event Facts
-5. Contradictions & Uncertainty
+1. Event Definition
+2. Verification Status
+3. Source & Evidence Map
+4. Verified Facts
+5. Conflicting / Unverified Claims
 6. Existing Research Context
-7. Direct Impact
-8. Second-order Impact
-9. Affected Assumptions
-10. Affected Thesis
-11. Catalysts
-12. Risks
-13. Open Research Questions
-14. Proposed Knowledge Updates
-15. Monitoring Plan
-16. Conclusion
+7. First-Order Impact
+8. Second-Order Impact
+9. Business / Industry Transmission
+10. Financial / Operating Implications
+11. Assumption Impact
+12. Thesis Impact
+13. Catalyst Changes
+14. Risk Changes
+15. Valuation / Monitoring Implications
+16. Open Questions / Research Gaps
 
 Top-level references are canonical `source:` and `claim:` refs returned by the
 Gateway. Section provenance is narrowed to the refs that support that section.
 Daily Signal refs and article/URL links remain explicit anchor metadata and do
 not become synthetic canonical refs.
 
-The current implementation builds the typed report result but retains the
-explicit `EVENT_RESEARCH_REPORT_CONTRACT_NOTE`: the shared
-`app/services/research-report.ts` validator/renderer/writer still needs to
-admit `event_research` before report persistence and report retrieval can be
-called accepted. Task 5 records this dependency; it does not modify that
-application integration file.
+The report is assembled by Workflow and persisted through the existing
+`ResearchService.startEventResearch` -> `WorkflowService` -> report-writer
+path. Canonical event occurrence and stable viewpoint/risk/catalyst slots are
+code-owned; a missing authoritative event date is report-only and cannot
+create an occurrence slot.
 
 ## 12. Fallback, cancellation, and telemetry
 

@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-09-09T06:43:37.000Z",
-  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001",
+  "generatedAt": "2026-09-09T07:29:39.589Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-001",
   "classification": "REAL_MODEL_CONTRACT_BLOCKED",
   "processExitCode": 1,
   "implementationCommit": "pre-commit-working-tree",
-  "sourceBaseline": "37b4a0e664441f0c3cdc4dc5bd42c238649a9dce",
+  "sourceBaseline": "2b4b52f4b237972e86eb110ac5147ba4067872be",
   "workingTreeDiffCleanAfterGeneration": false,
   "realPiReasoningExecutor": true,
   "host": {
@@ -39,13 +39,26 @@
     "canonicalSourceCountDelta": 2,
     "canonicalClaimCountDelta": 1,
     "irrelevantSourceCanonicalized": false,
-    "workflowTerminalStatus": "completed"
+    "workflowTerminalStatus": "completed",
+    "eventFingerprintUsesClusterIdentity": true,
+    "stageBRepairAttempts": 1,
+    "directImpactCount": 0,
+    "secondOrderImpactCount": 0,
+    "affectedExistingClaimCount": 0,
+    "modelDerivedInterpretiveSectionCount": 11,
+    "eventOccurrenceProposalIncluded": true,
+    "baselineEntityCount": 1,
+    "finalEntityCount": 1,
+    "baselineSourceCount": 1,
+    "finalSourceCount": 3,
+    "baselineClaimCount": 3,
+    "finalClaimCount": 4
   },
   "run": {
     "status": "completed",
-    "reportId": "event-research-600519-event-387e5266580723ba3d257054-pi-event-research-001",
-    "reportPath": "event-research-600519-event-387e5266580723ba3d257054-pi-event-research-001.md",
-    "errors": [],
+    "reportId": "event-research-600519-event-3f44d8c086f785bac7e4e27e-pi-event-research-001",
+    "reportPath": "event-research-600519-event-3f44d8c086f785bac7e4e27e-pi-event-research-001.md",
+    "errors": null,
     "diagnostics": []
   },
   "verification": {
@@ -60,12 +73,12 @@
   "canonicalCounts": {
     "entities": 1,
     "sources": 3,
-    "claims": 3
+    "claims": 4
   },
   "reportContract": {
     "persisted": true,
     "workflowState": "persisted",
-    "note": "event_research is admitted by app/services/research-report.ts and persisted by the existing report writer; the Real Pi gate remains blocked by bounded Stage B fallback"
+    "note": "event_research is admitted by app/services/research-report.ts and persisted by the existing report writer; the Real Pi gate may still block on model contract fallback"
   },
   "irrelevantSourceCanonicalized": false,
   "secretsIncluded": false,

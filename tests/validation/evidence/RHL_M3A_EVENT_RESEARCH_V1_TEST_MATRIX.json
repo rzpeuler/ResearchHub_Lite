@@ -1,5 +1,5 @@
 {
-  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-001",
   "generatedFrom": [
     "tests/workflows/event-research.test.ts",
     "tests/workflows/event-research-skill.test.ts",
@@ -8,8 +8,8 @@
   ],
   "focusedRun": {
     "command": "node --import tsx --test tests/workflows/event-research.test.ts tests/workflows/event-research-skill.test.ts",
-    "tests": 51,
-    "pass": 51,
+    "tests": 44,
+    "pass": 44,
     "fail": 0
   },
   "statusLegend": {

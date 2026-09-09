@@ -1,5 +1,29 @@
 # ResearchHub_Lite — Decision Log
 
+## RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-001 — Implementation State — 2026-09-09
+
+**Status:** FIX-001 IMPLEMENTED / CTO ACCEPTANCE PENDING
+
+FIX-001 closes the Event Research foundation gaps without changing Schema,
+Gateway, Writer, provider, Daily, Runtime, or frontend architecture. Daily
+event identity uses non-empty `clusterKey`, falling back to normalized title
+plus authoritative date; `signalId` remains operational provenance only.
+Workflow code owns stable event occurrence and event impact slots, exact frozen
+16-section report assembly, and report-only behavior when no authoritative date
+exists. Stage B now returns bounded interpretations and explicit impact
+assessments (type, basis, direction, materiality, horizon, references,
+rationale, and causal chain); second-order causal chains are required and
+hypothesis-only proposals are rejected from durable mutation.
+
+The Real Pi harness now executes through `ResearchService.startEventResearch`,
+the actual `WorkflowService`, and `PiReasoningExecutor`, with seeded structured
+assumption/risk claims and a clustered Daily Signal. The gate requires direct
+and second-order impact, affected Existing Knowledge, model-derived
+interpretation, deterministic event occurrence, stable entity count, source and
+claim deltas, persisted report, and no irrelevant canonicalization. Real model
+fallback remains a truthful `REAL_MODEL_CONTRACT_BLOCKED` outcome and is not
+accepted as PASS.
+
 ## RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001 — Implementation State — 2026-09-09
 
 **Status:** IMPLEMENTED / CTO ACCEPTANCE PENDING

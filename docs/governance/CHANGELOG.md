@@ -2,6 +2,13 @@
 
 ## 2026-09-09
 
+- Implemented `RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-001`
+  pending CTO acceptance: corrected clustered event identity, code-owned stable
+  event/impact slots, explicit Stage B impact contracts and bounded causal
+  interpretation, exact frozen report sections, and the real service-path Pi
+  gate. Real Pi remains classified from actual model behavior; no PASS is
+  inferred from fallback.
+
 - Implemented `RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001` pending CTO
   acceptance: added the Event Research architecture record, bounded anchor and
   Daily Signal bridge documentation, CNINFO/GDELT bounds, deterministic

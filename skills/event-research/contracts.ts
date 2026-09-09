@@ -26,22 +26,22 @@ export const EVENT_DURABLE_CLAIM_TYPES = ['viewpoint', 'risk', 'catalyst', 'assu
 export type EventDurableClaimType = (typeof EVENT_DURABLE_CLAIM_TYPES)[number]
 
 export const EVENT_RESEARCH_SECTIONS = [
-  'Event Summary',
-  'Event Anchor & Scope',
-  'Evidence Verification',
-  'Verified Event Facts',
-  'Contradictions & Uncertainty',
+  'Event Definition',
+  'Verification Status',
+  'Source & Evidence Map',
+  'Verified Facts',
+  'Conflicting / Unverified Claims',
   'Existing Research Context',
-  'Direct Impact',
-  'Second-order Impact',
-  'Affected Assumptions',
-  'Affected Thesis',
-  'Catalysts',
-  'Risks',
-  'Open Research Questions',
-  'Proposed Knowledge Updates',
-  'Monitoring Plan',
-  'Conclusion',
+  'First-Order Impact',
+  'Second-Order Impact',
+  'Business / Industry Transmission',
+  'Financial / Operating Implications',
+  'Assumption Impact',
+  'Thesis Impact',
+  'Catalyst Changes',
+  'Risk Changes',
+  'Valuation / Monitoring Implications',
+  'Open Questions / Research Gaps',
 ] as const
 export type EventResearchSectionTitle = (typeof EVENT_RESEARCH_SECTIONS)[number]
 
@@ -56,6 +56,7 @@ export interface EventResearchAnchorContext {
   readonly title: string
   readonly description?: string
   readonly signalId?: string
+  readonly clusterKey?: string
   readonly url?: string
   readonly publishedAt?: string
   readonly eventDate?: string
@@ -130,11 +131,26 @@ export interface EventVerificationResult {
 export interface EventImpactAssessment {
   readonly assessmentId: string
   readonly disposition: EventImpactDisposition
+  readonly impactType?: 'direct' | 'second_order' | 'assumption' | 'thesis' | 'catalyst' | 'risk' | 'no_change' | 'research_gap'
+  readonly basis?: 'verified_fact' | 'inference' | 'hypothesis'
+  readonly direction?: 'positive' | 'negative' | 'mixed' | 'unclear'
+  readonly materiality?: 'low' | 'medium' | 'high'
+  readonly timeHorizon?: 'immediate' | 'near_term' | 'medium_term' | 'long_term'
   readonly existingKnowledgeRefs: readonly string[]
   readonly sourceCandidateIds: readonly string[]
   readonly rationale: string
-  readonly directImpact: string
-  readonly secondOrderImpact: string
+  readonly causalChain?: string
+  readonly directImpact?: string
+  readonly secondOrderImpact?: string
+}
+
+export interface EventInterpretation {
+  readonly interpretationId: string
+  readonly sectionId: string
+  readonly markdown: string
+  readonly sourceCandidateIds: readonly string[]
+  readonly existingKnowledgeRefs: readonly string[]
+  readonly assessmentRefs: readonly string[]
 }
 
 export interface EventResearchSection {
@@ -181,6 +197,7 @@ export interface EventResearchSynthesisInput {
 
 export interface EventResearchSynthesisOutput {
   readonly sections: readonly EventResearchSection[]
+  readonly interpretations?: readonly EventInterpretation[]
   readonly assessments: readonly EventImpactAssessment[]
   readonly proposals: readonly EventResearchProposal[]
 }

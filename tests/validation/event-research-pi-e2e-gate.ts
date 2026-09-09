@@ -18,6 +18,19 @@ export interface EventResearchPiGate {
   readonly canonicalClaimCountDelta: number
   readonly irrelevantSourceCanonicalized: boolean
   readonly workflowTerminalStatus: string
+  readonly eventFingerprintUsesClusterIdentity: boolean
+  readonly stageBRepairAttempts: number
+  readonly directImpactCount: number
+  readonly secondOrderImpactCount: number
+  readonly affectedExistingClaimCount: number
+  readonly modelDerivedInterpretiveSectionCount: number
+  readonly eventOccurrenceProposalIncluded: boolean
+  readonly baselineEntityCount: number
+  readonly finalEntityCount: number
+  readonly baselineSourceCount: number
+  readonly finalSourceCount: number
+  readonly baselineClaimCount: number
+  readonly finalClaimCount: number
 }
 
 export interface EventResearchPiGateDecision {
@@ -47,5 +60,15 @@ export function evaluateEventResearchPiGate(gate: EventResearchPiGate): EventRes
     && gate.canonicalClaimCountDelta >= 1
     && gate.irrelevantSourceCanonicalized === false
     && gate.workflowTerminalStatus === 'completed'
+    && gate.eventFingerprintUsesClusterIdentity === true
+    && gate.stageBRepairAttempts <= 1
+    && gate.directImpactCount >= 1
+    && gate.secondOrderImpactCount >= 1
+    && gate.affectedExistingClaimCount >= 1
+    && gate.modelDerivedInterpretiveSectionCount >= 1
+    && gate.eventOccurrenceProposalIncluded === true
+    && gate.finalEntityCount === gate.baselineEntityCount
+    && gate.finalSourceCount > gate.baselineSourceCount
+    && gate.finalClaimCount > gate.baselineClaimCount
   return { pass, classification: pass ? 'EXECUTED / PASS GATE' : 'REAL_MODEL_CONTRACT_BLOCKED', exitCode: pass ? 0 : 1 }
 }
