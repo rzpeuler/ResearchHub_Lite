@@ -4,10 +4,11 @@ import { runCompanyDeepResearch } from '../../workflows/company-deep-research/wo
 import { runEarningsReview } from '../../workflows/earnings-review/workflow.ts'
 import { runValuation } from '../../workflows/valuation/workflow.ts'
 import { runEventResearch } from '../../workflows/event-research/workflow.ts'
+import { runThesisRedTeam } from '../../workflows/thesis-red-team/workflow.ts'
 import type { EventResearchSignalStore } from '../../plugins/daily-intelligence/contracts.ts'
 import type { ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchSignalStore } from '../../plugins/research-acquisition/contracts.ts'
 import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
-import { ApplicationServiceError, type ApplicationEarningsReviewResult, type ApplicationEventResearchResult, type ApplicationResearchResult, type ApplicationValuationResult, type EarningsReviewInput, type EventResearchInput, type ResearchCompanyInput, type ValuationInput } from './contracts.ts'
+import { ApplicationServiceError, type ApplicationEarningsReviewResult, type ApplicationEventResearchResult, type ApplicationResearchResult, type ApplicationValuationResult, type ApplicationThesisRedTeamResult, type EarningsReviewInput, type EventResearchInput, type ResearchCompanyInput, type ThesisRedTeamInput, type ValuationInput } from './contracts.ts'
 import { WorkflowService } from './workflow-service.ts'
 import { readResearchReport } from './research-report.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
@@ -133,6 +134,19 @@ export class ResearchService {
         return { runId: input.workflowRunId, status: result.status, knowledgeBaseId: result.knowledgeBaseId, ...(result.report === undefined ? {} : { reportId: result.report.reportId, reportPath: `${result.report.reportId}.md` }), committedIds: result.committedIds, proposalCount: result.proposalIds.length, summary: result.status === 'completed' ? `Event research completed for ${input.symbol}` : `Event research ${result.status} for ${input.symbol}`, ...(result.errors.length ? { errorSummary: result.errors.join('; ').slice(0, 500) } : {}), telemetry: result.telemetry, providerOutcome: result.providerOutcomes, ...(result.blockedReason === undefined ? {} : { blockedReason: result.blockedReason }) }
       } finally { signal.removeEventListener('abort', abort); callerSignal?.removeEventListener('abort', abort) }
     }).then((outcome) => outcome as ApplicationEventResearchResult & { readonly providerOutcome?: unknown })
+    completion.catch(() => undefined); return { runId: input.workflowRunId, completion }
+  }
+
+  startThesisRedTeam(input: ThesisRedTeamInput, callerSignal?: AbortSignal): { readonly runId: string; readonly completion: Promise<ApplicationThesisRedTeamResult> } {
+    if (!input || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(input.workflowRunId) || !/^\d{6}$/.test(input.symbol) || !/^claim:[^\s]+$/.test(input.thesisRef)) throw new ApplicationServiceError('invalid_input', 'workflowRunId, A-share symbol, and thesisRef are invalid')
+    if (input.lookbackDays !== undefined && (!Number.isInteger(input.lookbackDays) || input.lookbackDays < 30 || input.lookbackDays > 1095)) throw new ApplicationServiceError('invalid_input', 'lookbackDays must be between 30 and 1095')
+    const company: ResearchCompanyIdentity = { symbol: input.symbol, ...(input.name === undefined ? {} : { name: input.name }), ...(input.exchange === undefined ? {} : { exchange: input.exchange }) }
+    this.options.workflowService.register({ runId: input.workflowRunId, workflowType: 'thesis_red_team', objective: `Thesis Red Team ${input.symbol}` })
+    const completion = this.options.workflowService.start(input.workflowRunId, async (signal) => {
+      const combined = new AbortController(); const abort = () => combined.abort(); signal.addEventListener('abort', abort, { once: true }); callerSignal?.addEventListener('abort', abort, { once: true })
+      try { const handle = await this.registry.mount(resolve(this.options.mountedKnowledgeBaseRoot)); const result = await runThesisRedTeam({ workflowRunId: input.workflowRunId, handle, company, thesisRef: input.thesisRef, lookbackDays: input.lookbackDays, reportRoot: resolve(this.options.reportRoot ?? join(this.options.cwd ?? process.cwd(), 'runtime-data', 'reports')), acquisitionPlugins: this.options.acquisitionPlugins, dailySignalStore: this.options.dailySignalStore, reasoningExecutor: this.options.reasoningExecutor, signal: combined.signal }); return { runId: input.workflowRunId, status: result.status, knowledgeBaseId: result.knowledgeBaseId, ...(result.report === undefined ? {} : { reportId: result.report.reportId, reportPath: `${result.report.reportId}.md` }), committedIds: result.committedIds, proposalCount: result.proposalIds.length, summary: result.status === 'completed' ? `Thesis Red Team completed for ${input.symbol}` : `Thesis Red Team ${result.status} for ${input.symbol}`, ...(result.errors.length ? { errorSummary: result.errors.join('; ').slice(0, 500) } : {}), telemetry: result.telemetry }
+      } finally { signal.removeEventListener('abort', abort); callerSignal?.removeEventListener('abort', abort) }
+    }).then((outcome) => outcome as ApplicationThesisRedTeamResult)
     completion.catch(() => undefined); return { runId: input.workflowRunId, completion }
   }
 

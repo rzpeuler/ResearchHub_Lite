@@ -186,3 +186,5 @@ export type EventAnchor =
   | { readonly kind: 'user_event'; readonly title: string; readonly description: string; readonly eventDate?: string }
 export interface EventResearchInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly anchor: EventAnchor; readonly asOf?: string }
 export interface ApplicationEventResearchResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string }
+export interface ThesisRedTeamInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly thesisRef: string; readonly lookbackDays?: number }
+export interface ApplicationThesisRedTeamResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string }

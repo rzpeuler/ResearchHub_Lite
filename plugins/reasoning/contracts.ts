@@ -11,6 +11,8 @@ export const REASONING_OPERATIONS = [
   'valuation_synthesis',
   'event_evidence_assessment',
   'event_research_synthesis',
+  'thesis_attack_design',
+  'thesis_red_team_synthesis',
 ] as const
 
 export type ReasoningOperation = (typeof REASONING_OPERATIONS)[number]
