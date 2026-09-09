@@ -1,0 +1,35 @@
+{
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-003",
+  "model": "zhipu-openapi/glm-5.3-flash",
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false,
+  "stageA": {
+    "initial": { "topLevelKeys": ["attackVectors", "implicitAssumptions", "invalidationConditions"], "attackVectorCount": 8 },
+    "repair": null,
+    "diagnostics": [],
+    "validated": true,
+    "applied": true,
+    "fallbackUsed": false
+  },
+  "stageBSemantic": {
+    "initial": { "topLevelKeys": ["challengeAssessments", "evidenceAssessments", "interpretations", "proposals", "thesisVerdict"], "evidenceAssessmentCount": 4, "challengeCount": 10, "proposalCount": 5 },
+    "repair": { "topLevelKeys": ["challengeAssessments", "evidenceAssessments", "interpretations", "proposals", "thesisVerdict"], "evidenceAssessmentCount": 4, "challengeCount": 11, "proposalCount": 2 },
+    "repairAttempts": 1,
+    "diagnostics": ["proposal_0_invalid", "proposal_1_invalid"],
+    "validated": true,
+    "applied": true,
+    "fallbackUsed": false
+  },
+  "proposalOnlyRepair": {
+    "called": true,
+    "repairAttempts": 1,
+    "initialCandidateCount": 2,
+    "initialAcceptedCount": 0,
+    "repairCandidateCount": 0,
+    "repairAcceptedCount": 0,
+    "semanticCoreFrozen": true,
+    "outputContainedOnlyProposals": true
+  },
+  "classification": "EXECUTED / PASS GATE",
+  "note": "Structural metadata only; no model raw body or secret was retained. Hypothesis failure-case evidence remained report-only."
+}

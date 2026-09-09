@@ -2,7 +2,7 @@
 
 Status: `IMPLEMENTED / CTO ACCEPTANCE PENDING`
 
-Task identity: `RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001`
+Task identity: `RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-003`
 
 ## 1. Purpose and boundary
 
@@ -52,11 +52,13 @@ time; `lookbackDays` controls external evidence acquisition only.
 
 ## 3. Read-only Knowledge and Signal projections
 
-The only Gateway change is additive read-only exposure from
-`projectExistingKnowledge()`: lifecycle, confidence, probability,
-supportsClaimRefs, dependsOnClaimRefs, contradictsClaimRefs, supersedes, and
-supersededBy. Gateway submit, identity, resolution, ChangeSet, ReviewCase, and
-Writer behavior remain unchanged.
+Gateway remains producer-neutral. FIX-003 approves only a narrow shared
+contract extension for an explicit `resolution=update` proposal bound to
+exactly one existing canonical Claim. The target Claim, subject, claim type,
+statement, and all structured fields except `structuredValue.value` are
+immutable; Source/provenance may merge through the normal ChangeSet,
+validation, and Writer path. Gateway behavior never branches on a research
+vertical such as `thesis_red_team`.
 
 The workflow projects the target Thesis, direct outgoing links, direct incoming
 Company Claims, and one additional bounded dependency hop. It caps the result
@@ -102,22 +104,35 @@ Verdict consistency is code-owned: `inconclusive` cannot claim material impact;
 `weakened` requires a material challenge; `materially_challenged` requires a
 supported high/critical challenge; and `invalidation_condition_met` requires a
 matching condition and strong disconfirming evidence. The model cannot declare
-strong verification.
+strong verification. A semantic core must include an alternative explanation,
+a bear/failure case, and invalidation analysis. A missing failure case triggers
+at most one semantic-core repair; a hypothesis failure case remains report-only.
+Proposal candidates are downstream of the frozen semantic core. If all
+candidates are rejected for repairable contract or admissibility reasons, one
+separate bounded proposal-only repair may return proposals only; it cannot
+rewrite the semantic core.
 
 ## 5. Durable gate and immutability
 
 Code owns deterministic slots for the Red Team verdict, risk, and alternative
-viewpoint, plus structured updates to existing assumptions. No slot uses a
-Thesis-specific semantic key. Assumption updates preserve every existing
-structured field except the value. The target Thesis hash, lifecycle, source
-refs, and claim identity must remain unchanged. No Thesis proposal is ever
-submitted.
+viewpoint, plus structured updates to existing assumptions. Deterministic
+verdict evidence is derived directly from qualified evidence and
+verdict-supporting challenge bindings, never from accepted model proposals.
+No slot uses a Thesis-specific semantic key, and deterministic slots use a
+stable `current` period so identical reruns are idempotent. Assumption updates
+preserve every existing structured field except the value. The target Thesis
+hash, lifecycle, source refs, and claim identity must remain unchanged. No
+Thesis proposal is ever submitted.
 
 Only accepted proposal-referenced external evidence reaches Gateway. Unused,
 irrelevant, manual-anchor, Daily Signal, and unknown-date context cannot become
 canonical evidence. The report is code-assembled with exactly 16 frozen
 sections, precise provenance, subjectRefs containing Company and Thesis, and
-`reportType=thesis_red_team`.
+`reportType=thesis_red_team`. Telemetry distinguishes model candidates,
+submitted proposals, Gateway claim bindings/creates/updates, durable applied
+proposals, and persisted Source/Claim deltas. Report-only evidence records its
+candidate ID, provider, title, and date in bounded report provenance without
+inventing canonical Source refs.
 
 ## 6. Integration and validation
 
@@ -130,9 +145,11 @@ row-level evidence matrix. No Schema, Writer, frontend, scheduler, queue,
 Graph DB, Vector DB, RAG, provider framework, or multi-agent orchestration is
 introduced.
 
-Acceptance requires the real Pi path to execute with valid Stage A/B output,
+Acceptance requires the real `PiReasoningExecutor` path to execute with valid
 disconfirming evidence, alternative and failure analysis, affected existing
-Knowledge, a non-inconclusive verdict, at least one accepted durable proposal,
-unchanged Thesis and Company integrity, no Signal/irrelevant canonicalization,
-and a persisted 16-section report. Provider availability remains separately
-reported and non-blocking unless a deterministic application defect is found.
+Knowledge, a non-inconclusive verdict, at least one persisted canonical Claim
+binding backed by a qualified canonical Source, unchanged Thesis and Company
+integrity, no Signal/irrelevant/unknown-date canonicalization, and a persisted
+16-section report. Provider availability remains separately reported and
+non-blocking unless a deterministic application defect is found. Synthetic
+semantic or durable fallback is never an acceptance path.

@@ -1,18 +1,17 @@
-# RHL M3A-4 Thesis Red Team v1 FIX-002 Evidence Summary
+# RHL M3A-4 Thesis Red Team v1 FIX-003 Evidence Summary
 
-- Task: `RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-002`
-- Real Pi E2E: `REAL_MODEL_CONTRACT_BLOCKED`
-- Model: `zhipu-openapi/glm-5.3-flash`
-- Exact active Company/Thesis resolution: passed; dependency projection 3 Claims, 1 critical assumption, 1 recent Signal.
-- Stage A: real model first output passed semantic validation; `fallbackUsed=false`, `validated=true`, `applied=true`, `repairAttempts=0`.
-- Stage B: real model first output passed the semantic core; six proposal candidates were deterministically rejected (`proposal_0_invalid` through `proposal_5_invalid`), with no repair or semantic fallback; `fallbackUsed=false`, `validated=true`, `applied=true`.
-- No synthetic semantic fallback was used. No evidence, challenge, interpretation, verdict, or proposal was fabricated after model output processing.
-- Durable write gate: closed because the real model omitted a failure case and produced no accepted durable proposal; canonical Source/Claim delta 0/0.
-- Actual persisted Thesis hash and lifecycle were unchanged; Company hash was unchanged.
-- Daily Signal, irrelevant source, and unknown-date source were not canonicalized.
-- Report: `thesis_red_team`, exactly 16 sections, persisted as a blocked research-gap report.
-- Raw bodies and secrets: excluded from evidence.
-- Validation: full `npm test` passed, 555/555 tests; `npm run typecheck`, `npm run client:typecheck`, and `npm run client:build` passed.
-- FIX-002 focused regressions: 31/31 passed, including single-source strength, unrelated-source rejection, irrelevant/context/unknown-date durable gates, invalidation binding, and existing-assumption field preservation.
+- Task: `RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-003`
+- Status: `IMPLEMENTED / CTO ACCEPTANCE PENDING`
+- Real Pi E2E: `EXECUTED / PASS GATE`
+- Model: `zhipu-openapi/glm-5.3-flash`; the run used the real `PiReasoningExecutor` and no synthetic semantic fallback.
+- Stage A: real model output validated and applied; `fallbackUsed=false`, `repairAttempts=0`, 8 attack vectors and 6 invalidation conditions.
+- Stage B semantic core: initial output required one bounded semantic repair because `failure_case` was missing; repaired output validated and applied with `fallbackUsed=false`, 11 challenges, 1 alternative explanation, and 1 failure case.
+- Stage B proposal phase: initial candidates were deterministically rejected; proposal-only repair was called exactly once with frozen semantic core. The repair returned no admissible model candidate, so no synthetic proposal was created.
+- Deterministic verdict: `materially_challenged`; qualified disconfirming evidence bound directly from code-owned verdict/challenge logic, independent of accepted model proposals.
+- Durable outcome: 1 deterministic proposal submitted, 1 durable proposal applied, canonical Source delta 2, canonical Claim delta 1. Persisted state was used for the gate.
+- Integrity: Thesis hash, ID, lifecycle, and sourceRefs unchanged; Company hash unchanged. Unknown-date, irrelevant/context, and Daily Signal durable gates remained closed.
+- Report: `thesis_red_team`, persisted with exactly 16 sections; hypothesis failure-case provenance remained report-only and bounded to candidate/provider/title/date metadata.
+- Provider smoke: CNINFO and GDELT passed separately as non-blocking seam checks.
+- Validation: focused Thesis Red Team tests, generic Gateway update/idempotency tests, full `npm test`, root typecheck, client typecheck, and client build all pass.
 
-This is honest blocked evidence, not a real-model acceptance pass. Final task status remains `IMPLEMENTED / CTO ACCEPTANCE PENDING`.
+Real product acceptance authority is the Real PiReasoningExecutor product E2E; the gate helper unit test is not treated as product acceptance.

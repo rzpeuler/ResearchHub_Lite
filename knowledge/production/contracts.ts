@@ -26,7 +26,8 @@ export interface SemanticProductionProposal {
   readonly dependsOnProposalIds?: readonly string[]
   readonly contradictsProposalIds?: readonly string[]
   readonly semanticKey?: string
-  readonly resolution?: 'supersede' | 'contradict' | 'review'
+  /** Explicit generic intent to update one existing canonical Claim in place. */
+  readonly resolution?: 'update' | 'supersede' | 'contradict' | 'review'
 }
 
 export interface SemanticResolutionDecision {
