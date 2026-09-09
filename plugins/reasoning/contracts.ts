@@ -9,6 +9,8 @@ export const REASONING_OPERATIONS = [
   'earnings_review_synthesis',
   'valuation_assumption_design',
   'valuation_synthesis',
+  'event_evidence_assessment',
+  'event_research_synthesis',
 ] as const
 
 export type ReasoningOperation = (typeof REASONING_OPERATIONS)[number]

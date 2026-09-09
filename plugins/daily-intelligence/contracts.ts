@@ -77,6 +77,7 @@ export interface DailyResearchSignal {
 export interface DailySignalStore {
   appendMany(signals: readonly DailyResearchSignal[]): Promise<{ readonly appended: number; readonly skipped: number }>
   listWindow(from: string, to: string, limit?: number): Promise<readonly DailyResearchSignal[]>
+  getById(signalId: string): Promise<DailyResearchSignal | undefined>
 }
 
 export interface DailySignalCluster {

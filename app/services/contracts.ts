@@ -179,3 +179,10 @@ export interface ApplicationEarningsReviewResult extends ApplicationResearchResu
 export type ValuationMethod = 'PE' | 'PB' | 'EV_EBITDA'
 export interface ValuationInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly asOf?: string; readonly methods?: readonly ValuationMethod[]; readonly targetFiscalYear?: number }
 export interface ApplicationValuationResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string; readonly providerOutcome?: unknown }
+export type EventAnchor =
+  | { readonly kind: 'daily_signal'; readonly signalId: string }
+  | { readonly kind: 'article'; readonly url: string; readonly title?: string; readonly publishedAt?: string; readonly content?: string }
+  | { readonly kind: 'url'; readonly url: string; readonly title?: string; readonly publishedAt?: string }
+  | { readonly kind: 'user_event'; readonly title: string; readonly description: string; readonly eventDate?: string }
+export interface EventResearchInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly anchor: EventAnchor; readonly asOf?: string }
+export interface ApplicationEventResearchResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string }
