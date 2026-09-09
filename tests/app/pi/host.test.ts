@@ -156,6 +156,22 @@ test('ResearchHub tools reject duplicate input sources and cancelled Workflow st
   } finally { await removeKnowledgeBase(root) }
 })
 
+test('Pi research_event routes the exact EventResearchInput to the Application Service', async () => {
+  const received: Record<string, unknown>[] = []
+  const researchService = {
+    startEventResearch: (input: Record<string, unknown>) => {
+      received.push(input)
+      return { runId: input.workflowRunId, completion: Promise.resolve({ status: 'completed', runId: input.workflowRunId, knowledgeBaseId: 'kb-event-tool', committedIds: [], proposalCount: 0, summary: 'fixture', telemetry: {}, providerOutcome: [] }) }
+    },
+  } as never
+  const context = { knowledgeService: {} as KnowledgeService, productionService: {} as ProductionService, reviewService: {} as ReviewService, workflowService: new WorkflowService(), researchService }
+  const tool = createResearchHubTools(context).find((item) => item.name === 'research_event')!
+  const input = { workflowRunId: 'event-tool-routing', symbol: '600519', exchange: 'SSE', asOf: '2026-09-08T23:59:59.000Z', anchor: { kind: 'user_event', title: 'Fixture event', description: 'A bounded fixture event.', eventDate: '2026-09-08' } }
+  const result = await tool.execute('event-tool-call', input, undefined, undefined, {} as never)
+  assert.equal(result.content[0]?.type, 'text')
+  assert.deepEqual(received, [input])
+})
+
 test('Pi tool-call boundary rejects direct write, edit, and explicit-path bash mutation attempts', async () => {
   const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-pi-protected' })
   try {
