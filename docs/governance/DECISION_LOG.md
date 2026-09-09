@@ -1,5 +1,26 @@
 # ResearchHub_Lite — Decision Log
 
+## RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-002 — Implementation State — 2026-09-09
+
+**Status:** FIX-002 IMPLEMENTED / CTO ACCEPTANCE PENDING
+
+FIX-002 preserves the frozen Event Research architecture while closing the
+Stage B contract boundary. The model contract now requires explicit impact
+semantics, returns interpretations and assessments separately from bounded
+proposal candidates, and rejects legacy `disposition`/top-level `sections`.
+Semantic-core validation is independent from candidate filtering; malformed
+candidates are individually rejected with safe diagnostics, while the final
+16-section report and stable event slots remain code-owned. User-event durable
+identity uses title plus authoritative date, excluding mutable description.
+
+The executable Real Pi harness uses the actual ResearchService,
+WorkflowService, and PiReasoningExecutor. It records `EXECUTED / PASS GATE`
+with both stages validated/applied, direct and second-order impacts, affected
+Existing Knowledge, persisted 16-section report, stable entity count, source
+and claim deltas, and no irrelevant canonicalization. Diagnostics and
+structural summaries contain no raw model output or secrets. Provider smoke
+remains non-blocking and separately records CNINFO empty/GDELT 429.
+
 ## RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-001 — Implementation State — 2026-09-09
 
 **Status:** FIX-001 IMPLEMENTED / CTO ACCEPTANCE PENDING

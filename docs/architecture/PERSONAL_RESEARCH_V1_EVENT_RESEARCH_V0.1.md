@@ -1,8 +1,8 @@
 # Personal Research v1 — Event Research Architecture v0.1
 
-Status: `FIX-001 IMPLEMENTED / CTO ACCEPTANCE PENDING`
+Status: `FIX-002 IMPLEMENTED / CTO ACCEPTANCE PENDING`
 
-Task identity: `RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-001` (M3A-3)
+Task identity: `RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-002` (M3A-3)
 
 This document records the implemented Event Research vertical on the frozen
 Personal Research v1 Research Coverage architecture. It is additive to the
@@ -173,10 +173,11 @@ complete with zero durable proposals, zero canonical Sources, and zero Claims.
 `event_research_synthesis` receives only verified facts, supporting and
 contradicting bounded excerpts, bounded Company-only Knowledge, exact local
 reference allowlists, and deterministic event identity/date. The model returns
-bounded interpretations, explicit impact assessments, and local proposals;
-code assembles the exact sixteen-section report. Assessments carry explicit
+bounded interpretations, explicit impact assessments, and optional proposal
+candidates; code assembles the exact sixteen-section report. Assessments carry explicit
 impact type, basis, direction, materiality, horizon, existing-claim refs,
-source refs, rationale, and causal chain. Second-order assessments require a
+source refs, rationale, and causal chain, with no legacy disposition field.
+Second-order assessments require a
 non-empty causal chain; hypothesis-only output is report-only.
 
 Code remains authoritative for evidence validity, canonical identity, numeric
@@ -232,7 +233,10 @@ The report is assembled by Workflow and persisted through the existing
 `ResearchService.startEventResearch` -> `WorkflowService` -> report-writer
 path. Canonical event occurrence and stable viewpoint/risk/catalyst slots are
 code-owned; a missing authoritative event date is report-only and cannot
-create an occurrence slot.
+create an occurrence slot. Invalid proposal candidates are independently
+rejected and cannot invalidate an otherwise valid semantic core. Fallback
+telemetry reports zero model-derived interpretations; safe Stage A/Stage B
+diagnostics and bounded structural summaries are retained without raw output.
 
 ## 12. Fallback, cancellation, and telemetry
 

@@ -130,18 +130,15 @@ export interface EventVerificationResult {
 
 export interface EventImpactAssessment {
   readonly assessmentId: string
-  readonly disposition: EventImpactDisposition
-  readonly impactType?: 'direct' | 'second_order' | 'assumption' | 'thesis' | 'catalyst' | 'risk' | 'no_change' | 'research_gap'
-  readonly basis?: 'verified_fact' | 'inference' | 'hypothesis'
-  readonly direction?: 'positive' | 'negative' | 'mixed' | 'unclear'
-  readonly materiality?: 'low' | 'medium' | 'high'
-  readonly timeHorizon?: 'immediate' | 'near_term' | 'medium_term' | 'long_term'
+  readonly impactType: 'direct' | 'second_order' | 'assumption' | 'thesis' | 'catalyst' | 'risk' | 'no_change' | 'research_gap'
+  readonly basis: 'verified_fact' | 'inference' | 'hypothesis'
+  readonly direction: 'positive' | 'negative' | 'mixed' | 'unclear'
+  readonly materiality: 'low' | 'medium' | 'high'
+  readonly timeHorizon: 'immediate' | 'near_term' | 'medium_term' | 'long_term'
   readonly existingKnowledgeRefs: readonly string[]
   readonly sourceCandidateIds: readonly string[]
   readonly rationale: string
-  readonly causalChain?: string
-  readonly directImpact?: string
-  readonly secondOrderImpact?: string
+  readonly causalChain: string
 }
 
 export interface EventInterpretation {
@@ -196,10 +193,9 @@ export interface EventResearchSynthesisInput {
 }
 
 export interface EventResearchSynthesisOutput {
-  readonly sections: readonly EventResearchSection[]
-  readonly interpretations?: readonly EventInterpretation[]
+  readonly interpretations: readonly EventInterpretation[]
   readonly assessments: readonly EventImpactAssessment[]
-  readonly proposals: readonly EventResearchProposal[]
+  readonly proposalCandidates: readonly unknown[]
 }
 
 export interface EventResearchReasoningTelemetry {
@@ -212,6 +208,15 @@ export interface EventResearchReasoningTelemetry {
   readonly diagnostic?: string
   readonly diagnostics?: readonly string[]
   readonly model?: string
+  readonly firstAttemptShape?: EventReasoningShape
+  readonly repairAttemptShape?: EventReasoningShape
+}
+
+export interface EventReasoningShape {
+  readonly topLevelKeys: readonly string[]
+  readonly interpretationCount: number
+  readonly assessmentCount: number
+  readonly proposalCount: number
 }
 
 export interface EventEvidenceAssessmentSkillResult {

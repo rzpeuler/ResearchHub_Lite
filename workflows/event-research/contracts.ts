@@ -66,6 +66,8 @@ export interface EventResearchTelemetry {
   readonly contradictionCount: number
   readonly existingKnowledgeCount: number
   readonly proposalCandidateCount: number
+  readonly acceptedModelProposalCount: number
+  readonly proposalRejectionDiagnostics: readonly string[]
   readonly acceptedProposalCount: number
   readonly eventOccurrenceProposalCount: number
   readonly canonicalSourceCount: number
@@ -82,6 +84,10 @@ export interface EventResearchTelemetry {
   readonly eventOccurrenceProposalIncluded: boolean
   readonly reportPersistence: 'persisted'
   readonly diagnostics: readonly string[]
+  readonly stageADiagnostics: readonly string[]
+  readonly stageBDiagnostics: readonly string[]
+  readonly stageBFirstAttemptShape?: import('../../skills/event-research/contracts.ts').EventReasoningShape
+  readonly stageBRepairAttemptShape?: import('../../skills/event-research/contracts.ts').EventReasoningShape
 }
 
 export interface EventResearchReport {

@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../plugins/reasoning/contracts.ts'
 import {
-  EVENT_RESEARCH_SECTIONS,
   type EventEvidenceAssessmentInput,
   type EventEvidenceAssessmentOutput,
   type EventResearchSynthesisInput,
@@ -19,6 +18,8 @@ import {
   validateEventAssumptionUpdate,
   validateEventEvidenceAssessment,
   validateEventResearchSynthesis,
+  filterEventResearchProposals,
+  filterEventResearchProposalsWithDiagnostics,
 } from '../../skills/event-research/index.ts'
 
 type Dict = Record<string, unknown>
@@ -75,10 +76,10 @@ function synthesisInput(strongVerification = true): EventResearchSynthesisInput 
 }
 
 function validSynthesis(overrides: Dict = {}): Dict {
-  const sections = EVENT_RESEARCH_SECTIONS.map((title) => ({ sectionId: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), title, markdown: `Bounded interpretation for ${title}.`, sourceCandidateIds: title === 'Source & Evidence Map' ? ['official-1'] : [], existingKnowledgeRefs: title === 'Assumption Impact' ? ['claim:assumption-1'] : [], assessmentRefs: ['impact-1'] }))
+  const interpretations = [{ interpretationId: 'interpretation-1', sectionId: 'assumption-impact', markdown: 'Bounded interpretation for the assumption impact.', sourceCandidateIds: ['official-1'], existingKnowledgeRefs: ['claim:assumption-1'], assessmentRefs: ['impact-1'] }]
   return {
-    sections,
-    assessments: [{ assessmentId: 'impact-1', disposition: 'changes_assumption', existingKnowledgeRefs: ['claim:assumption-1'], sourceCandidateIds: ['official-1'], rationale: 'The verified event changes the assumption.', directImpact: 'The direct effect is material.', secondOrderImpact: 'The second-order effect requires monitoring.' }],
+    interpretations,
+    assessments: [{ assessmentId: 'impact-1', impactType: 'assumption', basis: 'verified_fact', direction: 'negative', materiality: 'medium', timeHorizon: 'near_term', existingKnowledgeRefs: ['claim:assumption-1'], sourceCandidateIds: ['official-1'], rationale: 'The verified event changes the assumption.', causalChain: 'event -> demand assumption change' }],
     proposals: [{ proposalId: 'assumption-update', kind: 'claim', claimType: 'assumption', subjectKey: 'company', statement: 'Demand growth assumption is revised based on the verified event.', sourceCandidateIds: ['official-1'], existingKnowledgeRefs: ['claim:assumption-1'], assessmentRefs: ['impact-1'], structuredValue: { metric: 'demand_growth', value: 0.05, unit: 'ratio', comparator: 'eq', period: '2026-FY' } }],
     ...overrides,
   }
@@ -195,18 +196,47 @@ test('ER-SKILL-4b repair input bounds oversized hidden refs and model projection
 
 test('ER-SKILL-5 Stage B validates exact sections, impacts, and structured assumption updates', () => {
   const output = validateEventResearchSynthesis(validSynthesis(), synthesisInput())
-  assert.equal(output.sections.length, 16)
-  assert.equal(output.proposals.length, 1)
+  assert.equal(output.interpretations.length, 1)
+  assert.equal(output.proposalCandidates.length, 1)
   const existing = synthesisInput().existingKnowledge[0]!
-  assert.equal(validateEventAssumptionUpdate({ existingClaimRef: existing.canonicalRef, structuredValue: output.proposals[0]!.structuredValue }, existing), true)
-  assert.equal(validateEventAssumptionUpdate({ existingClaimRef: existing.canonicalRef, structuredValue: { ...(output.proposals[0]!.structuredValue as Dict), unit: 'percent' } }, existing), false)
-  assert.equal(validateEventAssumptionUpdate({ existingClaimRef: existing.canonicalRef, structuredValue: { ...(output.proposals[0]!.structuredValue as Dict), value: '15%' } }, existing), false)
+  const proposals = filterEventResearchProposals(output.proposalCandidates, synthesisInput(), output.assessments)
+  assert.equal(proposals.length, 1)
+  assert.equal(validateEventAssumptionUpdate({ existingClaimRef: existing.canonicalRef, structuredValue: proposals[0]!.structuredValue }, existing), true)
+  assert.equal(validateEventAssumptionUpdate({ existingClaimRef: existing.canonicalRef, structuredValue: { ...(proposals[0]!.structuredValue as Dict), unit: 'percent' } }, existing), false)
+  assert.equal(validateEventAssumptionUpdate({ existingClaimRef: existing.canonicalRef, structuredValue: { ...(proposals[0]!.structuredValue as Dict), value: '15%' } }, existing), false)
+})
+
+test('FIX-002 required impact semantics fail closed without legacy disposition', () => {
+  const input = synthesisInput()
+  for (const field of ['impactType', 'basis', 'direction', 'materiality', 'timeHorizon', 'causalChain']) {
+    const assessment = { ...(validSynthesis().assessments as Dict[])[0] }
+    delete assessment[field]
+    assert.throws(() => validateEventResearchSynthesis(validSynthesis({ assessments: [assessment] }), input), EventResearchSemanticError)
+  }
+  const direct = { ...(validSynthesis().assessments as Dict[])[0], impactType: 'direct', existingKnowledgeRefs: [] }
+  const output = validateEventResearchSynthesis(validSynthesis({ assessments: [direct] }), input)
+  assert.equal('disposition' in output.assessments[0]!, false)
+  assert.equal(output.assessments[0]!.impactType, 'direct')
+})
+
+test('FIX-002 malformed proposal is rejected independently from valid semantic core', () => {
+  const input = synthesisInput()
+  const value = validSynthesis({ proposals: [{ ...(validSynthesis().proposals as Dict[])[0], sourceCandidateIds: ['forged'] }] })
+  const output = validateEventResearchSynthesis(value, input)
+  const filtered = filterEventResearchProposalsWithDiagnostics(value.proposals as unknown[], input, output.assessments)
+  assert.equal(output.assessments.length, 1)
+  assert.equal(filtered.accepted.length, 0)
+  assert.match(filtered.diagnostics[0] ?? '', /^proposal_0_/)
+})
+
+test('FIX-002 legacy top-level sections are rejected', () => {
+  assert.throws(() => validateEventResearchSynthesis({ ...validSynthesis(), sections: [] }, synthesisInput()), EventResearchSemanticError)
 })
 
 test('ER-SKILL-6 Stage B rejects forged refs, incompatible impacts, and over-broad proposals', () => {
   const input = synthesisInput()
-  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ proposals: [{ ...(validSynthesis().proposals as Dict[])[0], existingKnowledgeRefs: ['claim:forged'] }] }), input), EventResearchSemanticError)
-  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ proposals: [{ ...(validSynthesis().proposals as Dict[])[0], sourceCandidateIds: ['source-forged'] }] }), input), EventResearchSemanticError)
+  assert.equal(filterEventResearchProposals([{ ...(validSynthesis().proposals as Dict[])[0], existingKnowledgeRefs: ['claim:forged'] }], input, validateEventResearchSynthesis(validSynthesis(), input).assessments).length, 0)
+  assert.equal(filterEventResearchProposals([{ ...(validSynthesis().proposals as Dict[])[0], sourceCandidateIds: ['source-forged'] }], input, validateEventResearchSynthesis(validSynthesis(), input).assessments).length, 0)
   assert.throws(() => validateEventResearchSynthesis(validSynthesis({ proposals: Array.from({ length: 5 }, (_, index) => ({ ...(validSynthesis().proposals as Dict[])[0], proposalId: `p-${index}` })) }), input), EventResearchSemanticError)
 })
 
@@ -232,17 +262,17 @@ test('ER-SKILL-6e Stage B rejects oversized assessments and reference arrays bef
   const input = synthesisInput()
   const oversizedAssessments = Array.from({ length: 2_000 }, (_, index) => ({ ...(validSynthesis().assessments as Dict[])[0]!, assessmentId: `impact-${index}` }))
   assert.throws(() => validateEventResearchSynthesis(validSynthesis({ assessments: oversizedAssessments }), input), EventResearchSemanticError)
-  const largeRefs = (validSynthesis().sections as Dict[]).map((section) => ({ ...section, sourceCandidateIds: Array.from({ length: 2_000 }, () => 'official-1') }))
-  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ sections: largeRefs }), input), EventResearchSemanticError)
-  const duplicateSectionIds = (validSynthesis().sections as Dict[]).map((section) => ({ ...section, sectionId: 'same-section' }))
-  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ sections: duplicateSectionIds }), input), EventResearchSemanticError)
+  const largeRefs = [{ ...(validSynthesis().interpretations as Dict[])[0], sourceCandidateIds: Array.from({ length: 2_000 }, () => 'official-1') }]
+  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ interpretations: largeRefs }), input), EventResearchSemanticError)
+  const duplicateSectionIds = [{ ...(validSynthesis().interpretations as Dict[])[0], sectionId: 'not-an-allowed-section' }]
+  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ interpretations: duplicateSectionIds }), input), EventResearchSemanticError)
   const executor = new SequenceExecutor([validSynthesis()])
   return new EventResearchSynthesisSkill(executor).synthesize(input).then(() => {
     const contract = executor.requests[0]?.outputContract as Dict
-    assert.equal(((contract.sections as Dict).maxItems), 16)
+    assert.equal(((contract.interpretations as Dict).maxItems), 12)
     assert.equal(((contract.assessments as Dict).maxItems), 12)
-    assert.equal((((contract.sections as Dict).item as Dict).sourceCandidateIds as Dict).maxItems, 12)
-    assert.deepEqual(((contract.sections as Dict).item as Dict).required, ['sectionId', 'title', 'markdown', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs'])
+    assert.equal((((contract.interpretations as Dict).item as Dict).sourceCandidateIds as Dict).maxItems, 12)
+    assert.deepEqual(((contract.interpretations as Dict).item as Dict).required, ['interpretationId', 'sectionId', 'markdown', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs'])
     assert.deepEqual(((contract.assessments as Dict).item as Dict).required, ['assessmentId', 'impactType', 'basis', 'direction', 'materiality', 'timeHorizon', 'existingKnowledgeRefs', 'sourceCandidateIds', 'rationale', 'causalChain'])
     assert.deepEqual(((contract.proposals as Dict).item as Dict).required, ['proposalId', 'kind', 'claimType', 'subjectKey', 'statement', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs'])
     assert.deepEqual((((contract.proposals as Dict).item as Dict).claimType as Dict).enum, ['viewpoint', 'risk', 'catalyst', 'assumption'])
@@ -287,10 +317,10 @@ test('ER-SKILL-7c proposal dates require authoritative dates and bounded structu
   const baseProposal = (validSynthesis().proposals as Dict[])[0]!
   assert.equal(hasUnsupportedNumericClaim('The event was recorded on 2026-09-08.', [], [], ['2026-09-08']), false)
   assert.equal(hasUnsupportedNumericClaim('The event was recorded on 2099-01-01.', [], [], ['2026-09-08']), true)
-  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ proposals: [{ ...baseProposal, statement: 'The event is scheduled for 2099-01-01.' }] }), input), EventResearchSemanticError)
-  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ proposals: [{ ...baseProposal, structuredValue: { ...(baseProposal.structuredValue as Dict), metric: 'm'.repeat(97) } }] }), input), EventResearchSemanticError)
-  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ proposals: [{ ...baseProposal, structuredValue: { ...(baseProposal.structuredValue as Dict), fiscalPeriod: 'FY2026' } }] }), input), EventResearchSemanticError)
-  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ proposals: [{ ...baseProposal, structuredValue: { ...(baseProposal.structuredValue as Dict), period: '2099-01-01' } }] }), input), EventResearchSemanticError)
+  assert.equal(filterEventResearchProposals([{ ...baseProposal, statement: 'The event is scheduled for 2099-01-01.' }], input, validateEventResearchSynthesis(validSynthesis(), input).assessments).length, 0)
+  assert.equal(filterEventResearchProposals([{ ...baseProposal, structuredValue: { ...(baseProposal.structuredValue as Dict), metric: 'm'.repeat(97) } }], input, validateEventResearchSynthesis(validSynthesis(), input).assessments).length, 0)
+  assert.equal(filterEventResearchProposals([{ ...baseProposal, structuredValue: { ...(baseProposal.structuredValue as Dict), fiscalPeriod: 'FY2026' } }], input, validateEventResearchSynthesis(validSynthesis(), input).assessments).length, 0)
+  assert.equal(filterEventResearchProposals([{ ...baseProposal, structuredValue: { ...(baseProposal.structuredValue as Dict), period: '2099-01-01' } }], input, validateEventResearchSynthesis(validSynthesis(), input).assessments).length, 0)
   assert.throws(() => validateEventResearchSynthesis(validSynthesis(), { ...input, sources: undefined }), EventResearchSemanticError)
 })
 
@@ -304,18 +334,19 @@ test('ER-SKILL-7b Gateway conversion returns only the canonical proposal shape',
 })
 
 test('ER-SKILL-8 weak verification returns a report contract with no durable proposals', () => {
-  const weakSynthesis = validSynthesis({ sections: (validSynthesis().sections as Dict[]).map((section) => ({ ...section, sourceCandidateIds: (section.sourceCandidateIds as string[]).filter((id) => id === 'news-1') })), assessments: [{ ...(validSynthesis().assessments as Dict[])[0], sourceCandidateIds: ['news-1'] }] })
+  const weakSynthesis = validSynthesis({ interpretations: [], assessments: [{ ...(validSynthesis().assessments as Dict[])[0], sourceCandidateIds: ['news-1'] }] })
   const output = validateEventResearchSynthesis(weakSynthesis, synthesisInput(false))
-  assert.equal(output.sections.length, 16)
-  assert.equal(output.proposals.length, 0)
+  assert.equal(output.interpretations.length, 0)
+  assert.equal(output.proposalCandidates.length, 1)
 })
 
 test('ER-SKILL-9 Stage B repair is bounded and invalid output falls back safely', async () => {
   const invalid = validSynthesis({ proposals: [{ ...(validSynthesis().proposals as Dict[])[0], sourceCandidateIds: ['forged'] }] })
   const executor = new SequenceExecutor([invalid, invalid])
   const result = await new EventResearchSynthesisSkill(executor).synthesize(synthesisInput())
-  assert.equal(result.reasoning.repairAttempts, 1)
-  assert.equal(result.reasoning.fallbackUsed, true)
-  assert.equal(result.output.proposals.length, 0)
-  assert.equal(executor.requests.length, 2)
+  assert.equal(result.reasoning.repairAttempts, 0)
+  assert.equal(result.reasoning.fallbackUsed, false)
+  assert.equal(result.reasoning.applied, true)
+  assert.equal(result.output.proposalCandidates.length, 1)
+  assert.equal(executor.requests.length, 1)
 })

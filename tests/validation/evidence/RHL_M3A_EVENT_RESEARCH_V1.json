@@ -1,10 +1,10 @@
 {
-  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-002",
   "classification": "IMPLEMENTED / CTO ACCEPTANCE PENDING",
   "architecture": "IMPLEMENTED / CTO ACCEPTANCE PENDING",
-  "focusedTests": { "command": "node --import tsx --test tests/workflows/event-research.test.ts tests/workflows/event-research-skill.test.ts", "tests": 43, "pass": 43, "fail": 0 },
+  "focusedTests": { "command": "node --import tsx --test tests/workflows/event-research.test.ts tests/workflows/event-research-skill.test.ts", "tests": 48, "pass": 48, "fail": 0 },
   "observedRepositoryValidation": {
-    "node": { "tests": 511, "pass": 511, "fail": 0 },
+    "node": { "tests": 524, "pass": 524, "fail": 0 },
     "client": { "tests": 21, "pass": 21, "fail": 0 },
     "typecheck": "PASS",
     "gitDiffCheck": "PASS",
@@ -12,17 +12,23 @@
   },
   "realPi": {
     "evidenceFile": "RHL_M3A_EVENT_RESEARCH_V1_PI_E2E.json",
-    "classification": "REAL_MODEL_CONTRACT_BLOCKED",
-    "processExitCode": 1,
+    "classification": "EXECUTED / PASS GATE",
+    "processExitCode": 0,
     "actualPiReasoningExecutor": true,
     "model": "zhipu-openapi/glm-5.3-flash",
     "assessment": "called and validated",
-    "synthesis": "called, repair attempted, final output fell back",
+    "synthesis": "called and validated/applied without fallback",
     "strongVerification": true,
+    "directImpactCount": 1,
+    "secondOrderImpactCount": 1,
+    "affectedExistingClaimCount": 3,
+    "modelDerivedInterpretiveSectionCount": 11,
+    "canonicalSourceCountDelta": 2,
+    "canonicalClaimCountDelta": 2,
     "irrelevantSourceCanonicalized": false,
     "reportSections": 16,
-    "reportPersisted": false,
-    "blockers": ["Stage B output was not accepted after bounded repair", "shared report writer does not yet admit event_research"]
+    "reportPersisted": true,
+    "blockers": []
   },
   "providerSmoke": {
     "evidenceFile": "RHL_M3A_EVENT_RESEARCH_V1_PROVIDER_SMOKE.json",
@@ -35,7 +41,7 @@
     "modifiedByTask5": ["docs/architecture/PERSONAL_RESEARCH_V1_EVENT_RESEARCH_V0.1.md", "docs/governance/CURRENT_STATUS.md", "docs/governance/DECISION_LOG.md", "docs/governance/CHANGELOG.md", "tests/validation/evidence/*", "tests/validation/event-research-pi-e2e.ts", "tests/validation/event-research-pi-e2e-gate.ts", "tests/validation/event-research-provider-smoke.ts"],
     "forbiddenProductionChanges": true,
     "implementationCommit": "pre-commit-working-tree",
-    "sourceBaseline": "37b4a0e664441f0c3cdc4dc5bd42c238649a9dce"
+    "sourceBaseline": "af9f473afe992f220bdb1cd0650454d6a448d798"
   },
   "secretsIncluded": false,
   "rawBodiesIncluded": false

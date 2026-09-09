@@ -5,7 +5,6 @@ import {
   EVENT_DURABLE_CLAIM_TYPES,
   EVENT_EVIDENCE_REQUIREMENTS,
   EVENT_EVIDENCE_VERDICTS,
-  EVENT_IMPACT_DISPOSITIONS,
   EVENT_RESEARCH_SECTIONS,
   type EventAssumptionUpdate,
   type EventContradiction,
@@ -16,10 +15,11 @@ import {
   type EventEvidenceSource,
   type EventExistingKnowledgeClaim,
   type EventImpactAssessment,
+  type EventInterpretation,
   type EventResearchProposal,
   type EventResearchGatewayProposal,
   type EventResearchReasoningTelemetry,
-  type EventResearchSection,
+  type EventReasoningShape,
   type EventResearchSynthesisInput,
   type EventResearchSynthesisOutput,
   type EventSourceAssessment,
@@ -47,7 +47,7 @@ const STRUCTURED_SAFE_STRING = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,95}$/
 const FISCAL_PERIOD = /^\d{4}-(?:Q[1-4]|H[12]|FY)$/
 const WRAPPERS = ['result', 'output', 'data', 'structuredOutput', 'response'] as const
 const STRUCTURED_FIELDS = ['comparator', 'fiscalPeriod', 'metric', 'period', 'semanticKey', 'unit', 'value'] as const
-const PROPOSAL_FIELDS = ['assessmentRefs', 'claimType', 'existingKnowledgeRefs', 'kind', 'proposalId', 'sourceCandidateIds', 'statement', 'subjectKey', 'structuredValue'] as const
+const PROPOSAL_FIELDS = ['assessmentRefs', 'claimType', 'existingKnowledgeRefs', 'kind', 'newValue', 'proposalId', 'sourceCandidateIds', 'statement', 'subjectKey', 'structuredValue'] as const
 
 export class EventResearchSemanticError extends Error {
   readonly retryable: boolean
@@ -74,7 +74,11 @@ function safeDiagnostics(error: unknown): readonly string[] {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value) }
-function records(value: unknown, max = MAX_REFERENCE_ITEMS): readonly Record<string, unknown>[] { return Array.isArray(value) ? value.slice(0, max).filter(isRecord) : [] }
+function reasoningShape(value: unknown): EventReasoningShape {
+  const object = isRecord(value) ? value : {}
+  const count = (key: string) => Array.isArray(object[key]) ? object[key].length : 0
+  return { topLevelKeys: Object.keys(object).sort().slice(0, 16), interpretationCount: count('interpretations'), assessmentCount: count('assessments'), proposalCount: count('proposals') }
+}
 function strings(value: unknown): readonly string[] { return Array.isArray(value) ? value.slice(0, MAX_REFERENCE_ITEMS).filter((item): item is string => typeof item === 'string') : [] }
 function validLocalId(value: unknown): value is string { return typeof value === 'string' && LOCAL_ID.test(value) }
 function uniqueSorted(values: readonly string[]): readonly string[] { return [...new Set(values)].sort() }
@@ -376,12 +380,12 @@ export function validateEventAssumptionUpdate(value: unknown, existingClaim: Eve
 
 export const isValidEventAssumptionUpdate = validateEventAssumptionUpdate
 
-function durableDisposition(disposition: EventImpactAssessment['disposition']): boolean { return disposition !== 'no_change' && disposition !== 'research_gap' }
-function compatibleDisposition(claimType: EventDurableClaimType, disposition: EventImpactAssessment['disposition']): boolean {
-  if (claimType === 'assumption') return disposition === 'changes_assumption'
-  if (claimType === 'risk') return disposition === 'new_risk' || disposition === 'affects_thesis'
-  if (claimType === 'catalyst') return disposition === 'new_catalyst' || disposition === 'affects_thesis'
-  return disposition === 'new_fact' || disposition === 'supports_existing' || disposition === 'contradicts_existing' || disposition === 'affects_thesis'
+function durableImpactType(impactType: EventImpactAssessment['impactType']): boolean { return impactType !== 'no_change' && impactType !== 'research_gap' }
+function compatibleImpactType(claimType: EventDurableClaimType, impactType: EventImpactAssessment['impactType']): boolean {
+  if (claimType === 'assumption') return impactType === 'assumption'
+  if (claimType === 'risk') return impactType === 'risk' || impactType === 'direct' || impactType === 'second_order'
+  if (claimType === 'catalyst') return impactType === 'catalyst' || impactType === 'direct' || impactType === 'second_order'
+  return impactType === 'direct' || impactType === 'second_order' || impactType === 'thesis'
 }
 
 function allowedSupportingSources(input: EventResearchSynthesisInput): ReadonlySet<string> { return new Set(input.verification.supportingSourceCandidateIds) }
@@ -391,20 +395,29 @@ function validateAssessment(value: unknown, index: number, input: EventResearchS
   const item = isRecord(value) ? value : {}
   const sources = strings(item.sourceCandidateIds)
   const claims = strings(item.existingKnowledgeRefs)
-  const impactType = item.impactType ?? (item.disposition === 'new_risk' ? 'risk' : item.disposition === 'new_catalyst' ? 'catalyst' : item.disposition === 'changes_assumption' ? 'assumption' : item.disposition === 'affects_thesis' ? 'thesis' : item.disposition === 'research_gap' ? 'research_gap' : item.disposition === 'no_change' ? 'no_change' : item.disposition === 'new_fact' ? 'direct' : 'direct')
-  const basis = item.basis ?? (impactType === 'research_gap' || impactType === 'no_change' ? 'hypothesis' : 'verified_fact')
-  const direction = item.direction ?? 'unclear'
-  const materiality = item.materiality ?? 'medium'
-  const timeHorizon = item.timeHorizon ?? 'near_term'
-  const causalChain = item.causalChain ?? item.secondOrderImpact ?? item.directImpact ?? ''
-  const valid = keysAreAllowed(item, ['assessmentId', 'disposition', 'impactType', 'basis', 'direction', 'materiality', 'timeHorizon', 'existingKnowledgeRefs', 'sourceCandidateIds', 'rationale', 'causalChain', 'directImpact', 'secondOrderImpact']) && validLocalId(item.assessmentId) && (item.disposition === undefined || enumValue(item.disposition, EVENT_IMPACT_DISPOSITIONS)) && enumValue(impactType, ['direct', 'second_order', 'assumption', 'thesis', 'catalyst', 'risk', 'no_change', 'research_gap'] as const) && enumValue(basis, ['verified_fact', 'inference', 'hypothesis'] as const) && enumValue(direction, ['positive', 'negative', 'mixed', 'unclear'] as const) && enumValue(materiality, ['low', 'medium', 'high'] as const) && enumValue(timeHorizon, ['immediate', 'near_term', 'medium_term', 'long_term'] as const) && exactArray(item.sourceCandidateIds, sourceSet) && exactArray(item.existingKnowledgeRefs, claimSet) && nonEmptyText(item.rationale, 1_000) && nonEmptyText(causalChain, 1_500) && (impactType !== 'second_order' || causalChain.trim() !== '')
-  if (!valid) throw new EventResearchSemanticError(`Invalid event impact assessment ${index}`, [`impact_assessment_${index}_invalid`])
-  if (basis !== 'hypothesis' && impactType !== 'no_change' && impactType !== 'research_gap' && (sources.length === 0 || !sources.every((id) => allowedSupportingSources(input).has(id)))) throw new EventResearchSemanticError(`Durable event impact lacks supporting evidence ${index}`, [`impact_assessment_${index}_evidence_required`])
+  const impactType = item.impactType
+  const basis = item.basis
+  const direction = item.direction
+  const materiality = item.materiality
+  const timeHorizon = item.timeHorizon
+  const causalChain = item.causalChain
+  const diagnostic = (field: string) => `impact_assessment_${index}_${field}`
+  if (!validLocalId(item.assessmentId)) throw new EventResearchSemanticError(`Invalid event impact assessment ${index}`, [diagnostic('id_invalid')])
+  if (!enumValue(impactType, ['direct', 'second_order', 'assumption', 'thesis', 'catalyst', 'risk', 'no_change', 'research_gap'] as const)) throw new EventResearchSemanticError(`Invalid event impact assessment ${index}`, [diagnostic('impact_type_invalid')])
+  if (!enumValue(basis, ['verified_fact', 'inference', 'hypothesis'] as const)) throw new EventResearchSemanticError(`Invalid event impact assessment ${index}`, [diagnostic('basis_invalid')])
+  if (!enumValue(direction, ['positive', 'negative', 'mixed', 'unclear'] as const)) throw new EventResearchSemanticError(`Invalid event impact assessment ${index}`, [diagnostic('direction_invalid')])
+  if (!enumValue(materiality, ['low', 'medium', 'high'] as const)) throw new EventResearchSemanticError(`Invalid event impact assessment ${index}`, [diagnostic('materiality_invalid')])
+  if (!enumValue(timeHorizon, ['immediate', 'near_term', 'medium_term', 'long_term'] as const)) throw new EventResearchSemanticError(`Invalid event impact assessment ${index}`, [diagnostic('time_horizon_invalid')])
+  if (!exactArray(item.sourceCandidateIds, sourceSet)) throw new EventResearchSemanticError(`Invalid event impact assessment ${index}`, [diagnostic('source_refs_invalid')])
+  if (!exactArray(item.existingKnowledgeRefs, claimSet)) throw new EventResearchSemanticError(`Invalid event impact assessment ${index}`, [diagnostic('existing_refs_invalid')])
+  if (!nonEmptyText(item.rationale, 1_000)) throw new EventResearchSemanticError(`Invalid event impact assessment ${index}`, [diagnostic('rationale_invalid')])
+  if (!nonEmptyText(causalChain, 1_500)) throw new EventResearchSemanticError(`Invalid event impact assessment ${index}`, [diagnostic('causal_chain_invalid')])
+  if (impactType === 'second_order' && basis === 'hypothesis') throw new EventResearchSemanticError(`Second-order impact requires evidence ${index}`, [diagnostic('second_order_basis_invalid')])
+  if (basis !== 'hypothesis' && durableImpactType(impactType) && (sources.length === 0 || !sources.every((id) => allowedSupportingSources(input).has(id)))) throw new EventResearchSemanticError(`Durable event impact lacks supporting evidence ${index}`, [diagnostic('evidence_required')])
   const referencedClaims = claims.map((ref) => input.existingKnowledge.find((claim) => claim.canonicalRef === ref)).filter((claim): claim is EventExistingKnowledgeClaim => claim !== undefined)
-  if ((item.disposition === 'changes_assumption' || impactType === 'assumption') && (referencedClaims.length !== 1 || referencedClaims[0]?.claimType !== 'assumption')) throw new EventResearchSemanticError(`Assumption impact requires one exact assumption Claim ${index}`, [`impact_assessment_${index}_assumption_ref_required`])
-  if ((item.disposition === 'affects_thesis' || impactType === 'thesis') && (referencedClaims.length !== 1 || referencedClaims[0]?.claimType !== 'thesis')) throw new EventResearchSemanticError(`Thesis impact requires one exact thesis Claim ${index}`, [`impact_assessment_${index}_thesis_ref_required`])
-  if ((item.disposition === 'supports_existing' || item.disposition === 'contradicts_existing') && referencedClaims.length === 0) throw new EventResearchSemanticError(`Existing impact requires an exact existing Claim ${index}`, [`impact_assessment_${index}_existing_ref_required`])
-  return { assessmentId: item.assessmentId as string, disposition: (item.disposition ?? (impactType === 'risk' ? 'new_risk' : impactType === 'catalyst' ? 'new_catalyst' : impactType === 'assumption' ? 'changes_assumption' : impactType === 'thesis' ? 'affects_thesis' : impactType)) as EventImpactAssessment['disposition'], impactType: impactType as EventImpactAssessment['impactType'], basis: basis as EventImpactAssessment['basis'], direction: direction as EventImpactAssessment['direction'], materiality: materiality as EventImpactAssessment['materiality'], timeHorizon: timeHorizon as EventImpactAssessment['timeHorizon'], existingKnowledgeRefs: claims, sourceCandidateIds: sources, rationale: (item.rationale as string).trim().slice(0, 1_000), causalChain: causalChain.trim().slice(0, 1_500), ...(item.directImpact === undefined ? {} : { directImpact: String(item.directImpact).trim().slice(0, 1_500) }), ...(item.secondOrderImpact === undefined ? {} : { secondOrderImpact: String(item.secondOrderImpact).trim().slice(0, 1_500) }) }
+  if (impactType === 'assumption' && (referencedClaims.length !== 1 || referencedClaims[0]?.claimType !== 'assumption')) throw new EventResearchSemanticError(`Assumption impact requires one exact assumption Claim ${index}`, [`impact_assessment_${index}_assumption_ref_required`])
+  if (impactType === 'thesis' && (referencedClaims.length !== 1 || referencedClaims[0]?.claimType !== 'thesis')) throw new EventResearchSemanticError(`Thesis impact requires one exact thesis Claim ${index}`, [`impact_assessment_${index}_thesis_ref_required`])
+  return { assessmentId: item.assessmentId as string, impactType, basis, direction, materiality, timeHorizon, existingKnowledgeRefs: claims, sourceCandidateIds: sources, rationale: (item.rationale as string).trim().slice(0, 1_000), causalChain: (causalChain as string).trim().slice(0, 1_500) }
 }
 
 function proposalDiagnostics(index: number, code: string): never { throw new EventResearchSemanticError(`Invalid event research proposal ${index}`, [`proposal_${index}_${code}`]) }
@@ -424,27 +437,34 @@ export function validateEventResearchProposal(value: unknown, index: number, inp
   if (!sources.every((id) => allowedSupportingSources(input).has(id))) proposalDiagnostics(index, 'source_not_supporting')
   if (new Set(assessmentRefs).size !== assessmentRefs.length) proposalDiagnostics(index, 'assessment_refs_duplicate')
   const referencedAssessments = assessmentRefs.map((ref) => assessmentMap.get(ref)!).filter(Boolean)
-  if (!referencedAssessments.some((assessment) => durableDisposition(assessment.disposition) && assessment.basis !== 'hypothesis')) proposalDiagnostics(index, 'non_hypothesis_assessment_required')
+  if (!referencedAssessments.some((assessment) => durableImpactType(assessment.impactType) && assessment.basis !== 'hypothesis')) proposalDiagnostics(index, 'non_hypothesis_assessment_required')
   const referencedSourceIds = new Set(referencedAssessments.flatMap((assessment) => assessment.sourceCandidateIds))
   if (!sources.every((sourceId) => referencedSourceIds.has(sourceId))) proposalDiagnostics(index, 'source_not_referenced_by_assessment')
-  if (!referencedAssessments.every((assessment) => compatibleDisposition(claimType as EventDurableClaimType, assessment.disposition))) proposalDiagnostics(index, 'impact_disposition_incompatible')
+  if (!referencedAssessments.every((assessment) => compatibleImpactType(claimType as EventDurableClaimType, assessment.impactType))) proposalDiagnostics(index, 'impact_type_incompatible')
   if (claimType === 'assumption') {
   if (claims.length !== 1) proposalDiagnostics(index, 'assumption_ref_count')
     const existing = claimByRef(input, claims[0]!)
     const dates = authoritativeDates(input)
-    if (item.structuredValue !== undefined && !validateStructuredShape(item.structuredValue, true, dates)) proposalDiagnostics(index, 'structured_value_invalid')
-    if (existing === undefined || !validateEventAssumptionUpdate({ existingClaimRef: claims[0], structuredValue: item.structuredValue }, existing)) proposalDiagnostics(index, 'assumption_update_invalid')
-    const nextValue = item.structuredValue as EventStructuredValue
+    if (existing === undefined || !isRecord(existing.structuredValue)) proposalDiagnostics(index, 'assumption_update_invalid')
+    const current = existing!.structuredValue as EventStructuredValue
+    const nextStructuredValue = item.structuredValue === undefined
+      ? (Object.prototype.hasOwnProperty.call(item, 'newValue') && (item.newValue === null || ['string', 'number', 'boolean'].includes(typeof item.newValue)) ? { ...current, value: item.newValue } : undefined)
+      : item.structuredValue
+    if (nextStructuredValue === undefined || !validateStructuredShape(nextStructuredValue, true, dates)) proposalDiagnostics(index, 'structured_value_invalid')
+    if (!validateEventAssumptionUpdate({ existingClaimRef: claims[0], structuredValue: nextStructuredValue }, existing!)) proposalDiagnostics(index, 'assumption_update_invalid')
+    const nextValue = nextStructuredValue as EventStructuredValue
     if (hasUnsupportedNumericClaim(item.statement as string, typeof nextValue.value === 'number' ? [nextValue.value] : [], validatedCompanyTicker(input), [...dates])) proposalDiagnostics(index, 'unsupported_numeric_claim')
   } else {
     if (item.structuredValue !== undefined) proposalDiagnostics(index, 'unsupported_structured_value')
     if (hasUnsupportedNumericClaim(item.statement as string, [], validatedCompanyTicker(input), [...authoritativeDates(input)])) proposalDiagnostics(index, 'unsupported_numeric_claim')
   }
-  return { proposalId: item.proposalId as string, kind: 'claim', claimType: claimType as EventDurableClaimType, subjectKey: 'company', statement: (item.statement as string).trim(), sourceCandidateIds: sources, existingKnowledgeRefs: claims, assessmentRefs, ...(item.structuredValue === undefined ? {} : { structuredValue: item.structuredValue as EventStructuredValue }) }
+  return { proposalId: item.proposalId as string, kind: 'claim', claimType: claimType as EventDurableClaimType, subjectKey: 'company', statement: (item.statement as string).trim(), sourceCandidateIds: sources, existingKnowledgeRefs: claims, assessmentRefs, ...(claimType === 'assumption' ? { structuredValue: (item.structuredValue ?? { ...(claimByRef(input, claims[0]!)!.structuredValue as EventStructuredValue), value: item.newValue }) as EventStructuredValue } : {}) }
 }
 
-export function filterEventResearchProposals(values: readonly unknown[], input: EventResearchSynthesisInput, assessments: readonly EventImpactAssessment[]): readonly EventResearchProposal[] {
+export interface EventResearchProposalFilterResult { readonly accepted: readonly EventResearchProposal[]; readonly diagnostics: readonly string[] }
+export function filterEventResearchProposalsWithDiagnostics(values: readonly unknown[], input: EventResearchSynthesisInput, assessments: readonly EventImpactAssessment[]): EventResearchProposalFilterResult {
   const accepted: EventResearchProposal[] = []
+  const diagnostics: string[] = []
   const types = new Set<string>()
   for (const [index, value] of values.entries()) {
     if (accepted.length >= MAX_PROPOSALS) break
@@ -453,16 +473,18 @@ export function filterEventResearchProposals(values: readonly unknown[], input: 
       if (types.has(proposal.claimType)) continue
       types.add(proposal.claimType)
       accepted.push(proposal)
-    } catch {
-      // Proposal filtering is a deterministic fail-closed boundary.
+    } catch (error) {
+      const diagnostic = error instanceof EventResearchSemanticError ? error.diagnostics[0] : undefined
+      diagnostics.push((diagnostic ?? `proposal_${index}_rejected`).slice(0, 160))
     }
   }
-  return accepted
+  return { accepted, diagnostics: diagnostics.slice(0, 24) }
 }
+export function filterEventResearchProposals(values: readonly unknown[], input: EventResearchSynthesisInput, assessments: readonly EventImpactAssessment[]): readonly EventResearchProposal[] { return filterEventResearchProposalsWithDiagnostics(values, input, assessments).accepted }
 
 function synthesisInstruction(repair: boolean, diagnostics: readonly string[]): string {
   const prefix = repair ? `Bounded repair attempt 1. Correct every deterministic diagnostic: ${diagnostics.join(', ') || 'output_contract_invalid'}. Return a complete replacement object.` : 'Return one complete synthesis object.'
-  return `${prefix} Use only verified event facts, supplied evidence, and bounded Company Knowledge. Return exactly interpretations, assessments, and proposals. interpretations may only use sectionId values: ${EVENT_RESEARCH_SECTIONS.slice(5).map((title) => eventResearchSectionId(title)).join(', ')}; each contains interpretationId, sectionId, markdown, sourceCandidateIds, existingKnowledgeRefs, and assessmentRefs. Do not generate the final 16-section report. Impact assessments must use impactType, basis, direction, materiality, timeHorizon, causalChain, rationale, exact existingKnowledgeRefs and sourceCandidateIds. impactType values: direct, second_order, assumption, thesis, catalyst, risk, no_change, research_gap. basis values: verified_fact, inference, hypothesis. direction values: positive, negative, mixed, unclear. materiality values: low, medium, high. timeHorizon values: immediate, near_term, medium_term, long_term. Proposals are local claim proposals only, with claimType viewpoint, risk, catalyst, or assumption. Copy all IDs exactly from supplied allowlists. Thesis impact is report-level and must not be a thesis proposal. Do not invent dates, canonical refs, calculations, or numeric claims. An assumption proposal must preserve every existing structured-value field except value. Return JSON only.`
+  return `${prefix} Use only verified event facts, supplied evidence, and bounded Company Knowledge. Return exactly interpretations, assessments, and proposals (proposal candidates). If no durable Knowledge update is clearly justified, return proposals: []. interpretations may only use sectionId values: ${EVENT_RESEARCH_SECTIONS.slice(5).map((title) => eventResearchSectionId(title)).join(', ')}; each contains interpretationId, sectionId, markdown, sourceCandidateIds, existingKnowledgeRefs, and assessmentRefs. Do not generate the final 16-section report. Impact assessments must explicitly include impactType, basis, direction, materiality, timeHorizon, causalChain, rationale, exact existingKnowledgeRefs and sourceCandidateIds; never omit a semantic field and never use legacy disposition. impactType values: direct, second_order, assumption, thesis, catalyst, risk, no_change, research_gap. basis values: verified_fact, inference, hypothesis. direction values: positive, negative, mixed, unclear. materiality values: low, medium, high. timeHorizon values: immediate, near_term, medium_term, long_term. Proposals are optional local claim candidates only, with claimType viewpoint, risk, catalyst, or assumption. Copy all IDs exactly from supplied allowlists. Thesis impact is report-level and must not be a thesis proposal. Do not invent dates, canonical refs, calculations, or numeric claims. An assumption candidate may provide only its new value; code owns the authoritative assumption slot. Example shape: { interpretations: [{ interpretationId: 'interpretation-1', sectionId: 'first-order-impact', markdown: 'bounded interpretation', sourceCandidateIds: ['source-1'], existingKnowledgeRefs: ['claim-1'], assessmentRefs: ['assessment-1'] }], assessments: [{ assessmentId: 'assessment-1', impactType: 'direct', basis: 'verified_fact', direction: 'positive', materiality: 'medium', timeHorizon: 'near_term', existingKnowledgeRefs: [], sourceCandidateIds: ['source-1'], rationale: 'bounded rationale', causalChain: 'event -> direct effect' }, { assessmentId: 'assessment-2', impactType: 'second_order', basis: 'inference', direction: 'unclear', materiality: 'low', timeHorizon: 'medium_term', existingKnowledgeRefs: [], sourceCandidateIds: ['source-1'], rationale: 'bounded rationale', causalChain: 'event -> direct effect -> second-order effect' }], proposals: [] }. Return JSON only.`
 }
 
 function synthesisModelInput(input: EventResearchSynthesisInput, repair?: { readonly prior: unknown; readonly diagnostics: readonly string[] }): Record<string, unknown> {
@@ -482,10 +504,9 @@ function synthesisContract(input: EventResearchSynthesisInput): Record<string, u
   const assessmentRefs = { type: 'array', maxItems: MAX_REFERENCE_ITEMS, uniqueItems: true, items: { type: 'string', pattern: LOCAL_ID.source, maxLength: 96 } }
   const claimRefs = sourceReferenceContract(claims)
   const assessment = { type: 'object', required: ['assessmentId', 'impactType', 'basis', 'direction', 'materiality', 'timeHorizon', 'existingKnowledgeRefs', 'sourceCandidateIds', 'rationale', 'causalChain'], additionalProperties: false, assessmentId: { type: 'string', pattern: LOCAL_ID.source, maxLength: 96 }, impactType: { type: 'string', enum: ['direct', 'second_order', 'assumption', 'thesis', 'catalyst', 'risk', 'no_change', 'research_gap'] }, basis: { type: 'string', enum: ['verified_fact', 'inference', 'hypothesis'] }, direction: { type: 'string', enum: ['positive', 'negative', 'mixed', 'unclear'] }, materiality: { type: 'string', enum: ['low', 'medium', 'high'] }, timeHorizon: { type: 'string', enum: ['immediate', 'near_term', 'medium_term', 'long_term'] }, existingKnowledgeRefs: claimRefs, sourceCandidateIds: sourceReferenceContract(allowedSources), rationale: { type: 'string', minLength: 1, maxLength: 1_000 }, causalChain: { type: 'string', minLength: 1, maxLength: 1_500 } }
-  const proposal = { type: 'object', required: ['proposalId', 'kind', 'claimType', 'subjectKey', 'statement', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs'], additionalProperties: false, proposalId: { type: 'string', pattern: LOCAL_ID.source, maxLength: 96 }, kind: { type: 'string', enum: ['claim'] }, claimType: { type: 'string', enum: EVENT_DURABLE_CLAIM_TYPES }, subjectKey: { type: 'string', enum: ['company'] }, statement: { type: 'string', minLength: 1, maxLength: 1_500 }, sourceCandidateIds: sourceReferenceContract(verification.supportingSourceCandidateIds, true), existingKnowledgeRefs: claimRefs, assessmentRefs, structuredValue: structuredValueContract() }
+  const proposal = { type: 'object', required: ['proposalId', 'kind', 'claimType', 'subjectKey', 'statement', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs'], additionalProperties: false, proposalId: { type: 'string', pattern: LOCAL_ID.source, maxLength: 96 }, kind: { type: 'string', enum: ['claim'] }, claimType: { type: 'string', enum: EVENT_DURABLE_CLAIM_TYPES }, subjectKey: { type: 'string', enum: ['company'] }, statement: { type: 'string', minLength: 1, maxLength: 1_500 }, sourceCandidateIds: sourceReferenceContract(verification.supportingSourceCandidateIds, true), existingKnowledgeRefs: claimRefs, assessmentRefs, structuredValue: structuredValueContract(), newValue: { type: ['string', 'number', 'boolean', 'null'] } }
   const interpretation = { type: 'object', required: ['interpretationId', 'sectionId', 'markdown', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs'], additionalProperties: false, interpretationId: { type: 'string', pattern: LOCAL_ID.source, maxLength: 96 }, sectionId: { type: 'string', enum: EVENT_RESEARCH_SECTIONS.slice(5).map((title) => eventResearchSectionId(title)) }, markdown: { type: 'string', minLength: 1, maxLength: 2_000 }, sourceCandidateIds: sourceReferenceContract(allowedSources), existingKnowledgeRefs: claimRefs, assessmentRefs }
-  const legacySection = { type: 'object', required: ['sectionId', 'title', 'markdown', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs'], additionalProperties: false, sourceCandidateIds: sourceReferenceContract(allowedSources), existingKnowledgeRefs: claimRefs, assessmentRefs }
-  return { type: 'object', required: ['interpretations', 'assessments', 'proposals'], additionalProperties: false, allowedSourceCandidateIds: allowedSources, allowedSupportingSourceCandidateIds: verification.supportingSourceCandidateIds, allowedContradictingSourceCandidateIds: verification.contradictingSourceCandidateIds, allowedExistingClaimRefs: claims, allowedAssumptionClaimRefs: input.existingKnowledge.slice(0, MAX_EXISTING_CLAIMS).filter((claim) => claim.claimType === 'assumption' && claims.includes(claim.canonicalRef)).map((claim) => claim.canonicalRef), allowedThesisClaimRefs: input.existingKnowledge.slice(0, MAX_EXISTING_CLAIMS).filter((claim) => claim.claimType === 'thesis' && claims.includes(claim.canonicalRef)).map((claim) => claim.canonicalRef), allowedImpactTypes: ['direct', 'second_order', 'assumption', 'thesis', 'catalyst', 'risk', 'no_change', 'research_gap'], allowedBasisValues: ['verified_fact', 'inference', 'hypothesis'], allowedDirections: ['positive', 'negative', 'mixed', 'unclear'], allowedMaterialityValues: ['low', 'medium', 'high'], allowedTimeHorizons: ['immediate', 'near_term', 'medium_term', 'long_term'], allowedInterpretationSectionIds: EVENT_RESEARCH_SECTIONS.slice(5).map((title) => eventResearchSectionId(title)), interpretations: { type: 'array', maxItems: 12, item: interpretation }, assessments: { type: 'array', maxItems: MAX_IMPACT_ASSESSMENTS, item: assessment }, proposals: { type: 'array', maxItems: MAX_PROPOSALS, item: proposal }, sections: { type: 'array', minItems: EVENT_RESEARCH_SECTIONS.length, maxItems: EVENT_RESEARCH_SECTIONS.length, item: legacySection, deprecated: true } }
+  return { type: 'object', required: ['interpretations', 'assessments', 'proposals'], additionalProperties: false, allowedSourceCandidateIds: allowedSources, allowedSupportingSourceCandidateIds: verification.supportingSourceCandidateIds, allowedContradictingSourceCandidateIds: verification.contradictingSourceCandidateIds, allowedExistingClaimRefs: claims, allowedAssumptionClaimRefs: input.existingKnowledge.slice(0, MAX_EXISTING_CLAIMS).filter((claim) => claim.claimType === 'assumption' && claims.includes(claim.canonicalRef)).map((claim) => claim.canonicalRef), allowedThesisClaimRefs: input.existingKnowledge.slice(0, MAX_EXISTING_CLAIMS).filter((claim) => claim.claimType === 'thesis' && claims.includes(claim.canonicalRef)).map((claim) => claim.canonicalRef), allowedImpactTypes: ['direct', 'second_order', 'assumption', 'thesis', 'catalyst', 'risk', 'no_change', 'research_gap'], allowedBasisValues: ['verified_fact', 'inference', 'hypothesis'], allowedDirections: ['positive', 'negative', 'mixed', 'unclear'], allowedMaterialityValues: ['low', 'medium', 'high'], allowedTimeHorizons: ['immediate', 'near_term', 'medium_term', 'long_term'], allowedInterpretationSectionIds: EVENT_RESEARCH_SECTIONS.slice(5).map((title) => eventResearchSectionId(title)), interpretations: { type: 'array', maxItems: 12, item: interpretation }, assessments: { type: 'array', maxItems: MAX_IMPACT_ASSESSMENTS, item: assessment }, proposals: { type: 'array', maxItems: MAX_PROPOSALS, item: proposal } }
 }
 
 function sameStringSet(left: readonly string[], right: readonly string[]): boolean { return left.length === right.length && new Set(left).size === left.length && new Set(right).size === right.length && [...left].sort().every((value, index) => value === [...right].sort()[index]) }
@@ -504,57 +525,36 @@ function deterministicSynthesisVerification(input: EventResearchSynthesisInput):
 
 export function validateEventResearchSynthesis(value: unknown, input: EventResearchSynthesisInput): EventResearchSynthesisOutput {
   const object = parseEventReasoningObject(value)
-  if (!keysAreAllowed(object, ['sections', 'interpretations', 'assessments', 'proposals']) || !Array.isArray(object.assessments) || !Array.isArray(object.proposals) || (!Array.isArray(object.sections) && !Array.isArray(object.interpretations))) throw new EventResearchSemanticError('Event research synthesis arrays are required', ['synthesis_arrays_missing'])
-  if (!Array.isArray(object.sections) && Array.isArray(object.interpretations)) {
-    const allowed = new Set(EVENT_RESEARCH_SECTIONS.slice(5).map((title) => eventResearchSectionId(title)))
-    const seen = new Set<string>()
-    const generated = object.interpretations.map((value, index) => {
-      const item = isRecord(value) ? value : {}
-      const refs = strings(item.sourceCandidateIds); const claims = strings(item.existingKnowledgeRefs); const assessmentRefs = strings(item.assessmentRefs)
-      if (!keysAreAllowed(item, ['interpretationId', 'sectionId', 'markdown', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs']) || !validLocalId(item.interpretationId) || typeof item.sectionId !== 'string' || !allowed.has(item.sectionId) || seen.has(item.sectionId) || !nonEmptyText(item.markdown, 2_000) || !Array.isArray(item.sourceCandidateIds) || !Array.isArray(item.existingKnowledgeRefs) || !Array.isArray(item.assessmentRefs)) throw new EventResearchSemanticError(`Invalid event interpretation ${index}`, [`interpretation_${index}_invalid`])
-      seen.add(item.sectionId)
-      return { sectionId: item.sectionId, title: EVENT_RESEARCH_SECTIONS.find((title) => eventResearchSectionId(title) === item.sectionId), markdown: item.markdown, sourceCandidateIds: refs, existingKnowledgeRefs: claims, assessmentRefs }
-    })
-    const bySection = new Map(generated.map((item) => [item.sectionId, item]))
-    object.sections = EVENT_RESEARCH_SECTIONS.map((title) => bySection.get(eventResearchSectionId(title)) ?? { sectionId: eventResearchSectionId(title), title, markdown: 'No validated model interpretation is available.', sourceCandidateIds: [], existingKnowledgeRefs: [], assessmentRefs: [] })
-  }
-  const sectionArray = object.sections as readonly unknown[]
-  if (sectionArray.length > EVENT_RESEARCH_SECTIONS.length) throw new EventResearchSemanticError('Event research sections exceed the bounded contract', ['synthesis_section_count_exceeds_bound'])
+  if (!keysAreAllowed(object, ['interpretations', 'assessments', 'proposals']) || !Array.isArray(object.interpretations) || !Array.isArray(object.assessments) || !Array.isArray(object.proposals)) throw new EventResearchSemanticError('Event research synthesis arrays are required', ['synthesis_arrays_missing'])
+  if (object.interpretations.length > 12) throw new EventResearchSemanticError('Event interpretations exceed the bounded contract', ['interpretation_count_exceeds_bound'])
   if (object.assessments.length > MAX_IMPACT_ASSESSMENTS) throw new EventResearchSemanticError('Event impact assessments exceed the bounded contract', ['impact_assessment_count_exceeds_bound'])
   if (object.proposals.length > MAX_PROPOSALS) throw new EventResearchSemanticError('Too many event research proposals', ['proposal_count_exceeds_bound'])
   if (input.evidence.sourceAssessments.length > MAX_SOURCE_ASSESSMENTS) throw new EventResearchSemanticError('Stage A source assessments exceed the bounded source set', ['verification_source_count_exceeds_bound'])
-  const rawSections = records(object.sections, EVENT_RESEARCH_SECTIONS.length)
-  if (rawSections.length !== sectionArray.length || rawSections.length !== EVENT_RESEARCH_SECTIONS.length) throw new EventResearchSemanticError('Event research requires exactly 16 sections', ['synthesis_section_count_invalid'])
-  const byTitle = new Map<string, Record<string, unknown>>()
   const sourceSet = new Set(sourceIds(input))
   const claimSet = new Set(claimIds(input))
   const derivedVerification = deterministicSynthesisVerification(input)
   if (derivedVerification.supportingSourceCandidateIds.some((id) => !sourceSet.has(id)) || derivedVerification.contradictingSourceCandidateIds.some((id) => !sourceSet.has(id))) throw new EventResearchSemanticError('Event verification references are outside the evidence set', ['verification_refs_invalid'])
   validateSourceExcerpts(derivedVerification.supportingSourceCandidateIds, input.supportingSourceExcerpts, 'supporting', sourceSet)
   validateSourceExcerpts(derivedVerification.contradictingSourceCandidateIds, input.contradictingSourceExcerpts, 'contradicting', sourceSet)
-  const sections: EventResearchSection[] = rawSections.map((item, index) => {
+  const allowedInterpretationIds = new Set(EVENT_RESEARCH_SECTIONS.slice(5).map((title) => eventResearchSectionId(title)))
+  const seenInterpretationIds = new Set<string>()
+  const interpretations: EventInterpretation[] = object.interpretations.map((value, index) => {
+    const item = isRecord(value) ? value : {}
     const refs = strings(item.sourceCandidateIds); const claims = strings(item.existingKnowledgeRefs); const assessmentRefs = strings(item.assessmentRefs)
-    const title = item.title
-    const valid = keysAreAllowed(item, ['sectionId', 'title', 'markdown', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs']) && validLocalId(item.sectionId) && typeof title === 'string' && (EVENT_RESEARCH_SECTIONS as readonly string[]).includes(title) && nonEmptyText(item.markdown, 2_000) && exactArray(item.sourceCandidateIds, sourceSet) && exactArray(item.existingKnowledgeRefs, claimSet) && Array.isArray(item.assessmentRefs) && item.assessmentRefs.length <= MAX_REFERENCE_ITEMS && assessmentRefs.length === item.assessmentRefs.length && new Set(assessmentRefs).size === assessmentRefs.length && assessmentRefs.every((ref) => validLocalId(ref))
-    if (!valid) throw new EventResearchSemanticError(`Invalid event research section ${index}`, [`synthesis_section_${index}_invalid`])
-    if (byTitle.has(title as string)) throw new EventResearchSemanticError(`Duplicate event research section ${index}`, [`synthesis_section_${index}_duplicate`])
-    byTitle.set(title as string, item)
-    return { sectionId: item.sectionId as string, title: title as EventResearchSection['title'], markdown: (item.markdown as string).trim().slice(0, 2_000), sourceCandidateIds: refs, existingKnowledgeRefs: claims, assessmentRefs }
+    if (!validLocalId(item.interpretationId)) throw new EventResearchSemanticError(`Invalid event interpretation ${index}`, [`interpretation_${index}_id_invalid`])
+    if (typeof item.sectionId !== 'string' || !allowedInterpretationIds.has(item.sectionId) || seenInterpretationIds.has(item.sectionId)) throw new EventResearchSemanticError(`Invalid event interpretation ${index}`, [`interpretation_${index}_section_invalid`])
+    if (!nonEmptyText(item.markdown, 2_000)) throw new EventResearchSemanticError(`Invalid event interpretation ${index}`, [`interpretation_${index}_markdown_invalid`])
+    if (!exactArray(item.sourceCandidateIds, sourceSet)) throw new EventResearchSemanticError(`Invalid event interpretation ${index}`, [`interpretation_${index}_source_refs_invalid`])
+    if (!exactArray(item.existingKnowledgeRefs, claimSet)) throw new EventResearchSemanticError(`Invalid event interpretation ${index}`, [`interpretation_${index}_claim_refs_invalid`])
+    if (!Array.isArray(item.assessmentRefs) || assessmentRefs.length !== item.assessmentRefs.length || new Set(assessmentRefs).size !== assessmentRefs.length) throw new EventResearchSemanticError(`Invalid event interpretation ${index}`, [`interpretation_${index}_assessment_refs_invalid`])
+    seenInterpretationIds.add(item.sectionId)
+    return { interpretationId: item.interpretationId as string, sectionId: item.sectionId, markdown: (item.markdown as string).trim().slice(0, 2_000), sourceCandidateIds: refs, existingKnowledgeRefs: claims, assessmentRefs }
   })
-  if (EVENT_RESEARCH_SECTIONS.some((title) => !byTitle.has(title))) throw new EventResearchSemanticError('Event research section title set is incomplete', ['synthesis_section_titles_invalid'])
-  if (new Set(sections.map((section) => section.sectionId)).size !== sections.length) throw new EventResearchSemanticError('Duplicate event research section IDs are not allowed', ['synthesis_section_id_duplicate'])
   const assessments = object.assessments.slice(0, MAX_IMPACT_ASSESSMENTS).map((item, index) => validateAssessment(item, index, input, sourceSet, claimSet))
   if (new Set(assessments.map((item) => item.assessmentId)).size !== assessments.length) throw new EventResearchSemanticError('Duplicate event impact assessment IDs are not allowed', ['impact_assessment_duplicate'])
   const assessmentSet = new Set(assessments.map((assessment) => assessment.assessmentId))
-  if (sections.some((section) => section.assessmentRefs.some((ref) => !assessmentSet.has(ref)))) throw new EventResearchSemanticError('Section assessment references must resolve to local assessments', ['synthesis_section_assessment_ref_invalid'])
-  if (records(object.proposals, MAX_PROPOSALS).length !== object.proposals.length) throw new EventResearchSemanticError('Event research proposals contain non-objects', ['proposal_items_invalid'])
-  const proposals = derivedVerification.strongVerification ? object.proposals.map((item, index) => validateEventResearchProposal(item, index, input, assessments)) : []
-  if (new Set(proposals.map((proposal) => proposal.claimType)).size !== proposals.length) throw new EventResearchSemanticError('Only one proposal per event claim type is allowed', ['proposal_claim_type_duplicate'])
-  const interpretations = Array.isArray(object.interpretations) ? object.interpretations.slice(0, 12).map((value, index) => {
-    const item = isRecord(value) ? value : {}
-    return { interpretationId: String(item.interpretationId ?? `interpretation-${index}`), sectionId: String(item.sectionId ?? ''), markdown: typeof item.markdown === 'string' ? item.markdown.trim().slice(0, 2_000) : '', sourceCandidateIds: strings(item.sourceCandidateIds), existingKnowledgeRefs: strings(item.existingKnowledgeRefs), assessmentRefs: strings(item.assessmentRefs) }
-  }) : undefined
-  return { sections, ...(interpretations === undefined ? {} : { interpretations }), assessments, proposals }
+  if (interpretations.some((interpretation) => interpretation.assessmentRefs.some((ref) => !assessmentSet.has(ref)))) throw new EventResearchSemanticError('Interpretation assessment references must resolve to local assessments', ['interpretation_assessment_ref_invalid'])
+  return { interpretations, assessments, proposalCandidates: object.proposals }
 }
 
 export function toEventResearchGatewayProposal(proposal: EventResearchProposal): EventResearchGatewayProposal {
@@ -594,7 +594,7 @@ export class EventResearchSynthesisSkill {
   constructor(private readonly executor?: ReasoningExecutor) {}
 
   fallback(repairAttempts = 0, diagnostics: readonly string[] = []): EventResearchSynthesisSkillResult {
-    const output: EventResearchSynthesisOutput = { sections: EVENT_RESEARCH_SECTIONS.map((title) => ({ sectionId: eventResearchSectionId(title), title, markdown: `Research Gap / Unavailable: no validated synthesis is available for ${title}.`, sourceCandidateIds: [], existingKnowledgeRefs: [], assessmentRefs: [] })), assessments: [], proposals: [] }
+    const output: EventResearchSynthesisOutput = { interpretations: [], assessments: [], proposalCandidates: [] }
     return { output, reasoning: telemetry(this.executor, 'event_research_synthesis', { validated: false, applied: false, fallbackUsed: true, repairAttempts, ...(diagnostics.length === 0 ? {} : { diagnostic: diagnostics.join('; ').slice(0, 300), diagnostics }) }) }
   }
 
@@ -607,14 +607,14 @@ export class EventResearchSynthesisSkill {
     } catch (error) {
       return this.fallback(0, safeDiagnostics(error))
     }
-    let repairAttempts = 0; let prior: unknown = null; let diagnostics: readonly string[] = []
+    let repairAttempts = 0; let prior: unknown = null; let diagnostics: readonly string[] = []; let firstAttemptShape: EventReasoningShape | undefined; let repairAttemptShape: EventReasoningShape | undefined
     const execute = (repair?: { readonly prior: unknown; readonly diagnostics: readonly string[] }) => this.executor!.execute({ operation: 'event_research_synthesis', instruction: synthesisInstruction(repair !== undefined, repair === undefined ? [] : repair.diagnostics), input: synthesisModelInput(input, repair), outputContract: synthesisContract(input), metadata: { operationFamily: 'personal-research-v1', companySymbol: input.company.symbol.slice(0, 32), eventFingerprint: input.eventFingerprint.slice(0, 160) } } satisfies ReasoningRequest)
     try {
-      try { const result = await execute(); prior = parseEventReasoningObject(result.output); return { output: validateEventResearchSynthesis(prior, input), reasoning: telemetry(this.executor, 'event_research_synthesis', { validated: true, applied: true, fallbackUsed: false, repairAttempts }) } } catch (error) { diagnostics = safeDiagnostics(error) }
+      try { const result = await execute(); prior = parseEventReasoningObject(result.output); firstAttemptShape = reasoningShape(prior); return { output: validateEventResearchSynthesis(prior, input), reasoning: telemetry(this.executor, 'event_research_synthesis', { validated: true, applied: true, fallbackUsed: false, repairAttempts, firstAttemptShape }) } } catch (error) { diagnostics = safeDiagnostics(error) }
       repairAttempts = 1
-      const result = await execute({ prior, diagnostics }); return { output: validateEventResearchSynthesis(parseEventReasoningObject(result.output), input), reasoning: telemetry(this.executor, 'event_research_synthesis', { validated: true, applied: true, fallbackUsed: false, repairAttempts }) }
+      const result = await execute({ prior, diagnostics }); const repaired = parseEventReasoningObject(result.output); repairAttemptShape = reasoningShape(repaired); return { output: validateEventResearchSynthesis(repaired, input), reasoning: telemetry(this.executor, 'event_research_synthesis', { validated: true, applied: true, fallbackUsed: false, repairAttempts, ...(firstAttemptShape === undefined ? {} : { firstAttemptShape }), repairAttemptShape }) }
     } catch (error) {
-      return this.fallback(repairAttempts, [...diagnostics, ...safeDiagnostics(error)].slice(0, 24))
+      const fallback = this.fallback(repairAttempts, [...diagnostics, ...safeDiagnostics(error)].slice(0, 24)); return { ...fallback, reasoning: telemetry(this.executor, 'event_research_synthesis', { ...fallback.reasoning, ...(firstAttemptShape === undefined ? {} : { firstAttemptShape }), ...(repairAttemptShape === undefined ? {} : { repairAttemptShape }) }) }
     }
   }
 }
