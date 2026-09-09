@@ -42,6 +42,9 @@ const MAX_SOURCE_ASSESSMENTS = 12
 const MAX_CONTRADICTIONS = 12
 const MAX_REFERENCE_ITEMS = 12
 const MAX_IMPACT_ASSESSMENTS = 12
+const MAX_STRUCTURED_STRING = 96
+const STRUCTURED_SAFE_STRING = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,95}$/
+const FISCAL_PERIOD = /^\d{4}-(?:Q[1-4]|H[12]|FY)$/
 const WRAPPERS = ['result', 'output', 'data', 'structuredOutput', 'response'] as const
 const STRUCTURED_FIELDS = ['comparator', 'fiscalPeriod', 'metric', 'period', 'semanticKey', 'unit', 'value'] as const
 const PROPOSAL_FIELDS = ['assessmentRefs', 'claimType', 'existingKnowledgeRefs', 'kind', 'proposalId', 'sourceCandidateIds', 'statement', 'subjectKey', 'structuredValue'] as const
@@ -102,21 +105,21 @@ export function parseEventReasoningObject(value: unknown, depth = 0): Record<str
 
 function validSourceId(value: unknown): value is string { return typeof value === 'string' && value !== '' && value.length <= 160 }
 function boundedUniqueSources(sources: readonly EventEvidenceSource[]): readonly EventEvidenceSource[] {
+  if (!Array.isArray(sources) || sources.length > MAX_REFERENCE_ITEMS) throw new EventResearchSemanticError('Event source candidates exceed the bounded source set', ['source_count_exceeds_bound'])
   const seen = new Set<string>()
   for (const source of sources) {
-    const candidateId = source?.candidateId
-    if (typeof candidateId === 'string') {
-      if (seen.has(candidateId)) throw new EventResearchSemanticError('Duplicate event source candidate IDs are not allowed', ['source_candidate_duplicate'])
-      seen.add(candidateId)
-    }
+    if (!isRecord(source)) throw new EventResearchSemanticError('Event source metadata is incomplete or invalid', ['source_metadata_invalid'])
+    const candidateId = source.candidateId
+    if (!validSourceId(candidateId) || typeof source.title !== 'string' || source.title.trim() === '' || typeof source.provider !== 'string' || source.provider.trim() === '' || typeof source.excerpt !== 'string' || source.excerpt.trim() === '' || (source.kind !== undefined && typeof source.kind !== 'string') || (source.url !== undefined && typeof source.url !== 'string') || (source.publishedAt !== undefined && typeof source.publishedAt !== 'string') || (source.official !== undefined && typeof source.official !== 'boolean')) throw new EventResearchSemanticError('Event source metadata is incomplete or invalid', ['source_metadata_invalid'])
+    if (seen.has(candidateId)) throw new EventResearchSemanticError('Duplicate event source candidate IDs are not allowed', ['source_candidate_duplicate'])
+    seen.add(candidateId)
   }
-  return sources.slice(0, MAX_SOURCE_ASSESSMENTS)
+  return sources
 }
 function sourceIds(input: EventEvidenceAssessmentInput | EventResearchSynthesisInput): readonly string[] {
   if (!('evidence' in input)) return uniqueSorted(boundedUniqueSources(input.sources).map((source) => source.candidateId).filter(validSourceId))
-  const supplied = boundedUniqueSources(input.sources ?? []).map((source) => source.candidateId).filter(validSourceId)
-  if (input.sources !== undefined) return uniqueSorted(supplied)
-  return uniqueSorted([...input.evidence.sourceAssessments.slice(0, MAX_SOURCE_ASSESSMENTS).map((item) => item.sourceCandidateId), ...input.evidence.verifiedFacts.slice(0, MAX_VERIFIED_FACTS).flatMap((item) => strings(item.sourceCandidateIds)), ...input.evidence.contradictions.slice(0, MAX_CONTRADICTIONS).flatMap((item) => strings(item.sourceCandidateIds))].filter(validSourceId))
+  if (input.sources === undefined) return []
+  return uniqueSorted(boundedUniqueSources(input.sources).map((source) => source.candidateId).filter(validSourceId))
 }
 
 function claimIds(input: EventResearchSynthesisInput): readonly string[] { return uniqueSorted(input.existingKnowledge.slice(0, MAX_EXISTING_CLAIMS).map((claim) => claim.canonicalRef).filter((ref) => typeof ref === 'string' && ref.length <= 200 && CLAIM_REF.test(ref))) }
@@ -159,8 +162,9 @@ function selectedExcerpts(input: EventResearchSynthesisInput, ids: readonly stri
 
 function validateSourceExcerpts(ids: readonly string[], supplied: readonly EventEvidenceSource[] | undefined, label: string, sourceSet: ReadonlySet<string>): void {
   if (supplied === undefined) return
+  const bounded = boundedUniqueSources(supplied)
   const allowed = new Set(ids)
-  if (supplied.length > MAX_SOURCE_ASSESSMENTS || new Set(supplied.map((source) => source.candidateId)).size !== supplied.length || supplied.some((source) => !sourceSet.has(source.candidateId) || !allowed.has(source.candidateId) || typeof source.excerpt !== 'string')) throw new EventResearchSemanticError(`${label} source excerpts are outside the exact evidence allowlist`, [`${label}_source_excerpts_invalid`])
+  if (bounded.some((source) => !sourceSet.has(source.candidateId) || !allowed.has(source.candidateId))) throw new EventResearchSemanticError(`${label} source excerpts are outside the exact evidence allowlist`, [`${label}_source_excerpts_invalid`])
 }
 function modelClaim(claim: EventExistingKnowledgeClaim): Record<string, unknown> { return boundedValue({ canonicalRef: claim.canonicalRef, claimType: claim.claimType, statement: claim.statement?.slice(0, 600), subjectRefs: claim.subjectRefs?.slice(0, 12), structuredValue: claim.structuredValue === null || claim.structuredValue === undefined ? claim.structuredValue : boundedValue(claim.structuredValue) }) as Record<string, unknown> }
 function modelSourceAssessment(item: EventSourceAssessment): Record<string, unknown> { return boundedValue({ sourceCandidateId: item.sourceCandidateId, verdict: item.verdict, confidence: item.confidence, rationale: item.rationale, evidenceRequirement: item.evidenceRequirement }) as Record<string, unknown> }
@@ -181,7 +185,11 @@ function assessmentModelInput(input: EventEvidenceAssessmentInput, repair?: { re
 }
 
 function assessmentContract(input: EventEvidenceAssessmentInput): Record<string, unknown> {
-  return { type: 'object', required: ['sourceAssessments', 'verifiedFacts', 'contradictions'], allowedSourceCandidateIds: sourceIds(input), sourceAssessments: { type: 'array', maxItems: MAX_SOURCE_ASSESSMENTS, item: { sourceCandidateId: sourceIds(input), verdict: EVENT_EVIDENCE_VERDICTS, confidence: { type: 'number', finite: true, min: 0, max: 1 }, evidenceRequirement: EVENT_EVIDENCE_REQUIREMENTS, rationale: 'non-empty string' } }, verifiedFacts: { type: 'array', maxItems: MAX_VERIFIED_FACTS, item: { factId: 'safe local id', statement: 'non-empty string', sourceCandidateIds: sourceIds(input), confidence: { type: 'number', finite: true, min: 0, max: 1 }, evidenceRequirement: EVENT_EVIDENCE_REQUIREMENTS } }, contradictions: { type: 'array', maxItems: MAX_CONTRADICTIONS, item: { contradictionId: 'optional safe local id', statement: 'non-empty string', sourceCandidateIds: sourceIds(input), rationale: 'optional non-empty string' } } }
+  const allowedSources = sourceIds(input)
+  return { type: 'object', required: ['sourceAssessments', 'verifiedFacts', 'contradictions'], additionalProperties: false, allowedSourceCandidateIds: allowedSources,
+    sourceAssessments: { type: 'array', maxItems: MAX_SOURCE_ASSESSMENTS, item: { type: 'object', required: ['sourceCandidateId', 'verdict', 'confidence', 'rationale', 'evidenceRequirement'], additionalProperties: false, sourceCandidateId: { type: 'string', enum: allowedSources, maxLength: 160 }, verdict: EVENT_EVIDENCE_VERDICTS, confidence: { type: 'number', finite: true, min: 0, max: 1 }, rationale: { type: 'string', minLength: 1, maxLength: 1_000 }, evidenceRequirement: EVENT_EVIDENCE_REQUIREMENTS } },
+    verifiedFacts: { type: 'array', maxItems: MAX_VERIFIED_FACTS, item: { type: 'object', required: ['factId', 'statement', 'sourceCandidateIds', 'confidence', 'evidenceRequirement'], additionalProperties: false, factId: { type: 'string', pattern: LOCAL_ID.source, maxLength: 96 }, statement: { type: 'string', minLength: 1, maxLength: 2_000 }, sourceCandidateIds: sourceReferenceContract(allowedSources, true), confidence: { type: 'number', finite: true, min: 0, max: 1 }, evidenceRequirement: EVENT_EVIDENCE_REQUIREMENTS, structuredValue: structuredValueContract() } },
+    contradictions: { type: 'array', maxItems: MAX_CONTRADICTIONS, item: { type: 'object', required: ['statement', 'sourceCandidateIds'], additionalProperties: false, contradictionId: { type: 'string', pattern: LOCAL_ID.source, maxLength: 96 }, statement: { type: 'string', minLength: 1, maxLength: 2_000 }, sourceCandidateIds: sourceReferenceContract(allowedSources, true), rationale: { type: 'string', minLength: 1, maxLength: 1_000 } } } }
 }
 
 function validateSourceAssessment(value: unknown, index: number, allowed: ReadonlySet<string>): EventSourceAssessment {
@@ -191,13 +199,29 @@ function validateSourceAssessment(value: unknown, index: number, allowed: Readon
   return { sourceCandidateId: item.sourceCandidateId as string, verdict: item.verdict as EventSourceAssessment['verdict'], confidence: item.confidence as number, rationale: (item.rationale as string).trim().slice(0, 1_000), evidenceRequirement: item.evidenceRequirement as EventEvidenceRequirement }
 }
 
-function validateStructuredShape(value: unknown, allowSemanticKey = true): value is EventStructuredValue {
+function structuredString(value: unknown): value is string { return typeof value === 'string' && STRUCTURED_SAFE_STRING.test(value) }
+function structuredPeriod(value: unknown, allowedDates?: ReadonlySet<string>): boolean {
+  if (value === undefined || value === null) return true
+  if (!structuredString(value)) return false
+  if (validIsoDate(value)) return allowedDates === undefined || allowedDates.has(value)
+  return FISCAL_PERIOD.test(value)
+}
+function validateStructuredShape(value: unknown, allowSemanticKey = true, allowedDates?: ReadonlySet<string>): value is EventStructuredValue {
   if (!isRecord(value) || !keysAreAllowed(value, STRUCTURED_FIELDS as readonly string[])) return false
-  if (typeof value.metric !== 'string' || value.metric.trim() === '' || !('value' in value) || !('unit' in value) || (value.unit !== null && typeof value.unit !== 'string') || !('comparator' in value) || (value.comparator !== null && !['eq', 'gt', 'gte', 'lt', 'lte', 'approx'].includes(value.comparator as string))) return false
+  if (!structuredString(value.metric) || !('value' in value) || !('unit' in value) || (value.unit !== null && !structuredString(value.unit)) || !('comparator' in value) || (value.comparator !== null && !['eq', 'gt', 'gte', 'lt', 'lte', 'approx'].includes(value.comparator as string))) return false
   if (!((typeof value.value === 'string' && value.value.length <= 1_200) || (typeof value.value === 'number' && Number.isFinite(value.value)) || typeof value.value === 'boolean' || value.value === null)) return false
   if (typeof value.value === 'string' && /[-+]?(?:\d+(?:\.\d*)?|\.\d+)/.test(value.value)) return false
-  for (const field of ['period', 'fiscalPeriod', 'semanticKey'] as const) if (value[field] !== undefined && value[field] !== null && typeof value[field] !== 'string') return false
+  if (!structuredPeriod(value.period, allowedDates) || (value.fiscalPeriod !== undefined && value.fiscalPeriod !== null && (!structuredString(value.fiscalPeriod) || !FISCAL_PERIOD.test(value.fiscalPeriod)))) return false
+  if (value.semanticKey !== undefined && value.semanticKey !== null && !structuredString(value.semanticKey)) return false
   return allowSemanticKey || value.semanticKey === undefined || value.semanticKey === null
+}
+
+function structuredValueContract(): Record<string, unknown> {
+  return { type: 'object', required: ['metric', 'value', 'unit', 'comparator'], additionalProperties: false, allowedFields: STRUCTURED_FIELDS, metric: { type: 'string', pattern: STRUCTURED_SAFE_STRING.source, minLength: 1, maxLength: MAX_STRUCTURED_STRING }, value: { type: ['string', 'number', 'boolean', 'null'], maxLength: 1_200, finite: true, numericTextForbidden: true }, unit: { type: ['string', 'null'], pattern: STRUCTURED_SAFE_STRING.source, maxLength: MAX_STRUCTURED_STRING }, comparator: { type: ['string', 'null'], enum: ['eq', 'gt', 'gte', 'lt', 'lte', 'approx'] }, period: { type: ['string', 'null'], pattern: STRUCTURED_SAFE_STRING.source, maxLength: MAX_STRUCTURED_STRING, semantic: 'ISO date from the authoritative date allowlist or YYYY-(Q1|H1|Q3|FY)' }, fiscalPeriod: { type: ['string', 'null'], pattern: FISCAL_PERIOD.source, maxLength: MAX_STRUCTURED_STRING }, semanticKey: { type: ['string', 'null'], pattern: STRUCTURED_SAFE_STRING.source, maxLength: MAX_STRUCTURED_STRING } }
+}
+
+function sourceReferenceContract(allowed: readonly string[], nonEmpty = false): Record<string, unknown> {
+  return { type: 'array', minItems: nonEmpty ? 1 : 0, maxItems: MAX_REFERENCE_ITEMS, uniqueItems: true, items: { type: 'string', enum: allowed, maxLength: 160 } }
 }
 
 export function validateEventStructuredValue(value: unknown, expected: EventStructuredValue): value is EventStructuredValue {
@@ -208,7 +232,31 @@ export function validateEventStructuredValue(value: unknown, expected: EventStru
   return actual.metric === expected.metric && actual.value === expected.value && actual.unit === expected.unit && actual.comparator === expected.comparator && actual.period === expected.period && actual.fiscalPeriod === expected.fiscalPeriod && actual.semanticKey === expected.semanticKey
 }
 
+function validatedSourceReferences(value: unknown, allowed: ReadonlySet<string>, label: string, nonEmpty = true): readonly string[] {
+  if (!Array.isArray(value) || value.length > MAX_REFERENCE_ITEMS || (nonEmpty && value.length === 0)) throw new EventResearchSemanticError(`${label} source references are invalid`, [`${label}_refs_invalid`])
+  const refs = value.filter((item): item is string => typeof item === 'string')
+  if (refs.length !== value.length || new Set(refs).size !== refs.length || refs.some((ref) => !validSourceId(ref) || !allowed.has(ref))) throw new EventResearchSemanticError(`${label} source references are outside the real source set`, [`${label}_refs_invalid`])
+  return refs
+}
+
+function validateEvidenceForVerification(input: EventEvidenceAssessmentOutput, sources: readonly EventEvidenceSource[]): ReadonlyMap<string, EventEvidenceSource> {
+  if (input.sourceAssessments.length > MAX_SOURCE_ASSESSMENTS || input.verifiedFacts.length > MAX_VERIFIED_FACTS || input.contradictions.length > MAX_CONTRADICTIONS) throw new EventResearchSemanticError('Event evidence exceeds its bounded contract', ['verification_evidence_bound_exceeded'])
+  const boundedSources = boundedUniqueSources(sources)
+  const sourceSet = new Set(boundedSources.map((source) => source.candidateId))
+  const sourceMap = new Map(boundedSources.map((source) => [source.candidateId, source]))
+  const assessmentIds = new Set<string>()
+  for (const [index, assessment] of input.sourceAssessments.entries()) {
+    if (!isRecord(assessment) || !validSourceId(assessment.sourceCandidateId) || !sourceSet.has(assessment.sourceCandidateId)) throw new EventResearchSemanticError(`Event source assessment ${index} is outside the real source set`, [`source_assessment_${index}_refs_invalid`])
+    if (assessmentIds.has(assessment.sourceCandidateId)) throw new EventResearchSemanticError('Duplicate source assessments are not allowed', ['source_assessment_duplicate'])
+    assessmentIds.add(assessment.sourceCandidateId)
+  }
+  for (const [index, fact] of input.verifiedFacts.entries()) validatedSourceReferences(fact?.sourceCandidateIds, sourceSet, `verified_fact_${index}`)
+  for (const [index, contradiction] of input.contradictions.entries()) validatedSourceReferences(contradiction?.sourceCandidateIds, sourceSet, `contradiction_${index}`)
+  return sourceMap
+}
+
 export function validateEventEvidenceAssessment(value: unknown, input: EventEvidenceAssessmentInput): EventEvidenceAssessmentOutput {
+  if (!Array.isArray(input.sources) || input.sources.length === 0) throw new EventResearchSemanticError('Event evidence requires real source metadata', ['source_metadata_missing'])
   const object = parseEventReasoningObject(value)
   const allowed = new Set(sourceIds(input))
   if (!keysAreAllowed(object, ['sourceAssessments', 'verifiedFacts', 'contradictions']) || !Array.isArray(object.sourceAssessments) || !Array.isArray(object.verifiedFacts) || !Array.isArray(object.contradictions)) throw new EventResearchSemanticError('Event evidence assessment arrays are required', ['assessment_arrays_missing'])
@@ -216,10 +264,11 @@ export function validateEventEvidenceAssessment(value: unknown, input: EventEvid
   const sourceAssessments = object.sourceAssessments.map((item, index) => validateSourceAssessment(item, index, allowed))
   if (new Set(sourceAssessments.map((item) => item.sourceCandidateId)).size !== sourceAssessments.length) throw new EventResearchSemanticError('Duplicate source assessments are not allowed', ['source_assessment_duplicate'])
   if (object.verifiedFacts.length > MAX_VERIFIED_FACTS) throw new EventResearchSemanticError('Verified event facts exceed the bounded contract', ['verified_fact_count_exceeds_bound'])
+  const dates = authoritativeDates(input)
   const facts: EventVerifiedFact[] = object.verifiedFacts.map((value, index) => {
     const item = isRecord(value) ? value : {}
     const refs = exactArray(item.sourceCandidateIds, allowed, true) ? item.sourceCandidateIds : []
-    const valid = keysAreAllowed(item, ['factId', 'statement', 'sourceCandidateIds', 'confidence', 'evidenceRequirement', 'structuredValue']) && validLocalId(item.factId) && nonEmptyText(item.statement, 2_000) && exactArray(item.sourceCandidateIds, allowed, true) && typeof item.confidence === 'number' && Number.isFinite(item.confidence) && item.confidence >= 0 && item.confidence <= 1 && enumValue(item.evidenceRequirement, EVENT_EVIDENCE_REQUIREMENTS) && (item.structuredValue === undefined || validateStructuredShape(item.structuredValue))
+    const valid = keysAreAllowed(item, ['factId', 'statement', 'sourceCandidateIds', 'confidence', 'evidenceRequirement', 'structuredValue']) && validLocalId(item.factId) && nonEmptyText(item.statement, 2_000) && exactArray(item.sourceCandidateIds, allowed, true) && typeof item.confidence === 'number' && Number.isFinite(item.confidence) && item.confidence >= 0 && item.confidence <= 1 && enumValue(item.evidenceRequirement, EVENT_EVIDENCE_REQUIREMENTS) && (item.structuredValue === undefined || validateStructuredShape(item.structuredValue, true, dates))
     if (!valid) throw new EventResearchSemanticError(`Invalid verified event fact ${index}`, [`verified_fact_${index}_invalid`])
     return { factId: item.factId as string, statement: (item.statement as string).trim().slice(0, 2_000), sourceCandidateIds: refs, confidence: item.confidence as number, evidenceRequirement: item.evidenceRequirement as EventEvidenceRequirement, ...(item.structuredValue === undefined ? {} : { structuredValue: item.structuredValue as EventStructuredValue }) }
   })
@@ -237,16 +286,13 @@ export function validateEventEvidenceAssessment(value: unknown, input: EventEvid
 }
 
 export function deriveEventVerification(input: EventEvidenceAssessmentOutput, sources: readonly EventEvidenceSource[] = []): EventVerificationResult {
-  const boundedSources = boundedUniqueSources(sources)
-  const sourceMap = new Map(boundedSources.map((source) => [source.candidateId, source]))
-  const allowed = sources.length === 0 ? undefined : new Set(boundedSources.map((source) => source.candidateId).filter(validSourceId))
-  const eligible = (id: string): boolean => validSourceId(id) && (allowed === undefined || allowed.has(id))
-  const supporting = uniqueSorted(input.sourceAssessments.slice(0, MAX_SOURCE_ASSESSMENTS).filter((item) => item.verdict === 'supports' && eligible(item.sourceCandidateId)).map((item) => item.sourceCandidateId))
-  const contradicting = uniqueSorted([...input.sourceAssessments.slice(0, MAX_SOURCE_ASSESSMENTS).filter((item) => item.verdict === 'contradicts' && eligible(item.sourceCandidateId)).map((item) => item.sourceCandidateId), ...input.contradictions.slice(0, MAX_CONTRADICTIONS).flatMap((item) => strings(item.sourceCandidateIds)).filter(eligible)])
+  const sourceMap = validateEvidenceForVerification(input, sources)
+  const supporting = uniqueSorted(input.sourceAssessments.filter((item) => item.verdict === 'supports').map((item) => item.sourceCandidateId))
+  const contradicting = uniqueSorted([...input.sourceAssessments.filter((item) => item.verdict === 'contradicts').map((item) => item.sourceCandidateId), ...input.contradictions.flatMap((item) => item.sourceCandidateIds)])
   const official = supporting.some((id) => sourceIsOfficial(sourceMap.get(id)))
   let verificationLevel: EventVerificationLevel = 'unverified'
   if (supporting.length > 0 && contradicting.length > 0) verificationLevel = 'conflicted'
-  else if (official || (sources.length === 0 && input.sourceAssessments.slice(0, MAX_SOURCE_ASSESSMENTS).some((item) => item.verdict === 'supports' && item.evidenceRequirement === 'primary'))) verificationLevel = 'official_verified'
+  else if (official) verificationLevel = 'official_verified'
   else if (supporting.length >= 2) verificationLevel = 'corroborated'
   else if (supporting.length === 1) verificationLevel = 'single_source'
   return { verificationLevel, strongVerification: verificationLevel === 'official_verified' || verificationLevel === 'corroborated', supportingSourceCandidateIds: supporting, contradictingSourceCandidateIds: contradicting }
@@ -271,13 +317,28 @@ function validIsoDate(value: string): boolean {
   return day <= daysInMonth[month - 1]!
 }
 
+function dateTokens(value: unknown): readonly string[] {
+  return typeof value === 'string' ? [...value.matchAll(/\b\d{4}-\d{2}-\d{2}\b/g)].map((match) => match[0]!) : []
+}
+
+function authoritativeDates(input: EventEvidenceAssessmentInput | EventResearchSynthesisInput): ReadonlySet<string> {
+  const values: unknown[] = [input.anchor.publishedAt, input.anchor.eventDate, input.eventDate]
+  if ('asOf' in input) values.push(input.asOf)
+  if (input.sources !== undefined) values.push(...input.sources.map((source) => source.publishedAt))
+  return new Set(values.flatMap(dateTokens).filter(validIsoDate))
+}
+
 function numericTokens(statement: string, allowedTickers: readonly string[] = []): readonly number[] {
   const tickerSet = new Set(allowedTickers)
   const masked = statement.replace(/\b\d{4}-\d{2}-\d{2}\b/g, (date) => validIsoDate(date) ? ' ' : date)
   return [...masked.matchAll(/[-+]?\d+(?:\.\d+)?/g)].filter((match) => !tickerSet.has(match[0])).map((match) => Number(match[0])).filter((value) => Number.isFinite(value))
 }
 
-export function hasUnsupportedNumericClaim(statement: string, allowedValues: readonly number[] = [], allowedTickers: readonly string[] = []): boolean {
+export function hasUnsupportedNumericClaim(statement: string, allowedValues: readonly number[] = [], allowedTickers: readonly string[] = [], allowedDates?: readonly string[]): boolean {
+  if (allowedDates !== undefined) {
+    const dates = new Set(allowedDates.filter(validIsoDate))
+    if (dateTokens(statement).some((date) => !dates.has(date))) return true
+  }
   const allowed = allowedValues.flatMap((value) => [value, value * 100]).filter((value) => Number.isFinite(value))
   return numericTokens(statement, allowedTickers).some((value) => !allowed.some((candidate) => Math.abs(candidate - value) < 1e-9))
 }
@@ -286,11 +347,13 @@ export const containsUnsupportedNumericClaim = hasUnsupportedNumericClaim
 
 export function eventOccurrenceStructuredValue(eventFingerprint: string, eventDate: string): EventStructuredValue {
   if (!validLocalId(eventFingerprint) || !validIsoDate(eventDate)) throw new TypeError('event fingerprint and valid ISO event date are required')
-  return { metric: `event_occurrence_${eventFingerprint}`, value: true, unit: 'event', comparator: 'eq', period: eventDate }
+  const metric = `event_occurrence_${eventFingerprint}`
+  if (!structuredString(metric)) throw new TypeError('event fingerprint is too long for a structured event value')
+  return { metric, value: true, unit: 'event', comparator: 'eq', period: eventDate }
 }
 
 export function buildEventOccurrenceProposal(eventFingerprint: string, eventDate: string, sourceCandidateIds: readonly string[], statement = 'The selected event was verified.'): SemanticProductionProposal {
-  if (!Array.isArray(sourceCandidateIds) || sourceCandidateIds.length === 0 || sourceCandidateIds.some((id) => !validLocalId(id))) throw new TypeError('at least one safe source candidate id is required')
+  if (!Array.isArray(sourceCandidateIds) || sourceCandidateIds.length === 0 || sourceCandidateIds.length > MAX_REFERENCE_ITEMS || new Set(sourceCandidateIds).size !== sourceCandidateIds.length || sourceCandidateIds.some((id) => !validLocalId(id))) throw new TypeError('source candidate ids must be bounded, unique, and safe')
   return { proposalId: `event-occurrence-${eventFingerprint}`, kind: 'claim', claimType: 'fact', subjectKey: 'company', statement: statement.trim().slice(0, 1_500), sourceCandidateIds: [...sourceCandidateIds], structuredValue: eventOccurrenceStructuredValue(eventFingerprint, eventDate) }
 }
 
@@ -350,14 +413,16 @@ export function validateEventResearchProposal(value: unknown, index: number, inp
   if (!referencedAssessments.some((assessment) => durableDisposition(assessment.disposition))) proposalDiagnostics(index, 'durable_assessment_required')
   if (!referencedAssessments.every((assessment) => compatibleDisposition(claimType as EventDurableClaimType, assessment.disposition))) proposalDiagnostics(index, 'impact_disposition_incompatible')
   if (claimType === 'assumption') {
-    if (claims.length !== 1) proposalDiagnostics(index, 'assumption_ref_count')
+  if (claims.length !== 1) proposalDiagnostics(index, 'assumption_ref_count')
     const existing = claimByRef(input, claims[0]!)
+    const dates = authoritativeDates(input)
+    if (item.structuredValue !== undefined && !validateStructuredShape(item.structuredValue, true, dates)) proposalDiagnostics(index, 'structured_value_invalid')
     if (existing === undefined || !validateEventAssumptionUpdate({ existingClaimRef: claims[0], structuredValue: item.structuredValue }, existing)) proposalDiagnostics(index, 'assumption_update_invalid')
     const nextValue = item.structuredValue as EventStructuredValue
-    if (hasUnsupportedNumericClaim(item.statement as string, typeof nextValue.value === 'number' ? [nextValue.value] : [], validatedCompanyTicker(input))) proposalDiagnostics(index, 'unsupported_numeric_claim')
+    if (hasUnsupportedNumericClaim(item.statement as string, typeof nextValue.value === 'number' ? [nextValue.value] : [], validatedCompanyTicker(input), [...dates])) proposalDiagnostics(index, 'unsupported_numeric_claim')
   } else {
     if (item.structuredValue !== undefined) proposalDiagnostics(index, 'unsupported_structured_value')
-    if (hasUnsupportedNumericClaim(item.statement as string, [], validatedCompanyTicker(input))) proposalDiagnostics(index, 'unsupported_numeric_claim')
+    if (hasUnsupportedNumericClaim(item.statement as string, [], validatedCompanyTicker(input), [...authoritativeDates(input)])) proposalDiagnostics(index, 'unsupported_numeric_claim')
   }
   return { proposalId: item.proposalId as string, kind: 'claim', claimType: claimType as EventDurableClaimType, subjectKey: 'company', statement: (item.statement as string).trim(), sourceCandidateIds: sources, existingKnowledgeRefs: claims, assessmentRefs, ...(item.structuredValue === undefined ? {} : { structuredValue: item.structuredValue as EventStructuredValue }) }
 }
@@ -397,17 +462,23 @@ function synthesisModelInput(input: EventResearchSynthesisInput, repair?: { read
 function synthesisContract(input: EventResearchSynthesisInput): Record<string, unknown> {
   const verification = deriveEventVerification(input.evidence, input.sources ?? [])
   const claims = claimIds(input)
-  const referenceArray = { type: 'array', maxItems: MAX_REFERENCE_ITEMS, items: 'exact bounded references' }
-  return { type: 'object', required: ['sections', 'assessments', 'proposals'], requiredSectionTitles: EVENT_RESEARCH_SECTIONS, allowedSourceCandidateIds: sourceIds(input), allowedSupportingSourceCandidateIds: verification.supportingSourceCandidateIds, allowedContradictingSourceCandidateIds: verification.contradictingSourceCandidateIds, allowedExistingClaimRefs: claims, allowedAssumptionClaimRefs: input.existingKnowledge.slice(0, MAX_EXISTING_CLAIMS).filter((claim) => claim.claimType === 'assumption' && claims.includes(claim.canonicalRef)).map((claim) => claim.canonicalRef), allowedThesisClaimRefs: input.existingKnowledge.slice(0, MAX_EXISTING_CLAIMS).filter((claim) => claim.claimType === 'thesis' && claims.includes(claim.canonicalRef)).map((claim) => claim.canonicalRef), allowedImpactDispositionValues: EVENT_IMPACT_DISPOSITIONS, allowedProposalClaimTypes: EVENT_DURABLE_CLAIM_TYPES, sections: { type: 'array', minItems: EVENT_RESEARCH_SECTIONS.length, maxItems: EVENT_RESEARCH_SECTIONS.length, item: { sourceCandidateIds: referenceArray, existingKnowledgeRefs: referenceArray, assessmentRefs: referenceArray } }, assessments: { type: 'array', maxItems: MAX_IMPACT_ASSESSMENTS, item: { sourceCandidateIds: referenceArray, existingKnowledgeRefs: referenceArray } }, proposals: { type: 'array', maxItems: MAX_PROPOSALS, item: { sourceCandidateIds: referenceArray, existingKnowledgeRefs: referenceArray, assessmentRefs: referenceArray } } }
+  const allowedSources = sourceIds(input)
+  const assessmentRefs = { type: 'array', maxItems: MAX_REFERENCE_ITEMS, uniqueItems: true, items: { type: 'string', pattern: LOCAL_ID.source, maxLength: 96 } }
+  const claimRefs = sourceReferenceContract(claims)
+  const section = { type: 'object', required: ['sectionId', 'title', 'markdown', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs'], additionalProperties: false, sectionId: { type: 'string', pattern: LOCAL_ID.source, maxLength: 96 }, title: { type: 'string', enum: EVENT_RESEARCH_SECTIONS }, markdown: { type: 'string', minLength: 1, maxLength: 2_000 }, sourceCandidateIds: sourceReferenceContract(allowedSources), existingKnowledgeRefs: claimRefs, assessmentRefs }
+  const assessment = { type: 'object', required: ['assessmentId', 'disposition', 'existingKnowledgeRefs', 'sourceCandidateIds', 'rationale', 'directImpact', 'secondOrderImpact'], additionalProperties: false, assessmentId: { type: 'string', pattern: LOCAL_ID.source, maxLength: 96 }, disposition: { type: 'string', enum: EVENT_IMPACT_DISPOSITIONS }, existingKnowledgeRefs: claimRefs, sourceCandidateIds: sourceReferenceContract(allowedSources), rationale: { type: 'string', minLength: 1, maxLength: 1_000 }, directImpact: { type: 'string', minLength: 1, maxLength: 1_500 }, secondOrderImpact: { type: 'string', minLength: 1, maxLength: 1_500 } }
+  const proposal = { type: 'object', required: ['proposalId', 'kind', 'claimType', 'subjectKey', 'statement', 'sourceCandidateIds', 'existingKnowledgeRefs', 'assessmentRefs'], additionalProperties: false, proposalId: { type: 'string', pattern: LOCAL_ID.source, maxLength: 96 }, kind: { type: 'string', enum: ['claim'] }, claimType: { type: 'string', enum: EVENT_DURABLE_CLAIM_TYPES }, subjectKey: { type: 'string', enum: ['company'] }, statement: { type: 'string', minLength: 1, maxLength: 1_500 }, sourceCandidateIds: sourceReferenceContract(verification.supportingSourceCandidateIds, true), existingKnowledgeRefs: claimRefs, assessmentRefs, structuredValue: structuredValueContract() }
+  return { type: 'object', required: ['sections', 'assessments', 'proposals'], additionalProperties: false, requiredSectionTitles: EVENT_RESEARCH_SECTIONS, allowedSourceCandidateIds: allowedSources, allowedSupportingSourceCandidateIds: verification.supportingSourceCandidateIds, allowedContradictingSourceCandidateIds: verification.contradictingSourceCandidateIds, allowedExistingClaimRefs: claims, allowedAssumptionClaimRefs: input.existingKnowledge.slice(0, MAX_EXISTING_CLAIMS).filter((claim) => claim.claimType === 'assumption' && claims.includes(claim.canonicalRef)).map((claim) => claim.canonicalRef), allowedThesisClaimRefs: input.existingKnowledge.slice(0, MAX_EXISTING_CLAIMS).filter((claim) => claim.claimType === 'thesis' && claims.includes(claim.canonicalRef)).map((claim) => claim.canonicalRef), allowedImpactDispositionValues: EVENT_IMPACT_DISPOSITIONS, allowedProposalClaimTypes: EVENT_DURABLE_CLAIM_TYPES, sections: { type: 'array', minItems: EVENT_RESEARCH_SECTIONS.length, maxItems: EVENT_RESEARCH_SECTIONS.length, item: section }, assessments: { type: 'array', maxItems: MAX_IMPACT_ASSESSMENTS, item: assessment }, proposals: { type: 'array', maxItems: MAX_PROPOSALS, item: proposal } }
 }
 
 function sameStringSet(left: readonly string[], right: readonly string[]): boolean { return left.length === right.length && new Set(left).size === left.length && new Set(right).size === right.length && [...left].sort().every((value, index) => value === [...right].sort()[index]) }
 function deterministicSynthesisVerification(input: EventResearchSynthesisInput): EventVerificationResult {
+  if (input.sources === undefined || input.sources.length === 0) throw new EventResearchSemanticError('Event synthesis requires real source metadata', ['source_metadata_missing'])
   if (input.evidence.sourceAssessments.length > MAX_SOURCE_ASSESSMENTS || input.evidence.verifiedFacts.length > MAX_VERIFIED_FACTS || input.evidence.contradictions.length > MAX_CONTRADICTIONS) throw new EventResearchSemanticError('Stage A evidence exceeds the bounded synthesis input', ['verification_evidence_bound_exceeded'])
   const sourceSet = new Set(sourceIds(input))
-  const evidenceRefArrays = [...input.evidence.verifiedFacts.slice(0, MAX_VERIFIED_FACTS).map((item) => item.sourceCandidateIds), ...input.evidence.contradictions.slice(0, MAX_CONTRADICTIONS).map((item) => item.sourceCandidateIds)]
+  const evidenceRefArrays = [...input.evidence.verifiedFacts.map((item) => item.sourceCandidateIds), ...input.evidence.contradictions.map((item) => item.sourceCandidateIds)]
   if (evidenceRefArrays.some((value) => !Array.isArray(value) || value.length > MAX_REFERENCE_ITEMS)) throw new EventResearchSemanticError('Stage A evidence reference arrays exceed the bounded synthesis input', ['verification_evidence_refs_bound_exceeded'])
-  const refs = [...input.evidence.sourceAssessments.slice(0, MAX_SOURCE_ASSESSMENTS).map((item) => item.sourceCandidateId), ...input.evidence.verifiedFacts.slice(0, MAX_VERIFIED_FACTS).flatMap((item) => strings(item.sourceCandidateIds)), ...input.evidence.contradictions.slice(0, MAX_CONTRADICTIONS).flatMap((item) => strings(item.sourceCandidateIds))]
+  const refs = [...input.evidence.sourceAssessments.map((item) => item.sourceCandidateId), ...input.evidence.verifiedFacts.flatMap((item) => strings(item.sourceCandidateIds)), ...input.evidence.contradictions.flatMap((item) => strings(item.sourceCandidateIds))]
   if (refs.some((ref) => !sourceSet.has(ref))) throw new EventResearchSemanticError('Stage A evidence references are outside supplied sources', ['verification_evidence_refs_invalid'])
   const derived = deriveEventVerification(input.evidence, input.sources ?? [])
   if (!validateEventVerificationResult(input.verification) || input.verification.verificationLevel !== derived.verificationLevel || input.verification.strongVerification !== derived.strongVerification || !sameStringSet(input.verification.supportingSourceCandidateIds, derived.supportingSourceCandidateIds) || !sameStringSet(input.verification.contradictingSourceCandidateIds, derived.contradictingSourceCandidateIds)) throw new EventResearchSemanticError('Caller verification does not match Stage A evidence', ['verification_derived_mismatch'])
@@ -465,6 +536,7 @@ export class EventEvidenceAssessmentSkill {
 
   async assess(input: EventEvidenceAssessmentInput): Promise<EventEvidenceAssessmentSkillResult> {
     if (this.executor === undefined) return this.fallback()
+    if (!Array.isArray(input.sources) || input.sources.length === 0) return this.fallback(0, ['source_metadata_missing'])
     let repairAttempts = 0; let prior: unknown = null; let diagnostics: readonly string[] = []
     const execute = (repair?: { readonly prior: unknown; readonly diagnostics: readonly string[] }) => this.executor!.execute({ operation: 'event_evidence_assessment', instruction: assessmentInstruction(repair !== undefined, repair === undefined ? [] : repair.diagnostics), input: assessmentModelInput(input, repair), outputContract: assessmentContract(input), metadata: { operationFamily: 'personal-research-v1', companySymbol: input.company.symbol.slice(0, 32) } } satisfies ReasoningRequest)
     try {
