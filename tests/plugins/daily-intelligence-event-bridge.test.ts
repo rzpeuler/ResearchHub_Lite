@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { FileDailySignalStore } from '../../plugins/daily-intelligence/signal-store.ts'
-import type { DailyResearchSignal } from '../../plugins/daily-intelligence/contracts.ts'
+import { isEventResearchSignalStore, type DailyResearchSignal, type DailySignalStore, type EventResearchSignalStore } from '../../plugins/daily-intelligence/contracts.ts'
 
 function signal(signalId: string, publishedAt = '2026-09-08T00:00:00.000Z'): DailyResearchSignal {
   return {
@@ -28,7 +28,7 @@ function signal(signalId: string, publishedAt = '2026-09-08T00:00:00.000Z'): Dai
 
 test('Daily Signal bridge performs exact lookup and preserves append/list behavior', async () => {
   const root = await mkdtemp(join(tmpdir(), 'rhl-event-bridge-'))
-  const store = new FileDailySignalStore(join(root, 'signals.jsonl'))
+  const store: EventResearchSignalStore = new FileDailySignalStore(join(root, 'signals.jsonl'))
   const selected = signal('signal-event-1')
   const outsideWindow = signal('signal-event-2', '2026-09-07T00:00:00.000Z')
 
@@ -37,4 +37,15 @@ test('Daily Signal bridge performs exact lookup and preserves append/list behavi
   assert.equal(await store.getById('signal-event'), undefined)
   assert.equal(await store.getById('missing'), undefined)
   assert.deepEqual(await store.listWindow('2026-09-08T00:00:00.000Z', '2026-09-08T23:59:59.000Z'), [selected])
+})
+
+test('legacy append/list-only Daily Signal stores remain compatible and fail the event capability check', async () => {
+  const legacyStore: DailySignalStore = {
+    async appendMany(signals) { return { appended: signals.length, skipped: 0 } },
+    async listWindow() { return [] },
+  }
+
+  assert.equal(isEventResearchSignalStore(legacyStore), false)
+  assert.deepEqual(await legacyStore.appendMany([signal('legacy')]), { appended: 1, skipped: 0 })
+  assert.deepEqual(await legacyStore.listWindow('2026-09-08T00:00:00.000Z', '2026-09-08T23:59:59.000Z'), [])
 })
