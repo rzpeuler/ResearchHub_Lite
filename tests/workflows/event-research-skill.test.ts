@@ -15,6 +15,7 @@ import {
   deriveEventVerification,
   eventOccurrenceStructuredValue,
   hasUnsupportedNumericClaim,
+  toEventResearchGatewayProposal,
   validateEventAssumptionUpdate,
   validateEventEvidenceAssessment,
   validateEventResearchSynthesis,
@@ -69,6 +70,7 @@ function synthesisInput(strongVerification = true): EventResearchSynthesisInput 
     evidence,
     verification: deriveEventVerification(evidence, assessmentInput().sources),
     existingKnowledge: [{ canonicalRef: 'claim:assumption-1', claimType: 'assumption', statement: 'Demand growth assumption.', subjectRefs: ['entity:fixture'], structuredValue: { metric: 'demand_growth', value: 0.1, unit: 'ratio', comparator: 'eq', period: '2026-FY' } }],
+    sources: assessmentInput().sources,
   }
 }
 
@@ -88,13 +90,17 @@ test('ER-SKILL-1 Stage A uses the exact sourceAssessments shape and allowlists',
   assert.equal(output.sourceAssessments[0]?.verdict, 'supports')
   assert.throws(() => validateEventEvidenceAssessment({ ...validAssessment(), sourceAssessments: [{ ...validAssessment().sourceAssessments[0], verdict: 'inconclusive' }] }, assessmentInput()), EventResearchSemanticError)
   assert.throws(() => validateEventEvidenceAssessment({ ...validAssessment(), sourceAssessments: [{ ...validAssessment().sourceAssessments[0], confidence: Number.NaN }] }, assessmentInput()), EventResearchSemanticError)
+  for (const confidence of [-0.01, 1.01, Number.POSITIVE_INFINITY]) assert.throws(() => validateEventEvidenceAssessment({ ...validAssessment(), sourceAssessments: [{ ...validAssessment().sourceAssessments[0], confidence }] }, assessmentInput()), EventResearchSemanticError)
 })
 
 test('ER-SKILL-2 Stage A accepts context and rejects forged source references', () => {
   const input = assessmentInput()
   const context = { ...validAssessment(), sourceAssessments: [{ sourceCandidateId: 'news-1', verdict: 'context' as const, confidence: 0.4, rationale: 'Context only.', evidenceRequirement: 'single_source' as const }] }
   assert.equal(validateEventEvidenceAssessment(context, input).sourceAssessments[0]?.verdict, 'context')
+  const irrelevant = { ...context, sourceAssessments: [{ ...context.sourceAssessments[0]!, verdict: 'irrelevant' as const }] }
+  assert.equal(validateEventEvidenceAssessment(irrelevant, input).sourceAssessments[0]?.verdict, 'irrelevant')
   assert.throws(() => validateEventEvidenceAssessment({ ...context, verifiedFacts: [{ ...context.verifiedFacts[0]!, sourceCandidateIds: ['forged'] }] }, input), EventResearchSemanticError)
+  assert.throws(() => validateEventEvidenceAssessment({ ...context, contradictions: [{ statement: 'Conflict.', sourceCandidateIds: ['forged'] }] }, input), EventResearchSemanticError)
 })
 
 test('ER-SKILL-3 Stage A derives deterministic verification levels', () => {
@@ -103,6 +109,8 @@ test('ER-SKILL-3 Stage A derives deterministic verification levels', () => {
   const corroborated = { ...validAssessment(), sourceAssessments: validAssessment().sourceAssessments.map((item) => ({ ...item, sourceCandidateId: item.sourceCandidateId === 'official-1' ? 'news-1' : 'news-2' })) }
   assert.equal(deriveEventVerification(corroborated, [{ ...input.sources[1]!, candidateId: 'news-1' }, { ...input.sources[1]!, candidateId: 'news-2' }]).verificationLevel, 'corroborated')
   assert.equal(deriveEventVerification({ ...validAssessment(), sourceAssessments: [validAssessment().sourceAssessments[0]!] , contradictions: [{ statement: 'A conflicting account.', sourceCandidateIds: ['news-1'] }] }, input.sources).verificationLevel, 'conflicted')
+  assert.equal(deriveEventVerification({ ...validAssessment(), sourceAssessments: [validAssessment().sourceAssessments[1]!] , contradictions: [] }, input.sources).verificationLevel, 'single_source')
+  assert.equal(deriveEventVerification({ sourceAssessments: [], verifiedFacts: [], contradictions: [] }).verificationLevel, 'unverified')
 })
 
 test('ER-SKILL-4 Stage A makes at most one bounded repair attempt', async () => {
@@ -115,7 +123,23 @@ test('ER-SKILL-4 Stage A makes at most one bounded repair attempt', async () => 
   const repair = (executor.requests[1]?.input as Dict).repair as Dict
   assert.equal(repair.attempt, 1)
   assert.ok(repair.priorInvalidStructuredOutput)
+  assert.deepEqual((executor.requests[1]?.input as Dict).allowedSourceCandidateIds, ['news-1', 'official-1'])
+  assert.deepEqual((executor.requests[1]?.input as Dict).allowedVerdictValues, ['supports', 'contradicts', 'context', 'irrelevant'])
   assert.equal(JSON.stringify(repair).includes('stack'), false)
+})
+
+test('ER-SKILL-4b repair input bounds oversized hidden refs and model projections', async () => {
+  const input: EventEvidenceAssessmentInput = { ...assessmentInput(), company: { ...assessmentInput().company, name: 'company '.repeat(2_000) }, anchor: { ...assessmentInput().anchor, description: 'anchor '.repeat(2_000) }, sources: assessmentInput().sources.map((source) => ({ ...source, title: 'title '.repeat(2_000), url: `https://example.test/${'u'.repeat(4_000)}`, excerpt: 'excerpt '.repeat(2_000) })) }
+  const invalid = { sourceAssessments: [{ sourceCandidateId: 'forged', verdict: 'supports', confidence: 0.9, rationale: 'bad', evidenceRequirement: 'primary' }], verifiedFacts: [], contradictions: [], hiddenRef: 'secret '.repeat(20_000) }
+  const executor = new SequenceExecutor([invalid, validAssessment()])
+  await new EventEvidenceAssessmentSkill(executor).assess(input)
+  const requestInput = executor.requests[0]?.input as Dict
+  assert.equal(String((requestInput.company as Dict).name).length, 200)
+  assert.ok(String((requestInput.anchor as Dict).description).length <= 1_500)
+  assert.ok(String(((requestInput.sources as Dict[])[0]!).excerpt).length <= 1_500)
+  const repair = (executor.requests[1]?.input as Dict).repair as Dict
+  assert.ok(JSON.stringify(repair).length <= 12_000)
+  assert.equal(JSON.stringify(repair).includes('secret '.repeat(1_000)), false)
 })
 
 test('ER-SKILL-5 Stage B validates exact sections, impacts, and structured assumption updates', () => {
@@ -134,12 +158,59 @@ test('ER-SKILL-6 Stage B rejects forged refs, incompatible impacts, and over-bro
   assert.throws(() => validateEventResearchSynthesis(validSynthesis({ proposals: Array.from({ length: 5 }, (_, index) => ({ ...(validSynthesis().proposals as Dict[])[0], proposalId: `p-${index}` })) }), input), EventResearchSemanticError)
 })
 
+test('ER-SKILL-6b Stage B derives verification and rejects forged or inconsistent caller verification', () => {
+  const input = synthesisInput()
+  assert.throws(() => validateEventResearchSynthesis(validSynthesis(), { ...input, verification: { ...input.verification, strongVerification: false } }), EventResearchSemanticError)
+  assert.throws(() => validateEventResearchSynthesis(validSynthesis(), { ...input, verification: { verificationLevel: 'corroborated', strongVerification: true, supportingSourceCandidateIds: ['official-1'], contradictingSourceCandidateIds: [] } }), EventResearchSemanticError)
+  assert.throws(() => validateEventResearchSynthesis(validSynthesis(), { ...input, verification: { ...input.verification, supportingSourceCandidateIds: ['source-forged'] } }), EventResearchSemanticError)
+  const forgedContradiction = { ...input, evidence: { ...input.evidence, contradictions: [{ statement: 'Forged contradiction.', sourceCandidateIds: ['source-forged'] }] } }
+  assert.throws(() => validateEventResearchSynthesis(validSynthesis(), { ...forgedContradiction, verification: deriveEventVerification(forgedContradiction.evidence, input.sources) }), EventResearchSemanticError)
+})
+
+test('ER-SKILL-6d Stage B requires exact existing Claim refs by impact disposition', () => {
+  const input = synthesisInput()
+  const baseAssessment = (validSynthesis().assessments as Dict[])[0]!
+  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ assessments: [{ ...baseAssessment, existingKnowledgeRefs: [] }] }), input), EventResearchSemanticError)
+  const thesisInput: EventResearchSynthesisInput = { ...input, existingKnowledge: [...input.existingKnowledge, { canonicalRef: 'claim:thesis-1', claimType: 'thesis', statement: 'Existing thesis.' }] }
+  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ assessments: [{ ...baseAssessment, disposition: 'affects_thesis', existingKnowledgeRefs: ['claim:thesis-1'] }] }), thesisInput), EventResearchSemanticError)
+  assert.throws(() => validateEventResearchSynthesis(validSynthesis({ assessments: [{ ...baseAssessment, disposition: 'supports_existing', existingKnowledgeRefs: [] }] }), input), EventResearchSemanticError)
+})
+
+test('ER-SKILL-6c Stage B request receives bounded supporting and contradicting source excerpts', async () => {
+  const sources = assessmentInput().sources
+  const evidence = { ...validAssessment(), sourceAssessments: [{ ...validAssessment().sourceAssessments[0]!, verdict: 'supports' as const }, { ...validAssessment().sourceAssessments[1]!, verdict: 'contradicts' as const }], contradictions: [{ statement: 'The independent account conflicts.', sourceCandidateIds: ['news-1'] }] }
+  const input: EventResearchSynthesisInput = { ...synthesisInput(), sources, evidence, verification: deriveEventVerification(evidence, sources), supportingSourceExcerpts: [{ ...sources[0]!, excerpt: 'support '.repeat(1_000) }], contradictingSourceExcerpts: [{ ...sources[1]!, excerpt: 'contradiction '.repeat(1_000) }] }
+  const executor = new SequenceExecutor([validSynthesis()])
+  await new EventResearchSynthesisSkill(executor).synthesize(input)
+  const requestInput = executor.requests[0]?.input as Dict
+  const supporting = requestInput.supportingSourceExcerpts as Dict[]
+  const contradicting = requestInput.contradictingSourceExcerpts as Dict[]
+  assert.equal(supporting[0]?.candidateId, 'official-1')
+  assert.equal(contradicting[0]?.candidateId, 'news-1')
+  assert.ok(String(supporting[0]?.excerpt).length <= 1_500)
+  assert.ok(String(contradicting[0]?.excerpt).length <= 1_500)
+  assert.equal('content' in (supporting[0] ?? {}), false)
+})
+
 test('ER-SKILL-7 unsupported numeric claims fail closed while event occurrence values are deterministic', () => {
   assert.equal(hasUnsupportedNumericClaim('The event changed the outlook by 15%.'), true)
   assert.equal(hasUnsupportedNumericClaim('The event was recorded on 2026-09-08.'), false)
   assert.deepEqual(eventOccurrenceStructuredValue('event-fixture-1', '2026-09-08'), { metric: 'event_occurrence_event-fixture-1', value: true, unit: 'event', comparator: 'eq', period: '2026-09-08' })
   assert.equal('semanticKey' in buildEventOccurrenceProposal('event-fixture-1', '2026-09-08', ['official-1']), false)
   assert.throws(() => eventOccurrenceStructuredValue('entity:forged', '2026-09-08'), TypeError)
+  assert.throws(() => eventOccurrenceStructuredValue('event-fixture-1', '2026-99-99'), TypeError)
+  assert.equal(hasUnsupportedNumericClaim('Metric 2026 is material.'), true)
+  assert.equal(hasUnsupportedNumericClaim('Ticker 123456 is material.'), true)
+  assert.equal(hasUnsupportedNumericClaim('Ticker 600519 is material.', [], ['600519']), false)
+})
+
+test('ER-SKILL-7b Gateway conversion returns only the canonical proposal shape', () => {
+  const proposal = (validSynthesis().proposals as Dict[])[0]!
+  const converted = toEventResearchGatewayProposal(proposal as never)
+  assert.deepEqual(converted, { proposalId: 'assumption-update', kind: 'claim', claimType: 'assumption', subjectKey: 'company', statement: 'Demand growth assumption is revised based on the verified event.', sourceCandidateIds: ['official-1'], structuredValue: { metric: 'demand_growth', value: 0.05, unit: 'ratio', comparator: 'eq', period: '2026-FY' } })
+  assert.equal('semanticKey' in converted, false)
+  assert.equal('existingKnowledgeRefs' in converted, false)
+  assert.equal('assessmentRefs' in converted, false)
 })
 
 test('ER-SKILL-8 weak verification returns a report contract with no durable proposals', () => {

@@ -147,10 +147,23 @@ export interface EventResearchSection {
 }
 
 export interface EventResearchProposal extends SemanticProductionProposal {
+  readonly kind: 'claim'
   readonly claimType: EventDurableClaimType
+  readonly subjectKey: 'company'
+  readonly statement: string
   readonly sourceCandidateIds: readonly string[]
   readonly existingKnowledgeRefs: readonly string[]
   readonly assessmentRefs: readonly string[]
+}
+
+export interface EventResearchGatewayProposal {
+  readonly proposalId: string
+  readonly kind: 'claim'
+  readonly claimType: EventDurableClaimType
+  readonly subjectKey: 'company'
+  readonly statement: string
+  readonly sourceCandidateIds: readonly string[]
+  readonly structuredValue?: Readonly<Record<string, unknown>> | null
 }
 
 export interface EventResearchSynthesisInput {
@@ -161,6 +174,9 @@ export interface EventResearchSynthesisInput {
   readonly verification: EventVerificationResult
   readonly evidence: EventEvidenceAssessmentOutput
   readonly existingKnowledge: readonly EventExistingKnowledgeClaim[]
+  readonly sources?: readonly EventEvidenceSource[]
+  readonly supportingSourceExcerpts?: readonly EventEvidenceSource[]
+  readonly contradictingSourceExcerpts?: readonly EventEvidenceSource[]
 }
 
 export interface EventResearchSynthesisOutput {
