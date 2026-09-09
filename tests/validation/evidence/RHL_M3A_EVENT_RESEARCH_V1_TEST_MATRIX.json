@@ -904,8 +904,8 @@
       "requirement": "Real Pi E2E gate: actual PiReasoningExecutor, Stage A/B, verification, deltas, report persistence, and irrelevant-source exclusion",
       "testFile": "tests/validation/event-research-pi-e2e.ts",
       "testName": "event-research-pi-e2e.ts with event-research-pi-e2e-gate.ts",
-      "status": "BLOCKED",
-      "evidence": "executed; EXECUTED / PASS GATE: both stages validated/applied and event_research report persisted"
+      "status": "PASS",
+      "evidence": "actual Real Pi E2E executed; classification EXECUTED / PASS GATE; process exit 0; both stages validated/applied; full semantic gate passed"
     },
     {
       "testId": "E88",

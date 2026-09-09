@@ -21,7 +21,7 @@ Observed result: `48/48 PASS`, including FIX-002 regressions for required
 impact semantics, malformed proposal isolation, legacy section rejection,
 fallback telemetry, safe diagnostics, and user-event identity stability.
 
-Repository checks: full Node `520/520 PASS`, Client `21/21 PASS`,
+Repository checks: full Node `524/524 PASS`, Client `21/21 PASS`,
 `npm run typecheck PASS`, `npm run client:typecheck PASS`,
 `npm run client:build PASS`, and `git diff --check PASS`.
 
@@ -42,8 +42,10 @@ irrelevant source canonicalized.
 
 The harness also records safe Stage A/B diagnostics, first/repair structural
 summaries, and proposal rejection diagnostics without raw model output or
-secrets. Two optional model proposal candidates were rejected independently;
-the deterministic event-occurrence Claim remained accepted.
+secrets. Two model proposal candidates were produced; one was rejected
+independently by the deterministic gate and one was accepted. The deterministic
+event-occurrence proposal was also accepted, for two total accepted Gateway
+proposals.
 
 ## Provider smoke
 

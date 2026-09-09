@@ -2,6 +2,12 @@
 
 ## 2026-09-09
 
+- Closed `RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-CLOSE` as
+  `PASS / CLOSED by CTO acceptance` at implementation head
+  `1bcbdd72621918185489002c7d182ff5eeedb892`. Corrected accepted evidence
+  counts, E87 status, proposal accounting, and aggregate scope metadata;
+  no product source changes were made.
+
 - Implemented `RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-002`
   pending CTO acceptance: separated the Stage B semantic core from proposal
   candidate filtering, made impact semantics required with no legacy

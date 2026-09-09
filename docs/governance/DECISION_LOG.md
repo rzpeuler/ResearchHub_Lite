@@ -1,5 +1,25 @@
 # ResearchHub_Lite — Decision Log
 
+## RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-CLOSE — CTO Acceptance Closure — 2026-09-09
+
+**Status:** PASS / CLOSED by CTO acceptance
+
+Accepted implementation head: `1bcbdd72621918185489002c7d182ff5eeedb892`.
+
+M3A-3 Event Research is formally closed. The accepted guarantees preserve the
+Daily-versus-Event boundary, exact existing Company coverage, cluster-first
+event identity, targeted CNINFO/GDELT acquisition, code-owned Stage A
+verification and event slots, explicit Stage B semantics without legacy
+disposition, independent proposal validation, Gateway/Writer authority,
+proposal-referenced evidence, and the code-owned 16-section `event_research`
+report.
+
+Accepted evidence is focused Event 48/48, Event plus gate 52/52, Node 524/524,
+Client 21/21, and Real Pi `EXECUTED / PASS GATE` with process exit 0. Provider
+smoke remains non-blocking operational evidence: CNINFO transport succeeded
+with zero candidates and GDELT returned HTTP 429. M3A-4 remains NOT STARTED;
+M3B remains NOT STARTED / ARCHITECTURE REQUIRED; Theme remains DEFERRED.
+
 ## RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-FIX-002 — Implementation State — 2026-09-09
 
 **Status:** FIX-002 IMPLEMENTED / CTO ACCEPTANCE PENDING

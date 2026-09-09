@@ -38,10 +38,15 @@
     "productAcceptanceImpact": "none"
   },
   "scope": {
-    "modifiedByTask5": ["docs/architecture/PERSONAL_RESEARCH_V1_EVENT_RESEARCH_V0.1.md", "docs/governance/CURRENT_STATUS.md", "docs/governance/DECISION_LOG.md", "docs/governance/CHANGELOG.md", "tests/validation/evidence/*", "tests/validation/event-research-pi-e2e.ts", "tests/validation/event-research-pi-e2e-gate.ts", "tests/validation/event-research-provider-smoke.ts"],
-    "forbiddenProductionChanges": true,
-    "implementationCommit": "pre-commit-working-tree",
-    "sourceBaseline": "af9f473afe992f220bdb1cd0650454d6a448d798"
+    "sourceBaseline": "af9f473afe992f220bdb1cd0650454d6a448d798",
+    "acceptedImplementationHead": "1bcbdd72621918185489002c7d182ff5eeedb892",
+    "scopeConformance": {
+      "schemaChanged": false,
+      "gatewayChanged": false,
+      "writerChanged": false,
+      "newProviderAdded": false,
+      "genericFrameworkAdded": false
+    }
   },
   "secretsIncluded": false,
   "rawBodiesIncluded": false
