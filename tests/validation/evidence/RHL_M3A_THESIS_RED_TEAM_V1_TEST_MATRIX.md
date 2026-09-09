@@ -4,7 +4,7 @@
 |---|---|---|
 | Skill projection and bounds | `tests/workflows/thesis-red-team-skill.test.ts` | PASS |
 | Stage A / Stage B contracts and legacy report rejection | `tests/workflows/thesis-red-team-skill.test.ts` | PASS |
-| Acceptance gate helper unit tests | `tests/validation/thesis-red-team-pi-e2e-gate.test.ts` | 12/12 PASS |
+| Acceptance gate helper unit tests | `tests/validation/thesis-red-team-pi-e2e-gate.test.ts` | 13/13 PASS |
 | Generic Gateway update and deterministic-slot idempotency | `tests/validation/thesis-red-team-gateway.test.ts` | PASS |
 | Real PiReasoningExecutor product E2E | `tests/validation/thesis-red-team-pi-e2e.ts` | `EXECUTED / PASS GATE` |
 | CNINFO/GDELT provider seam smoke | `RHL_M3A_THESIS_RED_TEAM_V1_PROVIDER_SMOKE.json` | PASS, non-blocking |
