@@ -12,7 +12,7 @@
 - Daily Signal, irrelevant source, and unknown-date source were not canonicalized.
 - Report: `thesis_red_team`, exactly 16 sections, persisted as a blocked research-gap report.
 - Raw bodies and secrets: excluded from evidence.
-- Validation: full `npm test` passed, 550/550 tests; `npm run typecheck`, `npm run client:typecheck`, and `npm run client:build` passed.
+- Validation: full `npm test` passed, 555/555 tests; `npm run typecheck`, `npm run client:typecheck`, and `npm run client:build` passed.
 - FIX-002 focused regressions: 31/31 passed, including single-source strength, unrelated-source rejection, irrelevant/context/unknown-date durable gates, invalidation binding, and existing-assumption field preservation.
 
 This is honest blocked evidence, not a real-model acceptance pass. Final task status remains `IMPLEMENTED / CTO ACCEPTANCE PENDING`.

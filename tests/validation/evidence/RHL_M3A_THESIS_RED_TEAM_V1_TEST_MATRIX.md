@@ -9,7 +9,7 @@
 | CNINFO/GDELT provider seam smoke | `RHL_M3A_THESIS_RED_TEAM_V1_PROVIDER_SMOKE.json` | PASS, non-blocking |
 | TypeScript contracts | `npm run typecheck --silent` | PASS |
 | FIX-002 focused regressions | `tests/workflows/thesis-red-team-skill.test.ts` | 31/31 PASS |
-| Full repository test suite | `npm test` | 550/550 PASS |
+| Full repository test suite | `npm test` | 555/555 PASS |
 | Client typecheck and production build | `npm run client:typecheck`; `npm run client:build` | PASS |
 
 FIX-002 status: `IMPLEMENTED / CTO ACCEPTANCE PENDING`; CTO acceptance remains blocked by the real Stage B model contract result.
