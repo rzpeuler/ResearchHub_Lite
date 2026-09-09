@@ -1,12 +1,552 @@
 {
-  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001",
-  "testFile": "tests/workflows/valuation.test.ts",
-  "requiredIds": [
-    "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11", "V12", "V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27", "V28", "V29", "V30", "V31", "V32", "V33", "V34", "V35", "V36", "V37", "V38", "V39", "V40", "V41", "V42", "V43", "V44", "V45", "V46", "V47", "V48", "V49", "V50", "V51", "V52", "V53", "V54", "V55", "V56", "V57", "V58", "V59", "V60", "V61", "V62", "V63"
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001-FIX-001",
+  "rows": [
+    {
+      "testId": "V1",
+      "requirement": "normalizes dashed dates",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V1 normalizes dashed dates",
+      "status": "PASS"
+    },
+    {
+      "testId": "V2",
+      "requirement": "normalizes Chinese dates",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V2 normalizes Chinese dates",
+      "status": "PASS"
+    },
+    {
+      "testId": "V3",
+      "requirement": "selects the latest usable market close",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V3 selects the latest usable market close",
+      "status": "PASS"
+    },
+    {
+      "testId": "V4",
+      "requirement": "excludes future market rows",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V4 excludes future market rows",
+      "status": "PASS"
+    },
+    {
+      "testId": "V5",
+      "requirement": "rejects non-positive market closes",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V5 rejects non-positive market closes",
+      "status": "PASS"
+    },
+    {
+      "testId": "V6",
+      "requirement": "keeps annual December 31 rows",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V6 keeps annual December 31 rows",
+      "status": "PASS"
+    },
+    {
+      "testId": "V7",
+      "requirement": "excludes Q1 H1 Q3 rows from the FY basis",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V7 excludes Q1 H1 Q3 rows from the FY basis",
+      "status": "PASS"
+    },
+    {
+      "testId": "V8",
+      "requirement": "sorts annual basis rows newest first",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V8 sorts annual basis rows newest first",
+      "status": "PASS"
+    },
+    {
+      "testId": "V9",
+      "requirement": "parses publication dates",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V9 parses publication dates",
+      "status": "PASS"
+    },
+    {
+      "testId": "V10",
+      "requirement": "explicit asOf selects a published basis",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V10 explicit asOf selects a published basis",
+      "status": "PASS"
+    },
+    {
+      "testId": "V11",
+      "requirement": "explicit asOf rejects missing publication dates",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V11 explicit asOf rejects missing publication dates",
+      "status": "PASS"
+    },
+    {
+      "testId": "V12",
+      "requirement": "explicit asOf rejects future publication dates",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V12 explicit asOf rejects future publication dates",
+      "status": "PASS"
+    },
+    {
+      "testId": "V13",
+      "requirement": "current snapshot records unverified publication status when needed",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V13 current snapshot records unverified publication status when needed",
+      "status": "PASS"
+    },
+    {
+      "testId": "V14",
+      "requirement": "basis carries explicit units",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V14 basis carries explicit units",
+      "status": "PASS"
+    },
+    {
+      "testId": "V15",
+      "requirement": "PE eligibility requires positive EPS",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V15 PE eligibility requires positive EPS",
+      "status": "PASS"
+    },
+    {
+      "testId": "V16",
+      "requirement": "PB eligibility requires positive BVPS",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V16 PB eligibility requires positive BVPS",
+      "status": "PASS"
+    },
+    {
+      "testId": "V17",
+      "requirement": "EV EBITDA eligibility requires finite net debt and shares",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V17 EV EBITDA eligibility requires finite net debt and shares",
+      "status": "PASS"
+    },
+    {
+      "testId": "V18",
+      "requirement": "computes PE reference multiple in code",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V18 computes PE reference multiple in code",
+      "status": "PASS"
+    },
+    {
+      "testId": "V19",
+      "requirement": "computes PB reference multiple in code",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V19 computes PB reference multiple in code",
+      "status": "PASS"
+    },
+    {
+      "testId": "V20",
+      "requirement": "computes EV EBITDA reference multiple in code",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V20 computes EV EBITDA reference multiple in code",
+      "status": "PASS"
+    },
+    {
+      "testId": "V21",
+      "requirement": "computes one-period PE target price",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V21 computes one-period PE target price",
+      "status": "PASS"
+    },
+    {
+      "testId": "V22",
+      "requirement": "computes one-period PB target price",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V22 computes one-period PB target price",
+      "status": "PASS"
+    },
+    {
+      "testId": "V23",
+      "requirement": "computes one-period EV EBITDA target price",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V23 computes one-period EV EBITDA target price",
+      "status": "PASS"
+    },
+    {
+      "testId": "V24",
+      "requirement": "permits bounded negative growth above minus one",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V24 permits bounded negative growth above minus one",
+      "status": "PASS"
+    },
+    {
+      "testId": "V25",
+      "requirement": "rejects a target year at or before the basis year",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V25 rejects a target year at or before the basis year",
+      "status": "PASS"
+    },
+    {
+      "testId": "V26",
+      "requirement": "requires exactly Bear Base Bull",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V26 requires exactly Bear Base Bull",
+      "status": "PASS"
+    },
+    {
+      "testId": "V27",
+      "requirement": "rejects non-monotonic assumptions",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V27 rejects non-monotonic assumptions",
+      "status": "PASS"
+    },
+    {
+      "testId": "V28",
+      "requirement": "calculates nine sensitivity cells",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V28 calculates nine sensitivity cells",
+      "status": "PASS"
+    },
+    {
+      "testId": "V29",
+      "requirement": "deterministically recomputes scenario outputs",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V29 deterministically recomputes scenario outputs",
+      "status": "PASS"
+    },
+    {
+      "testId": "V30",
+      "requirement": "workflow defaults target fiscal year to basis plus one",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V30 workflow defaults target fiscal year to basis plus one",
+      "status": "PASS"
+    },
+    {
+      "testId": "V31",
+      "requirement": "allows target fiscal year at basis plus three",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V31 allows target fiscal year at basis plus three",
+      "status": "PASS"
+    },
+    {
+      "testId": "V32",
+      "requirement": "rejects target fiscal year beyond basis plus three",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V32 rejects target fiscal year beyond basis plus three",
+      "status": "PASS"
+    },
+    {
+      "testId": "V33",
+      "requirement": "filters requested methods to eligible methods",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V33 filters requested methods to eligible methods",
+      "status": "PASS"
+    },
+    {
+      "testId": "V34",
+      "requirement": "keeps the method set bounded to PE PB EV_EBITDA",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V34 keeps the method set bounded to PE PB EV_EBITDA",
+      "status": "PASS"
+    },
+    {
+      "testId": "V35",
+      "requirement": "completes with one exact canonical Company",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V35 completes with one exact canonical Company",
+      "status": "PASS"
+    },
+    {
+      "testId": "V36",
+      "requirement": "missing Company coverage blocks before acquisition",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V36 missing Company coverage blocks before acquisition",
+      "status": "PASS"
+    },
+    {
+      "testId": "V37",
+      "requirement": "ambiguous exact Company coverage blocks",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V37 ambiguous exact Company coverage blocks",
+      "status": "PASS"
+    },
+    {
+      "testId": "V38",
+      "requirement": "unavailable market data blocks",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V38 unavailable market data blocks",
+      "status": "PASS"
+    },
+    {
+      "testId": "V39",
+      "requirement": "acquisition calls all three AKShare methods",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V39 acquisition calls all three AKShare methods",
+      "status": "PASS"
+    },
+    {
+      "testId": "V40",
+      "requirement": "writes a valuation ResearchReport",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V40 writes a valuation ResearchReport",
+      "status": "PASS"
+    },
+    {
+      "testId": "V41",
+      "requirement": "uses exactly sixteen fixed report sections",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V41 uses exactly sixteen fixed report sections",
+      "status": "PASS"
+    },
+    {
+      "testId": "V42",
+      "requirement": "states consensus is unavailable",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V42 states consensus is unavailable",
+      "status": "PASS"
+    },
+    {
+      "testId": "V43",
+      "requirement": "states DCF is deferred in v1",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V43 states DCF is deferred in v1",
+      "status": "PASS"
+    },
+    {
+      "testId": "V44",
+      "requirement": "calls Stage A assumption design",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V44 calls Stage A assumption design",
+      "status": "PASS"
+    },
+    {
+      "testId": "V45",
+      "requirement": "Stage A selects one primary method",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V45 Stage A selects one primary method",
+      "status": "PASS"
+    },
+    {
+      "testId": "V46",
+      "requirement": "calls Stage B synthesis after computation",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V46 calls Stage B synthesis after computation",
+      "status": "PASS"
+    },
+    {
+      "testId": "V47",
+      "requirement": "reasoning receives only deterministic market and financial source IDs",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V47 reasoning receives only deterministic market and financial source IDs",
+      "status": "PASS"
+    },
+    {
+      "testId": "V48",
+      "requirement": "viewpoint proposal passes the durable gate",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V48 viewpoint proposal passes the durable gate",
+      "status": "PASS"
+    },
+    {
+      "testId": "V49",
+      "requirement": "durable proposals are company scoped",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V49 durable proposals are company scoped",
+      "status": "PASS"
+    },
+    {
+      "testId": "V50",
+      "requirement": "proposal count is bounded at three",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V50 proposal count is bounded at three",
+      "status": "PASS"
+    },
+    {
+      "testId": "V51",
+      "requirement": "report section refs are canonical Gateway refs",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V51 report section refs are canonical Gateway refs",
+      "status": "PASS"
+    },
+    {
+      "testId": "V52",
+      "requirement": "canonical claims remain attached to the existing Company",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V52 canonical claims remain attached to the existing Company",
+      "status": "PASS"
+    },
+    {
+      "testId": "V53",
+      "requirement": "replay is idempotent for the same workflow run",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V53 replay is idempotent for the same workflow run",
+      "status": "PASS"
+    },
+    {
+      "testId": "V54",
+      "requirement": "telemetry records deterministic computation and persistence counts",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V54 telemetry records deterministic computation and persistence counts",
+      "status": "PASS"
+    },
+    {
+      "testId": "V55",
+      "requirement": "cancellation is respected before coverage acquisition",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V55 cancellation is respected before coverage acquisition",
+      "status": "PASS"
+    },
+    {
+      "testId": "V56",
+      "requirement": "future asOf is rejected",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V56 future asOf is rejected",
+      "status": "PASS"
+    },
+    {
+      "testId": "V57",
+      "requirement": "ResearchService registers valuation workflow type",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V57 ResearchService registers valuation workflow type",
+      "status": "PASS"
+    },
+    {
+      "testId": "V62",
+      "requirement": "valuation does not create a canonical Valuation object",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V62 valuation does not create a canonical Valuation object",
+      "status": "PASS"
+    },
+    {
+      "testId": "V63",
+      "requirement": "report contains the three scenario sections and sensitivity",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V63 report contains the three scenario sections and sensitivity",
+      "status": "PASS"
+    },
+    {
+      "testId": "V64",
+      "requirement": "companyBasic telemetry is never durable evidence",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V64 companyBasic telemetry is never durable evidence",
+      "status": "PASS"
+    },
+    {
+      "testId": "V65",
+      "requirement": "source acquisition time is distinct from historical valuation context",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V65 source acquisition time is distinct from historical valuation context",
+      "status": "PASS"
+    },
+    {
+      "testId": "V66",
+      "requirement": "exact structured values reject model-supplied drift and numeric text is canonicalized",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V66 exact structured values reject model-supplied drift and numeric text is canonicalized",
+      "status": "PASS"
+    },
+    {
+      "testId": "V67",
+      "requirement": "report section evidence is precise rather than repeated globally",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V67 report section evidence is precise rather than repeated globally",
+      "status": "PASS"
+    },
+    {
+      "testId": "V68",
+      "requirement": "zero accepted proposals do not canonicalize acquired evidence",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V68 zero accepted proposals do not canonicalize acquired evidence",
+      "status": "PASS"
+    },
+    {
+      "testId": "V69",
+      "requirement": "assumption evidence must be a subset of the Base scenario evidence",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V69 assumption evidence must be a subset of the Base scenario evidence",
+      "status": "PASS"
+    },
+    {
+      "testId": "V70",
+      "requirement": "cross-run valuation dates share structured Gateway slots while results change",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V70 cross-run valuation dates share structured Gateway slots while results change",
+      "status": "PASS"
+    },
+    {
+      "testId": "V71",
+      "requirement": "Gateway conversion strips valuation-local fields and uses stable periods",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V71 Gateway conversion strips valuation-local fields and uses stable periods",
+      "status": "PASS"
+    },
+    {
+      "testId": "V72",
+      "requirement": "Stage A repair carries bounded invalid output and required allowlists",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V72 Stage A repair carries bounded invalid output and required allowlists",
+      "status": "PASS"
+    },
+    {
+      "testId": "V73",
+      "requirement": "Stage A rejects model-owned arithmetic fields fail closed",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V73 Stage A rejects model-owned arithmetic fields fail closed",
+      "status": "PASS"
+    },
+    {
+      "testId": "V74",
+      "requirement": "forged Stage B result, claim, and source references fail closed",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V74 forged Stage B result, claim, and source references fail closed",
+      "status": "PASS"
+    },
+    {
+      "testId": "V75",
+      "requirement": "Stage B strictly rejects more than three proposals",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V75 Stage B strictly rejects more than three proposals",
+      "status": "PASS"
+    },
+    {
+      "testId": "V76",
+      "requirement": "Pi analyze_valuation routes the complete input to startValuation",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V76 Pi analyze_valuation routes the complete input to startValuation",
+      "status": "PASS"
+    },
+    {
+      "testId": "VAL-HTTP-001",
+      "requirement": "HTTP valuation route starts authoritative Workflow",
+      "testFile": "tests/app/runtime/valuation-route.test.ts",
+      "testName": "VAL-HTTP-001 HTTP valuation route starts authoritative Workflow",
+      "status": "PASS"
+    },
+    {
+      "testId": "VAL-GATE-001",
+      "requirement": "valuation Pi gate returns executable pass contract",
+      "testFile": "tests/validation/valuation-pi-e2e-gate.test.ts",
+      "testName": "VAL-GATE-001 valuation Pi gate returns executable pass contract",
+      "status": "PASS"
+    },
+    {
+      "testId": "VAL-GATE-002",
+      "requirement": "valuation Pi gate fails closed on semantic acceptance gaps",
+      "testFile": "tests/validation/valuation-pi-e2e-gate.test.ts",
+      "testName": "VAL-GATE-002 valuation Pi gate fails closed on semantic acceptance gaps",
+      "status": "PASS"
+    },
+    {
+      "testId": "VAL-GATE-003",
+      "requirement": "valuation Pi gate rejects a non-Pi executor proof",
+      "testFile": "tests/validation/valuation-pi-e2e-gate.test.ts",
+      "testName": "VAL-GATE-003 valuation Pi gate rejects a non-Pi executor proof",
+      "status": "PASS"
+    },
+    {
+      "testId": "V77",
+      "requirement": "viewpoint dependencies reference only assumptions in the current Gateway submission",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V77 viewpoint dependencies include only assumptions in the Gateway submission",
+      "status": "PASS"
+    },
+    {
+      "testId": "V78",
+      "requirement": "model valuation-view numbers are canonicalized in the durable report section",
+      "testFile": "tests/workflows/valuation.test.ts",
+      "testName": "V78 model valuation-view numbers are canonicalized in the durable report section",
+      "status": "PASS"
+    }
   ],
-  "passed": 63,
-  "failed": 0,
-  "coverage": [
-    "normalization", "market PIT", "annual FY basis", "publication PIT", "units", "PE eligibility", "PB eligibility", "EV/EBITDA eligibility", "reference multiples", "PE formula", "PB formula", "EV/EBITDA formula", "scenario validation", "3x3 sensitivity", "deterministic recompute", "target-year bounds", "requested-method filtering", "exact Company coverage", "missing coverage", "ambiguous coverage", "provider calls", "ResearchReport", "fixed sections", "consensus/DCF unavailable", "two-stage reasoning", "bounded references", "Gateway proposal gate", "Company-only claims", "replay idempotency", "telemetry", "cancellation", "future asOf", "Application Service", "HTTP route", "Pi tool", "no canonical Valuation object"
-  ]
+  "note": "Every PASS row names an executable Node test; no source-text-only proof is used for routing or semantic gates."
 }

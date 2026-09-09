@@ -1,6 +1,36 @@
 # ResearchHub_Lite — Decision Log
 
+## RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001-FIX-001 — Implementation State — 2026-09-09
+
+Status: `FIX-001 IMPLEMENTED / CTO ACCEPTANCE PENDING`
+
+FIX-001 preserves the accepted Valuation architecture and closes state
+maintenance and provenance gaps. Valuation proposals now rely on the existing
+Gateway Claim slot identity (Claim type, Company subject, structured metric,
+and structured period) without a Valuation-specific semantic key. Source
+retrieval time is the actual acquisition clock, while historical `asOf` and
+valuation date remain workflow/report context; evidence Source identity is
+stable across reruns of the same market price date or FY basis. Only market
+and financial snapshots consumed by deterministic valuation are eligible for
+durable evidence; unused `companyBasic` remains telemetry-only. Local
+valuation references are stripped before Gateway submission, dependencies are
+accepted-only, and report section provenance is mapped to supporting refs.
+
+The validation layer adds executable cross-run, repair, forged-reference,
+unauthorized-arithmetic, zero-durable-change, Pi tool, HTTP route, deterministic
+clock, canonical-delta, and row-level test-matrix proof. The Real Pi gate
+requires the complete semantic, computation, persistence, Company, and Report
+contract and exits zero only for `EXECUTED / PASS GATE`. No Schema, Gateway,
+Writer, Provider Framework, M3A-3/4, M3B, or Theme scope was introduced.
+
+M1 and M2 remain PASS / CLOSED, and M3 Architecture remains PASS / FROZEN.
+M3A-3/4 remain NOT STARTED; M3B remains NOT STARTED / ARCHITECTURE REQUIRED;
+Theme Framework remains DEFERRED.
+
 ## RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001 — Implementation State — 2026-09-09
+
+Historical pre-FIX-001 record; the FIX-001 entry above and its evidence files
+supersede the aggregate V1–V63 counts and legacy classification wording below.
 
 M3A-2 Valuation is implemented on the frozen Personal Research v1 Research Coverage architecture and remains `IMPLEMENTED / CTO ACCEPTANCE PENDING`. The implementation preserves the existing Workflow / Skill / Plugin / Knowledge boundaries: exact canonical Company coverage is resolved before acquisition, the existing AKShare adapter supplies only structured companyBasic/financialData/historicalMarketData, Workflow owns FY/PIT normalization and deterministic eligibility/calculation, Skill owns bounded two-stage semantic output, and canonical mutation remains behind the existing Knowledge Production Gateway / validated ChangeSet / Writer path.
 

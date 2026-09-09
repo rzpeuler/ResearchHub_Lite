@@ -77,14 +77,23 @@ introduced; the report states `Consensus unavailable` and
 
 At most three durable local proposals are accepted, with only `assumption` or
 `viewpoint` claim types. V1 defaults to Base assumptions/viewpoint, stable
-code-owned semantic keys, proposal-referenced evidence only, and no canonical
+code-owned structured values, proposal-referenced evidence only, and no canonical
 Valuation object. The report has the fixed sixteen section titles defined by
 the Valuation contract and uses canonical refs returned by Gateway.
 
 ## Verification and governance
 
-The implementation is verified by the focused V1–V63 matrix, repository tests,
-type/client/build checks, a real `PiReasoningExecutor` run against a fresh V04
-knowledge base with deterministic fixtures, and an AKShare provider smoke run.
-This document records implementation completion only; CTO acceptance remains
-pending. M3A-3 and M3A-4 are not started.
+The implementation is verified by executable focused regressions, repository
+tests, type/client/build checks, a real `PiReasoningExecutor` run against a
+fresh V04 knowledge base with deterministic fixtures, and an AKShare provider
+smoke run. The valuation run date is workflow/report context, never canonical
+semantic identity. Source `retrievedAt` is the actual acquisition time and is
+not rewritten to historical `asOf` or valuation date. Canonical Source
+identity is evidence-snapshot based: market evidence is keyed by company and
+price date, while financial evidence is keyed by company and FY basis (with
+report/publication metadata as evidence context). Data acquired only for
+provider telemetry, such as unused `companyBasic`, is not durable evidence.
+Under the current Gateway, valuation Claim slots are provided by Claim type,
+Company subject, and structured metric plus period; Valuation does not add a
+semantic-key identity layer. CTO acceptance remains pending. M3A-3 and M3A-4
+are not started.

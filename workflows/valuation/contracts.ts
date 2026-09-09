@@ -63,6 +63,7 @@ export interface ValuationTelemetrySnapshot {
   readonly assumptionDesign: ValuationReasoningTelemetry
   readonly computation: { readonly scenarioCount: number; readonly calculatedScenarioCount: number; readonly sensitivityCellCount: number; readonly deterministicRecomputeStatus: 'matched' | 'unavailable' | 'mismatch' }
   readonly synthesis: ValuationReasoningTelemetry
+  readonly modelDerivedInterpretiveSectionCount: number
   readonly proposalCandidateCount: number
   readonly acceptedProposalCount: number
   readonly canonicalSourceCount: number

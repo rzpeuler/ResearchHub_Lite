@@ -1,5 +1,9 @@
 # ResearchHub_Lite Changelog
 
+## 2026-09-09
+
+- Implemented `RHL-PERSONAL-RESEARCH-V1-M3A-VALUATION-001-FIX-001` pending CTO acceptance: stabilized existing Gateway valuation Claim slots across run dates, separated actual Source retrieval time from historical valuation context, made Source identity evidence-snapshot based, excluded unused companyBasic from durable evidence, tightened local proposal/evidence/dependency gates, mapped section-level Report provenance precisely, and added executable Pi/HTTP/Real Pi/delta/test-matrix validation. No Schema, Gateway, Writer, Provider Framework, M3A-3/4, M3B, or Theme scope was introduced.
+
 ## 2026-09-08
 
 - Implemented `RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001` pending CTO acceptance: exact fiscal-period contract and filing selection, period-aware AKShare normalization, deterministic earnings computation, existing-company coverage gate, bounded Earnings Review reasoning/assessment gate, proposal-referenced-only Gateway evidence, `earnings_review` ResearchReport support, ResearchService/Pi/HTTP entrypoints, focused executable regressions, and committed Pi/provider evidence. M3A-2/3/4, M3B, and Theme Framework remain out of scope.

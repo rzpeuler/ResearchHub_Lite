@@ -1,31 +1,40 @@
-# RHL M3A-2 Valuation v1 — Validation Summary
+# RHL M3A-2 Valuation v1 — FIX-001 Validation Summary
 
-Status: `IMPLEMENTED / CTO ACCEPTANCE PENDING`
+Status: `FIX-001 IMPLEMENTED / CTO ACCEPTANCE PENDING`
 
-The Valuation vertical is implemented on the frozen Research Coverage
-architecture. It routes through `analyze_valuation` /
-`POST /api/production/analyze-valuation`, resolves one exact existing Company,
-calls the existing AKShare adapter's three structured methods, performs FY/PIT
-normalization and method eligibility in code, invokes bounded Stage A and Stage
-B Pi reasoning, calculates Bear/Base/Bull targets plus a 3x3 sensitivity matrix
-deterministically, and submits only validated local proposals through the
-existing Gateway and Writer path.
+FIX-001 preserves the accepted Valuation path: Pi/HTTP -> ResearchService ->
+existing Company coverage -> AKShare -> bounded Stage A -> deterministic
+calculation -> bounded Stage B -> proposal-referenced Gateway/Writer ->
+`valuation` ResearchReport. It closes cross-run Claim slot stability using the
+existing Claim type, Company subject, structured metric, and structured period;
+separates actual Source retrieval time from historical valuation context;
+stabilizes evidence-snapshot Source identity; and keeps unused `companyBasic`
+telemetry out of durable evidence.
 
-The focused matrix `V1–V63` passed `63/63`. The real Pi harness used the current
-production model `zhipu-openapi/glm-5.3-flash`, the actual `PiReasoningExecutor`,
-a fresh Schema 0.4 / Storage Format 1 Knowledge Base, deterministic AKShare
-fixtures, seeded Company/Thesis/Assumption/Source coverage, and exited `0` with
-`EXECUTED_PASS`. Stage A and Stage B were both validated and applied without
-fallback or repair; the run produced 3 scenarios, 9 sensitivity cells, and 2
-accepted durable claims while keeping one Company entity.
+The focused Valuation suite passes `78/78`, including executable tests for
+cross-run slot/source identity, Source retrieval time, exact structured values,
+numeric statement authority, accepted-only dependencies, local-field stripping,
+zero-durable evidence, bounded Stage A repair, unauthorized arithmetic,
+forged Stage B refs, max-three proposals, actual Pi tool routing, and the
+actual HTTP route. The row-level matrix contains one executable PASS row per
+test and no source-text-only routing proof.
 
-The non-blocking provider smoke reached the installed AKShare adapter but was
-classified `PROVIDER_TRANSPORT_BLOCKED`: companyBasic and market transport were
-blocked by the observed Eastmoney proxy disconnect, while financialData
-transport returned an empty payload. This is recorded separately from product
-usability and does not invalidate deterministic fixture or real-Pi evidence.
+The Real Pi harness uses the actual `PiReasoningExecutor` with model
+`zhipu-openapi/glm-5.3-flash`, deterministic `NOW=2026-09-09T00:00:00.000Z`
+and `AS_OF=2026-09-08T00:00:00.000Z`, a fresh Schema 0.4 / Storage 1 Knowledge
+Base, and deterministic AKShare fixtures. It classified `EXECUTED / PASS GATE`
+with process exit `0`: the gate proved a real `PiReasoningExecutor` and
+`pi-coding-agent` runtime; Stage A and B called/validated/applied without fallback
+or repair, PE selected from eligible methods, 3 calculated scenarios, 9
+sensitivity cells, matched deterministic recompute, 3 model-derived sections,
+1 accepted durable proposal, baseline/final entity counts `1/1`, Source delta
+`+1`, Claim delta `+1`, and no canonicalized unused companyBasic Source.
 
-No Schema, Gateway, Writer, provider framework, generic layer, DCF, consensus,
-canonical Valuation object, M3A-3, M3A-4, or user PDF change is part of this
-task. CTO acceptance is still required before changing the governance state to
-PASS / CLOSED.
+The separate non-blocking AKShare smoke classified `PROVIDER_TRANSPORT_BLOCKED`:
+companyBasic and historical market transport failed at the observed Eastmoney
+proxy boundary, while financialData transport succeeded with an empty payload.
+This remains separate from deterministic fixture and Real Pi product evidence.
+
+No Schema, Gateway, Writer, Provider Framework, generic valuation framework,
+DCF, consensus integration, canonical Valuation object, M3A-3, M3A-4, M3B,
+Theme, frontend, scheduler, queue, or user PDF change is part of this task.

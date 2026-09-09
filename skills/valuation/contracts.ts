@@ -4,6 +4,17 @@ export const VALUATION_METHODS = ['PE', 'PB', 'EV_EBITDA'] as const
 export type ValuationMethod = (typeof VALUATION_METHODS)[number]
 export const VALUATION_SCENARIOS = ['bear', 'base', 'bull'] as const
 export type ValuationScenarioId = (typeof VALUATION_SCENARIOS)[number]
+export const VALUATION_EVIDENCE_ROLES = ['market', 'financial', 'basic'] as const
+export type ValuationEvidenceRole = (typeof VALUATION_EVIDENCE_ROLES)[number]
+export type DurableValuationEvidenceRole = Exclude<ValuationEvidenceRole, 'basic'>
+
+export interface ValuationStructuredValue {
+  readonly metric: string
+  readonly value: number
+  readonly unit: 'ratio' | 'multiple' | 'CNY/share' | 'percent'
+  readonly period: string
+  readonly comparator: 'eq'
+}
 
 export const VALUATION_REPORT_SECTIONS = [
   'Valuation Snapshot',
