@@ -12,10 +12,10 @@
     "fallbackUsed": false
   },
   "stageBSemantic": {
-    "initial": { "topLevelKeys": ["challengeAssessments", "evidenceAssessments", "interpretations", "proposals", "thesisVerdict"], "evidenceAssessmentCount": 4, "challengeCount": 10, "proposalCount": 5 },
-    "repair": { "topLevelKeys": ["challengeAssessments", "evidenceAssessments", "interpretations", "proposals", "thesisVerdict"], "evidenceAssessmentCount": 4, "challengeCount": 11, "proposalCount": 2 },
+    "initial": { "topLevelKeys": ["challengeAssessments", "evidenceAssessments", "interpretations", "proposals", "thesisVerdict"], "evidenceAssessmentCount": 4, "challengeCount": 8, "proposalCount": 6 },
+    "repair": { "topLevelKeys": ["challengeAssessments", "evidenceAssessments", "interpretations", "proposals", "thesisVerdict"], "evidenceAssessmentCount": 4, "challengeCount": 10, "proposalCount": 4 },
     "repairAttempts": 1,
-    "diagnostics": ["proposal_0_invalid", "proposal_1_invalid"],
+    "diagnostics": ["proposal_0_invalid", "proposal_1_invalid", "proposal_2_invalid", "proposal_3_invalid"],
     "validated": true,
     "applied": true,
     "fallbackUsed": false
@@ -23,7 +23,7 @@
   "proposalOnlyRepair": {
     "called": true,
     "repairAttempts": 1,
-    "initialCandidateCount": 2,
+    "initialCandidateCount": 4,
     "initialAcceptedCount": 0,
     "repairCandidateCount": 0,
     "repairAcceptedCount": 0,
