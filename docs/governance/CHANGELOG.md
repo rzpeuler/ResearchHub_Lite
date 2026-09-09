@@ -8,7 +8,7 @@
   fingerprint/date and verification/proposal gates, fallback/report contract
   notes, row-level evidence, an executable Real Pi gate/harness, and a separate
   non-blocking provider smoke. Focused Event Research validation observed
-  `43/43 PASS`; Real Pi is honestly `REAL_MODEL_CONTRACT_BLOCKED` because Stage B
+  `51/51 PASS`; Real Pi is honestly `REAL_MODEL_CONTRACT_BLOCKED` because Stage B
   fell back, although the admitted `event_research` report was persisted;
   provider smoke observed CNINFO empty and GDELT HTTP 429. Task 5 did
   not modify Task 2/3/app integration code, Schema, Gateway, or Writer.

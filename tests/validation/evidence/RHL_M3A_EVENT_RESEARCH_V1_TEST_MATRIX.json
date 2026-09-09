@@ -8,8 +8,8 @@
   ],
   "focusedRun": {
     "command": "node --import tsx --test tests/workflows/event-research.test.ts tests/workflows/event-research-skill.test.ts",
-    "tests": 43,
-    "pass": 43,
+    "tests": 51,
+    "pass": 51,
     "fail": 0
   },
   "statusLegend": {

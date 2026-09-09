@@ -23,12 +23,13 @@ Focused Event Research command:
 node --import tsx --test tests/workflows/event-research.test.ts tests/workflows/event-research-skill.test.ts
 ```
 
-Observed result: `51/51 PASS` (20 Skill tests and 23 Workflow tests). The
+Observed result: `51/51 PASS` (20 Skill tests, 23 Workflow tests, app/gate
+tests included). The
 row-level matrix expands the executable assertions into E1–E86 requirement
 rows and includes the Skill rows.
 
-Repository checks observed before evidence generation: Client `21/21 PASS`,
-full discovered Node `511/511 PASS`, `npx tsc --noEmit PASS`, and
+Repository checks: Client `21/21 PASS`, full discovered Node `518/518 PASS`,
+`npx tsc --noEmit PASS`, and
 `git diff --check PASS`. These are working-tree observations and are not an
 acceptance claim for pre-existing Task 2/3 code.
 

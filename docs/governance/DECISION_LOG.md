@@ -33,8 +33,7 @@ change was introduced. M3A-4 remains not started, M3B remains architecture
 required, and Theme remains deferred.
 
 Validation evidence records 51/51 focused Event Research Skill/Workflow tests,
-the observed full Node suite with two concurrent route-test timing failures and
-the 21/21 Client suite, root typecheck, and
+the full 518/518 Node suite and the 21/21 Client suite, root typecheck, and
 `git diff --check` as passing observations. The executable Real Pi harness used
 the actual `PiReasoningExecutor`, selected model
 `zhipu-openapi/glm-5.3-flash`, fresh Schema 0.4 / Storage 1 Knowledge, seeded
