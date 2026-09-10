@@ -3,7 +3,7 @@
   "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-004",
   "classification": "EXECUTED / PASS GATE",
   "processExitCode": 0,
-  "implementationCommit": "working-tree",
+  "implementationCommit": "1158e2dc1406ea979aa8d2ccc6e093731ea4942a",
   "realPiReasoningExecutor": true,
   "host": {
     "provider": "pi-coding-agent",
