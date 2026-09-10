@@ -1,8 +1,13 @@
 # Personal Research v1 — Thesis Red Team v0.1
 
-Status: `IMPLEMENTED / CTO ACCEPTANCE PENDING`
+Status: `PASS / CLOSED by CTO acceptance`
 
 Task identity: `RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-004`
+
+Accepted feature implementation head:
+`620d75d4a9257f686d1ba723d16affb8e111b205`
+
+FIX-004 Real Pi acceptance: `EXECUTED / PASS GATE`.
 
 ## 1. Purpose and boundary
 

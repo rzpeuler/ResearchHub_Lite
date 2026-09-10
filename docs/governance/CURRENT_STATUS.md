@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Personal Research v1 M3A-3 Event Research — PASS / CLOSED by CTO acceptance; M3 Architecture PASS / FROZEN**
+**Personal Research v1 M3A-4 Thesis Red Team — PASS / CLOSED by CTO acceptance; M3 Architecture PASS / FROZEN**
 
 ## Current Snapshot
 
@@ -14,7 +14,7 @@
 - `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-001`: PASS / CLOSED by the same CTO acceptance. The bounded catalog/watchlist, source preservation, signal lifecycle, scheduler, report, and shared product composition remain accepted; M3 was not started.
 - `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-002`: PASS / CLOSED by the same CTO acceptance. FIX-002 closes async enrichment application, bounded change intelligence, proposal/evidence admissibility, multi-company Gateway grouping, canonical-only report provenance, shared Runtime/CLI/Scheduler/Pi composition, immediate 60-second Scheduler checks, active-only catalog wiring, and real product telemetry. Provider and Pi evidence remain explicit about environment limitations.
 - `RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-003`: PASS / CLOSED by the same CTO acceptance. FIX-003 adds bounded structured-output normalization, strict partial-field enrichment, Change Assessment durable eligibility as the pre-Gateway authority, exact section admissibility, executable multi-company/evidence regressions, and direct Product telemetry for real Pi validation/application. M2 is closed; M3 was not started.
-- `RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001`: PASS / FROZEN by CTO decision. M3A-1 Earnings Review, M3A-2 Valuation, and M3A-3 Event Research are PASS / CLOSED by CTO acceptance; M3A-4 Thesis Red Team is IMPLEMENTED / CTO ACCEPTANCE PENDING on the active feature branch. FIX-001/FIX-002/FIX-003/FIX-004 close synthetic fallback, bounded repair context, evidence qualification, verdict binding, and persisted-integrity proof defects; FIX-004 latest real Stage B model contract is `EXECUTED / PASS GATE` while CTO acceptance remains pending. M3B Industry Deep Research is NOT STARTED / ARCHITECTURE REQUIRED; Theme Framework remains DEFERRED.
+- `RHL-ARCH-PERSONAL-RESEARCH-V1-RESEARCH-COVERAGE-001`: PASS / FROZEN by CTO decision. M3A-1 Earnings Review, M3A-2 Valuation, M3A-3 Event Research, and M3A-4 Thesis Red Team are all PASS / CLOSED by CTO acceptance. FIX-001/FIX-002/FIX-003/FIX-004 remain the accepted M3A-4 repair lineage; FIX-004 latest Real Pi model contract is `EXECUTED / PASS GATE`. M3B Industry Deep Research is NOT STARTED / ARCHITECTURE REQUIRED; Theme Framework remains DEFERRED.
 - `RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001`: PASS / CLOSED by CTO acceptance. Accepted implementation head: `cf4e4154df5a57aea0525286423b260ab9d2eaeb`. The lineage is `a323ee91751a51d1208231c38645a153f1605178` → `88ed7947aa2818d1afd57b16dad5fb63aade547c` → `cf4e4154df5a57aea0525286423b260ab9d2eaeb`. The accepted path requires existing canonical Company coverage, exact-period CNINFO/AKShare evidence, deterministic financial computation, bounded Earnings Review reasoning, local durable gates, Gateway-mediated mutation, and `earnings_review` ResearchReport persistence.
 - `RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-001`: PASS / CLOSED by the same CTO acceptance. It closes the explicit real-model contract, bounded repair context and diagnostics, section Claim provenance mapping, executable evidence reproducibility, and ER24/ER33 proof gaps. Real Pi evidence is `EXECUTED / PASS GATE`; provider smoke remains non-blocking and separately reported.
 - `RHL-PERSONAL-RESEARCH-V1-M3A-EARNINGS-REVIEW-001-FIX-002`: PASS / CLOSED by the same CTO acceptance. It corrects the Real Pi harness success exit contract, adds executable pass/fail exit regression coverage, and regenerates evidence from the harness with the unchanged semantic gate.
@@ -180,7 +180,10 @@ independent CTO acceptance and is not marked PASS/CLOSED.
 
 ## 2026-09-10 — M3A-4 Thesis Red Team FIX-004
 
-**Status:** Implemented / CTO acceptance pending
+**Status:** PASS / CLOSED by CTO acceptance
+
+Accepted implementation head: `620d75d4a9257f686d1ba723d16affb8e111b205`.
+Real Pi acceptance: `EXECUTED / PASS GATE`.
 
 FIX-004 closes the Stage B invalidation-analysis completeness gap. Stage A
 `invalidationConditionCount` is no longer accepted as Stage B evidence;
@@ -189,3 +192,14 @@ whose `conditionRef` belongs to the Stage A allowlist. Missing analysis uses
 the existing single bounded semantic repair and fails closed after a second
 miss, with no synthetic challenge. Real Pi acceptance now checks the separate
 `invalidationAnalysisCount` telemetry.
+
+## 2026-09-10 — M3A-4 Thesis Red Team CTO acceptance closure
+
+**Status:** PASS / CLOSED by CTO acceptance
+
+Accepted implementation head: `620d75d4a9257f686d1ba723d16affb8e111b205`.
+FIX-004 Real Pi: `EXECUTED / PASS GATE`. FIX-001 through FIX-004 remain the
+historical repair lineage. No FIX-005 is required. A full second stochastic
+Workflow rerun is not an M3A-4 closure condition; deterministic replay and
+stable-slot regression remain the idempotency authority. M3B remains
+`NOT STARTED / ARCHITECTURE REQUIRED`; Theme Framework remains `DEFERRED`.
