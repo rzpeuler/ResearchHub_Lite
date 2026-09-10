@@ -942,3 +942,27 @@ Workflow rerun is not an M3A-4 closure condition; deterministic replay and
 stable-slot regression remain the idempotency authority. M3A-4 is closed
 without starting M3B implementation; M3B remains `NOT STARTED /
 ARCHITECTURE REQUIRED`, and Theme Framework remains `DEFERRED`.
+
+## RHL-ARCH-PERSONAL-RESEARCH-V1-INDUSTRY-DEEP-RESEARCH-001 — 2026-09-10
+
+**Decision:** M3B Industry Deep Research Architecture v0.1 — PASS / FROZEN
+
+**Baseline:** `d75c161cdcbd279d4b1062233102991e95ea8c0c`
+
+The CTO-approved M3B architecture is admitted as the normative frozen
+baseline. M3B reuses the existing canonical Knowledge model without a Schema
+upgrade; one Industry Deep Research Workflow, one Industry Research Skill,
+the existing acquisition Plugin seam, and the existing Knowledge Production
+Gateway are the only intended vertical boundaries. No new Agent, generic
+Planner, Research Engine, Workflow Engine, Provider Registry, Graph DB,
+Vector DB, or RAG infrastructure is introduced. The eight methodology modules
+remain Skill methodology modules, not eight Skills. Each run is constrained to
+one semantic proposal bundle, one Gateway submission, one validated ChangeSet,
+and one Writer commit.
+
+M3B-1 producer-neutral Knowledge Production Boundary Closure is mandatory
+before Industry Workflow implementation, including generic root Entity
+binding, conservative non-Company Entity resolution, Claim subjects that can
+resolve to Entity or Relation, and Relation proposal to canonical Relation
+ref mapping. Theme Framework remains deferred. No M3B implementation is
+authorized by this freeze decision.
