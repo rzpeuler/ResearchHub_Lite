@@ -1,0 +1,21 @@
+{
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-004",
+  "status": "IMPLEMENTED / CTO ACCEPTANCE PENDING",
+  "rows": [
+    { "testId": "A", "requirement": "Stage A condition does not satisfy Stage B invalidation analysis", "testName": "FIX-004 Stage A invalidation conditions do not satisfy Stage B completeness", "status": "PASS" },
+    { "testId": "B", "requirement": "One semantic repair accepts a legal invalidation challenge", "testName": "FIX-004 missing invalidation analysis invokes one semantic repair and accepts a legal challenge", "status": "PASS" },
+    { "testId": "C", "requirement": "Second missing analysis fails closed without synthetic challenge", "testName": "FIX-004 missing invalidation analysis after repair fails closed without synthesis", "status": "PASS" },
+    { "testId": "D", "requirement": "Base synthesis fixture contains a legal invalidation challenge", "testName": "Thesis Red Team Stage B keeps semantic core separate from proposal gate", "status": "PASS" },
+    { "testId": "E", "requirement": "Gate blocks Stage A-only invalidation condition design", "testName": "Thesis Red Team Pi gate blocks Stage B invalidation analysis missing", "status": "PASS" },
+    { "testId": "F", "requirement": "Gate passes with both Stage A design and Stage B analysis", "testName": "Thesis Red Team Pi gate passes the complete acceptance fixture", "status": "PASS" },
+    { "testId": "G", "requirement": "Stage A invalidation output contract declares statement", "testName": "FIX-004 Stage A output contract declares the required invalidation statement property", "status": "PASS" },
+    { "testId": "PI", "requirement": "Real Pi durable acceptance oracle", "testName": "thesis-red-team-pi-e2e.ts", "status": "EXECUTED / PASS GATE" }
+  ],
+  "focusedTests": { "count": 43, "status": "PASS" },
+  "nodeTests": { "count": 568, "status": "PASS" },
+  "clientTests": { "count": 21, "status": "PASS" },
+  "typecheck": "PASS",
+  "clientTypecheck": "PASS",
+  "clientBuild": "PASS",
+  "diffCheck": "PASS"
+}

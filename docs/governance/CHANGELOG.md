@@ -1,5 +1,14 @@
 # ResearchHub_Lite Changelog
 
+## 2026-09-10
+
+- Implemented `RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-004`
+  pending CTO acceptance: Stage B now requires explicit allowlisted
+  invalidation-condition analysis, bounded semantic repair covers the missing
+  analysis and fails closed after one retry, the Stage A output contract
+  declares `statement`, and Real Pi telemetry/gating distinguishes Stage A
+  condition design from Stage B condition analysis.
+
 ## 2026-09-09
 
 - Closed `RHL-PERSONAL-RESEARCH-V1-M3A-EVENT-RESEARCH-001-CLOSE` as

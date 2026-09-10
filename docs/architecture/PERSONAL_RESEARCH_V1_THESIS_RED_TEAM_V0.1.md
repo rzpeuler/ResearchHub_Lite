@@ -2,7 +2,7 @@
 
 Status: `IMPLEMENTED / CTO ACCEPTANCE PENDING`
 
-Task identity: `RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-003`
+Task identity: `RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-004`
 
 ## 1. Purpose and boundary
 
@@ -105,8 +105,13 @@ Verdict consistency is code-owned: `inconclusive` cannot claim material impact;
 supported high/critical challenge; and `invalidation_condition_met` requires a
 matching condition and strong disconfirming evidence. The model cannot declare
 strong verification. A semantic core must include an alternative explanation,
-a bear/failure case, and invalidation analysis. A missing failure case triggers
-at most one semantic-core repair; a hypothesis failure case remains report-only.
+a bear/failure case, and explicit invalidation-condition analysis. Stage A
+invalidation-condition design is not Stage B invalidation-condition analysis:
+Stage B must contain at least one `invalidation_condition` challenge with a
+`conditionRef` belonging to the Stage A condition allowlist. A missing failure
+case or invalidation analysis triggers at most one semantic-core repair; a
+hypothesis failure case remains report-only. No invalidation challenge is
+synthesized from Stage A.
 Proposal candidates are downstream of the frozen semantic core. If all
 candidates are rejected for repairable contract or admissibility reasons, one
 separate bounded proposal-only repair may return proposals only; it cannot
@@ -130,7 +135,9 @@ canonical evidence. The report is code-assembled with exactly 16 frozen
 sections, precise provenance, subjectRefs containing Company and Thesis, and
 `reportType=thesis_red_team`. Telemetry distinguishes model candidates,
 submitted proposals, Gateway claim bindings/creates/updates, durable applied
-proposals, and persisted Source/Claim deltas. Report-only evidence records its
+proposals, and persisted Source/Claim deltas. Stage A `invalidationConditionCount`
+is tracked separately from the Stage B `invalidationAnalysisCount`.
+Report-only evidence records its
 candidate ID, provider, title, and date in bounded report provenance without
 inventing canonical Source refs.
 

@@ -914,3 +914,18 @@ FIX-002 final real Pi evidence is `REAL_MODEL_CONTRACT_BLOCKED`: Stage A and Sta
 ## 2026-09-10 — FIX-003 Gateway boundary decision
 
 CTO decision recorded for the implementation contract: “KnowledgeProductionGateway may support a narrow generic existing-canonical-Claim update contract, but no producer-specific vertical branching is allowed.” The contract is explicit, exact-target, subject/type compatible, frozen-field preserving, idempotent, and remains under ChangeSet validation and Writer authority. No Schema 0.4, Storage Format 1, Writer authority, or frozen Runtime architecture changed.
+## RHL-PERSONAL-RESEARCH-V1-M3A-THESIS-RED-TEAM-001-FIX-004 — 2026-09-10
+
+**Status:** Implemented / CTO acceptance pending
+
+FIX-004 corrects the Stage B semantic completeness gate. Stage A invalidation
+condition design and Stage B invalidation condition analysis are distinct
+requirements. A valid Stage B semantic core must include at least one
+`invalidation_condition` challenge with a `conditionRef` in the Stage A
+allowlist. Missing analysis receives at most one existing bounded semantic
+repair; a second miss fails closed without synthetic challenge creation or
+verdict mutation. Telemetry records `invalidationAnalysisCount` separately
+from `invalidationConditionCount`, and the Real Pi gate requires both. The
+Stage A structured output contract now declares the required `statement`
+property. FIX-003 Gateway, Writer, Schema, Runtime, and application boundaries
+are unchanged.
