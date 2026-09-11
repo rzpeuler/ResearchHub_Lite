@@ -61,3 +61,30 @@ test('Changed semantic slot can supersede or persist a durable ReviewCase', asyn
     const review = await gateway.submit({ ...(await input(root, 'resolution-3')), proposals: [claim('ambiguous', 37, temporal, 'review')] }); assert.equal(review.status, 'no_changes'); const cases = await listReviewCases(root, { producerRunId: 'resolution-3' }); assert.equal(cases.length, 1); assets = await readCanonicalV04Assets(root); assert.equal(assets.objects.filter((item) => item.kind === 'claim').length, 2)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
+
+test('producer-neutral Industry Relation mapping resolves Relation-subject Claims without root fallback', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-producer-neutral-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-producer-neutral', now: clock() })
+    const gateway = new KnowledgeProductionGateway()
+    const evidence = source('INDUSTRY', 'structured-INDUSTRY')
+    const result = await gateway.submit({
+      handle: await new KnowledgeBaseRegistry().mount(root), producerType: 'company_deep_research', producerRunId: 'producer-neutral-1',
+      schemaProfile: { schemaVersion: '0.4', storageFormatVersion: '1', requiresRawProvenance: true },
+      entity: { localKey: 'root-industry', entityType: 'industry', name: 'Battery Cells' },
+      proposals: [
+        { proposalId: 'peer-industry', kind: 'entity', subjectKey: 'peer-industry', entityType: 'industry', entityName: 'Battery Materials' },
+        { proposalId: 'chain-link', kind: 'relation', subjectKey: 'root-industry', targetKey: 'peer-industry', relationType: 'upstream_of', sourceCandidateIds: ['structured-INDUSTRY'] },
+        { proposalId: 'relation-claim', kind: 'claim', subjectKey: 'chain-link', claimType: 'fact', statement: 'The chain link is structurally material', sourceCandidateIds: ['structured-INDUSTRY'] }
+      ],
+      evidenceBindings: [{ localSourceId: 'structured-INDUSTRY', source: evidence }], now: clock
+    })
+    assert.equal(result.status, 'committed', result.errors.join('; '))
+    assert.ok(result.relationRefsByProposalId?.['chain-link'])
+    assert.ok(result.claimRefsByProposalId['relation-claim'])
+    const assets = await readCanonicalV04Assets(root)
+    const claimAsset = assets.objects.find((item) => (item.value as { id: string }).id === result.claimRefsByProposalId['relation-claim'])
+    assert.ok(claimAsset, JSON.stringify(result))
+    assert.equal((claimAsset.value as { subjectRefs: string[] }).subjectRefs[0], result.relationRefsByProposalId?.['chain-link'])
+  } finally { await rm(root, { recursive: true, force: true }) }
+})

@@ -47,6 +47,8 @@ export interface ProductionEntityInput {
   readonly name: string
   readonly aliases?: readonly string[]
   readonly semanticFields?: Readonly<Record<string, unknown>>
+  /** Optional producer-supplied canonical root binding; it is always type-checked by the Gateway. */
+  readonly existingEntityRef?: string
 }
 
 export interface ProductionEvidenceBinding {
@@ -90,6 +92,7 @@ export interface KnowledgeProductionOutcome {
   readonly sourceRefsByLocalId: Readonly<Record<string, string>>
   readonly claimRefsByProposalId: Readonly<Record<string, string>>
   readonly entityRefsByLocalKey: Readonly<Record<string, string>>
+  readonly relationRefsByProposalId?: Readonly<Record<string, string>>
   readonly resolutionIntents: readonly ResolutionIntentSummary[]
   readonly errors: readonly string[]
 }
