@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { IndustryResearchSkill, INDUSTRY_MODULES, validateIndustryModuleResult, validateIndustryResearchDesign } from '../../../skills/industry-research/index.ts'
+import { IndustryResearchSkill, INDUSTRY_MODULES, validateIndustryModuleResult, validateIndustryResearchDesign, validateCrossModuleSynthesis } from '../../../skills/industry-research/index.ts'
 import type { ReasoningExecutor } from '../../../plugins/reasoning/contracts.ts'
 const design = { definitionHypothesis: 'A bounded manufacturing industry.', targetKind: 'industry', scope: { included: ['manufacturing'], excluded: ['broad theme'] }, moduleQuestions: Object.fromEntries(INDUSTRY_MODULES.map((m) => [m, `Question for ${m}`])), keyMetrics: ['capacity'], evidenceRequirements: ['official'], searchTerms: ['fixture industry'], knownGaps: [], verificationCandidates: [] }
 const source = { candidate: { candidateId: 's1', kind: 'official_disclosure' as const, tier: 1 as const, title: 'Official', provider: 'fixture', publishedAt: '2026-09-01' }, retrievedAt: '2026-09-01', title: 'Official', content: 'The industry supplies products.', contentHash: 'a'.repeat(64), publisher: 'Fixture', rights: { accessScope: 'public' as const, retentionAllowed: true, aiProcessingAllowed: true, derivativeKnowledgeAllowed: true, redistributionAllowed: false } }
@@ -14,4 +14,15 @@ test('Industry Skill validates design gaps, candidates, string arrays and quanti
   assert.throws(() => validateIndustryResearchDesign({ ...design, verificationCandidates: [{ name: 'x', kind: 'person', reason: 'r' }] }), /candidate/)
   assert.throws(() => validateIndustryModuleResult({ ...moduleOutput('market_size_growth'), proposals: [{ proposalId: 'p', kind: 'claim', subjectKey: 'local', claimType: 'fact', statement: 'q', sourceCandidateIds: ['e1'], structuredValue: { metric: 'm', value: NaN, unit: 'u', comparator: 'eq', period: '2026' } }] }, 'market_size_growth', ['e1']), /quantitative/)
   assert.throws(() => validateIndustryModuleResult({ ...moduleOutput('market_size_growth'), proposals: [{ proposalId: 'p', kind: 'claim', subjectKey: 'local', claimType: 'unknown', statement: 'q', sourceCandidateIds: ['e1'] }] }, 'market_size_growth', ['e1']), /Claim/)
+})
+test('Industry Skill rejects producer-owned canonical bindings and malformed local report material', () => {
+  assert.throws(() => validateIndustryModuleResult({ ...moduleOutput('market_size_growth'), proposals: [{ proposalId: 'p', kind: 'claim', subjectKey: 'local', claimType: 'fact', statement: 'q', sourceCandidateIds: ['e1'], existingKnowledgeRefs: ['claim:canonical'] }] }, 'market_size_growth', ['e1']), /canonical resolution/)
+  assert.throws(() => validateIndustryModuleResult({ ...moduleOutput('market_size_growth'), reportMaterial: { markdown: 'x', evidenceIds: ['e1'], proposalIds: [], relationProposalIds: ['p'] } }, 'market_size_growth', ['e1']), /local report material/)
+  assert.throws(() => validateIndustryModuleResult({ ...moduleOutput('market_size_growth'), gaps: [{ gapId: 'g', module: 'market_size_growth', question: 'q', reason: 'r', actionable: true, searchTerms: ['x', 'x'] }] }, 'market_size_growth', ['e1']), /Research Gap/)
+})
+test('CrossModuleSynthesis validates module Relation report references separately from proposal IDs', () => {
+  const relation = { proposalId: 'rel', kind: 'relation', subjectKey: 'company', targetKey: 'product', relationType: 'offers_product', sourceCandidateIds: ['e1'] }
+  const base = { executiveView: 'view', analysis: 'analysis', evidenceIds: ['e1'], proposals: [], gaps: [], alternativeViews: [] }
+  assert.doesNotThrow(() => validateCrossModuleSynthesis({ ...base, reportMaterial: { markdown: 'relation-backed', evidenceIds: ['e1'], proposalIds: ['rel'], relationProposalIds: ['rel'] } }, ['e1'], ['rel'], ['rel']))
+  assert.throws(() => validateCrossModuleSynthesis({ ...base, proposals: [relation], reportMaterial: { markdown: 'bad', evidenceIds: ['e1'], proposalIds: ['rel'], relationProposalIds: ['company'] } }, ['e1'], [], ['rel']), /local report material/)
 })
