@@ -1,4 +1,4 @@
-import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
+import type { ReasoningExecutor, ReasoningOperation } from '../../plugins/reasoning/contracts.ts'
 import type { SemanticProductionProposal } from '../../knowledge/production/contracts.ts'
 import { INDUSTRY_MODULES, type CrossModuleSynthesis, type IndustryModuleResult, type IndustryResearchModule, type IndustryResearchSkillInput, type ResearchDesign, type ResearchGap } from './contracts.ts'
 
@@ -8,34 +8,41 @@ const localId = /^[A-Za-z][A-Za-z0-9._-]*$/
 const canonicalId = /^(entity|relation|claim|source|raw|changeset|review-case):/i
 const text = (v: unknown) => typeof v === 'string' && v.trim().length > 0
 const arr = (v: unknown): v is readonly unknown[] => Array.isArray(v)
+const stringArray = (v: unknown): v is readonly string[] => arr(v) && v.every((x) => text(x))
+const localReference = (v: unknown) => typeof v === 'string' && localId.test(v) && !canonicalId.test(v)
+const finiteValue = (v: unknown) => typeof v === 'number' ? Number.isFinite(v) : typeof v === 'string' ? v.trim() !== '' : typeof v === 'boolean'
 
 export function validateIndustryResearchDesign(value: unknown): ResearchDesign {
   if (!isObject(value) || !text(value.definitionHypothesis) || !['industry', 'theme', 'product', 'technology', 'uncertain'].includes(String(value.targetKind))) throw new Error('Invalid Industry Research Design target diagnosis')
   if (!isObject(value.scope) || !arr(value.scope.included) || !arr(value.scope.excluded) || value.scope.included.some((x) => !text(x)) || value.scope.excluded.some((x) => !text(x))) throw new Error('Invalid Industry Research Design scope')
   const questions = value.moduleQuestions
   if (!isObject(questions) || INDUSTRY_MODULES.some((m) => !text(questions[m]))) throw new Error('Research Design must contain all eight module questions')
-  for (const key of ['keyMetrics', 'evidenceRequirements', 'searchTerms', 'knownGaps', 'verificationCandidates']) if (!arr(value[key])) throw new Error(`Research Design ${key} must be an array`)
+  for (const key of ['keyMetrics', 'evidenceRequirements', 'searchTerms']) if (!stringArray(value[key])) throw new Error(`Research Design ${key} must be a non-empty string array`)
+  if (!arr(value.knownGaps)) throw new Error('Research Design knownGaps must be an array')
+  for (const gap of value.knownGaps) if (!isObject(gap) || !localReference(gap.gapId) || !INDUSTRY_MODULES.includes(gap.module as IndustryResearchModule) || !text(gap.question) || !text(gap.reason) || typeof gap.actionable !== 'boolean' || (gap.searchTerms !== undefined && !stringArray(gap.searchTerms))) throw new Error('Invalid Research Design known gap')
+  if (!arr(value.verificationCandidates)) throw new Error('Research Design verificationCandidates must be an array')
+  for (const candidate of value.verificationCandidates) if (!isObject(candidate) || !text(candidate.name) || !['product', 'technology', 'industry', 'company'].includes(String(candidate.kind)) || !text(candidate.reason)) throw new Error('Invalid verification candidate')
   return value as unknown as ResearchDesign
 }
 
 function validateProposal(p: unknown, evidenceIds: Set<string>, proposalIds: Set<string>, knownProposalIds = proposalIds): SemanticProductionProposal {
-  if (!isObject(p) || !text(p.proposalId) || !localId.test(String(p.proposalId)) || proposalIds.has(String(p.proposalId))) throw new Error('Proposal ID must be unique and local')
+  if (!isObject(p) || !text(p.proposalId) || !localReference(p.proposalId) || proposalIds.has(String(p.proposalId))) throw new Error('Proposal ID must be unique and local')
   const id = String(p.proposalId); proposalIds.add(id)
   if ([p.proposalId, p.subjectKey, p.targetKey, p.existingKnowledgeRefs].flat().some((v) => typeof v === 'string' && canonicalId.test(v))) throw new Error('Model output contains a canonical-looking identifier')
   if (!['entity', 'relation', 'claim'].includes(String(p.kind))) throw new Error('Unsupported semantic proposal kind')
-  if (!text(p.subjectKey)) throw new Error('Proposal subjectKey is required')
+  if (!localReference(p.subjectKey) || (p.targetKey !== undefined && !localReference(p.targetKey))) throw new Error('Proposal local references are invalid')
   if (p.kind === 'entity' && (!['industry', 'product', 'technology', 'company'].includes(String(p.entityType)) || !text(p.entityName))) throw new Error('Unsupported Entity proposal')
   if (p.kind === 'relation' && (!text(p.relationType) || !text(p.targetKey))) throw new Error('Invalid Relation proposal')
-  if (p.kind === 'claim' && (!text(p.claimType) || !text(p.statement))) throw new Error('Invalid Claim proposal')
+  if (p.kind === 'claim' && (!['fact', 'forecast', 'viewpoint', 'trend', 'risk', 'assumption', 'thesis', 'catalyst'].includes(String(p.claimType)) || !text(p.statement))) throw new Error('Invalid Claim proposal')
   if (p.sourceCandidateIds !== undefined && (!arr(p.sourceCandidateIds) || p.sourceCandidateIds.some((x) => typeof x !== 'string' || !evidenceIds.has(x)))) throw new Error('Proposal references unknown evidence')
   for (const key of ['supportsProposalIds', 'dependsOnProposalIds', 'contradictsProposalIds'] as const) if (p[key] !== undefined && (!arr(p[key]) || p[key].some((x) => typeof x !== 'string' || !knownProposalIds.has(x)))) throw new Error('Proposal contains unresolved local link')
-  if (p.kind === 'claim' && p.structuredValue !== undefined && p.structuredValue !== null && (!isObject(p.structuredValue) || !text(p.structuredValue.metric) || !('value' in p.structuredValue) || !text(p.structuredValue.unit) || !text(p.structuredValue.comparator))) throw new Error('Malformed quantitative structured value')
+  if (p.kind === 'claim' && p.structuredValue !== undefined && p.structuredValue !== null && (!isObject(p.structuredValue) || !text(p.structuredValue.metric) || !('value' in p.structuredValue) || !finiteValue(p.structuredValue.value) || !text(p.structuredValue.unit) || !text(p.structuredValue.comparator) || (p.structuredValue.period !== undefined && !text(p.structuredValue.period)) || (p.structuredValue.fiscalPeriod !== undefined && !text(p.structuredValue.fiscalPeriod)))) throw new Error('Malformed quantitative structured value')
   return p as unknown as SemanticProductionProposal
 }
 
 function validateGaps(value: unknown, module: IndustryResearchModule): ResearchGap[] {
   if (!arr(value)) throw new Error('gaps must be an array')
-  return value.map((g) => { if (!isObject(g) || !text(g.gapId) || g.module !== module || !text(g.question) || !text(g.reason) || typeof g.actionable !== 'boolean') throw new Error('Invalid Research Gap'); return g as unknown as ResearchGap })
+  const ids = new Set<string>(); return value.map((g) => { if (!isObject(g) || !localReference(g.gapId) || ids.has(String(g.gapId)) || g.module !== module || !text(g.question) || !text(g.reason) || typeof g.actionable !== 'boolean' || (g.searchTerms !== undefined && !stringArray(g.searchTerms))) throw new Error('Invalid Research Gap'); ids.add(String(g.gapId)); return g as unknown as ResearchGap })
 }
 
 export function validateIndustryModuleResult(value: unknown, module: IndustryResearchModule, suppliedEvidence: readonly string[]): IndustryModuleResult {
@@ -43,7 +50,7 @@ export function validateIndustryModuleResult(value: unknown, module: IndustryRes
   const proposals: SemanticProductionProposal[] = []; const ids = new Set<string>(); const evidence = new Set(suppliedEvidence)
   if (!arr(value.proposals)) throw new Error('Module proposals must be an array')
   for (const p of value.proposals) if (isObject(p) && text(p.proposalId)) ids.add(String(p.proposalId))
-  for (const p of value.proposals) { const checked = validateProposal(p, evidence, new Set(proposals.map((x) => x.proposalId)), ids); proposals.push(checked) }
+  const seen = new Set<string>(); for (const p of value.proposals) { const checked = validateProposal(p, evidence, seen, ids); proposals.push(checked) }
   const gaps = validateGaps(value.gaps, module)
   const material = isObject(value.reportMaterial) ? value.reportMaterial : undefined
   if (!material || !text(material.markdown) || !arr(material.evidenceIds) || material.evidenceIds.some((x) => typeof x !== 'string' || !evidence.has(x))) throw new Error('Invalid local report material')
@@ -55,7 +62,7 @@ export function validateCrossModuleSynthesis(value: unknown, suppliedEvidence: r
   const ids = new Set<string>(moduleProposalIds); const proposals: SemanticProductionProposal[] = []; const evidence = new Set(suppliedEvidence)
   if (!arr(value.proposals)) throw new Error('Synthesis proposals must be an array')
   for (const p of value.proposals) if (isObject(p) && text(p.proposalId)) { if (ids.has(String(p.proposalId))) throw new Error('Duplicate synthesis proposal ID'); ids.add(String(p.proposalId)) }
-  for (const p of value.proposals) { const checked = validateProposal(p, evidence, new Set(proposals.map((x) => x.proposalId)), ids); proposals.push(checked) }
+  const seen = new Set<string>(); for (const p of value.proposals) { const checked = validateProposal(p, evidence, seen, ids); proposals.push(checked) }
   if (!arr(value.gaps) || value.gaps.some((g) => !isObject(g) || !text(g.gapId) || !INDUSTRY_MODULES.includes(g.module as IndustryResearchModule) || !text(g.question) || !text(g.reason) || typeof g.actionable !== 'boolean')) throw new Error('Invalid synthesis Research Gap')
   if (!arr(value.alternativeViews) || value.alternativeViews.some((x) => !text(x))) throw new Error('Invalid alternative views')
   return value as unknown as CrossModuleSynthesis
@@ -63,8 +70,8 @@ export function validateCrossModuleSynthesis(value: unknown, suppliedEvidence: r
 
 export class IndustryResearchSkill {
   constructor(private readonly executor: ReasoningExecutor) {}
-  private async call(operation: string, input: unknown, outputContract: unknown, repairContext?: unknown): Promise<unknown> {
-    const result = await this.executor.execute({ operation: operation as never, instruction: repairContext === undefined ? `Perform bounded ${operation} using only supplied evidence.` : `Repair the invalid bounded ${operation} output. Return only a corrected object. Validation error: ${String(repairContext)}`, input, outputContract })
+  private async call(operation: ReasoningOperation, input: unknown, outputContract: unknown, repairContext?: unknown): Promise<unknown> {
+    const result = await this.executor.execute({ operation, instruction: repairContext === undefined ? `Perform bounded ${operation} using only supplied evidence.` : `Repair the invalid bounded ${operation} output. Return only a corrected object. Validation error: ${String(repairContext)}`, input, outputContract })
     return result.output
   }
   async design(input: { readonly target: IndustryResearchSkillInput['target']; readonly existingKnowledge: readonly unknown[] }): Promise<ResearchDesign> { try { return validateIndustryResearchDesign(await this.call('industry_research_design', input, 'ResearchDesign')) } catch (first) { return validateIndustryResearchDesign(await this.call('industry_research_design', input, 'ResearchDesign', first instanceof Error ? first.message : String(first))) } }
