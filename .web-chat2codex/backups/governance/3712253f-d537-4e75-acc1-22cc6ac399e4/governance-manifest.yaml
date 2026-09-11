@@ -1,0 +1,50 @@
+version: 1
+managed_by: web-chat2codex
+template_version: 1
+governance_entry_point: docs/governance
+documents:
+  - id: governance-readme
+    path: docs/governance/README.md
+    audience:
+      - Sol
+      - Luna
+      - Codex
+    version: 1
+    status: active
+    type: entry-point
+  - id: project-rules
+    path: docs/governance/PROJECT_RULES.md
+    audience:
+      - Sol
+      - Luna
+      - Codex
+    version: 1
+    status: active
+    type: project-policy
+  - id: development-workflow
+    path: docs/governance/DEVELOPMENT_WORKFLOW.md
+    audience:
+      - Sol
+      - Luna
+      - Codex
+    version: 1
+    status: active
+    type: workflow
+  - id: agent-roles
+    path: docs/governance/AGENT_ROLES.md
+    audience:
+      - Sol
+      - Luna
+      - Codex
+    version: 1
+    status: active
+    type: roles
+  - id: git-policy
+    path: docs/governance/GIT_POLICY.md
+    audience:
+      - Sol
+      - Luna
+      - Codex
+    version: 1
+    status: active
+    type: git-policy
