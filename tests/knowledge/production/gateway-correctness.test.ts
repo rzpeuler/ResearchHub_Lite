@@ -254,15 +254,25 @@ test('resolver-returned contradiction creates a distinct linked Claim, preserves
     const baseId = base.claimRefsByProposalId.base
     const before = (await readCanonicalV04Assets(root)).objects.find((x) => (x.value as { id: string }).id === baseId)!.value
     const decisions: Array<{ outcome: string; reason: string }> = []
-    const resolver = () => { const decision = { outcome: 'contradicts' as const, reason: 'deterministic semantic contradiction' }; decisions.push(decision); return decision }
+    const resolver = () => { if (decisions.length > 0) throw new Error('exact Claim replay must bypass SemanticResolver'); const decision = { outcome: 'contradicts' as const, reason: 'deterministic semantic contradiction' }; decisions.push(decision); return decision }
     const incoming = { ...claim('resolver-contradiction', 41), statement: 'EPS is revised by resolver evidence' }
     const first = await gateway.submit({ ...(await input(root, 'resolver-contradiction-1')), proposals: [incoming], semanticResolver: resolver }); assert.equal(first.status, 'committed', first.errors.join('; ')); assert.deepEqual(decisions, [{ outcome: 'contradicts', reason: 'deterministic semantic contradiction' }])
     const firstAssets = await readCanonicalV04Assets(root); const firstId = first.claimRefsByProposalId['resolver-contradiction']; assert.notEqual(firstId, baseId); assert.deepEqual(first.createdIds, [firstId]); assert.equal(first.createdIds.includes(baseId), false)
     const firstClaim = firstAssets.objects.find((x) => (x.value as { id: string }).id === firstId)!.value as { id: string; contradictsClaimRefs: string[] }; assert.deepEqual(firstClaim.contradictsClaimRefs, [baseId])
     const afterFirst = firstAssets.objects.find((x) => (x.value as { id: string }).id === baseId)!.value; assert.deepEqual(afterFirst, before)
     assert.equal(firstAssets.objects.filter((x) => x.kind === 'claim').length, 2)
-    const replay = await gateway.submit({ ...(await input(root, 'resolver-contradiction-2')), proposals: [incoming], semanticResolver: resolver }); assert.equal(replay.status, 'no_changes', replay.errors.join('; ')); assert.equal(replay.claimRefsByProposalId['resolver-contradiction'], firstId); assert.deepEqual(decisions, [{ outcome: 'contradicts', reason: 'deterministic semantic contradiction' }, { outcome: 'contradicts', reason: 'deterministic semantic contradiction' }])
-    const replayAssets = await readCanonicalV04Assets(root); assert.equal(replayAssets.objects.filter((x) => x.kind === 'claim').length, 2); assert.deepEqual(replayAssets.objects.find((x) => (x.value as { id: string }).id === baseId)!.value, before); assert.deepEqual((replayAssets.objects.find((x) => (x.value as { id: string }).id === firstId)!.value as { contradictsClaimRefs: string[] }).contradictsClaimRefs, [baseId])
+    const replay = await gateway.submit({ ...(await input(root, 'resolver-contradiction-2')), proposals: [incoming], semanticResolver: resolver }); assert.equal(replay.status, 'no_changes', replay.errors.join('; ')); assert.equal(replay.knowledgeBaseRevision, first.knowledgeBaseRevision); assert.equal(replay.claimRefsByProposalId['resolver-contradiction'], firstId); assert.deepEqual(decisions, [{ outcome: 'contradicts', reason: 'deterministic semantic contradiction' }])
+    const replayAssets = await readCanonicalV04Assets(root); assert.equal(replayAssets.objects.filter((x) => x.kind === 'claim').length, 2); assert.deepEqual(replayAssets.objects.find((x) => (x.value as { id: string }).id === baseId)!.value, before); assert.deepEqual(replayAssets.objects.find((x) => (x.value as { id: string }).id === firstId)!.value, firstClaim)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('exact non-contradiction Claim replay bypasses SemanticResolver', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-exact-claim-replay-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-exact-claim-replay', now: clock() }); const gateway = new KnowledgeProductionGateway()
+    const proposal = { ...claim('exact-first', 42), claimType: 'fact' as const, statement: 'Revenue is observed', probability: undefined }
+    const first = await gateway.submit({ ...(await input(root, 'exact-claim-1')), proposals: [proposal] }); assert.equal(first.status, 'committed', first.errors.join('; '))
+    const replay = await gateway.submit({ ...(await input(root, 'exact-claim-2')), proposals: [{ ...proposal, proposalId: 'exact-replay' }], semanticResolver: () => { throw new Error('exact Claim replay must bypass SemanticResolver') } }); assert.equal(replay.status, 'no_changes', replay.errors.join('; ')); assert.equal(replay.claimRefsByProposalId['exact-replay'], first.claimRefsByProposalId['exact-first']); assert.equal(replay.knowledgeBaseRevision, first.knowledgeBaseRevision)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
