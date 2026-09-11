@@ -88,3 +88,41 @@ test('producer-neutral Industry Relation mapping resolves Relation-subject Claim
     assert.equal((claimAsset.value as { subjectRefs: string[] }).subjectRefs[0], result.relationRefsByProposalId?.['chain-link'])
   } finally { await rm(root, { recursive: true, force: true }) }
 })
+
+test('non-Company roots are conservative, repeatable, and resolver-bound', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-industry-root-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-industry-root', now: clock() })
+    const gateway = new KnowledgeProductionGateway()
+    const first = await gateway.submit({ ...(await input(root, 'industry-1')), entity: { localKey: 'industry', entityType: 'industry', name: 'Copper Foil' }, proposals: [], evidenceBindings: [ { localSourceId: 'industry-source', source: source('INDUSTRY', 'industry-source') } ] })
+    assert.equal(first.status, 'committed')
+    const second = await gateway.submit({ ...(await input(root, 'industry-2')), entity: { localKey: 'industry', entityType: 'industry', name: 'Copper Foil' }, proposals: [], evidenceBindings: [ { localSourceId: 'industry-source', source: source('INDUSTRY', 'industry-source') } ], semanticResolver: () => ({ outcome: 'equivalent', reason: 'same canonical industry' }) })
+    assert.equal(second.status, 'no_changes')
+    assert.equal(second.entityRefsByLocalKey.industry, first.entityRefsByLocalKey.industry)
+    const assets = await readCanonicalV04Assets(root)
+    assert.equal(assets.objects.filter((x) => x.kind === 'entity' && (x.value as { type?: string }).type === 'industry').length, 1)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Company explicit ref cannot bypass ticker identity and root keys cannot be replaced', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-root-guards-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-root-guards', now: clock() }); const gateway = new KnowledgeProductionGateway()
+    const first = await gateway.submit(await input(root, 'root-company-1', '600519')); assert.equal(first.status, 'committed')
+    const wrong = await gateway.submit({ ...(await input(root, 'root-company-2', '000858')), entity: { localKey: 'company', entityType: 'company', name: '000858', aliases: ['000858'], semanticFields: { ticker: '000858', exchange: 'SZSE' }, existingEntityRef: first.entityRefsByLocalKey.company }, proposals: [] })
+    assert.equal(wrong.status, 'blocked'); assert.equal(wrong.entityRefsByLocalKey.company, undefined)
+    const conflicting = await gateway.submit({ ...(await input(root, 'root-company-3')), proposals: [{ proposalId: 'company', kind: 'entity', subjectKey: 'company', entityType: 'company', entityName: 'Other Company' }] as never[] })
+    assert.equal(conflicting.status, 'blocked'); assert.match(conflicting.errors.join('; '), /overwrite authoritative root/)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('distinct evidence keeps Source-to-Raw Claim provenance and replay merges it', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-provenance-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-provenance', now: clock() }); const gateway = new KnowledgeProductionGateway()
+    const a = source('600519', 'evidence-a', 'bytes-a'); const b = { ...source('600519', 'evidence-b', 'bytes-b'), title: 'Second fixture', candidate: { ...source('600519', 'evidence-b', 'bytes-b').candidate, title: 'Second fixture' } }; const p = (id: string) => ({ proposalId: id, kind: 'claim' as const, subjectKey: 'company', claimType: 'fact' as const, statement: 'Revenue was observed', sourceCandidateIds: ['evidence-a', 'evidence-b'] })
+    const result = await gateway.submit({ ...(await input(root, 'prov-1')), proposals: [p('claim-1')], evidenceBindings: [{ localSourceId: 'evidence-a', source: a }, { localSourceId: 'evidence-b', source: b }] })
+    assert.equal(result.status, 'committed'); const assets = await readCanonicalV04Assets(root); const c = assets.objects.find((x) => x.kind === 'claim')!.value as { provenance: Array<{ sourceRef: string; rawRef: string }>; sourceRefs: string[] }
+    assert.equal(c.provenance.length, 2); assert.equal(new Set(c.provenance.map((x) => x.rawRef)).size, 2); assert.deepEqual(new Set(c.provenance.map((x) => x.sourceRef)), new Set(c.sourceRefs))
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
