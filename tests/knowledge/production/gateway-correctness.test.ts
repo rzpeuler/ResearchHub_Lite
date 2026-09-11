@@ -126,3 +126,31 @@ test('distinct evidence keeps Source-to-Raw Claim provenance and replay merges i
     assert.equal(c.provenance.length, 2); assert.equal(new Set(c.provenance.map((x) => x.rawRef)).size, 2); assert.deepEqual(new Set(c.provenance.map((x) => x.sourceRef)), new Set(c.sourceRefs))
   } finally { await rm(root, { recursive: true, force: true }) }
 })
+
+test('semantic equivalent changed slot keeps the existing canonical Claim ID and update invariant', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-equivalent-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-equivalent', now: clock() }); const gateway = new KnowledgeProductionGateway()
+    const first = await gateway.submit({ ...(await input(root, 'equivalent-1')), proposals: [claim('old', 42)] }); assert.equal(first.status, 'committed')
+    const second = await gateway.submit({ ...(await input(root, 'equivalent-2')), proposals: [{ ...claim('changed', 43), statement: 'EPS is revised', resolution: undefined }], semanticResolver: () => ({ outcome: 'equivalent', reason: 'same canonical semantic slot' }) })
+    assert.equal(second.status, 'no_changes'); assert.equal(second.claimRefsByProposalId.changed, first.claimRefsByProposalId.old)
+    const assets = await readCanonicalV04Assets(root); const claims = assets.objects.filter((item) => item.kind === 'claim'); assert.equal(claims.length, 1)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Claim proposal links materialize to canonical Claim references and frozen update fields fail closed', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-claim-links-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-claim-links', now: clock() }); const gateway = new KnowledgeProductionGateway(); const a = claim('a', 1); const b = { ...claim('b', 2), supportsProposalIds: ['a'], dependsOnProposalIds: ['a'], contradictsProposalIds: ['a'] }; const first = await gateway.submit({ ...(await input(root, 'claim-links-1')), proposals: [a, b] }); assert.equal(first.status, 'committed')
+    const assets = await readCanonicalV04Assets(root); const bAsset = assets.objects.find((item) => (item.value as { id: string }).id === first.claimRefsByProposalId.b)!.value as { supportsClaimRefs?: string[]; dependsOnClaimRefs?: string[]; contradictsClaimRefs?: string[] }; assert.deepEqual(bAsset.supportsClaimRefs, [first.claimRefsByProposalId.a]); assert.deepEqual(bAsset.dependsOnClaimRefs, [first.claimRefsByProposalId.a]); assert.deepEqual(bAsset.contradictsClaimRefs, [first.claimRefsByProposalId.a])
+    const rejected = await gateway.submit({ ...(await input(root, 'claim-links-2')), proposals: [{ ...claim('bad-update', 3), statement: 'Different statement', existingKnowledgeRefs: [first.claimRefsByProposalId.a], resolution: 'update' }] }); assert.equal(rejected.status, 'no_changes'); assert.equal(rejected.claimRefsByProposalId['bad-update'], undefined); assert.ok(rejected.resolutionIntents.some((item) => item.disposition === 'review_required'))
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('all terminal Gateway outcomes expose a Relation mapping object', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-outcome-shape-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-outcome-shape', now: clock() }); const gateway = new KnowledgeProductionGateway(); const committed = await gateway.submit(await input(root, 'shape-1')); const replay = await gateway.submit(await input(root, 'shape-2')); const blocked = await gateway.submit({ ...(await input(root, 'shape-3')), proposals: [{ proposalId: 'bad id', kind: 'claim', subjectKey: 'company', claimType: 'fact', statement: 'bad' }] as never[] });
+    for (const result of [committed, replay, blocked]) assert.equal(typeof result.relationRefsByProposalId, 'object')
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
