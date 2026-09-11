@@ -43,6 +43,9 @@
       "FAILED",
       "NOT_RUN"
     ],
+    "tests_are_evidence_only": true,
+    "tests_status_does_not_gate_sync": true,
+    "failed_tests_must_not_set_status_failed": true,
     "completed_status": "COMPLETED",
     "report_path_rule": "must_equal_report_path",
     "git_owner": "ORCHESTRATOR",
@@ -59,6 +62,7 @@
     ],
     "production_paths_forbidden": true,
     "failed_tests_with_valid_report_are_completed": true,
-    "not_run_or_missing_report_is_failed": true
+    "not_run_tests_are_evidence_only": true,
+    "missing_report_is_failed": true
   }
 }
