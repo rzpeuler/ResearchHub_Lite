@@ -92,8 +92,8 @@ export interface KnowledgeProductionOutcome {
   readonly sourceRefsByLocalId: Readonly<Record<string, string>>
   readonly claimRefsByProposalId: Readonly<Record<string, string>>
   readonly entityRefsByLocalKey: Readonly<Record<string, string>>
-  /** Runtime Gateway outcomes always populate this mapping; legacy workflow drafts remain source-compatible. */
-  readonly relationRefsByProposalId?: Readonly<Record<string, string>>
+  /** Every terminal Gateway outcome exposes the producer proposal to canonical Relation mapping. */
+  readonly relationRefsByProposalId: Readonly<Record<string, string>>
   readonly resolutionIntents: readonly ResolutionIntentSummary[]
   readonly errors: readonly string[]
 }

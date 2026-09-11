@@ -155,7 +155,7 @@ export async function runValuation(input: ValuationWorkflowInput): Promise<Valua
     }
 
     const gateway = new KnowledgeProductionGateway(new KnowledgeBaseRegistry())
-    let outcome: KnowledgeProductionOutcome = { status: 'no_changes', knowledgeBaseId: input.handle.knowledgeBaseId, knowledgeBaseRevision: input.handle.revision, baseRevision: input.handle.revision, createdIds: [], updatedIds: [], sourceRefsByLocalId: {}, claimRefsByProposalId: {}, entityRefsByLocalKey: {}, resolutionIntents: [], errors: [] }
+    let outcome: KnowledgeProductionOutcome = { status: 'no_changes', knowledgeBaseId: input.handle.knowledgeBaseId, knowledgeBaseRevision: input.handle.revision, baseRevision: input.handle.revision, createdIds: [], updatedIds: [], sourceRefsByLocalId: {}, claimRefsByProposalId: {}, entityRefsByLocalKey: {}, relationRefsByProposalId: {}, resolutionIntents: [], errors: [] }
     if (basis && plan && computation && proposals.length > 0) {
       const gatewayProposals = toGatewayProposals(proposals, plan, computation)
       abortIfNeeded(input.signal)

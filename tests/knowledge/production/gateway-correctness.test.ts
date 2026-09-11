@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { KnowledgeBaseRegistry } from '../../../knowledge/registry/registry.ts'
 import { createFreshKnowledgeBaseV04, readCanonicalV04Assets } from '../../../knowledge/storage/index.ts'
 import { KnowledgeProductionGateway } from '../../../knowledge/production/gateway.ts'
-import type { KnowledgeProductionInput } from '../../../knowledge/production/contracts.ts'
+import type { KnowledgeProductionInput, KnowledgeProductionOutcome } from '../../../knowledge/production/contracts.ts'
 import type { NormalizedResearchSource } from '../../../plugins/research-acquisition/contracts.ts'
 import { validateUsableAcquisitionPayload } from '../../../plugins/research-acquisition/payload-validation.ts'
 import { listReviewCases } from '../../../knowledge/review/store.ts'
@@ -80,12 +80,12 @@ test('producer-neutral Industry Relation mapping resolves Relation-subject Claim
       evidenceBindings: [{ localSourceId: 'structured-INDUSTRY', source: evidence }], now: clock
     })
     assert.equal(result.status, 'committed', result.errors.join('; '))
-    assert.ok(result.relationRefsByProposalId?.['chain-link'])
+    assert.ok(result.relationRefsByProposalId['chain-link'])
     assert.ok(result.claimRefsByProposalId['relation-claim'])
     const assets = await readCanonicalV04Assets(root)
     const claimAsset = assets.objects.find((item) => (item.value as { id: string }).id === result.claimRefsByProposalId['relation-claim'])
     assert.ok(claimAsset, JSON.stringify(result))
-    assert.equal((claimAsset.value as { subjectRefs: string[] }).subjectRefs[0], result.relationRefsByProposalId?.['chain-link'])
+    assert.equal((claimAsset.value as { subjectRefs: string[] }).subjectRefs[0], result.relationRefsByProposalId['chain-link'])
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
@@ -151,6 +151,118 @@ test('all terminal Gateway outcomes expose a Relation mapping object', async () 
   const root = await mkdtemp(join(tmpdir(), 'rhl-outcome-shape-'))
   try {
     await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-outcome-shape', now: clock() }); const gateway = new KnowledgeProductionGateway(); const committed = await gateway.submit(await input(root, 'shape-1')); const replay = await gateway.submit(await input(root, 'shape-2')); const blocked = await gateway.submit({ ...(await input(root, 'shape-3')), proposals: [{ proposalId: 'bad id', kind: 'claim', subjectKey: 'company', claimType: 'fact', statement: 'bad' }] as never[] });
-    for (const result of [committed, replay, blocked]) assert.equal(typeof result.relationRefsByProposalId, 'object')
+    await gateway.submit({ ...(await input(root, 'shape-seed')), entity: { localKey: 'industry', entityType: 'industry', name: 'Failing Industry' }, proposals: [], evidenceBindings: [] })
+    const failed = await gateway.submit({ ...(await input(root, 'shape-4')), entity: { localKey: 'industry', entityType: 'industry', name: 'Failing Industry' }, proposals: [], evidenceBindings: [], semanticResolver: () => { throw new Error('injected semantic resolver failure') } })
+    for (const result of [committed, replay, blocked, failed]) assert.equal(typeof result.relationRefsByProposalId, 'object')
+    assert.equal(failed.status, 'failed')
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+// Compile-time contract fixture: omitting relationRefsByProposalId must remain a type error.
+const requireOutcomeContract = (value: KnowledgeProductionOutcome) => value
+// @ts-expect-error Required producer-neutral Relation mapping must not be omitted.
+requireOutcomeContract({ status: 'no_changes', knowledgeBaseId: 'kb', knowledgeBaseRevision: 0, baseRevision: 0, createdIds: [], updatedIds: [], sourceRefsByLocalId: {}, claimRefsByProposalId: {}, entityRefsByLocalKey: {}, resolutionIntents: [], errors: [] })
+
+test('Product and Technology roots fail closed without proof, then replay exactly one resolver-approved canonical root', async () => {
+  for (const entityType of ['product', 'technology'] as const) {
+    const root = await mkdtemp(join(tmpdir(), `rhl-${entityType}-root-`))
+    try {
+      await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: `kb-${entityType}-root`, now: clock() }); const gateway = new KnowledgeProductionGateway()
+      const base = await input(root, `${entityType}-1`)
+      const first = await gateway.submit({ ...base, entity: { localKey: entityType, entityType, name: entityType === 'product' ? 'Atlas Engine' : 'Atlas Runtime' }, proposals: [], evidenceBindings: [] })
+      assert.equal(first.status, 'committed')
+      const replay = await gateway.submit({ ...base, producerRunId: `${entityType}-2`, entity: { localKey: entityType, entityType, name: entityType === 'product' ? 'Atlas Engine' : 'Atlas Runtime' }, proposals: [], evidenceBindings: [], semanticResolver: () => ({ outcome: 'equivalent', reason: 'exact deterministic root equivalence' }) })
+      assert.equal(replay.status, 'no_changes'); assert.equal(replay.entityRefsByLocalKey[entityType], first.entityRefsByLocalKey[entityType])
+      const assets = await readCanonicalV04Assets(root); assert.equal(assets.objects.filter((x) => x.kind === 'entity' && (x.value as { type?: string }).type === entityType).length, 1)
+    } finally { await rm(root, { recursive: true, force: true }) }
+  }
+})
+
+test('explicit non-Company root refs and mismatched Entity types fail closed', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-explicit-root-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-explicit-root', now: clock() }); const gateway = new KnowledgeProductionGateway()
+    const industry = await gateway.submit({ ...(await input(root, 'explicit-industry-1')), entity: { localKey: 'industry', entityType: 'industry', name: 'Battery Industry' }, proposals: [], evidenceBindings: [] }); assert.equal(industry.status, 'committed')
+    const invalid = await gateway.submit({ ...(await input(root, 'explicit-industry-2')), entity: { localKey: 'industry', entityType: 'industry', name: 'Different Name', existingEntityRef: 'entity:does-not-exist' }, proposals: [], evidenceBindings: [] }); assert.equal(invalid.status, 'blocked'); assert.equal(invalid.entityRefsByLocalKey.industry, undefined)
+    const mismatch = await gateway.submit({ ...(await input(root, 'explicit-industry-3')), entity: { localKey: 'industry', entityType: 'product', name: 'Battery Industry', existingEntityRef: industry.entityRefsByLocalKey.industry }, proposals: [], evidenceBindings: [] }); assert.equal(mismatch.status, 'blocked'); assert.equal(mismatch.entityRefsByLocalKey.industry, undefined)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('multiple plausible non-Company candidates do not first-match merge', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-multiple-plausible-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-multiple-plausible', now: clock() }); const gateway = new KnowledgeProductionGateway()
+    const seeded = await gateway.submit({ ...(await input(root, 'plausible-seed')), entity: { localKey: 'product', entityType: 'product', name: 'Alpha Product' }, proposals: [{ proposalId: 'beta', kind: 'entity', subjectKey: 'beta', entityType: 'product', entityName: 'Beta Product' }], evidenceBindings: [] }); assert.equal(seeded.status, 'committed')
+    const ambiguous = await gateway.submit({ ...(await input(root, 'plausible-ambiguous')), entity: { localKey: 'product', entityType: 'product', name: 'Unresolved Product', aliases: ['Alpha Product', 'Beta Product'] }, proposals: [], evidenceBindings: [] }); assert.equal(ambiguous.status, 'blocked'); assert.equal(ambiguous.entityRefsByLocalKey.product, undefined); assert.ok(ambiguous.resolutionIntents.some((x) => x.reason.includes('Multiple plausible')))
+    const assets = await readCanonicalV04Assets(root); assert.equal(assets.objects.filter((x) => x.kind === 'entity' && (x.value as { type?: string }).type === 'product').length, 2)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('exact Relation replay preserves the canonical ref and unions prior evidence', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-relation-replay-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-relation-replay', now: clock() }); const gateway = new KnowledgeProductionGateway()
+    const firstSource = source('INDUSTRY', 'relation-a', 'relation-bytes-a'); const secondSource = { ...source('INDUSTRY', 'relation-b', 'relation-bytes-b'), title: 'Relation second fixture', candidate: { ...source('INDUSTRY', 'relation-b', 'relation-bytes-b').candidate, title: 'Relation second fixture' } }
+    const proposal = { proposalId: 'belongs', kind: 'relation' as const, subjectKey: 'company', targetKey: 'industry', relationType: 'belongs_to_industry', sourceCandidateIds: ['relation-a'] }
+    const industry = { proposalId: 'industry', kind: 'entity' as const, subjectKey: 'industry', entityType: 'industry' as const, entityName: 'Beverage Industry' }
+    const first = await gateway.submit({ ...(await input(root, 'relation-replay-1')), proposals: [industry, proposal], evidenceBindings: [{ localSourceId: 'relation-a', source: firstSource }] }); assert.equal(first.status, 'committed')
+    const second = await gateway.submit({ ...(await input(root, 'relation-replay-2')), proposals: [{ ...industry }, { ...proposal, sourceCandidateIds: ['relation-b'] }], evidenceBindings: [{ localSourceId: 'relation-b', source: secondSource }], semanticResolver: () => ({ outcome: 'equivalent', reason: 'same canonical industry' }) }); assert.equal(second.status, 'committed'); assert.equal(second.relationRefsByProposalId.belongs, first.relationRefsByProposalId.belongs)
+    const relation = (await readCanonicalV04Assets(root)).objects.find((x) => (x.value as { id: string }).id === first.relationRefsByProposalId.belongs)!.value as { sourceRefs: string[] }; assert.equal(relation.sourceRefs.length, 2)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('existing Source replay persists both Raw refs and Claim replay merges prior provenance', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'rhl-source-claim-replay-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-source-claim-replay', now: clock() }); const gateway = new KnowledgeProductionGateway(); const a = source('600519', 'replay-a', 'raw-a'); const b = { ...source('600519', 'replay-a', 'raw-b'), contentHash: 'b'.repeat(64) }; const p = (id: string, evidence: string) => ({ proposalId: id, kind: 'claim' as const, subjectKey: 'company', claimType: 'fact' as const, statement: 'Revenue replay fact', sourceCandidateIds: [evidence] })
+    const first = await gateway.submit({ ...(await input(root, 'source-claim-1')), proposals: [p('claim-a', 'replay-a')], evidenceBindings: [{ localSourceId: 'replay-a', source: a }] }); assert.equal(first.status, 'committed')
+    const second = await gateway.submit({ ...(await input(root, 'source-claim-2')), proposals: [p('claim-b', 'replay-a')], evidenceBindings: [{ localSourceId: 'replay-a', source: b }] }); assert.equal(second.status, 'committed'); assert.equal(second.claimRefsByProposalId['claim-b'], first.claimRefsByProposalId['claim-a'])
+    const assets = await readCanonicalV04Assets(root); const sourceAsset = assets.objects.find((x) => x.kind === 'source')!.value as { rawRefs: string[] }; const claimAsset = assets.objects.find((x) => (x.value as { id: string }).id === first.claimRefsByProposalId['claim-a'])!.value as { provenance: Array<{ rawRef: string }> }; assert.equal(sourceAsset.rawRefs.length, 2); assert.equal(new Set(claimAsset.provenance.map((x) => x.rawRef)).size, 2)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('runtime-invalid proposals fail closed before canonical mutation', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-invalid-runtime-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-invalid-runtime', now: clock() }); const gateway = new KnowledgeProductionGateway(); const before = await readCanonicalV04Assets(root)
+    for (const bad of [{ proposalId: 'bad id', kind: 'claim', subjectKey: 'company', claimType: 'fact', statement: 'bad' }, { proposalId: 'unsafe-subject', kind: 'claim', subjectKey: 'bad/key', claimType: 'fact', statement: 'bad' }, { proposalId: 'unsupported', kind: 'unknown', subjectKey: 'company' }] as unknown[]) { const result = await gateway.submit({ ...(await input(root, `invalid-${String((bad as { proposalId?: unknown }).proposalId)}`)), proposals: [bad] as never[] }); assert.equal(result.status, 'blocked'); assert.equal((await readCanonicalV04Assets(root)).objects.length, before.objects.length) }
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('ReviewCase is never fabricated without usable archived Raw evidence, and forecast defaults to 0.5', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-review-forecast-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-review-forecast', now: clock() }); const gateway = new KnowledgeProductionGateway(); const empty = { ...source('600519', 'empty-review', ''), content: '' }
+    const review = await gateway.submit({ ...(await input(root, 'review-empty')), proposals: [claim('review-empty', 42, undefined, 'review')], evidenceBindings: [{ localSourceId: 'empty-review', source: empty }] }); assert.equal(review.status, 'committed'); assert.equal((await listReviewCases(root, { producerRunId: 'review-empty' })).length, 0)
+    const forecast = await gateway.submit({ ...(await input(root, 'forecast-default')), proposals: [{ ...claim('forecast-default', 42), probability: undefined }] }); assert.equal(forecast.status, 'committed'); const c = (await readCanonicalV04Assets(root)).objects.find((x) => (x.value as { id: string }).id === forecast.claimRefsByProposalId['forecast-default'])!.value as { probability: number }; assert.equal(c.probability, 0.5)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('producer and resolver contradiction create distinct Claims with links; resolver supersession preserves linkage', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-resolution-links-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-resolution-links', now: clock() }); const gateway = new KnowledgeProductionGateway(); const first = await gateway.submit({ ...(await input(root, 'contradict-1')), proposals: [claim('base', 42)] }); assert.equal(first.status, 'committed')
+    const producer = await gateway.submit({ ...(await input(root, 'contradict-2')), proposals: [claim('producer-contradiction', 41, undefined, 'contradict')] }); assert.equal(producer.status, 'committed'); const producerClaim = (await readCanonicalV04Assets(root)).objects.find((x) => (x.value as { id: string }).id === producer.claimRefsByProposalId['producer-contradiction'])!.value as { contradictsClaimRefs: string[] }; assert.deepEqual(producerClaim.contradictsClaimRefs, [first.claimRefsByProposalId.base])
+    const supersedeRoot = await mkdtemp(join(tmpdir(), 'rhl-resolver-supersede-')); try {
+      await createFreshKnowledgeBaseV04(supersedeRoot, { knowledgeBaseId: 'kb-resolver-supersede', now: clock() }); const supersedeGateway = new KnowledgeProductionGateway(); const supersedeBase = await supersedeGateway.submit({ ...(await input(supersedeRoot, 'resolver-base')), proposals: [claim('base', 42)] }); assert.equal(supersedeBase.status, 'committed')
+      const resolver = await supersedeGateway.submit({ ...(await input(supersedeRoot, 'resolver-1')), proposals: [{ ...claim('resolver-supersession', 40), statement: 'EPS is resolver revision', resolution: 'supersede' }], semanticResolver: () => ({ outcome: 'supersedes', reason: 'deterministic supersession' }) }); assert.equal(resolver.status, 'committed', resolver.errors.join('; ')); const assets = await readCanonicalV04Assets(supersedeRoot); const incoming = assets.objects.find((x) => (x.value as { id: string }).id === resolver.claimRefsByProposalId['resolver-supersession'])!.value as { supersedes: string[] }; const prior = assets.objects.find((x) => (x.value as { id: string }).id === supersedeBase.claimRefsByProposalId.base)!.value as { lifecycle: { status: string }, supersededBy: string[] }; assert.equal(incoming.supersedes.includes(supersedeBase.claimRefsByProposalId.base), true); assert.equal(prior.lifecycle.status, 'superseded'); assert.equal(prior.supersededBy.includes(resolver.claimRefsByProposalId['resolver-supersession']), true)
+    } finally { await rm(supersedeRoot, { recursive: true, force: true }) }
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('frozen explicit Claim fields reject updates while mutable structured values and links remain deterministic', async () => {
+  const fields = ['subject', 'claimType', 'statement', 'temporal', 'metric', 'unit', 'comparator', 'period', 'fiscalPeriod'] as const
+  const root = await mkdtemp(join(tmpdir(), 'rhl-frozen-fields-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-frozen-fields', now: clock() }); const gateway = new KnowledgeProductionGateway(); const first = await gateway.submit({ ...(await input(root, 'frozen-base')), proposals: [claim('base', 1)] }); assert.equal(first.status, 'committed')
+    for (const field of fields) { const p: Record<string, unknown> = { ...claim(`bad-${field}`, 2), existingKnowledgeRefs: [first.claimRefsByProposalId.base], resolution: 'update' }; if (field === 'subject') p.subjectKey = 'other'; if (field === 'claimType') p.claimType = 'fact'; if (field === 'statement') p.statement = 'different'; if (field === 'temporal') p.temporal = { asOf: '2026-09-09' }; if (field === 'metric') p.structuredValue = { ...(p.structuredValue as Record<string, unknown>), metric: 'other' }; if (field === 'unit') p.structuredValue = { ...(p.structuredValue as Record<string, unknown>), unit: 'USD' }; if (field === 'comparator') p.structuredValue = { ...(p.structuredValue as Record<string, unknown>), comparator: '>' }; if (field === 'period') p.structuredValue = { ...(p.structuredValue as Record<string, unknown>), period: 'FY2028' }; if (field === 'fiscalPeriod') p.structuredValue = { ...(p.structuredValue as Record<string, unknown>), fiscalPeriod: 'Q1' }; const result = await gateway.submit({ ...(await input(root, `frozen-${field}`)), proposals: [p] as never[] }); assert.equal(result.status, 'no_changes'); assert.equal(result.claimRefsByProposalId[`bad-${field}`], undefined); assert.ok(result.resolutionIntents.some((x) => x.disposition === 'review_required')) }
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('one submit commits at most one ChangeSet and replay does not advance revision', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-one-commit-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-one-commit', now: clock() }); const gateway = new KnowledgeProductionGateway(); const first = await gateway.submit({ ...(await input(root, 'one-commit-1')), proposals: [claim('one', 1)] }); assert.equal(first.status, 'committed'); assert.equal(first.knowledgeBaseRevision, first.baseRevision + 1); assert.equal(first.changeSetId !== undefined, true)
+    const replay = await gateway.submit({ ...(await input(root, 'one-commit-2')), proposals: [claim('one-replay', 1)] }); assert.equal(replay.status, 'no_changes'); assert.equal(replay.knowledgeBaseRevision, first.knowledgeBaseRevision); assert.equal(replay.changeSetId, undefined)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
