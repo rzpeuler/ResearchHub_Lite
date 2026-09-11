@@ -257,7 +257,7 @@ test('resolver-returned contradiction creates a distinct linked Claim, preserves
     const resolver = () => { const decision = { outcome: 'contradicts' as const, reason: 'deterministic semantic contradiction' }; decisions.push(decision); return decision }
     const incoming = { ...claim('resolver-contradiction', 41), statement: 'EPS is revised by resolver evidence' }
     const first = await gateway.submit({ ...(await input(root, 'resolver-contradiction-1')), proposals: [incoming], semanticResolver: resolver }); assert.equal(first.status, 'committed', first.errors.join('; ')); assert.deepEqual(decisions, [{ outcome: 'contradicts', reason: 'deterministic semantic contradiction' }])
-    const firstAssets = await readCanonicalV04Assets(root); const firstId = first.claimRefsByProposalId['resolver-contradiction']; assert.notEqual(firstId, baseId)
+    const firstAssets = await readCanonicalV04Assets(root); const firstId = first.claimRefsByProposalId['resolver-contradiction']; assert.notEqual(firstId, baseId); assert.deepEqual(first.createdIds, [firstId]); assert.equal(first.createdIds.includes(baseId), false)
     const firstClaim = firstAssets.objects.find((x) => (x.value as { id: string }).id === firstId)!.value as { id: string; contradictsClaimRefs: string[] }; assert.deepEqual(firstClaim.contradictsClaimRefs, [baseId])
     const afterFirst = firstAssets.objects.find((x) => (x.value as { id: string }).id === baseId)!.value; assert.deepEqual(afterFirst, before)
     assert.equal(firstAssets.objects.filter((x) => x.kind === 'claim').length, 2)
