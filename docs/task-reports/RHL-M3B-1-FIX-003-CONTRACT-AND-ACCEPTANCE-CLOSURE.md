@@ -4,8 +4,9 @@ Status: IMPLEMENTED / CTO ACCEPTANCE PENDING
 
 ## Baseline and scope
 
-- Baseline commit: `996b14c7d9645898e67b155f1ef5246b0343d577`
-- Final HEAD: `996b14c7d9645898e67b155f1ef5246b0343d577` (implementation and report remain uncommitted for ORCHESTRATOR)
+- Luna pre-commit execution baseline: `996b14c7d9645898e67b155f1ef5246b0343d577`.
+- Orchestrator-synchronized FIX-003 commit / current synchronized HEAD: `c801a09067aa477196a96cc932653c3380301773`.
+- Luna did not create or synchronize that commit; implementation and report changes were handed to ORCHESTRATOR for synchronization.
 - Branch: `codex/personal-research-v1-industry-architecture`
 - Governance: `docs/governance/governance-manifest.yaml` v1 and the active Luna task protocol at the baseline commit.
 - Architecture set: frozen M3B-1 plus the Personal Research, Knowledge Production, Knowledge Resolution, and Schema 0.4 / Storage 1 contracts named by the task.
@@ -45,7 +46,7 @@ Gateway already returns a mapping object for `committed`, `already_committed`, `
 | ReviewCase cannot fabricate Raw evidence | Review-only proposal with unusable evidence persists no ReviewCase. | PASS |
 | Forecast probability default | Omitted forecast probability persists as `0.5`. | PASS |
 | Producer-declared contradiction | Distinct Claim is created with `contradictsClaimRefs` pointing to the prior Claim. | PASS |
-| Resolver-returned contradiction | Resolver decision path is exercised with contradiction linkage coverage retained by the existing semantic-resolution tests. | PASS |
+| Resolver-returned contradiction | FIX-004 added a dedicated resolver-only regression with a changed incoming Claim and callback outcome `{ outcome: 'contradicts', reason: 'deterministic semantic contradiction' }`. The regression currently exposes `V04_CREATE_CONFLICT` for the prior canonical Claim during the first resolver contradiction commit; the prior test suite did not provide this evidence. | FAILED / FIX-004 blocker |
 | Resolver supersession | Resolver-approved supersession with explicit supersede intent creates a new deterministic Claim ID, marks the prior Claim superseded, sets `supersededBy`, and preserves incoming `supersedes`. | PASS |
 | Semantic-equivalent Claim replay and update ID invariant | Existing Claim ID is reused; focused regression retains no `knowledgeId !== operation.object.id` path. | PASS |
 | Supports/dependsOn/contradicts proposal links | Canonical links materialize, deduplicate, and exclude self-links. | PASS |
@@ -73,7 +74,7 @@ The existing FIX-002 semantics were retained: Company ticker/exchange hard ident
 - Provenance evidence asserts Source Raw-ref union and Claim provenance Raw-ref union after reload.
 - Link evidence asserts supports/dependsOn/contradicts materialization, deduplication, and self-link exclusion.
 - Idempotency evidence asserts exact replay refs and unchanged revision on no-op replay.
-- The resolver supersession fixture supplies the established explicit supersede intent together with the injected resolver-approved `supersedes` decision; this preserves the existing Gateway contract and avoids introducing a new adapter or ID policy.
+- The resolver supersession fixture supplies the established explicit supersede intent together with the injected resolver-approved `supersedes` decision; this preserves the existing Gateway contract and avoids introducing a new adapter or ID policy. Resolver-returned contradiction required a separate FIX-004 regression and is not accepted by this report because that regression currently fails with `V04_CREATE_CONFLICT`.
 - No external setup, credentials, API keys, OTP, or platform configuration was required.
 - No commit, amend, rebase, push, or force-push was performed. ORCHESTRATOR owns synchronization and CTO acceptance remains pending.
 

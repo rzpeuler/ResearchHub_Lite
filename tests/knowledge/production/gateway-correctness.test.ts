@@ -238,15 +238,39 @@ test('ReviewCase is never fabricated without usable archived Raw evidence, and f
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
-test('producer and resolver contradiction create distinct Claims with links; resolver supersession preserves linkage', async () => {
+test('producer-declared contradiction creates a distinct Claim with a link', async () => {
   const root = await mkdtemp(join(tmpdir(), 'rhl-resolution-links-'))
   try {
     await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-resolution-links', now: clock() }); const gateway = new KnowledgeProductionGateway(); const first = await gateway.submit({ ...(await input(root, 'contradict-1')), proposals: [claim('base', 42)] }); assert.equal(first.status, 'committed')
     const producer = await gateway.submit({ ...(await input(root, 'contradict-2')), proposals: [claim('producer-contradiction', 41, undefined, 'contradict')] }); assert.equal(producer.status, 'committed'); const producerClaim = (await readCanonicalV04Assets(root)).objects.find((x) => (x.value as { id: string }).id === producer.claimRefsByProposalId['producer-contradiction'])!.value as { contradictsClaimRefs: string[] }; assert.deepEqual(producerClaim.contradictsClaimRefs, [first.claimRefsByProposalId.base])
-    const supersedeRoot = await mkdtemp(join(tmpdir(), 'rhl-resolver-supersede-')); try {
-      await createFreshKnowledgeBaseV04(supersedeRoot, { knowledgeBaseId: 'kb-resolver-supersede', now: clock() }); const supersedeGateway = new KnowledgeProductionGateway(); const supersedeBase = await supersedeGateway.submit({ ...(await input(supersedeRoot, 'resolver-base')), proposals: [claim('base', 42)] }); assert.equal(supersedeBase.status, 'committed')
-      const resolver = await supersedeGateway.submit({ ...(await input(supersedeRoot, 'resolver-1')), proposals: [{ ...claim('resolver-supersession', 40), statement: 'EPS is resolver revision', resolution: 'supersede' }], semanticResolver: () => ({ outcome: 'supersedes', reason: 'deterministic supersession' }) }); assert.equal(resolver.status, 'committed', resolver.errors.join('; ')); const assets = await readCanonicalV04Assets(supersedeRoot); const incoming = assets.objects.find((x) => (x.value as { id: string }).id === resolver.claimRefsByProposalId['resolver-supersession'])!.value as { supersedes: string[] }; const prior = assets.objects.find((x) => (x.value as { id: string }).id === supersedeBase.claimRefsByProposalId.base)!.value as { lifecycle: { status: string }, supersededBy: string[] }; assert.equal(incoming.supersedes.includes(supersedeBase.claimRefsByProposalId.base), true); assert.equal(prior.lifecycle.status, 'superseded'); assert.equal(prior.supersededBy.includes(resolver.claimRefsByProposalId['resolver-supersession']), true)
-    } finally { await rm(supersedeRoot, { recursive: true, force: true }) }
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('resolver-returned contradiction creates a distinct linked Claim, preserves the prior Claim, and replays idempotently', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-resolver-contradiction-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-resolver-contradiction', now: clock() }); const gateway = new KnowledgeProductionGateway()
+    const base = await gateway.submit({ ...(await input(root, 'resolver-contradiction-base')), proposals: [claim('base', 42)] }); assert.equal(base.status, 'committed', base.errors.join('; '))
+    const baseId = base.claimRefsByProposalId.base
+    const before = (await readCanonicalV04Assets(root)).objects.find((x) => (x.value as { id: string }).id === baseId)!.value
+    const decisions: Array<{ outcome: string; reason: string }> = []
+    const resolver = () => { const decision = { outcome: 'contradicts' as const, reason: 'deterministic semantic contradiction' }; decisions.push(decision); return decision }
+    const incoming = { ...claim('resolver-contradiction', 41), statement: 'EPS is revised by resolver evidence' }
+    const first = await gateway.submit({ ...(await input(root, 'resolver-contradiction-1')), proposals: [incoming], semanticResolver: resolver }); assert.equal(first.status, 'committed', first.errors.join('; ')); assert.deepEqual(decisions, [{ outcome: 'contradicts', reason: 'deterministic semantic contradiction' }])
+    const firstAssets = await readCanonicalV04Assets(root); const firstId = first.claimRefsByProposalId['resolver-contradiction']; assert.notEqual(firstId, baseId)
+    const firstClaim = firstAssets.objects.find((x) => (x.value as { id: string }).id === firstId)!.value as { id: string; contradictsClaimRefs: string[] }; assert.deepEqual(firstClaim.contradictsClaimRefs, [baseId])
+    const afterFirst = firstAssets.objects.find((x) => (x.value as { id: string }).id === baseId)!.value; assert.deepEqual(afterFirst, before)
+    assert.equal(firstAssets.objects.filter((x) => x.kind === 'claim').length, 2)
+    const replay = await gateway.submit({ ...(await input(root, 'resolver-contradiction-2')), proposals: [incoming], semanticResolver: resolver }); assert.equal(replay.status, 'no_changes', replay.errors.join('; ')); assert.equal(replay.claimRefsByProposalId['resolver-contradiction'], firstId); assert.deepEqual(decisions, [{ outcome: 'contradicts', reason: 'deterministic semantic contradiction' }, { outcome: 'contradicts', reason: 'deterministic semantic contradiction' }])
+    const replayAssets = await readCanonicalV04Assets(root); assert.equal(replayAssets.objects.filter((x) => x.kind === 'claim').length, 2); assert.deepEqual(replayAssets.objects.find((x) => (x.value as { id: string }).id === baseId)!.value, before); assert.deepEqual((replayAssets.objects.find((x) => (x.value as { id: string }).id === firstId)!.value as { contradictsClaimRefs: string[] }).contradictsClaimRefs, [baseId])
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('resolver-approved supersession preserves linkage', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-resolver-supersede-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-resolver-supersede', now: clock() }); const gateway = new KnowledgeProductionGateway(); const supersedeBase = await gateway.submit({ ...(await input(root, 'resolver-base')), proposals: [claim('base', 42)] }); assert.equal(supersedeBase.status, 'committed')
+    const resolver = await gateway.submit({ ...(await input(root, 'resolver-1')), proposals: [{ ...claim('resolver-supersession', 40), statement: 'EPS is resolver revision', resolution: 'supersede' }], semanticResolver: () => ({ outcome: 'supersedes', reason: 'deterministic supersession' }) }); assert.equal(resolver.status, 'committed', resolver.errors.join('; ')); const assets = await readCanonicalV04Assets(root); const incoming = assets.objects.find((x) => (x.value as { id: string }).id === resolver.claimRefsByProposalId['resolver-supersession'])!.value as { supersedes: string[] }; const prior = assets.objects.find((x) => (x.value as { id: string }).id === supersedeBase.claimRefsByProposalId.base)!.value as { supersedes?: string[], lifecycle: { status: string }, supersededBy: string[] }; assert.equal(incoming.supersedes.includes(supersedeBase.claimRefsByProposalId.base), true); assert.equal(prior.lifecycle.status, 'superseded'); assert.equal(prior.supersededBy.includes(resolver.claimRefsByProposalId['resolver-supersession']), true)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 

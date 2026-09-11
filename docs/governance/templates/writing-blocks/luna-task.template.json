@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "task_kind": "IMPLEMENTATION",
   "task_id": "<填写唯一任务 ID>",
   "title": "<填写任务标题>",
   "objective": "<填写任务目标>",
@@ -46,5 +47,18 @@
     "report_path_rule": "must_equal_report_path",
     "git_owner": "ORCHESTRATOR",
     "luna_must_not_commit_or_push": true
+  },
+  "task_kind_options": [
+    "IMPLEMENTATION",
+    "TEST"
+  ],
+  "test_task_contract": {
+    "allowed_changes": [
+      "tests/**",
+      "<the exact report_path>"
+    ],
+    "production_paths_forbidden": true,
+    "failed_tests_with_valid_report_are_completed": true,
+    "not_run_or_missing_report_is_failed": true
   }
 }
