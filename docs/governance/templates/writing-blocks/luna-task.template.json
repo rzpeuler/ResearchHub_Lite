@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "task_id": "<填写唯一任务 ID>",
+  "title": "<填写任务标题>",
+  "objective": "<填写任务目标>",
+  "base_commit": "<填写基线 commit>",
+  "scope": [
+    "<填写允许修改的项目相对路径>"
+  ],
+  "out_of_scope": [
+    "<填写明确排除的范围>"
+  ],
+  "deliverables": [
+    "<填写交付物>"
+  ],
+  "validation_commands": [
+    "<填写验证命令>"
+  ],
+  "governance_revision": "<填写治理版本>",
+  "architecture_revision_set": [
+    "<填写架构版本或 revision>"
+  ],
+  "report_path": "<填写报告相对路径>",
+  "remote_sync_policy": {
+    "push": false
+  },
+  "execution_semantics": "Luna may decide implementation details inside the approved scope without asking Sol or the user; emit BLOCKED only for external account/API key/OTP/platform configuration, conflicts, unauthorized scope, or high-risk operations."
+}

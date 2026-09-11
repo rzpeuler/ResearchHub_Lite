@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "change_id": "<填写治理变更 ID>",
+  "operation": "<填写操作类型>",
+  "document_id": "<填写文档 ID>",
+  "path": "<填写 docs/governance 下的相对路径>",
+  "reason": "<填写变更原因>",
+  "risk_level": "<填写风险等级>",
+  "affected_agents": [
+    "Sol",
+    "Codex"
+  ],
+  "content": "# Policy: safe JSON example\nRule: use \\\"quoted\\\" text and a Windows path C:\\\\temp\\\\file.txt.\nURL: https://example.com/docs?a=1&b=2\n"
+}

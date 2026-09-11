@@ -1,6 +1,6 @@
 version: 1
 managed_by: web-chat2codex
-template_version: 1
+template_version: 2
 governance_entry_point: docs/governance
 documents:
   - id: governance-readme
@@ -48,3 +48,43 @@ documents:
     version: 1
     status: active
     type: git-policy
+  - id: writing-block-template-luna-task
+    path: docs/governance/templates/writing-blocks/luna-task.template.json
+    audience:
+      - Sol
+      - Codex
+    version: 1
+    status: active
+    type: writing-block-template
+  - id: writing-block-template-governance-change
+    path: docs/governance/templates/writing-blocks/governance-change.template.json
+    audience:
+      - Sol
+      - Codex
+    version: 1
+    status: active
+    type: writing-block-template
+  - id: writing-block-template-architecture-freeze
+    path: docs/governance/templates/writing-blocks/architecture-freeze.template.json
+    audience:
+      - Sol
+      - Codex
+    version: 1
+    status: active
+    type: writing-block-template
+  - id: writing-block-template-blocked
+    path: docs/governance/templates/writing-blocks/blocked.template.json
+    audience:
+      - Sol
+      - Codex
+    version: 1
+    status: active
+    type: writing-block-template
+  - id: writing-block-template-governance-reconciliation
+    path: docs/governance/templates/writing-blocks/governance-reconciliation.template.json
+    audience:
+      - Sol
+      - Codex
+    version: 1
+    status: active
+    type: writing-block-template
