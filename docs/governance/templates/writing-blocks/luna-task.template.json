@@ -5,10 +5,10 @@
   "objective": "<填写任务目标>",
   "base_commit": "<填写基线 commit>",
   "scope": [
-    "<填写允许修改的项目相对路径>"
+    "<填写允许修改的项目相对路径；目录请使用 path/**，文件请使用 path/to/file.ext>"
   ],
   "out_of_scope": [
-    "<填写明确排除的范围>"
+    "<填写明确排除的范围；目录请使用 path/**，文件请使用 path/to/file.ext>"
   ],
   "deliverables": [
     "<填写交付物>"
