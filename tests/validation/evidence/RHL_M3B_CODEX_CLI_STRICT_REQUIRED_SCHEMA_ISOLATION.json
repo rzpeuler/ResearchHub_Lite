@@ -1,0 +1,157 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-006-CODEX-STRICT-REQUIRED-SCHEMA-ISOLATION",
+  "baseCommit": "f7d9b4cfe840d6c1fd9cce3d4abf6b0df2e3e6c7",
+  "generatedAt": "2026-09-12T12:30:08.508Z",
+  "cliVersion": "codex-cli 0.152.1",
+  "backend": "codex-cli",
+  "model": "gpt-5.6-luna",
+  "effort": "medium",
+  "invocationMode": "production-codex-pi-adapter-exec-stdin-json-output-read-only",
+  "diag005Acceptance": {
+    "acceptedTestEvidenceOnly": true,
+    "baseCommit": "f7d9b4cfe840d6c1fd9cce3d4abf6b0df2e3e6c7",
+    "adapterExplicitTypedMinimal": "succeeded",
+    "typeInferredDesign": "process_started_unknown_nonzero_exit",
+    "actualRealCallCount": 2,
+    "normalizedFingerprint": "66ca1308a52ea98d",
+    "normalizedBytes": 2159,
+    "authoritativeSourceFingerprint": "9854f93073c44d96",
+    "primitiveTypePaths": [
+      "$.properties.targetKind",
+      "$.properties.knownGaps.items.properties.module",
+      "$.properties.verificationCandidates.items.properties.kind"
+    ],
+    "aggregateFailuresEvidenceOnly": true
+  },
+  "actualRealCallCount": 3,
+  "probes": {
+    "TYPED_OPTIONAL_PROPERTY_CONTROL": {
+      "attempted": true,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeReasoningCode": "reasoning_execution_failed",
+      "safeFailureClass": "unknown_nonzero_exit",
+      "structuredEventType": null,
+      "safeErrorCode": null,
+      "durationMs": 5471,
+      "normalizedSchemaFingerprint": "d366b37b7a754b5e",
+      "normalizedSchemaBytes": 148,
+      "outputHash": null,
+      "outputBytes": 0,
+      "parserStatus": "not_run",
+      "validatorStatus": "not_run"
+    },
+    "TYPED_ALL_REQUIRED_CONTROL": {
+      "attempted": true,
+      "processStarted": true,
+      "exitState": "normal_exit",
+      "semanticResultAvailable": true,
+      "safeReasoningCode": null,
+      "safeFailureClass": null,
+      "structuredEventType": null,
+      "safeErrorCode": null,
+      "durationMs": 10121,
+      "normalizedSchemaFingerprint": "74f3f11e66475830",
+      "normalizedSchemaBytes": 155,
+      "outputHash": "7804df69c0496002d4970b88b0c401f8d07134291521aac576384d50c0401b4c",
+      "outputBytes": 50,
+      "parserStatus": "passed",
+      "validatorStatus": "passed"
+    },
+    "ALL_REQUIRED_DESIGN_WITHOUT_TYPE_INFERENCE": {
+      "attempted": true,
+      "processStarted": true,
+      "exitState": "normal_exit",
+      "semanticResultAvailable": true,
+      "safeReasoningCode": null,
+      "safeFailureClass": null,
+      "structuredEventType": null,
+      "safeErrorCode": null,
+      "durationMs": 22160,
+      "normalizedSchemaFingerprint": "88711c17a6837ae7",
+      "normalizedSchemaBytes": 2125,
+      "outputHash": "a6179b03f7958fcaff867dd3296803a9460329eada68417bbd0b362b440376eb",
+      "outputBytes": 4000,
+      "parserStatus": "passed",
+      "validatorStatus": "passed",
+      "targetKind": "uncertain",
+      "moduleQuestionCount": 8
+    }
+  },
+  "controls": {
+    "optional": {
+      "required": [
+        "status"
+      ],
+      "normalizedFingerprint": "d366b37b7a754b5e",
+      "normalizedBytes": 148
+    },
+    "allRequired": {
+      "required": [
+        "status",
+        "note"
+      ],
+      "normalizedFingerprint": "74f3f11e66475830",
+      "normalizedBytes": 155
+    },
+    "structurallyIdenticalExceptRequired": true
+  },
+  "design": {
+    "sourceFingerprintBefore": "9854f93073c44d96",
+    "sourceFingerprintAfter": "9854f93073c44d96",
+    "expectedFingerprint": "9854f93073c44d96",
+    "sourceBytes": 3320,
+    "byteIdentical": true,
+    "requirednessChanges": [
+      {
+        "path": "$.properties.knownGaps.items",
+        "propertyKeys": [
+          "gapId",
+          "module",
+          "question",
+          "reason",
+          "actionable",
+          "searchTerms"
+        ]
+      }
+    ],
+    "requirednessChangeCount": 1,
+    "primitiveTypeAdditions": [],
+    "normalizedWithoutTypeInference": {
+      "fingerprint": "88711c17a6837ae7",
+      "bytes": 2125
+    }
+  },
+  "classification": "ALL_PROPERTIES_REQUIRED_TRANSFORMATION_PROVEN",
+  "nextActionCategory": "IMPLEMENT_NARROW_PRODUCTION_ALL_PROPERTIES_REQUIRED_NORMALIZATION",
+  "mutation": {
+    "production": false,
+    "pcbCall": false,
+    "industrySkillInvocation": false,
+    "knowledge": false,
+    "sourceRaw": false,
+    "gateway": false,
+    "writer": false,
+    "researchReport": false,
+    "graph": false,
+    "productionModelSelection": false,
+    "codexAdapter": false,
+    "piExecutor": false,
+    "productionSchemaNormalizer": false
+  },
+  "privacy": {
+    "rawPrompts": false,
+    "rawStdout": false,
+    "rawStderr": false,
+    "rawJsonl": false,
+    "rawFinalOutput": false,
+    "completeSchemas": false,
+    "completeDesignOutput": false,
+    "credentials": false,
+    "authData": false,
+    "privatePaths": false,
+    "reasoningTraces": false
+  },
+  "maxRealModelCalls": 4
+}
