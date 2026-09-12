@@ -1,0 +1,95 @@
+{
+  "generatedAt": "2026-09-12T00:00:00.000Z",
+  "taskId": "RHL-M3B-3B-REAL-PI-FINAL-ACCEPTANCE-001",
+  "implementationCommit": "2e265601b1d57f87e61398a50743e6fb760c09a4",
+  "classification": "REAL_MODEL_CONTRACT_BLOCKED",
+  "processExitCode": 1,
+  "realPiReasoningExecutor": true,
+  "modelRuntime": {
+    "provider": "pi-coding-agent",
+    "requestedModel": "zhipu-openapi/glm-5.3-flash"
+  },
+  "operations": {
+    "names": [
+      "industry_research_design",
+      "industry_research_design"
+    ],
+    "counts": {
+      "industry_research_design": 2
+    }
+  },
+  "targetDiagnosis": {
+    "target": "PCB Manufacturing",
+    "kind": null
+  },
+  "moduleStatusSummary": [],
+  "acquisition": {
+    "corpusId": "pcb-a-share-ai-server-hdi-v1",
+    "waveCount": 1,
+    "providerFixture": "fixture-bounded-pcb-acceptance",
+    "liveProviderEvidence": false,
+    "diagnostics": []
+  },
+  "gatewaySubmitCount": 0,
+  "revisionDelta": 0,
+  "canonicalObjectCounts": {
+    "entity": 0,
+    "relation": 0,
+    "claim": 0,
+    "source": 0
+  },
+  "requiredRelations": {
+    "chain": false,
+    "companyExposure": false
+  },
+  "numericAudit": {
+    "unsupportedNumericObservationCount": 0,
+    "rules": "Only numeric tokens in structured quantitative Claim values are checked; IDs, dates, and structural numbering are ignored."
+  },
+  "reportContract": {
+    "persisted": false,
+    "reportType": null,
+    "sectionCount": 0,
+    "hasResearchGaps": false
+  },
+  "graphContract": {
+    "profile": null,
+    "canonicalRefs": false,
+    "root": false,
+    "productOrTechnology": false,
+    "company": false,
+    "requiredEdge": false
+  },
+  "deterministicReplay": {
+    "outcome": "blocked",
+    "rootIdStable": true,
+    "revisionDelta": 0,
+    "stableGraphIdentity": true
+  },
+  "failedGates": [
+    "operation industry_research_design exact bounded count",
+    "operation industry_module_analysis exact bounded count",
+    "operation industry_cross_module_synthesis exact bounded count",
+    "completed Workflow status",
+    "Industry target diagnosis",
+    "all eight methodology modules exactly once",
+    "Industry Definition available",
+    "one Gateway submission",
+    "first-run revision delta equals one",
+    "durable Claim admitted",
+    "evidence-backed chain Relation admitted",
+    "evidence-backed Company exposure admitted",
+    "canonical Industry/Product-or-Technology/Company objects",
+    "industry report contract",
+    "canonical industry graph contract",
+    "deterministic replay non-mutating outcome"
+  ],
+  "privacy": {
+    "sentinelAbsent": true,
+    "rawBodiesIncluded": false,
+    "completePromptsIncluded": false,
+    "completeOutputsIncluded": false,
+    "absolutePathsIncluded": false,
+    "secretsIncluded": false
+  }
+}
