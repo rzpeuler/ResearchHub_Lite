@@ -9,3 +9,19 @@ The session registers the eight product-level ResearchHub Application Tools: `re
 Pi coding tools and Pi Skills remain available for ordinary agent work. The Workflow semantic context is built independently by `PiReasoningExecutor` and does not include the Pi conversation, project `AGENTS.md`, or Pi Skill text.
 
 Write/edit calls targeting a mounted canonical Knowledge Base are blocked at Pi's tool-call boundary. Explicit shell references are intercepted, but unrestricted child-shell path construction cannot be fully isolated by this layer; this is intentionally reported as `BASH_ISOLATION_GAP` until a restricted process/sandbox or Writer-mediated permission boundary is supplied.
+## Production reasoning selection
+
+The normal Pi and shared ResearchHub production reasoning path remains
+`zhipu-openapi/glm-5.3-flash`, selected by `selectProductionReasoningModel()`.
+
+Industry Deep Research is a separate, explicit Application Runtime policy. Its
+internally constructed `ResearchService` receives a lazy factory for the Codex
+CLI `gpt-5.6-luna` executor with medium reasoning effort. Codex discovery and
+construction occur only when an Industry run requests reasoning.
+
+The two policies do not automatically fall back to one another. Industry
+factory failures and Industry executor failures propagate to that run; the
+default zhipu executor is never a second attempt. Company Research, Earnings
+Review, Valuation, Event Research, Thesis Red Team, Daily Intelligence,
+document ingestion, and Pi conversation/session reasoning remain on the
+existing default executor.

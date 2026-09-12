@@ -19,6 +19,18 @@ export const PRIMARY_PRODUCTION_REASONING_MODEL: ProductionReasoningModelSelecti
   modelId: 'glm-5.3-flash',
 })
 
+export interface IndustryProductionReasoningSelection {
+  readonly backend: 'codex-cli'
+  readonly requestedModel: 'gpt-5.6-luna'
+  readonly requestedReasoningEffort: 'medium'
+}
+
+export const INDUSTRY_PRODUCTION_REASONING_SELECTION: IndustryProductionReasoningSelection = Object.freeze({
+  backend: 'codex-cli',
+  requestedModel: 'gpt-5.6-luna',
+  requestedReasoningEffort: 'medium',
+})
+
 export function selectProductionReasoningModel(runtime: ModelRuntime, selection: ProductionReasoningModelSelection = PRIMARY_PRODUCTION_REASONING_MODEL): Model<Api> {
   const model = runtime.getModel(selection.providerId, selection.modelId)
   if (model === undefined) throw new Error(`Configured production reasoning model is unavailable: ${selection.providerId}/${selection.modelId}`)
@@ -39,6 +51,11 @@ export async function createCodexCliLunaReasoningExecutor(options: CodexCliLunaE
   const adapter = new CodexCliReasoningExecutor({ ...options, executable, model: CODEX_CLI_LUNA_CONFIG.model, reasoningEffort: CODEX_CLI_LUNA_CONFIG.reasoningEffort })
   const metadata = adapter.runtimeMetadata()
   return new PiReasoningExecutor({ capabilities: options.capabilities, timeoutMs: options.timeoutMs, maxOutputChars: options.maxOutputChars, completion: adapter.complete.bind(adapter), runtimeMetadata: { backend: 'codex-cli', requestedModel: metadata.requestedModel, requestedReasoningEffort: metadata.requestedReasoningEffort, invocationMode: metadata.invocationMode, structuredOutputEnabled: metadata.structuredOutputEnabled } })
+}
+
+/** The sole explicit Industry production backend. It has no fallback policy. */
+export async function createIndustryProductionReasoningExecutor(options: CodexCliLunaExecutorOptions): Promise<PiReasoningExecutor> {
+  return createCodexCliLunaReasoningExecutor(options)
 }
 
 export async function discoverCodexCliExecutable(): Promise<string> {

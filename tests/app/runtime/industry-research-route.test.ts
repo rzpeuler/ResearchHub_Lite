@@ -17,17 +17,23 @@ class FixtureExecutor implements ReasoningExecutor {
   async execute(_request: never, signal?: AbortSignal) { if (this.waitForCancellation) await new Promise<void>((resolve) => signal?.addEventListener('abort', () => resolve(), { once: true })); return { operation: 'industry_design', output: {} } as never }
 }
 
-async function fixture(options: { readonly waitForCancellation?: boolean } = {}) {
+async function fixture(options: { readonly waitForCancellation?: boolean; readonly industryFactory?: () => Promise<ReasoningExecutor> } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'runtime-industry-route-'))
   const kb = join(root, 'kb'); const cwd = join(root, 'cwd'); const workspace = join(root, 'workspace'); const agentDir = join(root, 'agent')
   await mkdir(cwd); await mkdir(workspace); await mkdir(agentDir); await createFreshKnowledgeBaseV04(kb, { knowledgeBaseId: 'kb-industry-route' })
   const modelRuntime = await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
   const faux = fauxProvider({ provider: `industry-route-${Date.now()}-${Math.random()}`, models: [{ id: 'fixture-model' }] }); modelRuntime.registerNativeProvider(faux.provider)
-  const runtime = await createResearchHubApplicationRuntime({ cwd, agentDir, mountedKnowledgeBaseRoot: kb, workspaceRoot: workspace, modelRuntime, model: faux.getModel(), reasoningExecutor: new FixtureExecutor(options.waitForCancellation) })
+  const runtime = await createResearchHubApplicationRuntime({ cwd, agentDir, mountedKnowledgeBaseRoot: kb, workspaceRoot: workspace, modelRuntime, model: faux.getModel(), reasoningExecutor: new FixtureExecutor(options.waitForCancellation), industryReasoningExecutorFactory: options.industryFactory })
   const server = new ResearchHubRuntimeServer({ runtime, clientRoot: join(root, 'missing-client'), port: 0 })
   await server.start()
   return { root, runtime, server, modelRuntime, origin: server.address!.origin, token: server.address!.runtimeToken }
 }
+
+test('Application runtime does not resolve the Industry factory during startup', async () => {
+  let factoryCalls = 0
+  const f = await fixture({ industryFactory: async () => { factoryCalls++; return new FixtureExecutor() } })
+  try { assert.equal(factoryCalls, 0); assert.ok(f.runtime.researchService) } finally { await f.server.close(); await f.runtime.close(); await Promise.resolve((f.modelRuntime as unknown as { dispose?: () => void | Promise<void> }).dispose?.()); await rm(f.root, { recursive: true, force: true }) }
+})
 
 test('Industry HTTP routes accept bounded requests only with runtime security and register the Workflow', async () => {
   const f = await fixture()

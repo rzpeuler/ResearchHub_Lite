@@ -1,7 +1,7 @@
 import { join, resolve } from 'node:path'
 import { getAgentDir, ModelRuntime, SessionManager } from '@earendil-works/pi-coding-agent'
 import { PiReasoningExecutor } from '../../plugins/reasoning/pi/executor.ts'
-import { selectProductionReasoningModel } from '../pi/model-selection.ts'
+import { createIndustryProductionReasoningExecutor, selectProductionReasoningModel } from '../pi/model-selection.ts'
 import { KnowledgeService } from '../services/knowledge-service.ts'
 import { KnowledgeGraphService } from '../services/knowledge-graph-service.ts'
 import { ProductionService } from '../services/production-service.ts'
@@ -20,6 +20,7 @@ import type { ResearchHubApplicationRuntimeOptions, ResearchHubApplicationServic
 import { createDailyIntelligenceComposition } from '../services/daily-intelligence-composition.ts'
 import { DailyBriefScheduler } from '../../plugins/daily-intelligence/scheduler.ts'
 import { TradingCalendarService } from '../../plugins/daily-intelligence/calendar.ts'
+import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 
 export class ResearchHubApplicationRuntime {
   readonly cwd: string
@@ -77,10 +78,15 @@ export class ResearchHubApplicationRuntime {
     const workflowService = new WorkflowService()
     const productionService = new ProductionService({ mountedKnowledgeBaseRoot, workspaceRoot, cwd, reasoningExecutor, workflowService })
     let researchService = options.researchService
+    let industryReasoningExecutorFactory = options.industryReasoningExecutorFactory
+    if (industryReasoningExecutorFactory === undefined && options.reasoningExecutor === undefined) {
+      let industryExecutorPromise: Promise<ReasoningExecutor> | undefined
+      industryReasoningExecutorFactory = () => industryExecutorPromise ??= createIndustryProductionReasoningExecutor({ capabilities: reasoningExecutor.capabilities() })
+    }
     const dailyComposition = options.dailyIntelligenceService === undefined ? await createDailyIntelligenceComposition({ cwd, workflowService, reasoningExecutor, modelRuntime, mountedKnowledgeBaseRoot }) : undefined
     const dailyIntelligenceService = options.dailyIntelligenceService ?? dailyComposition!.service
     if (researchService === undefined && mountedKnowledgeBaseRoot !== undefined) {
-      try { const manifest = await loadKnowledgeBaseManifest(mountedKnowledgeBaseRoot); if (manifest.schemaVersion === '0.4' && manifest.storageFormatVersion === '1') { const dailySignalStore = new FileDailySignalStore(join(cwd, 'runtime-data', 'daily-signals.jsonl')); researchService = new ResearchService({ mountedKnowledgeBaseRoot, cwd, workflowService, reasoningExecutor, signalStore: new FileResearchSignalStore(join(cwd, 'runtime-data', 'research-signals.jsonl')), dailySignalStore, acquisitionPlugins: [new OfficialDisclosureResearchPlugin(new CninfoOfficialDisclosureClient()), new GdeltResearchPlugin()], akshare: new AkshareDataAdapter() }) } } catch { /* the normal v0.3 runtime remains available without Company Research */ }
+      try { const manifest = await loadKnowledgeBaseManifest(mountedKnowledgeBaseRoot); if (manifest.schemaVersion === '0.4' && manifest.storageFormatVersion === '1') { const dailySignalStore = new FileDailySignalStore(join(cwd, 'runtime-data', 'daily-signals.jsonl')); researchService = new ResearchService({ mountedKnowledgeBaseRoot, cwd, workflowService, reasoningExecutor, industryReasoningExecutorFactory, signalStore: new FileResearchSignalStore(join(cwd, 'runtime-data', 'research-signals.jsonl')), dailySignalStore, acquisitionPlugins: [new OfficialDisclosureResearchPlugin(new CninfoOfficialDisclosureClient()), new GdeltResearchPlugin()], akshare: new AkshareDataAdapter() }) } } catch { /* the normal v0.3 runtime remains available without Company Research */ }
     }
     const services = { knowledgeService, knowledgeGraphService, reviewService, workflowService, productionService, ...(researchService === undefined ? {} : { researchService }), dailyIntelligenceService }
     const sessionManager = options.sessionManager ?? SessionManager.create(cwd, options.sessionDir)

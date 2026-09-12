@@ -1,0 +1,77 @@
+{
+  "taskId": "RHL-M3B-3B-FIX-007-INDUSTRY-EXPLICIT-CODEX-PRODUCTION-SELECTION",
+  "baseCommit": "fbeed8ce47409382e4439228f1a45e99e8b3e916",
+  "generatedAt": "2026-09-12T14:12:52.199Z",
+  "defaultProductionModel": {
+    "providerId": "zhipu-openapi",
+    "modelId": "glm-5.3-flash"
+  },
+  "industryProductionBackend": {
+    "backend": "codex-cli",
+    "requestedModel": "gpt-5.6-luna",
+    "requestedReasoningEffort": "medium"
+  },
+  "lazySelection": {
+    "applicationStartupDoesNotDiscoverCodex": true,
+    "resolvesOnIndustryRun": true,
+    "successfulExecutorMayBeMemoized": true,
+    "rejectionDoesNotFallback": true
+  },
+  "realCallCount": 1,
+  "requestFingerprints": {
+    "expected": {
+      "instruction": "7a04f3501b1d420d",
+      "input": "36c1bc2fc516f169",
+      "outputContract": "9854f93073c44d96"
+    },
+    "actual": {
+      "instruction": "7a04f3501b1d420d",
+      "input": "36c1bc2fc516f169",
+      "outputContract": "9854f93073c44d96"
+    },
+    "allMatch": true
+  },
+  "transport": {
+    "sourceContractFingerprint": "9854f93073c44d96",
+    "fingerprint": "88711c17a6837ae7",
+    "bytes": 2125
+  },
+  "runtimeMetadata": {
+    "backend": "codex-cli",
+    "requestedModel": "gpt-5.6-luna",
+    "requestedReasoningEffort": "medium",
+    "structuredOutputEnabled": true
+  },
+  "parserStatus": "passed",
+  "validatorStatus": "passed",
+  "targetKind": "industry",
+  "moduleQuestionCount": 8,
+  "failure": null,
+  "finalClassification": "INDUSTRY_CODEX_SELECTION_VALIDATED",
+  "noFallbackAssertions": {
+    "noAutomaticFallback": true,
+    "defaultExecutorInvoked": false,
+    "fallbackCallCount": 0
+  },
+  "mutation": {
+    "knowledge": false,
+    "sourceRaw": false,
+    "gateway": false,
+    "writer": false,
+    "researchReport": false,
+    "graph": false,
+    "canonicalKnowledge": false,
+    "fullIndustryRun": false
+  },
+  "privacy": {
+    "rawPrompt": false,
+    "completeRequest": false,
+    "outputContract": false,
+    "stdout": false,
+    "stderr": false,
+    "completeOutput": false,
+    "credentials": false,
+    "privatePaths": false,
+    "reasoningTraces": false
+  }
+}

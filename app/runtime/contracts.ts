@@ -71,6 +71,8 @@ export interface ResearchHubApplicationRuntimeOptions {
   readonly sessionManager?: SessionManager
   readonly model?: Model<Api>
   readonly reasoningExecutor?: ReasoningExecutor
+  /** Lazy, Industry-only production executor selection. It is never a fallback. */
+  readonly industryReasoningExecutorFactory?: () => Promise<ReasoningExecutor>
   readonly settingsManager?: SettingsManager
   readonly resourceLoader?: DefaultResourceLoader
   readonly researchService?: ResearchService
