@@ -56,13 +56,21 @@ export interface NormalizedResearchSource {
   }
 }
 
-export interface ResearchAcquisitionRequest {
-  /** Kept required for source compatibility with the established Company callers. */
-  readonly company: ResearchCompanyIdentity
-  readonly industry?: ResearchIndustryIdentity
-  readonly asOf?: string
-  readonly limitPerKind?: number
-}
+export type ResearchAcquisitionRequest =
+  | {
+      /** Established Company callers remain source-compatible. */
+      readonly company: ResearchCompanyIdentity
+      readonly industry?: never
+      readonly asOf?: string
+      readonly limitPerKind?: number
+    }
+  | {
+      /** Industry acquisition never carries a fabricated Company identity. */
+      readonly industry: ResearchIndustryIdentity
+      readonly company?: never
+      readonly asOf?: string
+      readonly limitPerKind?: number
+    }
 
 export interface ResearchAcquisitionPlugin {
   readonly name: string

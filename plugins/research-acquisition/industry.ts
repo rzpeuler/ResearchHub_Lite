@@ -1,14 +1,14 @@
 import { sha256 } from './hash.ts'
 import type { AkshareDataClient } from './akshare.ts'
-import type { NormalizedResearchSource, ResearchAcquisitionRequest, ResearchFetchedSource, ResearchSourceCandidate } from './contracts.ts'
+import type { NormalizedResearchSource, ResearchAcquisitionPlugin, ResearchAcquisitionRequest, ResearchFetchedSource, ResearchSourceCandidate } from './contracts.ts'
 
 const text = (row: Record<string, unknown>, keys: string[]) => keys.map((key) => row[key]).find((value): value is string => typeof value === 'string' && value.trim() !== '')?.trim()
-export class AkshareIndustryResearchPlugin {
+export class AkshareIndustryResearchPlugin implements ResearchAcquisitionPlugin {
   readonly name = 'akshare-industry-research-acquisition'
   constructor(private readonly client: AkshareDataClient, private readonly now: () => string = () => new Date().toISOString()) {}
   async discover(request: ResearchAcquisitionRequest): Promise<readonly ResearchSourceCandidate[]> {
-    if (!('industry' in request) || !this.client.sectorPerformance) return []
-    const target = request.industry!; const names = new Set([target.name, ...(target.aliases ?? [])].map((x) => x.trim().toLocaleLowerCase()))
+    if ('company' in request || !this.client.sectorPerformance) return []
+    const target = request.industry; if (!target) return []; const names = new Set([target.name, ...(target.aliases ?? [])].map((x) => x.trim().toLocaleLowerCase()))
     const rows = await this.client.sectorPerformance({ symbol: '', startDate: request.asOf, endDate: request.asOf }); if (!Array.isArray(rows)) return []
     const matches = rows.filter((row): row is Record<string, unknown> => Boolean(row && typeof row === 'object')).map((row) => ({ row, name: text(row, ['板块名称', '行业名称', 'name', 'sectorName']) })).filter((x) => x.name && names.has(x.name.toLocaleLowerCase()))
     if (matches.length !== 1) return []

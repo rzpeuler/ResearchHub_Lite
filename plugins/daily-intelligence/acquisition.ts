@@ -11,7 +11,8 @@ export class WebResearchAcquisition implements ResearchAcquisitionPlugin {
     const result: ResearchSourceCandidate[] = []
     for (const configured of this.options.urls.slice(0, 10)) { const response = await this.fetchImpl(this.options.discoveryUrl ?? configured, { headers: { accept: 'text/html, application/rss+xml, application/atom+xml, text/plain' } }); if (!response.ok) throw new Error(`${this.options.provider} discovery failed with HTTP ${response.status}`); const bytes = new Uint8Array(await response.arrayBuffer()); const raw = new TextDecoder().decode(bytes); const items = extractItems(raw, configured, response.headers.get('content-type') ?? '')
       for (const item of items.slice(0, request.limitPerKind ?? 5)) {
-        const metadata = { ...(this.options.accountRef ? { sourceAccountRef: this.options.accountRef } : {}), ...(this.dailyScope === 'company' ? { companySymbol: request.company.symbol } : {}), providerObjectId: item.objectId ?? sha256(`${item.title}|${item.url ?? ''}`), acquisitionMode: 'public_item_discovery' }
+        const companySymbol = request.company?.symbol
+        const metadata = { ...(this.options.accountRef ? { sourceAccountRef: this.options.accountRef } : {}), ...(this.dailyScope === 'company' && companySymbol !== undefined ? { companySymbol } : {}), providerObjectId: item.objectId ?? sha256(`${item.title}|${item.url ?? ''}`), acquisitionMode: 'public_item_discovery' }
         result.push({ candidateId: `${this.options.provider}-${sha256(item.url ?? item.title).slice(0, 16)}`, kind: this.options.kind ?? 'web_article', tier: this.options.tier ?? 3, title: item.title, ...(item.url ? { url: item.url } : {}), provider: this.options.provider, ...(item.publishedAt ? { publishedAt: item.publishedAt } : {}), metadata })
       }
     }

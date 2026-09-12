@@ -9,10 +9,19 @@ export class IndustryAcquisitionComposition {
     const terms = [...new Set(request.searchTerms.map((x) => x.trim()).filter(Boolean))].slice(0, 8).map((x) => x.slice(0, 120))
     const target = { name: request.target.name, aliases: (request.target.aliases ?? []).slice(0, 8), canonicalRef: request.target.canonicalRef, searchTerms: terms }
     for (const plugin of this.plugins.slice(0, 8)) {
-      let candidates: readonly ResearchSourceCandidate[] = []; let failed = false; let usable = 0
-      try { candidates = (await plugin.discover({ company: { symbol: 'INDUSTRY' }, industry: target, asOf: request.target.asOf, limitPerKind: this.maxCandidatesPerProvider })).slice(0, this.maxCandidatesPerProvider) } catch (error) { failed = true; diagnostics.push(`${plugin.name}: failed`) }
-      for (const candidate of candidates) { if (sources.length >= this.maxSources) break; try { const fetched = await plugin.fetch(candidate); const normalized = await plugin.normalize(fetched); const key = normalized.canonicalUrl ? `url:${normalized.canonicalUrl}` : `hash:${normalized.contentHash}`; if (!normalized.content.trim() || seen.has(key)) continue; seen.add(key); sources.push(normalized); usable++ } catch { failed = true; diagnostics.push(`${plugin.name}: candidate failed`) } }
-      outcomes.push({ provider: plugin.name, providerAttempted: true, providerSucceeded: usable > 0 && !failed, providerEmpty: !failed && usable === 0, providerFailed: failed, usableSourceCount: usable })
+      let candidates: readonly ResearchSourceCandidate[] = []; let failed = false; let attempted = 0; let usable = 0
+      try { candidates = (await plugin.discover({ industry: target, asOf: request.target.asOf, limitPerKind: this.maxCandidatesPerProvider })).slice(0, this.maxCandidatesPerProvider) } catch { failed = true; diagnostics.push(`${plugin.name}: discovery_failed`) }
+      for (const candidate of candidates) {
+        if (sources.length >= this.maxSources) break
+        attempted++
+        try {
+          const fetched = await plugin.fetch(candidate); const normalized = await plugin.normalize(fetched)
+          const key = normalized.canonicalUrl ? `url:${normalized.canonicalUrl}` : `hash:${normalized.contentHash}`
+          if (!normalized.content.trim() || seen.has(key)) continue
+          seen.add(key); sources.push(normalized); usable++
+        } catch { failed = true; diagnostics.push(`${plugin.name}:${candidate.candidateId}: candidate_failed`) }
+      }
+      outcomes.push({ provider: plugin.name, providerAttempted: true, providerSucceeded: usable > 0, providerEmpty: !failed && attempted > 0 && usable === 0 || !failed && attempted === 0, providerFailed: failed, usableSourceCount: usable })
     }
     return { sources, outcomes, diagnostics: diagnostics.slice(0, 32) }
   }

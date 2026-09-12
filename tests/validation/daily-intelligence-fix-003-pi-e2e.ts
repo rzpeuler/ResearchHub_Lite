@@ -17,8 +17,9 @@ await mkdir(root, { recursive: true })
 const companies = [{ symbol: '600519', name: '贵州茅台', exchange: 'SSE' as const }]
 const fixture: ResearchAcquisitionPlugin = {
   name: 'fixture-public-retained-fix-003',
-  async discover({ company }) {
-    const symbol = company.symbol
+  async discover(request) {
+    if (!('company' in request)) return []
+    const symbol = request.company!.symbol
     const entries: ResearchSourceCandidate[] = symbol === '600519' ? [
       { candidateId: 'daily-pi-fix-003-official', kind: 'official_disclosure', tier: 1, title: '贵州茅台 management guidance update', provider: 'cninfo', publishedAt: '2026-09-08T00:00:00.000Z', metadata: { companySymbol: '600519' } },
       { candidateId: 'daily-pi-fix-003-institution', kind: 'web_article', tier: 2, title: 'Institutional view on premium spirits demand', provider: 'institution-fixture', publishedAt: '2026-09-08T00:20:00.000Z', metadata: { companySymbol: '600519' } },

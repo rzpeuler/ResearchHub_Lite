@@ -54,7 +54,7 @@ test('Company Deep Research binds two companies deterministically and is stable 
     await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-company-multi-test', now: '2026-09-08T00:00:00.000Z' })
     const plugin: ResearchAcquisitionPlugin = {
       name: 'fixture-official',
-      discover: async (request) => [{ candidateId: `official-${request.company.symbol}`, kind: 'official_disclosure', tier: 1, title: `${request.company.symbol} filing`, url: `https://example.com/${request.company.symbol}`, provider: 'cninfo', publishedAt: '2026-09-07T00:00:00.000Z', metadata: { companySymbol: request.company.symbol } }],
+      discover: async (request) => { if (!request.company) return []; return [{ candidateId: `official-${request.company.symbol}`, kind: 'official_disclosure', tier: 1, title: `${request.company.symbol} filing`, url: `https://example.com/${request.company.symbol}`, provider: 'cninfo', publishedAt: '2026-09-07T00:00:00.000Z', metadata: { companySymbol: request.company.symbol } }] },
       fetch: async (candidate) => ({ candidate, retrievedAt: '2026-09-08T00:00:00.000Z', content: `${candidate.candidateId} reported stable revenue.`, contentHash: candidate.candidateId.includes('600519') ? 'c'.repeat(64) : 'd'.repeat(64) }),
       normalize: async (fetched) => ({ candidate: fetched.candidate, retrievedAt: fetched.retrievedAt, title: fetched.candidate.title, content: fetched.content, contentHash: fetched.contentHash!, canonicalUrl: fetched.candidate.url, publisher: fetched.candidate.provider, rights: { accessScope: 'public', retentionAllowed: true, aiProcessingAllowed: true, derivativeKnowledgeAllowed: true, redistributionAllowed: false } }),
     }

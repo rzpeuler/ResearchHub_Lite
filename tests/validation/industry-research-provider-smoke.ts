@@ -7,7 +7,7 @@ import { AkshareIndustryResearchPlugin } from '../../plugins/research-acquisitio
 import { sha256 } from '../../plugins/research-acquisition/hash.ts'
 
 const target = { name: 'PCB', aliases: ['印制电路板'], searchTerms: ['PCB', '印制电路板', 'HDI'] }
-const request = { company: { symbol: 'INDUSTRY' }, industry: target, asOf: new Date().toISOString(), limitPerKind: 3 }
+const request = { industry: target, asOf: new Date().toISOString(), limitPerKind: 3 }
 const timeout = async <T>(work: () => Promise<T>, ms = 8_000): Promise<T> => await Promise.race([work(), new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))])
 async function probe(provider: string, work: () => Promise<unknown>) {
   try { const value = await timeout(work); const candidates = Array.isArray(value) ? value : []; return { provider, status: candidates.length ? 'usable' : 'empty', candidateCount: candidates.length, candidates: candidates.slice(0, 3).map((x: any) => ({ title: typeof x.title === 'string' ? x.title.slice(0, 160) : undefined, url: typeof x.url === 'string' ? x.url.slice(0, 300) : undefined, candidateHash: sha256(JSON.stringify(x)).slice(0, 16), rights: { accessScope: 'public', derivativeKnowledgeAllowed: true } })) } } catch (error) { const message = String(error); return { provider, status: /timeout|fetch|network|connect|command failed|python/i.test(message) ? 'unavailable_or_degraded' : 'failed', candidateCount: 0, diagnostics: /timeout/i.test(message) ? 'bounded timeout' : 'external provider unavailable or degraded' } }
