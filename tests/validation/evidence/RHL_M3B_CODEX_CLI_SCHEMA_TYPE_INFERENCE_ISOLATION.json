@@ -1,0 +1,134 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-005-CODEX-SCHEMA-TYPE-INFERENCE-ISOLATION",
+  "baseCommit": "128215bb47b680fed02cf38558803a8724b23eae",
+  "generatedAt": "2026-09-12T12:17:30.977Z",
+  "cliVersion": "codex-cli 0.152.1",
+  "backend": "codex-cli",
+  "model": "gpt-5.6-luna",
+  "effort": "medium",
+  "invocationMode": "exec-stdin-json-output-read-only",
+  "runtimeMetadata": {
+    "backend": "codex-cli",
+    "requestedModel": "gpt-5.6-luna",
+    "requestedReasoningEffort": "medium",
+    "structuredOutputEnabled": true
+  },
+  "diag004Acceptance": {
+    "acceptedTestEvidenceOnly": true,
+    "nativeProbeA": "succeeded",
+    "nativeProbeB": "succeeded",
+    "nativeProbeBFlags": "--output-schema + --json + -o",
+    "actualModelCallCount": 2,
+    "unrelatedAggregateFailure": "tests/app/runtime/valuation-route.test.ts timing/environment-sensitive failure in npm run test:node and npm test"
+  },
+  "schemaDelta": {
+    "diag003FailingAdapterControl": {
+      "fingerprint": "6403f2b1cc6b62ac",
+      "bytes": 107,
+      "untypedConst": "ok"
+    },
+    "diag004NativeGood": {
+      "bytes": 123,
+      "typedConst": "ok",
+      "type": "string"
+    }
+  },
+  "actualRealCallCount": 2,
+  "probes": {
+    "ADAPTER_EXPLICIT_TYPED_MINIMAL_CONTROL": {
+      "attempted": true,
+      "processStarted": true,
+      "exitState": "normal_exit",
+      "semanticResultAvailable": true,
+      "semanticOutputShape": "exactly {status: \"ok\"}",
+      "safeReasoningCode": null,
+      "safeFailureClass": null,
+      "structuredEventType": null,
+      "safeErrorCode": null,
+      "durationMs": 8565,
+      "normalizedSchemaFingerprint": "1bf50a2dc6bf4c0b",
+      "normalizedSchemaBytes": 123,
+      "outputHash": "a29ee2b15c494311c52521766e44af56a3ad2248e7a8ab465e5206463c13d288",
+      "outputBytes": 15,
+      "parserStatus": "not_run",
+      "validatorStatus": "not_run",
+      "targetKind": null,
+      "moduleQuestionKeys": [],
+      "moduleQuestionCount": 0
+    },
+    "ADAPTER_TYPE_INFERRED_DESIGN_NEUTRAL": {
+      "attempted": true,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeReasoningCode": "reasoning_execution_failed",
+      "safeFailureClass": "unknown_nonzero_exit",
+      "structuredEventType": null,
+      "safeErrorCode": null,
+      "durationMs": 5323,
+      "normalizedSchemaFingerprint": "66ca1308a52ea98d",
+      "normalizedSchemaBytes": 2159,
+      "outputHash": null,
+      "outputBytes": 0,
+      "parserStatus": "not_run",
+      "validatorStatus": "not_run",
+      "targetKind": null,
+      "moduleQuestionKeys": [],
+      "moduleQuestionCount": 0
+    }
+  },
+  "design": {
+    "sourceFingerprintBefore": "9854f93073c44d96",
+    "sourceFingerprintAfter": "9854f93073c44d96",
+    "expectedFingerprint": "9854f93073c44d96",
+    "sourceBytes": 3320,
+    "byteIdentical": true,
+    "inferredTypeAdditions": [
+      {
+        "path": "$.properties.targetKind",
+        "type": "string"
+      },
+      {
+        "path": "$.properties.knownGaps.items.properties.module",
+        "type": "string"
+      },
+      {
+        "path": "$.properties.verificationCandidates.items.properties.kind",
+        "type": "string"
+      }
+    ],
+    "normalizedFingerprint": "66ca1308a52ea98d",
+    "normalizedBytes": 2159
+  },
+  "classification": "BACKEND_FAILURE_DIAGNOSTIC_INCONCLUSIVE",
+  "nextActionCategory": "REVIEW_BACKEND_RUNTIME_FAILURE",
+  "mutation": {
+    "production": false,
+    "pcbCall": false,
+    "industrySkillInvocation": false,
+    "knowledge": false,
+    "sourceRaw": false,
+    "gateway": false,
+    "writer": false,
+    "researchReport": false,
+    "graph": false,
+    "productionModelSelection": false,
+    "codexAdapter": false,
+    "piExecutor": false,
+    "productionSchemaNormalizer": false
+  },
+  "privacy": {
+    "rawPrompts": false,
+    "rawStdout": false,
+    "rawStderr": false,
+    "rawJsonl": false,
+    "rawFinalOutput": false,
+    "completeSchemas": false,
+    "completeDesignOutput": false,
+    "credentials": false,
+    "authData": false,
+    "privatePaths": false,
+    "reasoningTraces": false
+  },
+  "maxRealModelCalls": 2
+}
