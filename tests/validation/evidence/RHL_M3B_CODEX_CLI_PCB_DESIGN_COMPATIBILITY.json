@@ -1,0 +1,87 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-002-CODEX-CLI-PCB-DESIGN-COMPATIBILITY",
+  "baseCommit": "5c63d540c36b7ccbfa9afe58ffbba886e7fe0dae",
+  "generatedAt": "2026-09-12T10:04:44.732Z",
+  "backend": "codex-cli",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "medium",
+  "invocationMode": "exec-stdin-json-output-read-only",
+  "request": {
+    "operation": "industry_research_design",
+    "instructionHash": "7a04f3501b1d420d",
+    "instructionBytes": 467,
+    "inputHash": "36c1bc2fc516f169",
+    "inputBytes": 98,
+    "inputKeys": [
+      "existingKnowledge",
+      "target"
+    ],
+    "outputContractHash": "9854f93073c44d96",
+    "outputContractBytes": 3320,
+    "outputContractKeys": [
+      "additionalProperties",
+      "bounds",
+      "name",
+      "properties",
+      "required",
+      "type"
+    ]
+  },
+  "requestContinuity": {
+    "convention": "sha256(JSON.stringify(value)).slice(0,16)",
+    "expected": {
+      "instruction": "7a04f3501b1d420d",
+      "input": "36c1bc2fc516f169",
+      "outputContract": "9854f93073c44d96"
+    },
+    "actual": {
+      "instruction": "7a04f3501b1d420d",
+      "input": "36c1bc2fc516f169",
+      "outputContract": "9854f93073c44d96"
+    },
+    "matches": {
+      "instruction": true,
+      "input": true,
+      "outputContract": true
+    },
+    "allMatch": true
+  },
+  "capturedFirstAttemptCount": 1,
+  "execution": {
+    "attempted": true,
+    "backendExecuted": true,
+    "durationMs": 36422,
+    "outputHash": null,
+    "outputBytes": 0,
+    "parser": "rejected_invalid_json_or_shape",
+    "validator": "not_run_or_failed",
+    "validatorDiagnosticCodes": [],
+    "targetKind": null,
+    "moduleQuestionKeys": [],
+    "moduleQuestionCount": 0,
+    "failure": {
+      "safeCode": "reasoning_output_invalid",
+      "externalSetup": false,
+      "category": "model_output"
+    }
+  },
+  "classification": "MODEL_OUTPUT_INVALID",
+  "productionSelectionAuthorized": false,
+  "mutation": {
+    "knowledgeBase": false,
+    "sourceRaw": false,
+    "gateway": false,
+    "writer": false,
+    "researchReport": false,
+    "graph": false,
+    "productionModelSelection": false
+  },
+  "privacy": {
+    "completeRequestPersisted": false,
+    "completeOutputPersisted": false,
+    "promptPersisted": false,
+    "reasoningTracePersisted": false,
+    "credentialsPersisted": false,
+    "privatePathsPersisted": false
+  }
+}
