@@ -13,7 +13,7 @@ import type { ReasoningRequest, ReasoningResult } from '../../plugins/reasoning/
 export const TASK_ID = 'RHL-M3B-3B-DIAG-003-CODEX-STRUCTURED-SCHEMA-COMPATIBILITY-MATRIX'
 export const BASE_COMMIT = '1f011467dc2117d3d09a48f8c9730c285da1a89c'
 export const EXPECTED_DESIGN_FINGERPRINT = '9854f93073c44d96'
-export const EXPECTED_DESIGN_TRANSPORT = { fingerprint: '95e315657e862a7e', bytes: 2111 } as const
+export const EXPECTED_DESIGN_TRANSPORT = { fingerprint: '88711c17a6837ae7', bytes: 2125 } as const
 export const CAPABILITIES = { maxContextTokens: 128_000, maxOutputTokens: 16_384, structuredOutputSupport: true, maxConcurrency: 1 } as const
 export const PROBE_NAMES = ['MINIMAL_STRICT_CONTROL', 'OPTIONAL_PROPERTY_PROBE', 'CURRENT_DESIGN_SCHEMA_NEUTRAL', 'STRICT_REQUIRED_DESIGN_PROBE'] as const
 export type ProbeName = typeof PROBE_NAMES[number]

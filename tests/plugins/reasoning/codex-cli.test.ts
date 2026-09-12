@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { createHash } from 'node:crypto'
 import { buildCodexCliInvocationArgs, classifyCodexFailure, CODEX_CLI_LUNA_CONFIG, CodexCliReasoningExecutor, normalizeCodexOutputSchema, parseCodexCliJsonlFinalResponse } from '../../../plugins/reasoning/codex-cli/executor.ts'
 import { PiReasoningExecutor } from '../../../plugins/reasoning/pi/executor.ts'
 
@@ -41,6 +42,63 @@ test('Codex schema normalizer supports dynamic enum, const and oneOf contracts a
   assert.throws(() => normalizeCodexOutputSchema({ type: 'string', enum: Array.from({ length: 100000 }, (_, i) => String(i)) }), /size limit/)
   assert.throws(() => normalizeCodexOutputSchema({ type: 'number', const: Number.NaN }), (error: unknown) => error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'reasoning_configuration_invalid')
   assert.throws(() => normalizeCodexOutputSchema({ type: 'object', properties: { x: new Date(0) } }), (error: unknown) => error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'reasoning_configuration_invalid')
+})
+
+test('Codex transport normalization makes every declared property required without mutating the source', () => {
+  const source = { type: 'object', additionalProperties: false, properties: { status: { type: 'string', const: 'ok' }, note: { type: 'string' } }, required: ['status'] }
+  const before = JSON.stringify(source)
+  const normalized = normalizeCodexOutputSchema(source)
+  assert.deepEqual(normalized.schema.required, ['status', 'note'])
+  assert.equal(normalized.strengthenedObjectCount, 1)
+  assert.deepEqual(normalized.strengthenedObjectPaths, ['$'])
+  assert.equal(JSON.stringify(source), before)
+  assert.deepEqual(source.required, ['status'])
+})
+
+test('Codex transport normalization recursively covers properties, items, maps, oneOf and anyOf', () => {
+  const normalized = normalizeCodexOutputSchema({ type: 'object', properties: {
+    nested: { type: 'object', properties: { value: { type: 'string' } } },
+    list: { type: 'array', items: { type: 'object', properties: { item: { type: 'boolean' } } } },
+    map: { type: 'object', additionalProperties: { type: 'object', properties: { mapped: { type: 'number' } } } },
+    one: { oneOf: [{ type: 'object', properties: { branch: { type: 'null' } } }] },
+    any: { anyOf: [{ type: 'object', properties: { alternative: { type: 'integer' } } }] },
+  } })
+  const schema = normalized.schema as any
+  assert.deepEqual(schema.required, ['nested', 'list', 'map', 'one', 'any'])
+  assert.deepEqual(schema.properties.nested.required, ['value'])
+  assert.deepEqual(schema.properties.list.items.required, ['item'])
+  assert.deepEqual(schema.properties.map.additionalProperties.required, ['mapped'])
+  assert.deepEqual(schema.properties.one.oneOf[0].required, ['branch'])
+  assert.deepEqual(schema.properties.any.anyOf[0].required, ['alternative'])
+})
+
+test('Codex transport normalization handles empty and propertyless schema nodes and rejects inconsistent required references', () => {
+  const normalized = normalizeCodexOutputSchema({ type: 'object', properties: { empty: { type: 'object', properties: {} }, noProperties: { type: 'string' } } })
+  assert.deepEqual((normalized.schema as any).required, ['empty', 'noProperties'])
+  assert.deepEqual((normalized.schema as any).properties.empty.required, [])
+  assert.equal(Object.prototype.hasOwnProperty.call((normalized.schema as any).properties.noProperties, 'required'), false)
+  assert.throws(() => normalizeCodexOutputSchema({ type: 'object', properties: { present: { type: 'string' } }, required: ['missing'] }), (error: unknown) => error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'reasoning_configuration_invalid')
+})
+
+test('Codex transport normalization preserves supported schema semantics and accepted Design fingerprint', async () => {
+  const { INDUSTRY_RESEARCH_DESIGN_CONTRACT, INDUSTRY_MODULE_RESULT_CONTRACT, INDUSTRY_SYNTHESIS_CONTRACT } = await import('../../../skills/industry-research/contracts.ts')
+  const source = JSON.stringify(INDUSTRY_RESEARCH_DESIGN_CONTRACT)
+  const normalized = normalizeCodexOutputSchema(INDUSTRY_RESEARCH_DESIGN_CONTRACT)
+  assert.equal(createHash('sha256').update(source).digest('hex').slice(0, 16), '9854f93073c44d96')
+  assert.equal(JSON.stringify(INDUSTRY_RESEARCH_DESIGN_CONTRACT), source)
+  assert.equal(normalized.fingerprint, '88711c17a6837ae7')
+  assert.equal(normalized.bytes, 2125)
+  assert.deepEqual((normalized.schema as any).properties.knownGaps.items.required, ['gapId', 'module', 'question', 'reason', 'actionable', 'searchTerms'])
+  for (const contract of [INDUSTRY_MODULE_RESULT_CONTRACT, INDUSTRY_SYNTHESIS_CONTRACT]) {
+    const result = normalizeCodexOutputSchema(contract)
+    const visit = (node: any): void => {
+      if (node && typeof node === 'object' && !Array.isArray(node)) {
+        if (node.properties) assert.deepEqual(node.required, Object.keys(node.properties))
+        for (const value of Object.values(node)) visit(value)
+      } else if (Array.isArray(node)) for (const value of node) visit(value)
+    }
+    visit(result.schema)
+  }
 })
 
 test('Codex CLI JSONL parser keeps only the final assistant response', () => {

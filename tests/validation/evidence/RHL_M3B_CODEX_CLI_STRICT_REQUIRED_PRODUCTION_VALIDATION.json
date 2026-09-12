@@ -1,0 +1,89 @@
+{
+  "taskId": "RHL-M3B-3B-FIX-006-CODEX-STRICT-REQUIRED-TRANSPORT-NORMALIZATION",
+  "baseCommit": "0c6a80dd1bf73b0357a382b705a43818fc20b562",
+  "generatedAt": "2026-09-12T13:26:34.992Z",
+  "cliVersion": "codex-cli 0.152.1",
+  "backend": "codex-cli",
+  "model": "gpt-5.6-luna",
+  "effort": "medium",
+  "authoritativeDesignSourceFingerprint": "9854f93073c44d96",
+  "normalizedTransport": {
+    "fingerprint": "88711c17a6837ae7",
+    "bytes": 2125,
+    "strengthenedObjectCount": 1
+  },
+  "diag006Acceptance": {
+    "optionalTypedControl": "unknown_nonzero_exit",
+    "allPropertiesRequiredControl": "succeeded",
+    "currentDesign": "parser_pass_validator_pass_targetKind_uncertain_eight_module_questions",
+    "primitiveTypeInference": false,
+    "actualRealCallCount": 3,
+    "normalizedFingerprint": "88711c17a6837ae7",
+    "normalizedBytes": 2125,
+    "knownGapsItemsRequired": [
+      "gapId",
+      "module",
+      "question",
+      "reason",
+      "actionable",
+      "searchTerms"
+    ],
+    "aggregateRegressionFailureEvidenceOnly": "tests/app/runtime/valuation-route.test.ts timing/environment-sensitive failure"
+  },
+  "actualCallCount": 2,
+  "neutralProbe": {
+    "attempted": true,
+    "processStarted": true,
+    "semanticResultAvailable": true,
+    "parserStatus": "passed",
+    "validatorStatus": "passed",
+    "targetKind": "uncertain",
+    "moduleQuestionCount": 8,
+    "failure": null
+  },
+  "conditionalPcbProbe": {
+    "attempted": true,
+    "processStarted": true,
+    "semanticResultAvailable": true,
+    "parserStatus": "passed",
+    "validatorStatus": "passed",
+    "targetKind": "industry",
+    "moduleQuestionCount": 8,
+    "failure": null
+  },
+  "pcbRequestFingerprints": {
+    "instruction": "7a04f3501b1d420d",
+    "input": "36c1bc2fc516f169",
+    "outputContract": "9854f93073c44d96"
+  },
+  "sourceContractUnchanged": true,
+  "finalClassification": "PCB_COMPATIBLE_VALID_INDUSTRY_DESIGN",
+  "productionSelectionAuthorized": true,
+  "mutation": {
+    "knowledge": false,
+    "sourceRaw": false,
+    "gateway": false,
+    "writer": false,
+    "researchReport": false,
+    "graph": false,
+    "productionModelSelection": false,
+    "codexAdapter": true,
+    "piExecutor": false,
+    "semanticRequest": false
+  },
+  "privacy": {
+    "rawPrompts": false,
+    "completeInputs": false,
+    "completeContracts": false,
+    "normalizedSchema": false,
+    "stdout": false,
+    "stderr": false,
+    "jsonl": false,
+    "modelOutputs": false,
+    "credentials": false,
+    "authData": false,
+    "privatePaths": false,
+    "reasoningTraces": false
+  },
+  "maxRealModelCalls": 2
+}

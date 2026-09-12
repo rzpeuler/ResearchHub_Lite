@@ -163,10 +163,14 @@ export interface CodexOutputSchema {
   readonly fingerprint: string
   readonly bytes: number
   readonly removedKeywords: readonly string[]
+  readonly strengthenedObjectCount: number
+  readonly strengthenedObjectPaths: readonly string[]
 }
 
 export function normalizeCodexOutputSchema(outputContract: unknown): CodexOutputSchema {
   const removed = new Set<string>()
+  let strengthenedObjectCount = 0
+  const strengthenedObjectPaths: string[] = []
   const convert = (value: unknown, path: string): unknown => {
     if (Array.isArray(value)) return value.map((item, index) => convert(item, `${path}[${index}]`))
     if (value === null || typeof value !== 'object') {
@@ -186,6 +190,19 @@ export function normalizeCodexOutputSchema(outputContract: unknown): CodexOutput
         result[key] = Object.fromEntries(Object.entries(child as Record<string, unknown>).map(([property, schema]) => [property, convert(schema, `${path}.properties.${property}`)]))
       } else result[key] = convert(child, `${path}.${key}`)
     }
+    if (result.properties !== undefined) {
+      const propertyKeys = Object.keys(result.properties as Record<string, unknown>)
+      if (result.required !== undefined) {
+        if (!Array.isArray(result.required) || result.required.some((item) => typeof item !== 'string' || !Object.prototype.hasOwnProperty.call(result.properties, item))) {
+          throw new Error(`outputContract required references a property that does not exist at ${path}`)
+        }
+      }
+      if (JSON.stringify(result.required) !== JSON.stringify(propertyKeys)) {
+        strengthenedObjectCount += 1
+        if (strengthenedObjectPaths.length < 256) strengthenedObjectPaths.push(path)
+      }
+      result.required = propertyKeys
+    }
     return result
   }
   let schema: unknown
@@ -197,7 +214,7 @@ export function normalizeCodexOutputSchema(outputContract: unknown): CodexOutput
   let serialized: string
   try { serialized = JSON.stringify(root) } catch (error) { throw new ReasoningExecutorError('reasoning_configuration_invalid', 'Codex structured output schema is not JSON-serializable', { cause: error }) }
   if (Buffer.byteLength(serialized, 'utf8') > CODEX_SCHEMA_MAX_BYTES) invalid('Codex structured output schema exceeds the configured size limit')
-  return { schema: root, serialized, fingerprint: createHash('sha256').update(serialized).digest('hex').slice(0, 16), bytes: Buffer.byteLength(serialized, 'utf8'), removedKeywords: [...removed].sort() }
+  return { schema: root, serialized, fingerprint: createHash('sha256').update(serialized).digest('hex').slice(0, 16), bytes: Buffer.byteLength(serialized, 'utf8'), removedKeywords: [...removed].sort(), strengthenedObjectCount, strengthenedObjectPaths }
 }
 
 function validateSchemaShape(schema: Record<string, unknown>, path: string): void {
