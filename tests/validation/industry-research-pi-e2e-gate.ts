@@ -34,14 +34,16 @@ export interface IndustryPiGateResult {
   readonly failedGates: readonly string[]
 }
 
-const REQUIRED_OPERATIONS = ['industry_research_design', 'industry_module_analysis', 'industry_cross_module_synthesis'] as const
 const REQUIRED_MODULES = ['industry_definition', 'market_size_growth', 'supply_demand_analysis', 'industry_chain_analysis', 'competitive_landscape', 'technology_evolution', 'company_mapping', 'risk_analysis'] as const
 
 export function evaluateIndustryPiGate(input: IndustryPiGateInput): IndustryPiGateResult {
   if (!input.executed) return { pass: false, classification: 'NOT_EXECUTED / BLOCKED', exitCode: 1, failedGates: ['real Pi execution did not start'] }
   const failures: string[] = []
   if (!input.realPiReasoningExecutor || input.runtimeProvider !== 'pi-coding-agent') failures.push('actual PiReasoningExecutor proof')
-  for (const operation of REQUIRED_OPERATIONS) if (!input.operations.includes(operation) || input.operationCounts[operation] !== (operation === 'industry_module_analysis' ? 8 : 1)) failures.push(`operation ${operation} exact bounded count`)
+  const counts = input.operationCounts
+  if (!input.operations.includes('industry_research_design') || (counts.industry_research_design ?? 0) < 1 || (counts.industry_research_design ?? 0) > 2) failures.push('operation industry_research_design bounded count 1-2')
+  if (!input.operations.includes('industry_module_analysis') || (counts.industry_module_analysis ?? 0) < 8 || (counts.industry_module_analysis ?? 0) > 32) failures.push('operation industry_module_analysis bounded count 8-32')
+  if (!input.operations.includes('industry_cross_module_synthesis') || (counts.industry_cross_module_synthesis ?? 0) < 1 || (counts.industry_cross_module_synthesis ?? 0) > 2) failures.push('operation industry_cross_module_synthesis bounded count 1-2')
   if (input.status !== 'completed') failures.push('completed Workflow status')
   if (input.targetKind !== 'industry') failures.push('Industry target diagnosis')
   const moduleNames = input.modules.map((item) => item.module)

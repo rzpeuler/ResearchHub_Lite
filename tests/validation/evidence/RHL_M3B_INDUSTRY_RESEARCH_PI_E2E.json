@@ -67,9 +67,8 @@
     "stableGraphIdentity": true
   },
   "failedGates": [
-    "operation industry_research_design exact bounded count",
-    "operation industry_module_analysis exact bounded count",
-    "operation industry_cross_module_synthesis exact bounded count",
+    "operation industry_module_analysis bounded count 8-32",
+    "operation industry_cross_module_synthesis bounded count 1-2",
     "completed Workflow status",
     "Industry target diagnosis",
     "all eight methodology modules exactly once",

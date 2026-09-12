@@ -16,6 +16,8 @@ import type { ResearchAcquisitionPlugin, ResearchFetchedSource, ResearchSourceCa
 import { sha256 } from '../../plugins/research-acquisition/hash.ts'
 import { getRaw } from '../../knowledge/raw/raw-archive.ts'
 import { evaluateIndustryPiGate, type IndustryPiGateInput } from './industry-research-pi-e2e-gate.ts'
+import { validateIndustryResearchDesign, validateIndustryModuleResult, validateCrossModuleSynthesis } from '../../skills/industry-research/skill.ts'
+import { INDUSTRY_MODULES, type IndustryModuleResult, type ResearchDesign, type CrossModuleSynthesis } from '../../skills/industry-research/contracts.ts'
 
 const repoRoot = resolve(import.meta.dirname, '../..')
 const evidencePath = resolve(repoRoot, 'tests/validation/evidence/RHL_M3B_INDUSTRY_RESEARCH_PI_E2E.json')
@@ -30,6 +32,26 @@ const safeDiagnostic = (value: unknown) => String(value instanceof Error ? value
 const countKinds = (assets: Awaited<ReturnType<typeof readCanonicalV04Assets>>) => Object.fromEntries(['entity', 'relation', 'claim', 'source'].map((kind) => [kind, assets.objects.filter((item) => item.kind === kind).length]))
 const idsByKind = (assets: Awaited<ReturnType<typeof readCanonicalV04Assets>>) => Object.fromEntries(['entity', 'relation', 'claim', 'source'].map((kind) => [kind, assets.objects.filter((item) => item.kind === kind).map((item) => item.value.id).sort()]))
 const fileExists = async (path: string) => { try { await readFile(path); return true } catch { return false } }
+
+function finalValidatedAttempts(observed: readonly { request: ReasoningRequest; output: unknown }[]) {
+  let design: ResearchDesign | undefined
+  const modules = new Map<string, IndustryModuleResult>()
+  let synthesis: CrossModuleSynthesis | undefined
+  for (const attempt of observed) {
+    try {
+      if (attempt.request.operation === 'industry_research_design') design = validateIndustryResearchDesign(attempt.output)
+      else if (attempt.request.operation === 'industry_module_analysis') {
+        const input = attempt.request.input as { module: typeof INDUSTRY_MODULES[number]; evidence?: Array<{ evidenceId: string }> }
+        modules.set(input.module, validateIndustryModuleResult(attempt.output, input.module, (input.evidence ?? []).map(x => x.evidenceId)))
+      } else if (attempt.request.operation === 'industry_cross_module_synthesis') {
+        const input = attempt.request.input as { evidence?: Array<{ evidenceId: string }>; modules?: readonly IndustryModuleResult[] }
+        const finalModules = [...modules.values()]
+        synthesis = validateCrossModuleSynthesis(attempt.output, (input.evidence ?? []).map(x => x.evidenceId), finalModules.flatMap(m => m.proposals.map(p => p.proposalId)), finalModules.flatMap(m => m.proposals.filter(p => p.kind === 'relation').map(p => p.proposalId)))
+      }
+    } catch { /* invalid attempts are intentionally excluded from acceptance semantics */ }
+  }
+  return { design, modules: INDUSTRY_MODULES.flatMap(m => modules.has(m) ? [modules.get(m)!] : []), synthesis }
+}
 
 function fixturePlugin(corpus: Corpus): ResearchAcquisitionPlugin {
   const byId = new Map(corpus.sources.map((source) => [source.candidateId, source]))
@@ -73,12 +95,12 @@ async function main() {
     const registry = new KnowledgeBaseRegistry(); let handle = await registry.mount(kbRoot); const beforeRevision = handle.revision
     runtime = await ModelRuntime.create({ authPath: join(getAgentDir(), 'auth.json'), modelsPath: join(getAgentDir(), 'models.json'), allowModelNetwork: true, refreshOnCreate: false })
     const model = selectProductionReasoningModel(runtime) as Model<Api>; const delegate = new PiReasoningExecutor({ modelRuntime: runtime, model, timeoutMs: 900_000, maxOutputChars: 400_000 })
-    const operations: string[] = []; const operationCounts: Record<string, number> = {}; const observed: Array<{ operation: string; output: unknown }> = []; const executor = { capabilities: () => delegate.capabilities(), execute: async (request: ReasoningRequest) => { operations.push(request.operation); operationCounts[request.operation] = (operationCounts[request.operation] ?? 0) + 1; const response = await delegate.execute(request); observed.push({ operation: request.operation, output: response.output }); return response } }
+    const operations: string[] = []; const operationCounts: Record<string, number> = {}; const observed: Array<{ request: ReasoningRequest; output: unknown }> = []; const executor = { capabilities: () => delegate.capabilities(), execute: async (request: ReasoningRequest) => { operations.push(request.operation); operationCounts[request.operation] = (operationCounts[request.operation] ?? 0) + 1; const response = await delegate.execute(request); observed.push({ request, output: response.output }); return response } }
     const workflowService = new WorkflowService(); const service = new ResearchService({ mountedKnowledgeBaseRoot: kbRoot, reportRoot, acquisitionPlugins: [fixturePlugin(fixture)], workflowService, reasoningExecutor: executor })
     executionStarted = true
     const result = await service.startIndustryResearch({ workflowRunId: 'rhl-m3b3-real-pi-001', name: 'PCB Manufacturing', aliases: ['Printed Circuit Board'], searchTerms: ['PCB', 'AI server', 'HDI'], asOf: AS_OF, maxSources: 4, maxEvidencePerModule: 2 }).completion
     handle = await registry.mount(kbRoot); const after = await readCanonicalV04Assets(kbRoot); const reportPath = result.reportPath ? join(reportRoot, result.reportPath) : ''; const report = result.reportPath && await fileExists(`${reportPath}.json`) ? JSON.parse(await readFile(`${reportPath}.json`, 'utf8')) : null
-    const design = observed.find((call) => call.operation === 'industry_research_design')?.output as any; const modules = observed.filter((call) => call.operation === 'industry_module_analysis').map((call) => call.output as any); const synthesis = observed.find((call) => call.operation === 'industry_cross_module_synthesis')?.output as any; const evidenceSources = fixture.sources
+    const validated = finalValidatedAttempts(observed); const design = validated.design as any; const modules = validated.modules as any[]; const synthesis = validated.synthesis as any; const evidenceSources = fixture.sources
     const objects = after.objects.map((item) => item.value as Obj); const entities = objects.filter((x) => x.id.startsWith('entity:')); const relations = objects.filter((x) => x.id.startsWith('relation:')); const claims = objects.filter((x) => x.id.startsWith('claim:')); const sources = objects.filter((x) => x.id.startsWith('source:'))
     const industry = entities.find((x) => x.type === 'industry'); const productOrTechnology = entities.find((x) => x.type === 'product' || x.type === 'technology'); const company = entities.find((x) => x.type === 'company'); const relation = relations.find((x) => ['upstream_of', 'depends_on', 'belongs_to_industry', 'applied_in'].includes(String((x as any).type))); const exposure = relations.find((x) => (x as any).type === 'business_exposure' && ((x.sourceRef === company?.id && x.targetRef === industry?.id) || (x.targetRef === company?.id && x.sourceRef === industry?.id)))
     const sourceRawProvenance = sources.every((source) => (source.rawRefs ?? []).every((rawRef) => Boolean(rawRef))) && claims.filter((claim) => claim.sourceRefs?.length).every((claim) => claim.provenance?.every((p) => p.sourceRef && p.rawRef && sources.some((source) => source.id === p.sourceRef && source.rawRefs?.includes(p.rawRef!)))) && (await Promise.all(sources.flatMap((source) => source.rawRefs ?? []).map((rawRef) => getRaw(handle, rawRef)))).length >= sources.length
