@@ -1,0 +1,259 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-008-PRODUCTION-REAL-PI-E2E-ACCEPTANCE",
+  "baseCommit": "302ca31f0bcefae0e383a1f36daabab755cf4400",
+  "generatedAt": "2026-09-12T14:37:07.072Z",
+  "target": {
+    "name": "PCB Manufacturing",
+    "alias": "Printed Circuit Board",
+    "asOf": "2026-09-12T00:00:00.000Z"
+  },
+  "productionSelection": {
+    "backend": "codex-cli",
+    "model": "gpt-5.6-luna",
+    "effort": "medium",
+    "primaryModelUnchanged": true,
+    "factory": "createIndustryProductionReasoningExecutor",
+    "zhipuFallbackCalls": 0
+  },
+  "runtime": {
+    "runtimeProvider": "pi-coding-agent",
+    "realPiReasoningExecutor": true,
+    "completion": {
+      "provider": "pi-coding-agent",
+      "backend": "codex-cli",
+      "requestedModel": "gpt-5.6-luna",
+      "requestedReasoningEffort": "medium",
+      "invocationMode": "exec-stdin-json-output-read-only",
+      "structuredOutputEnabled": true
+    }
+  },
+  "acquisition": {
+    "providers": [
+      {
+        "provider": "official-disclosure-research-acquisition",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": true,
+        "providerFailed": false,
+        "usableSourceCount": 0
+      },
+      {
+        "provider": "gdelt-research-acquisition",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": false,
+        "providerFailed": true,
+        "usableSourceCount": 0
+      },
+      {
+        "provider": "akshare-industry-research-acquisition",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": false,
+        "providerFailed": true,
+        "usableSourceCount": 0
+      }
+    ],
+    "diagnostics": [
+      "gdelt-research-acquisition: discovery_failed",
+      "akshare-industry-research-acquisition: discovery_failed",
+      "gdelt-research-acquisition: discovery_failed",
+      "akshare-industry-research-acquisition: discovery_failed"
+    ],
+    "liveNetworkCalls": 0
+  },
+  "operations": {
+    "names": [
+      "industry_research_design",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis"
+    ],
+    "counts": {
+      "industry_research_design": 1,
+      "industry_module_analysis": 16
+    },
+    "firstRunRealModel": true,
+    "replayModelCallCount": 0,
+    "replayLiveNetworkCalls": 0,
+    "automaticFallbackCalls": 0
+  },
+  "moduleSummaries": [],
+  "firstRun": {
+    "status": "blocked",
+    "initialRevision": 0,
+    "terminalRevision": 0,
+    "revisionDelta": 0,
+    "objectCountsBefore": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "objectCountsAfter": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "gatewaySubmitCount": 0,
+    "writerCommitCount": 0
+  },
+  "replay": {
+    "status": "blocked",
+    "objectCountsAfter": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "deltas": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "rootId": null,
+    "graphProjectionHash": "a461bf77bc4e4d73",
+    "replayGraphProjectionHash": "a461bf77bc4e4d73",
+    "modelCallCount": 0,
+    "liveNetworkCallCount": 0
+  },
+  "numericAudit": {
+    "unsupportedNumericObservationCount": 0
+  },
+  "semanticTypingIntact": true,
+  "report": {
+    "persisted": false,
+    "reportType": null,
+    "sectionCount": 0,
+    "hasResearchGaps": false
+  },
+  "graph": {
+    "profile": null,
+    "canonicalRefs": false,
+    "root": false,
+    "productOrTechnology": false,
+    "company": false,
+    "requiredEdge": false,
+    "projectionHash": "a461bf77bc4e4d73"
+  },
+  "privacy": {
+    "sentinelAbsent": true,
+    "rawBodiesIncluded": false,
+    "completePromptsIncluded": false,
+    "completeOutputsIncluded": false,
+    "absolutePathsIncluded": false,
+    "secretsIncluded": false
+  },
+  "industryPiGateInput": {
+    "executed": true,
+    "realPiReasoningExecutor": true,
+    "runtimeProvider": "pi-coding-agent",
+    "operations": [
+      "industry_research_design",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis"
+    ],
+    "operationCounts": {
+      "industry_research_design": 1,
+      "industry_module_analysis": 16
+    },
+    "status": "blocked",
+    "targetKind": "industry",
+    "modules": [],
+    "industryDefinitionAvailable": false,
+    "gatewaySubmitCount": 0,
+    "firstRunRevisionDelta": 0,
+    "durableClaimCount": 0,
+    "chainRelation": false,
+    "companyExposure": false,
+    "industryRoot": false,
+    "productOrTechnology": false,
+    "company": false,
+    "sourceRawProvenance": true,
+    "unsupportedNumericObservationCount": 0,
+    "semanticTypingIntact": true,
+    "report": {
+      "persisted": false,
+      "reportType": null,
+      "sectionCount": 0,
+      "hasResearchGaps": false
+    },
+    "graph": {
+      "profile": null,
+      "canonicalRefs": false,
+      "root": false,
+      "productOrTechnology": false,
+      "company": false,
+      "requiredEdge": false
+    },
+    "replay": {
+      "outcome": "blocked",
+      "rootIdStable": false,
+      "duplicateEntities": false,
+      "duplicateRelations": false,
+      "duplicateClaims": false,
+      "duplicateSources": false,
+      "duplicateRaw": false,
+      "revisionDelta": 0,
+      "graphStable": true
+    },
+    "privacy": {
+      "serializedEvidenceSafe": true,
+      "sentinelAbsent": true,
+      "pathsRedacted": true,
+      "secretsAbsent": true
+    }
+  },
+  "evaluator": {
+    "pass": false,
+    "classification": "REAL_MODEL_CONTRACT_BLOCKED",
+    "exitCode": 1,
+    "failedGates": [
+      "operation industry_cross_module_synthesis bounded count 1-2",
+      "completed Workflow status",
+      "all eight methodology modules exactly once",
+      "Industry Definition available",
+      "one Gateway submission",
+      "first-run revision delta equals one",
+      "durable Claim admitted",
+      "evidence-backed chain Relation admitted",
+      "evidence-backed Company exposure admitted",
+      "canonical Industry/Product-or-Technology/Company objects",
+      "industry report contract",
+      "canonical industry graph contract",
+      "deterministic replay non-mutating outcome",
+      "deterministic semantic-bundle replay"
+    ]
+  },
+  "classification": "REAL_MODEL_CONTRACT_BLOCKED",
+  "blockerCategory": "REAL_MODEL_CONTRACT_BLOCKED"
+}
