@@ -1,0 +1,94 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-001-PI-PROVIDER-SENSITIVE-ISOLATION",
+  "baseCommit": "d22d10a9eef01bbd98e317806857a10cf5f4eb9f",
+  "generatedAt": "2026-09-12T08:24:12.061Z",
+  "primaryProductionModelId": "zhipu-openapi/glm-5.3-flash",
+  "alternativeModelAvailable": false,
+  "alternativeModelId": null,
+  "request": {
+    "operation": "industry_research_design",
+    "instructionHash": "7a04f3501b1d420d",
+    "instructionChars": 467,
+    "inputHash": "36c1bc2fc516f169",
+    "inputChars": 98,
+    "inputKeys": [
+      "existingKnowledge",
+      "target"
+    ],
+    "outputContractHash": "9854f93073c44d96",
+    "outputContractChars": 3320,
+    "outputContractKeys": [
+      "additionalProperties",
+      "bounds",
+      "name",
+      "properties",
+      "required",
+      "type"
+    ]
+  },
+  "alternateRequest": {
+    "operation": "industry_research_design",
+    "instructionHash": "7a04f3501b1d420d",
+    "instructionChars": 467,
+    "inputHash": "983e2ba9a066ff15",
+    "inputChars": 78,
+    "inputKeys": [
+      "existingKnowledge",
+      "target"
+    ],
+    "outputContractHash": "9854f93073c44d96",
+    "outputContractChars": 3320,
+    "outputContractKeys": [
+      "additionalProperties",
+      "bounds",
+      "name",
+      "properties",
+      "required",
+      "type"
+    ]
+  },
+  "calls": [
+    {
+      "order": 1,
+      "model": "zhipu-openapi/glm-5.3-flash",
+      "kind": "neutral_control",
+      "outcome": "success",
+      "outputChars": 15,
+      "outputHash": "ba303821226c2ed7"
+    },
+    {
+      "order": 2,
+      "model": "zhipu-openapi/glm-5.3-flash",
+      "kind": "exact_pcb_design",
+      "outcome": "sensitive",
+      "safeCode": "finish_reason:sensitive"
+    },
+    {
+      "order": 3,
+      "model": "zhipu-openapi/glm-5.3-flash",
+      "kind": "alternate_target_design",
+      "outcome": "success",
+      "outputChars": 11738,
+      "outputHash": "6387e41991344288",
+      "validation": "valid",
+      "targetKind": "industry"
+    }
+  ],
+  "classification": "PRIMARY_TARGET_SENSITIVE_BLOCK",
+  "nextActionCategory": "REVIEW_DESIGN_REQUEST_BOUNDARY",
+  "canonicalMutation": {
+    "performed": false,
+    "knowledgeBase": false,
+    "gateway": false,
+    "writer": false,
+    "researchReport": false,
+    "graph": false
+  },
+  "privacy": {
+    "completeRequestsPersisted": false,
+    "promptsPersisted": false,
+    "modelOutputsPersisted": false,
+    "credentialsPersisted": false,
+    "privatePathsPersisted": false
+  }
+}
