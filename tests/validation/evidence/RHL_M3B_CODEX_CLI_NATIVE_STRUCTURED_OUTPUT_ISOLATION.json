@@ -1,0 +1,128 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-004-CODEX-CLI-NATIVE-STRUCTURED-OUTPUT-ISOLATION",
+  "baseCommit": "e47030644852be3091a2dc7bba913b34907d2c81",
+  "generatedAt": "2026-09-12T12:07:00.987Z",
+  "cli": {
+    "executable": "codex",
+    "version": "codex-cli 0.152.1",
+    "capability": {
+      "version": "codex-cli 0.152.1",
+      "flags": {
+        "model": true,
+        "sandbox": true,
+        "ephemeral": true,
+        "json": true,
+        "outputSchema": true,
+        "outputLastMessage": true,
+        "skipGitRepoCheck": true,
+        "workingDirectory": true
+      },
+      "supported": true
+    }
+  },
+  "model": "gpt-5.6-luna",
+  "effort": "medium",
+  "minimalStrictSchema": {
+    "sha256": "1bf50a2dc6bf4c0b6871a4bd155157cabd46ccaebf682022b182e39914f7e4e1",
+    "bytes": 123
+  },
+  "actualCallCount": 2,
+  "probes": [
+    {
+      "name": "A_NO_SCHEMA_JSON_OUTPUT_FILE_CONTROL",
+      "attempted": true,
+      "processStarted": true,
+      "exitCode": 0,
+      "exitState": "normal_exit",
+      "durationMs": 8818,
+      "flags": {
+        "model": true,
+        "sandbox": true,
+        "ephemeral": true,
+        "json": true,
+        "outputSchema": false,
+        "outputLastMessage": true,
+        "skipGitRepoCheck": true,
+        "workingDirectory": true
+      },
+      "schemaEnabled": false,
+      "jsonEventsEnabled": true,
+      "outputFileEnabled": true,
+      "model": "gpt-5.6-luna",
+      "reasoningEffort": "medium",
+      "stdoutSha256": "40d23d9c5a4292e778d3919441600674abca5104486f7d700fbf78fcf0d23536",
+      "stdoutBytes": 363,
+      "stderrSha256": "05a69152ce26ee49f51a0d271ff22696fc6703c19307eac142eecc0f066f787b",
+      "stderrBytes": 929,
+      "finalOutputSha256": "a29ee2b15c494311c52521766e44af56a3ad2248e7a8ab465e5206463c13d288",
+      "finalOutputBytes": 15,
+      "validJson": true,
+      "schemaSatisfied": false,
+      "safeFailureClass": null,
+      "safeProviderCliCode": null,
+      "externalSetupRequired": false
+    },
+    {
+      "name": "B_SCHEMA_JSON_OUTPUT_FILE",
+      "attempted": true,
+      "processStarted": true,
+      "exitCode": 0,
+      "exitState": "normal_exit",
+      "durationMs": 11050,
+      "flags": {
+        "model": true,
+        "sandbox": true,
+        "ephemeral": true,
+        "json": true,
+        "outputSchema": true,
+        "outputLastMessage": true,
+        "skipGitRepoCheck": true,
+        "workingDirectory": true
+      },
+      "schemaEnabled": true,
+      "jsonEventsEnabled": true,
+      "outputFileEnabled": true,
+      "model": "gpt-5.6-luna",
+      "reasoningEffort": "medium",
+      "stdoutSha256": "5d367626dfbb0db970e6507185c097fd918a1471246757f827dcbba67c875dbe",
+      "stdoutBytes": 359,
+      "stderrSha256": "ff0229b35ac27a309799a76a65bebd71377bc3f5e1010c2500bc67aad536a71d",
+      "stderrBytes": 929,
+      "finalOutputSha256": "a29ee2b15c494311c52521766e44af56a3ad2248e7a8ab465e5206463c13d288",
+      "finalOutputBytes": 15,
+      "validJson": true,
+      "schemaSatisfied": true,
+      "safeFailureClass": null,
+      "safeProviderCliCode": null,
+      "externalSetupRequired": false
+    }
+  ],
+  "classification": "NATIVE_STRUCTURED_OUTPUT_WORKS",
+  "nextActionCategory": "REVIEW_RESEARCHHUB_ADAPTER_INVOCATION_DELTA",
+  "stopReason": "Probe B returned schema-conformant JSON",
+  "mutation": {
+    "pcbCall": false,
+    "industryRequest": false,
+    "knowledge": false,
+    "sourceRaw": false,
+    "gateway": false,
+    "writer": false,
+    "researchReport": false,
+    "graph": false,
+    "productionModelSelection": false,
+    "productionAdapter": false,
+    "schemaNormalizer": false
+  },
+  "privacy": {
+    "rawPrompt": false,
+    "rawStdout": false,
+    "rawStderr": false,
+    "rawJsonl": false,
+    "rawFinalModelOutput": false,
+    "completeSchema": false,
+    "credentials": false,
+    "authData": false,
+    "privatePaths": false,
+    "reasoningTraces": false
+  }
+}
