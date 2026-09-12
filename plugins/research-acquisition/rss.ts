@@ -16,6 +16,7 @@ export class RssResearchPlugin implements ResearchAcquisitionPlugin {
   private readonly resolver = new DocumentInputResolver()
   constructor(private readonly options: RssResearchPluginOptions) { this.fetchImpl = options.fetchImpl ?? fetch; this.now = options.now ?? (() => new Date().toISOString()) }
   async discover(request: ResearchAcquisitionRequest): Promise<readonly ResearchSourceCandidate[]> {
+    if ('industry' in request) return []
     const limit = request.limitPerKind ?? 5
     const result: ResearchSourceCandidate[] = []
     for (const feedUrl of this.options.feedUrls) {

@@ -6,6 +6,12 @@ export interface ResearchCompanyIdentity {
   readonly name?: string
   readonly exchange?: 'SSE' | 'SZSE' | 'BSE' | string
 }
+export interface ResearchIndustryIdentity {
+  readonly name: string
+  readonly aliases?: readonly string[]
+  readonly canonicalRef?: string
+  readonly searchTerms: readonly string[]
+}
 
 export interface ResearchSourceCandidate {
   readonly candidateId: string
@@ -51,7 +57,9 @@ export interface NormalizedResearchSource {
 }
 
 export interface ResearchAcquisitionRequest {
+  /** Kept required for source compatibility with the established Company callers. */
   readonly company: ResearchCompanyIdentity
+  readonly industry?: ResearchIndustryIdentity
   readonly asOf?: string
   readonly limitPerKind?: number
 }

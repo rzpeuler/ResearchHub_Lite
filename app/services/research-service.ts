@@ -1,6 +1,7 @@
 import { join, resolve } from 'node:path'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { runCompanyDeepResearch } from '../../workflows/company-deep-research/workflow.ts'
+import { runIndustryDeepResearch } from '../../workflows/industry-deep-research/workflow.ts'
 import { runEarningsReview } from '../../workflows/earnings-review/workflow.ts'
 import { runValuation } from '../../workflows/valuation/workflow.ts'
 import { runEventResearch } from '../../workflows/event-research/workflow.ts'
@@ -8,7 +9,9 @@ import { runThesisRedTeam } from '../../workflows/thesis-red-team/workflow.ts'
 import type { EventResearchSignalStore } from '../../plugins/daily-intelligence/contracts.ts'
 import type { ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchSignalStore } from '../../plugins/research-acquisition/contracts.ts'
 import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
-import { ApplicationServiceError, type ApplicationEarningsReviewResult, type ApplicationEventResearchResult, type ApplicationResearchResult, type ApplicationValuationResult, type ApplicationThesisRedTeamResult, type EarningsReviewInput, type EventResearchInput, type ResearchCompanyInput, type ThesisRedTeamInput, type ValuationInput } from './contracts.ts'
+import { AkshareIndustryResearchPlugin } from '../../plugins/research-acquisition/industry.ts'
+import { IndustryAcquisitionComposition } from '../../plugins/research-acquisition/industry-composition.ts'
+import { ApplicationServiceError, type ApplicationEarningsReviewResult, type ApplicationEventResearchResult, type ApplicationResearchResult, type ApplicationValuationResult, type ApplicationThesisRedTeamResult, type ApplicationIndustryResearchResult, type EarningsReviewInput, type EventResearchInput, type IndustryResearchInput, type ResearchCompanyInput, type ThesisRedTeamInput, type ValuationInput } from './contracts.ts'
 import { WorkflowService } from './workflow-service.ts'
 import { readResearchReport } from './research-report.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
@@ -92,6 +95,24 @@ export class ResearchService {
     }))
     completion.catch(() => undefined)
     return { runId: input.workflowRunId, completion }
+  }
+
+  startIndustryResearch(input: IndustryResearchInput, callerSignal?: AbortSignal): { readonly runId: string; readonly completion: Promise<ApplicationIndustryResearchResult> } {
+    if (!input || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(input.workflowRunId) || typeof input.name !== 'string' || input.name.trim() === '' || input.name.length > 200) throw new ApplicationServiceError('invalid_input', 'workflowRunId and Industry name are invalid')
+    if (input.canonicalRef !== undefined && !/^entity:[A-Za-z0-9._-]+$/.test(input.canonicalRef)) throw new ApplicationServiceError('invalid_input', 'canonicalRef is invalid')
+    if (input.aliases !== undefined && (!Array.isArray(input.aliases) || input.aliases.length > 8 || input.aliases.some((x) => typeof x !== 'string' || !x.trim() || x.length > 120))) throw new ApplicationServiceError('invalid_input', 'aliases are invalid')
+    if (input.searchTerms !== undefined && (!Array.isArray(input.searchTerms) || input.searchTerms.length > 8 || input.searchTerms.some((x) => typeof x !== 'string' || !x.trim() || x.length > 120))) throw new ApplicationServiceError('invalid_input', 'searchTerms are invalid')
+    if (input.maxSources !== undefined && (!Number.isSafeInteger(input.maxSources) || input.maxSources < 1 || input.maxSources > 50)) throw new ApplicationServiceError('invalid_input', 'maxSources is invalid')
+    if (input.maxEvidencePerModule !== undefined && (!Number.isSafeInteger(input.maxEvidencePerModule) || input.maxEvidencePerModule < 1 || input.maxEvidencePerModule > 12)) throw new ApplicationServiceError('invalid_input', 'maxEvidencePerModule is invalid')
+    const target = { name: input.name.trim(), ...(input.aliases === undefined ? {} : { aliases: input.aliases.map((x) => x.trim()) }), ...(input.canonicalRef === undefined ? {} : { canonicalRef: input.canonicalRef }), ...(input.asOf === undefined ? {} : { asOf: input.asOf }) }
+    const plugins = [...this.options.acquisitionPlugins]; if (this.options.akshare) plugins.push(new AkshareIndustryResearchPlugin(this.options.akshare) as unknown as ResearchAcquisitionPlugin)
+    const composition = new IndustryAcquisitionComposition(plugins)
+    this.options.workflowService.register({ runId: input.workflowRunId, workflowType: 'industry_deep_research', objective: `Industry research ${target.name}` })
+    const completion = this.options.workflowService.start(input.workflowRunId, async (signal) => {
+      const combined = new AbortController(); const abort = () => combined.abort(); signal.addEventListener('abort', abort, { once: true }); callerSignal?.addEventListener('abort', abort, { once: true }); let diagnostics: readonly string[] = []; let outcomes: readonly unknown[] = []
+      try { const handle = await this.registry.mount(resolve(this.options.mountedKnowledgeBaseRoot)); const result = await runIndustryDeepResearch({ workflowRunId: input.workflowRunId, handle, target, reportRoot: resolve(this.options.reportRoot ?? join(this.options.cwd ?? process.cwd(), 'runtime-data', 'reports')), reasoningExecutor: this.options.reasoningExecutor!, maxSources: input.maxSources, maxEvidencePerModule: input.maxEvidencePerModule, signal: combined.signal, acquisitionWave: async (request) => { const acquired = await composition.acquire({ ...request, searchTerms: input.searchTerms ?? request.searchTerms }); diagnostics = acquired.diagnostics; outcomes = acquired.outcomes; return acquired.sources } }); return { status: result.status, workflow: result, diagnostics, outcomes } } finally { signal.removeEventListener('abort', abort); callerSignal?.removeEventListener('abort', abort) }
+    }).then((outcome) => ({ runId: input.workflowRunId, status: outcome.status, knowledgeBaseId: outcome.workflow.knowledgeBaseId, ...(outcome.workflow.report === undefined ? {} : { reportId: outcome.workflow.report.reportId, reportPath: `${outcome.workflow.report.reportId}.md` }), committedIds: outcome.workflow.committedIds, proposalCount: outcome.workflow.proposalIds.length, summary: outcome.workflow.status === 'completed' ? `Industry research completed for ${target.name}` : `Industry research ${outcome.workflow.status} for ${target.name}`, ...(outcome.workflow.errors.length ? { errorSummary: outcome.workflow.errors.join('; ').slice(0, 500) } : {}), providerOutcomes: outcome.outcomes, acquisitionDiagnostics: outcome.diagnostics }))
+    completion.catch(() => undefined); return { runId: input.workflowRunId, completion }
   }
 
   startEarningsReview(input: EarningsReviewInput, callerSignal?: AbortSignal): { readonly runId: string; readonly completion: Promise<ApplicationEarningsReviewResult> } {

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12T03:58:19.217Z",
+  "target": {
+    "name": "PCB",
+    "aliases": [
+      "印制电路板"
+    ],
+    "searchTerms": [
+      "PCB",
+      "印制电路板",
+      "HDI"
+    ]
+  },
+  "acquisitionOnly": true,
+  "providers": [
+    {
+      "provider": "gdelt",
+      "status": "unavailable_or_degraded",
+      "candidateCount": 0,
+      "diagnostics": "bounded timeout"
+    },
+    {
+      "provider": "cninfo",
+      "status": "empty",
+      "candidateCount": 0,
+      "candidates": []
+    },
+    {
+      "provider": "rss:gov.cn",
+      "status": "empty",
+      "candidateCount": 0,
+      "candidates": []
+    },
+    {
+      "provider": "akshare:industry",
+      "status": "unavailable_or_degraded",
+      "candidateCount": 0,
+      "diagnostics": "bounded timeout"
+    }
+  ]
+}
