@@ -1,0 +1,27 @@
+{
+  "taskId": "RHL-M3B-3B-FIX-003-CODEX-CLI-LUNA-PI-COMPATIBLE-REASONING",
+  "baseCommit": "cf8b7445e9eee5721b88199bdd306c9c44cc2557",
+  "generatedAt": "2026-09-12T09:37:18.498Z",
+  "codex": {
+    "discovered": true,
+    "version": "codex-cli 0.152.1",
+    "backend": "codex-cli",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "medium",
+    "supportedInvocationMode": "exec-stdin-json-output-read-only",
+    "safeNonMutatingNonInteractiveConfirmed": true
+  },
+  "request": {
+    "sha256": "4154c5df268307882de97025d02cd482838518c57c8e4c12806de66c74e93f9a",
+    "sizeBytes": 244
+  },
+  "result": {
+    "sha256": "a29ee2b15c494311c52521766e44af56a3ad2248e7a8ab465e5206463c13d288",
+    "sizeBytes": 15
+  },
+  "executionDurationMs": 9377,
+  "classification": "AVAILABLE",
+  "failureCode": null,
+  "secretsIncluded": false,
+  "privatePathsIncluded": false
+}

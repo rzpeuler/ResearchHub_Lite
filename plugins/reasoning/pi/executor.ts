@@ -40,7 +40,10 @@ export type PiModelRuntime = Pick<ModelRuntime, 'getModels' | 'complete'> & Part
 
 export interface PiReasoningRuntimeMetadata {
   readonly provider: 'pi-coding-agent'
+  readonly backend?: 'codex-cli'
   readonly requestedModel?: string
+  readonly requestedReasoningEffort?: string
+  readonly invocationMode?: string
 }
 
 export interface PiReasoningExecutorOptions {
@@ -48,6 +51,7 @@ export interface PiReasoningExecutorOptions {
   readonly modelRuntime?: PiModelRuntime
   readonly model?: Model<Api>
   readonly completion?: PiCompletion
+  readonly runtimeMetadata?: Omit<PiReasoningRuntimeMetadata, 'provider'>
   readonly timeoutMs?: number
   readonly maxOutputChars?: number
 }
@@ -58,6 +62,7 @@ export class PiReasoningExecutor implements ReasoningExecutor {
   private readonly modelRuntime?: PiModelRuntime
   private readonly configuredModel?: Model<Api>
   private readonly completion?: PiCompletion
+  private readonly runtimeMetadataValue?: Omit<PiReasoningRuntimeMetadata, 'provider'>
   private readonly timeoutMs: number
   private readonly maxOutputChars: number
   private runtimePromise?: Promise<PiModelRuntime>
@@ -69,6 +74,7 @@ export class PiReasoningExecutor implements ReasoningExecutor {
     this.modelRuntime = options.modelRuntime
     this.configuredModel = options.model
     this.completion = options.completion
+    this.runtimeMetadataValue = options.runtimeMetadata
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
     this.maxOutputChars = options.maxOutputChars ?? DEFAULT_OUTPUT_LIMIT
 
@@ -90,6 +96,7 @@ export class PiReasoningExecutor implements ReasoningExecutor {
 
   runtimeMetadata(): PiReasoningRuntimeMetadata {
     const model = this.configuredModel ?? this.resolvedModel
+    if (this.completion !== undefined && this.runtimeMetadataValue !== undefined) return { provider: 'pi-coding-agent', ...this.runtimeMetadataValue }
     return model === undefined
       ? { provider: 'pi-coding-agent' }
       : { provider: 'pi-coding-agent', requestedModel: `${model.provider}/${model.id}` }
