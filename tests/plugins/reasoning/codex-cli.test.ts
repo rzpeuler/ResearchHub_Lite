@@ -39,6 +39,8 @@ test('Codex schema normalizer supports dynamic enum, const and oneOf contracts a
   assert.throws(() => normalizeCodexOutputSchema({ type: 'object', properties: { x: undefined } }), (error: unknown) => error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'reasoning_configuration_invalid')
   assert.throws(() => normalizeCodexOutputSchema({}), /one JSON Schema object/)
   assert.throws(() => normalizeCodexOutputSchema({ type: 'string', enum: Array.from({ length: 100000 }, (_, i) => String(i)) }), /size limit/)
+  assert.throws(() => normalizeCodexOutputSchema({ type: 'number', const: Number.NaN }), (error: unknown) => error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'reasoning_configuration_invalid')
+  assert.throws(() => normalizeCodexOutputSchema({ type: 'object', properties: { x: new Date(0) } }), (error: unknown) => error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'reasoning_configuration_invalid')
 })
 
 test('Codex CLI JSONL parser keeps only the final assistant response', () => {
@@ -60,5 +62,9 @@ test('Codex CLI adapter runs through the Pi completion boundary without a native
     const result = await executor.execute({ operation: 'understandAndPlan', instruction: 'return the fixture object', input: { publicValue: 'ok' }, outputContract: { type: 'object' } })
     assert.equal((result.output as { ok: boolean }).ok, true)
     assert.deepEqual(executor.runtimeMetadata(), { provider: 'pi-coding-agent', backend: 'codex-cli', requestedModel: 'gpt-5.6-luna', requestedReasoningEffort: 'medium' })
+    const metadata = adapter.runtimeMetadata()
+    assert.equal(metadata.structuredOutputEnabled, true)
+    assert.match(metadata.structuredOutputSchemaFingerprint ?? '', /^[a-f0-9]{16}$/)
+    assert.equal(typeof metadata.structuredOutputSchemaBytes, 'number')
   } finally { await rm(root, { recursive: true, force: true }) }
 })

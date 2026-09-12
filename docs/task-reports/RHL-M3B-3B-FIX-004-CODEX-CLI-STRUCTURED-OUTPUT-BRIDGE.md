@@ -17,11 +17,11 @@ The installed CLI was inspected with `codex exec --help` before implementation. 
 - ResearchHub prompt metadata (`name`, `bounds`, `allowlists`, `proposalRules`) and known provider-unsupported generation constraints are removed from transport only. The original contract remains in the Pi prompt and existing validators remain authoritative. Current Design normalization removed: `bounds`, `maxItems`, `maxLength`, `minItems`, `minLength`, `name`, and `uniqueItems`.
 - Structural semantics such as object/array/string/number/boolean/null types, properties, required, additionalProperties, items, enum, const, oneOf, and anyOf are retained where present. Unknown keywords, unsafe values, invalid roots, and oversized schemas fail closed before process launch.
 - The safe argument array contains `--output-schema` exactly once and only the temporary schema path. The semantic Context remains on stdin. Existing ephemeral, read-only, no-approval-escalation, JSON-event, final-output-file, timeout, cancellation, bounded-output, and cleanup controls remain active.
-- Runtime metadata reports `structuredOutputEnabled: true`; no production default or failover policy changed. `PRIMARY_PRODUCTION_REASONING_MODEL` remains `zhipu-openapi/glm-5.3-flash`.
+- Runtime metadata reports `structuredOutputEnabled: true`; the adapter also records only the normalized schema fingerprint and byte size after conversion. The normalizer rejects non-finite numbers and non-plain objects before spawn. No production default or failover policy changed. `PRIMARY_PRODUCTION_REASONING_MODEL` remains `zhipu-openapi/glm-5.3-flash`.
 
 ## Deterministic validation
 
-Focused tests passed for Pi contract transport, unchanged Context generation, Design normalization, dynamic enum/const/oneOf handling, fail-closed unsafe inputs, size limits, safe invocation arguments, request-on-stdin behavior, Codex Luna model/medium configuration, opt-in model selection, and production-model preservation. TypeScript type checking passed.
+Focused tests passed for Pi contract transport, unchanged Context generation, Design normalization, dynamic enum/const/oneOf handling, fail-closed unsafe inputs including non-finite numbers and non-plain objects, size limits, safe invocation arguments, request-on-stdin behavior, Codex Luna model/medium configuration, opt-in model selection, and production-model preservation. TypeScript type checking passed.
 
 ## Actual unchanged PCB validation
 

@@ -21,6 +21,7 @@ export const CODEX_SCHEMA_MAX_BYTES = 64_000
 const RESEARCHHUB_METADATA_KEYS = new Set(['name', 'bounds', 'allowlists', 'proposalRules'])
 const CODEX_UNSUPPORTED_GENERATION_KEYS = new Set(['minLength', 'maxLength', 'pattern', 'minItems', 'maxItems', 'uniqueItems', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'multipleOf'])
 const CODEX_SCHEMA_KEYS = new Set(['type', 'properties', 'required', 'additionalProperties', 'items', 'enum', 'const', 'oneOf', 'anyOf', 'description'])
+const JSON_SCHEMA_TYPES = new Set(['object', 'array', 'string', 'number', 'integer', 'boolean', 'null'])
 
 export type CodexCliReasoningEffort = (typeof CODEX_REASONING_EFFORTS)[number]
 
@@ -36,6 +37,8 @@ export interface CodexCliRuntimeMetadata {
   readonly requestedReasoningEffort: CodexCliReasoningEffort
   readonly invocationMode: 'exec-stdin-json-output-read-only'
   readonly structuredOutputEnabled: true
+  readonly structuredOutputSchemaFingerprint?: string
+  readonly structuredOutputSchemaBytes?: number
 }
 
 export interface CodexCliReasoningExecutorOptions {
@@ -59,6 +62,7 @@ export class CodexCliReasoningExecutor {
   private readonly model: string
   private readonly reasoningEffort: CodexCliReasoningEffort
   private readonly commandPrefix: readonly string[]
+  private schemaMetadata?: Pick<CodexCliRuntimeMetadata, 'structuredOutputSchemaFingerprint' | 'structuredOutputSchemaBytes'>
 
   constructor(options: CodexCliReasoningExecutorOptions) {
     this.capabilitiesValue = validateReasoningCapabilities(options.capabilities)
@@ -79,7 +83,7 @@ export class CodexCliReasoningExecutor {
   capabilities(): ReasoningCapabilities { return this.capabilitiesValue }
 
   runtimeMetadata(): CodexCliRuntimeMetadata {
-    return { provider: 'codex-cli', requestedModel: this.model, requestedReasoningEffort: this.reasoningEffort, invocationMode: 'exec-stdin-json-output-read-only', structuredOutputEnabled: true }
+    return { provider: 'codex-cli', requestedModel: this.model, requestedReasoningEffort: this.reasoningEffort, invocationMode: 'exec-stdin-json-output-read-only', structuredOutputEnabled: true, ...this.schemaMetadata }
   }
 
   async complete(_model: unknown, context: Context, options: PiCompletionOptions): Promise<string> {
@@ -91,6 +95,7 @@ export class CodexCliReasoningExecutor {
     const prompt = JSON.stringify({ systemPrompt: context.systemPrompt, messages: context.messages })
     try {
       const normalized = normalizeCodexOutputSchema(options.outputContract)
+      this.schemaMetadata = { structuredOutputSchemaFingerprint: normalized.fingerprint, structuredOutputSchemaBytes: normalized.bytes }
       await writeFile(schemaPath, normalized.serialized, { encoding: 'utf8', flag: 'wx' })
       const args = buildCodexCliInvocationArgs({ commandPrefix: this.commandPrefix, model: this.model, reasoningEffort: this.reasoningEffort, invocationDirectory: directory, outputPath, schemaPath })
       const stdout = await this.runProcess(operation, operationId, directory, args, prompt, options.signal)
@@ -146,8 +151,11 @@ export function normalizeCodexOutputSchema(outputContract: unknown): CodexOutput
     if (Array.isArray(value)) return value.map((item, index) => convert(item, `${path}[${index}]`))
     if (value === null || typeof value !== 'object') {
       if (typeof value === 'function' || typeof value === 'symbol' || typeof value === 'bigint' || value === undefined) throw new Error(`outputContract contains a non-JSON value at ${path}`)
+      if (typeof value === 'number' && !Number.isFinite(value)) throw new Error(`outputContract contains a non-JSON number at ${path}`)
       return value
     }
+    const prototype = Object.getPrototypeOf(value)
+    if (prototype !== Object.prototype && prototype !== null) throw new Error(`outputContract contains a non-plain object at ${path}`)
     const result: Record<string, unknown> = {}
     for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
       if (RESEARCHHUB_METADATA_KEYS.has(key)) { removed.add(key); continue }
@@ -165,10 +173,30 @@ export function normalizeCodexOutputSchema(outputContract: unknown): CodexOutput
   if (schema === null || typeof schema !== 'object' || Array.isArray(schema) || Object.keys(schema as object).length === 0) invalid('ResearchHub output contract must convert to one JSON Schema object')
   const root = schema as Record<string, unknown>
   if (typeof root.type !== 'string' && root.oneOf === undefined && root.anyOf === undefined && root.enum === undefined && root.const === undefined) invalid('Codex structured output schema must be rooted in one JSON value')
+  validateSchemaShape(root, '$')
   let serialized: string
   try { serialized = JSON.stringify(root) } catch (error) { throw new ReasoningExecutorError('reasoning_configuration_invalid', 'Codex structured output schema is not JSON-serializable', { cause: error }) }
   if (Buffer.byteLength(serialized, 'utf8') > CODEX_SCHEMA_MAX_BYTES) invalid('Codex structured output schema exceeds the configured size limit')
   return { schema: root, serialized, fingerprint: createHash('sha256').update(serialized).digest('hex').slice(0, 16), bytes: Buffer.byteLength(serialized, 'utf8'), removedKeywords: [...removed].sort() }
+}
+
+function validateSchemaShape(schema: Record<string, unknown>, path: string): void {
+  if (schema.type !== undefined && (typeof schema.type !== 'string' || !JSON_SCHEMA_TYPES.has(schema.type))) invalid(`Codex structured output schema has an invalid type at ${path}`)
+  if (schema.properties !== undefined && (schema.properties === null || typeof schema.properties !== 'object' || Array.isArray(schema.properties))) invalid(`Codex structured output schema properties are invalid at ${path}`)
+  if (schema.properties !== undefined) for (const [key, child] of Object.entries(schema.properties as Record<string, unknown>)) {
+    if (child === null || typeof child !== 'object' || Array.isArray(child)) invalid(`Codex structured output property ${key} is not a schema at ${path}`)
+    validateSchemaShape(child as Record<string, unknown>, `${path}.properties.${key}`)
+  }
+  if (schema.required !== undefined && (!Array.isArray(schema.required) || schema.required.some((item) => typeof item !== 'string'))) invalid(`Codex structured output required is invalid at ${path}`)
+  if (schema.additionalProperties !== undefined && typeof schema.additionalProperties !== 'boolean' && (schema.additionalProperties === null || typeof schema.additionalProperties !== 'object' || Array.isArray(schema.additionalProperties))) invalid(`Codex structured output additionalProperties is invalid at ${path}`)
+  if (schema.additionalProperties && typeof schema.additionalProperties === 'object' && !Array.isArray(schema.additionalProperties)) validateSchemaShape(schema.additionalProperties as Record<string, unknown>, `${path}.additionalProperties`)
+  if (schema.items !== undefined && (schema.items === null || typeof schema.items !== 'object' || Array.isArray(schema.items))) invalid(`Codex structured output items is invalid at ${path}`)
+  if (schema.items && typeof schema.items === 'object' && !Array.isArray(schema.items)) validateSchemaShape(schema.items as Record<string, unknown>, `${path}.items`)
+  for (const key of ['oneOf', 'anyOf']) if (schema[key] !== undefined) {
+    if (!Array.isArray(schema[key]) || schema[key].length === 0 || schema[key].some((item) => item === null || typeof item !== 'object' || Array.isArray(item))) invalid(`Codex structured output ${key} is invalid at ${path}`)
+    for (const [index, child] of (schema[key] as unknown[]).entries()) validateSchemaShape(child as Record<string, unknown>, `${path}.${key}[${index}]`)
+  }
+  if (schema.enum !== undefined && (!Array.isArray(schema.enum) || schema.enum.length === 0)) invalid(`Codex structured output enum is invalid at ${path}`)
 }
 
 export function parseCodexCliJsonlFinalResponse(stdout: string, maxOutputChars = DEFAULT_OUTPUT_LIMIT): string {
