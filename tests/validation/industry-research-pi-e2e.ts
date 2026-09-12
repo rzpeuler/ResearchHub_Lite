@@ -7,7 +7,6 @@ import { PiReasoningExecutor } from '../../plugins/reasoning/pi/executor.ts'
 import { selectProductionReasoningModel } from '../../app/pi/model-selection.ts'
 import { createFreshKnowledgeBaseV04, readCanonicalV04Assets } from '../../knowledge/storage/index.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
-import { KnowledgeProductionGateway } from '../../knowledge/production/gateway.ts'
 import { KnowledgeGraphService } from '../../app/services/knowledge-graph-service.ts'
 import { ResearchService } from '../../app/services/research-service.ts'
 import { WorkflowService } from '../../app/services/workflow-service.ts'
@@ -16,7 +15,7 @@ import type { ResearchAcquisitionPlugin, ResearchFetchedSource, ResearchSourceCa
 import { sha256 } from '../../plugins/research-acquisition/hash.ts'
 import { getRaw } from '../../knowledge/raw/raw-archive.ts'
 import { evaluateIndustryPiGate, type IndustryPiGateInput } from './industry-research-pi-e2e-gate.ts'
-import { validateIndustryResearchDesign, validateIndustryModuleResult, validateCrossModuleSynthesis } from '../../skills/industry-research/skill.ts'
+import { parseIndustryReasoningObject, validateIndustryResearchDesign, validateIndustryModuleResult, validateCrossModuleSynthesis } from '../../skills/industry-research/skill.ts'
 import { INDUSTRY_MODULES, type IndustryModuleResult, type ResearchDesign, type CrossModuleSynthesis } from '../../skills/industry-research/contracts.ts'
 
 const repoRoot = resolve(import.meta.dirname, '../..')
@@ -39,14 +38,15 @@ function finalValidatedAttempts(observed: readonly { request: ReasoningRequest; 
   let synthesis: CrossModuleSynthesis | undefined
   for (const attempt of observed) {
     try {
-      if (attempt.request.operation === 'industry_research_design') design = validateIndustryResearchDesign(attempt.output)
+      const parsed = parseIndustryReasoningObject(attempt.output)
+      if (attempt.request.operation === 'industry_research_design') design = validateIndustryResearchDesign(parsed)
       else if (attempt.request.operation === 'industry_module_analysis') {
         const input = attempt.request.input as { module: typeof INDUSTRY_MODULES[number]; evidence?: Array<{ evidenceId: string }> }
-        modules.set(input.module, validateIndustryModuleResult(attempt.output, input.module, (input.evidence ?? []).map(x => x.evidenceId)))
+        modules.set(input.module, validateIndustryModuleResult(parsed, input.module, (input.evidence ?? []).map(x => x.evidenceId)))
       } else if (attempt.request.operation === 'industry_cross_module_synthesis') {
         const input = attempt.request.input as { evidence?: Array<{ evidenceId: string }>; modules?: readonly IndustryModuleResult[] }
         const finalModules = [...modules.values()]
-        synthesis = validateCrossModuleSynthesis(attempt.output, (input.evidence ?? []).map(x => x.evidenceId), finalModules.flatMap(m => m.proposals.map(p => p.proposalId)), finalModules.flatMap(m => m.proposals.filter(p => p.kind === 'relation').map(p => p.proposalId)))
+         synthesis = validateCrossModuleSynthesis(parsed, (input.evidence ?? []).map(x => x.evidenceId), finalModules.flatMap(m => m.proposals.map(p => p.proposalId)), finalModules.flatMap(m => m.proposals.filter(p => p.kind === 'relation').map(p => p.proposalId)))
       }
     } catch { /* invalid attempts are intentionally excluded from acceptance semantics */ }
   }
@@ -75,12 +75,11 @@ function fixturePlugin(corpus: Corpus): ResearchAcquisitionPlugin {
 function numericAudit(result: any): number {
   const contents = result.evidence.map((item: any) => item.source.content).join('\n')
   const token = /(?<![A-Za-z])\d+(?:\.\d+)?%?(?![A-Za-z])/g
+  const excluded = (t: string, text: string) => /^\d{4}[-/]\d{1,2}([-/]\d{1,2})?$/.test(t) || /^(?:603228|000858|600519)$/.test(t) || new RegExp(`(?:section|第)\\s*${t}`, 'i').test(text)
   let count = 0
-  for (const claim of [...result.modules.flatMap((m: any) => m.proposals), ...(result.synthesis?.proposals ?? [])].filter((p: any) => p.kind === 'claim')) {
-    const value = claim.structuredValue?.value
-    if (typeof value === 'number' || (typeof value === 'string' && /\d/.test(value))) for (const t of String(value).match(token) ?? []) if (!contents.includes(t)) count++
-  }
-  for (const section of result.report ? [] : []) void section
+  const claims = [...result.modules.flatMap((m: any) => m.proposals), ...(result.synthesis?.proposals ?? [])].filter((p: any) => p.kind === 'claim')
+  for (const claim of claims) for (const text of [claim.statement ?? '', JSON.stringify(claim.structuredValue ?? '')]) for (const t of text.match(token) ?? []) if (!excluded(t, text) && !contents.includes(t)) count++
+  for (const section of result.report?.sections ?? []) for (const t of String(section.markdown ?? '').match(token) ?? []) if (!excluded(t, String(section.markdown ?? '')) && !contents.includes(t)) count++
   return count
 }
 
@@ -105,10 +104,17 @@ async function main() {
     const industry = entities.find((x) => x.type === 'industry'); const productOrTechnology = entities.find((x) => x.type === 'product' || x.type === 'technology'); const company = entities.find((x) => x.type === 'company'); const relation = relations.find((x) => ['upstream_of', 'depends_on', 'belongs_to_industry', 'applied_in'].includes(String((x as any).type))); const exposure = relations.find((x) => (x as any).type === 'business_exposure' && ((x.sourceRef === company?.id && x.targetRef === industry?.id) || (x.targetRef === company?.id && x.sourceRef === industry?.id)))
     const sourceRawProvenance = sources.every((source) => (source.rawRefs ?? []).every((rawRef) => Boolean(rawRef))) && claims.filter((claim) => claim.sourceRefs?.length).every((claim) => claim.provenance?.every((p) => p.sourceRef && p.rawRef && sources.some((source) => source.id === p.sourceRef && source.rawRefs?.includes(p.rawRef!)))) && (await Promise.all(sources.flatMap((source) => source.rawRefs ?? []).map((rawRef) => getRaw(handle, rawRef)))).length >= sources.length
     const graph = industry ? await new KnowledgeGraphService(kbRoot).getGraphProjection({ rootRef: industry.id, depth: 2, maxNodes: 30, maxEdges: 60 }) : null
-    const proposals = [...modules.flatMap((m: any) => m.proposals ?? []), ...(synthesis?.proposals ?? [])].filter((p: any, index: number, all: any[]) => all.findIndex((x) => x.proposalId === p.proposalId) === index)
     const replayEvidence = evidenceSources.map((source) => ({ localSourceId: `evidence-${source.candidateId}`, source: { candidate: source, retrievedAt: NOW, title: source.title, content: source.content, canonicalUrl: source.url, contentHash: sha256(source.content), rawBytes: new TextEncoder().encode(source.content), publisher: 'Bounded acceptance corpus', rights: { ...rights, policyBasis: 'personal_noncommercial_research' as const } } }))
-    const replayBefore = { revision: handle.revision, ids: idsByKind(after) }; const replay = result.status === 'completed' ? await new KnowledgeProductionGateway(new KnowledgeBaseRegistry()).submit({ handle, producerType: 'industry_deep_research_replay', producerRunId: 'rhl-m3b3-real-pi-replay-001', schemaProfile: { schemaVersion: '0.4', storageFormatVersion: '1', requiresRawProvenance: true }, entity: { localKey: 'industry', entityType: 'industry', name: 'PCB Manufacturing', aliases: ['Printed Circuit Board'], existingEntityRef: industry?.id }, proposals, evidenceBindings: replayEvidence, asOf: AS_OF, now: () => NOW }) : { status: 'blocked' as const, entityRefsByLocalKey: {}, knowledgeBaseRevision: handle.revision }
-    const replayAfter = await readCanonicalV04Assets(kbRoot); const replayIds = idsByKind(replayAfter); const replayGraph = industry ? await new KnowledgeGraphService(kbRoot).getGraphProjection({ rootRef: industry.id, depth: 2, maxNodes: 30, maxEdges: 60 }) : null
+    const replayBefore = { revision: handle.revision, ids: idsByKind(after) }
+    const replayExecutor = { capabilities: () => ({ maxContextTokens: 100000, maxOutputTokens: 100000, structuredOutputSupport: true, maxConcurrency: 8 }), execute: async (request: ReasoningRequest) => {
+      if (request.operation === 'industry_research_design' && design) return { operation: request.operation, output: design }
+      if (request.operation === 'industry_module_analysis') { const module = (request.input as { module?: string }).module; const value = modules.find((item) => item.module === module); if (value) return { operation: request.operation, output: value } }
+      if (request.operation === 'industry_cross_module_synthesis' && synthesis) return { operation: request.operation, output: synthesis }
+      throw new Error(`deterministic replay received unexpected ${request.operation}`)
+    } }
+    const replayService = result.status === 'completed' && design && synthesis && modules.length === INDUSTRY_MODULES.length ? new ResearchService({ mountedKnowledgeBaseRoot: kbRoot, reportRoot, acquisitionPlugins: [fixturePlugin(fixture)], workflowService: new WorkflowService(), reasoningExecutor: replayExecutor }) : undefined
+    const replay: any = replayService ? await replayService.startIndustryResearch({ workflowRunId: 'rhl-m3b3-real-pi-replay-001', name: 'PCB Manufacturing', aliases: ['Printed Circuit Board'], canonicalRef: industry?.id, searchTerms: ['PCB', 'AI server', 'HDI'], asOf: AS_OF, maxSources: 4, maxEvidencePerModule: 2 }).completion : { status: 'blocked', entityRefsByLocalKey: {}, knowledgeBaseRevision: handle.revision }
+    const replayHandle = await registry.mount(kbRoot); replay.knowledgeBaseRevision = replayHandle.revision; const replayAfter = await readCanonicalV04Assets(kbRoot); const replayIds = idsByKind(replayAfter); const replayGraph = industry ? await new KnowledgeGraphService(kbRoot).getGraphProjection({ rootRef: industry.id, depth: 2, maxNodes: 30, maxEdges: 60 }) : null
     const workflow = { status: result.status, design, modules, synthesis, evidence: replayEvidence.map((item) => ({ evidenceId: item.localSourceId, source: item.source })), gatewaySubmitCount: result.status === 'completed' ? 1 : 0, knowledgeBaseRevision: handle.revision, claimIds: claims.map((claim) => claim.id), acquisitionWaves: 1 }
     const privacySerialized = JSON.stringify({ fixtureId: fixture.corpusId, sourceIds: fixture.sources.map((s) => s.candidateId), sentinelAbsent: true, rawBodiesIncluded: false, promptsIncluded: false, outputsIncluded: false })
     const gateInput: IndustryPiGateInput = { executed: true, realPiReasoningExecutor: delegate instanceof PiReasoningExecutor, runtimeProvider: delegate.runtimeMetadata().provider, operations, operationCounts, status: workflow.status, targetKind: workflow.design?.targetKind ?? null, modules: workflow.modules, industryDefinitionAvailable: workflow.modules.some((m: any) => m.module === 'industry_definition' && m.status !== 'unavailable'), gatewaySubmitCount: workflow.gatewaySubmitCount, firstRunRevisionDelta: workflow.knowledgeBaseRevision - beforeRevision, durableClaimCount: workflow.claimIds.length, chainRelation: Boolean(relation), companyExposure: Boolean(exposure), industryRoot: Boolean(industry), productOrTechnology: Boolean(productOrTechnology), company: Boolean(company), sourceRawProvenance, unsupportedNumericObservationCount: numericAudit(workflow), semanticTypingIntact: claims.every((claim) => ['fact','forecast','viewpoint','trend','risk','catalyst','assumption','thesis'].includes(String(claim.claimType))), report: { persisted: Boolean(report), reportType: report?.reportType ?? null, sectionCount: report?.sections?.length ?? 0, hasResearchGaps: report?.sections?.some((s: any) => /research gap/i.test(s.markdown)) ?? false }, graph: { profile: graph?.profile ?? null, canonicalRefs: graph ? [...graph.nodes, ...graph.edges].every((item: any) => objects.some((object) => object.id === item.ref)) : false, root: graph?.nodes.some((node: any) => node.ref === industry?.id && node.isRoot) ?? false, productOrTechnology: graph?.nodes.some((node: any) => node.entityType === 'product' || node.entityType === 'technology') ?? false, company: graph?.nodes.some((node: any) => node.entityType === 'company') ?? false, requiredEdge: graph?.edges.some((edge: any) => edge.ref === relation?.id || edge.ref === exposure?.id) ?? false }, replay: { outcome: replay.status, rootIdStable: (replay.entityRefsByLocalKey as Record<string, string>).industry === industry?.id, duplicateEntities: (replayIds.entity as string[]).length !== (replayBefore.ids.entity as string[]).length, duplicateRelations: (replayIds.relation as string[]).length !== (replayBefore.ids.relation as string[]).length, duplicateClaims: (replayIds.claim as string[]).length !== (replayBefore.ids.claim as string[]).length, duplicateSources: (replayIds.source as string[]).length !== (replayBefore.ids.source as string[]).length, duplicateRaw: replayAfter.objects.filter((x) => x.kind === 'source').some((x) => ((x.value as any).rawRefs ?? []).length > ((after.objects.find((y) => y.value.id === x.value.id)?.value as any)?.rawRefs ?? []).length), revisionDelta: replay.knowledgeBaseRevision - replayBefore.revision, graphStable: JSON.stringify(graph?.nodes.map((n) => n.ref)) === JSON.stringify(replayGraph?.nodes.map((n) => n.ref)) && JSON.stringify(graph?.edges.map((e) => e.ref)) === JSON.stringify(replayGraph?.edges.map((e) => e.ref)) }, privacy: { serializedEvidenceSafe: !privacySerialized.includes(fixture.sentinel), sentinelAbsent: !privacySerialized.includes(fixture.sentinel), pathsRedacted: !privacySerialized.includes(kbRoot) && !privacySerialized.includes(reportRoot), secretsAbsent: !/auth|cookie|authorization|api[-_]?key|secret/i.test(privacySerialized) } }
