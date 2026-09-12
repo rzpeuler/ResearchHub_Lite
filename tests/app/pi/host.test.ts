@@ -172,6 +172,26 @@ test('Pi research_event routes the exact EventResearchInput to the Application S
   assert.deepEqual(received, [input])
 })
 
+test('Pi research_industry is configuration-gated and delegates the validated Application input once', async () => {
+  const baseContext = { knowledgeService: {} as KnowledgeService, productionService: {} as ProductionService, reviewService: {} as ReviewService, workflowService: new WorkflowService() }
+  assert.equal(createResearchHubTools(baseContext).some((tool) => tool.name === 'research_industry'), false)
+  const received: Record<string, unknown>[] = []
+  const input = { workflowRunId: 'industry-tool-routing', name: 'PCB', aliases: ['印制电路板'], searchTerms: ['PCB'], asOf: '2026-09-08T00:00:00.000Z', maxSources: 4, maxEvidencePerModule: 2 }
+  const researchService = { startIndustryResearch: (value: Record<string, unknown>) => { received.push(value); return { runId: value.workflowRunId as string, completion: Promise.resolve({ runId: value.workflowRunId, status: 'completed', knowledgeBaseId: 'kb-industry-tool', reportPath: 'industry-tool-routing.md', committedIds: ['entity:industry-pcb'], proposalCount: 1, summary: 'bounded fixture', providerOutcomes: [{ provider: 'fixture', providerSucceeded: true }], acquisitionDiagnostics: ['bounded'] }) } } } as never
+  const tools = createResearchHubTools({ ...baseContext, researchService })
+  const tool = tools.find((item) => item.name === 'research_industry')!
+  assert.ok(tool)
+  const parameterKeys = Object.keys(((tool as unknown as { parameters: { properties: Record<string, unknown> } }).parameters).properties)
+  assert.deepEqual(parameterKeys.sort(), ['aliases', 'asOf', 'canonicalRef', 'maxEvidencePerModule', 'maxSources', 'name', 'searchTerms', 'workflowRunId'].sort())
+  const result = await tool.execute('industry-tool-call', input, undefined, undefined, {} as never)
+  assert.equal(received.length, 1)
+  assert.deepEqual(received, [input])
+  assert.equal(result.content[0]?.type, 'text')
+  const serialized = result.content[0]?.type === 'text' ? result.content[0].text : ''
+  assert.deepEqual(JSON.parse(serialized), { runId: 'industry-tool-routing', status: 'completed', knowledgeBaseId: 'kb-industry-tool', reportPath: 'industry-tool-routing.md', committedIds: ['entity:industry-pcb'], proposalCount: 1, summary: 'bounded fixture', providerOutcomes: [{ provider: 'fixture', providerSucceeded: true }], acquisitionDiagnostics: ['bounded'] })
+  assert.doesNotMatch(serialized, /normalized|raw|cookie|credential|authorization|telemetry|[A-Za-z]:\\|\//i)
+})
+
 test('Pi tool-call boundary rejects direct write, edit, and explicit-path bash mutation attempts', async () => {
   const root = await createKnowledgeBase({ knowledgeBaseId: 'kb-pi-protected' })
   try {

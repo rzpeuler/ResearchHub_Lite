@@ -17,6 +17,8 @@ import { KnowledgeProductionGateway } from '../../knowledge/production/gateway.t
 import { sha256 } from '../../plugins/research-acquisition/hash.ts'
 import type { DailyResearchSignal, DailySignalCluster, ResearchChangeAssessment } from '../../plugins/daily-intelligence/contracts.ts'
 import type { ResearchAcquisitionPlugin } from '../../plugins/research-acquisition/contracts.ts'
+import { WebResearchAcquisition } from '../../plugins/daily-intelligence/acquisition.ts'
+import { AkshareDailyMarketAcquisition } from '../../plugins/daily-intelligence/market.ts'
 
 const capabilities = () => ({ maxContextTokens: 20_000, maxOutputTokens: 4_000, structuredOutputSupport: true, maxConcurrency: 2 })
 function signal(symbol = '600519', candidateId = `candidate-${symbol}`, overrides: Partial<DailyResearchSignal> = {}): DailyResearchSignal { return { signalId: `signal-${symbol}`, kind: 'announcement', category: 'announcement', provider: 'fixture', source: { candidateId, kind: 'official_disclosure', tier: 1, title: `${symbol} official update`, provider: 'fixture', metadata: { companySymbol: symbol } }, discoveredAt: '2026-09-08T00:00:00.000Z', entities: [symbol], themes: [], title: `${symbol} official update`, contentHash: `hash-${symbol}`, excerpt: `${symbol} demand growth update`, relevance: 0.8, novelty: 1, importance: 0.8, sourceTier: 1, ...overrides } }
@@ -82,6 +84,26 @@ test('FIX-003 ordinary announcement is admissible only in announcement sections'
   const result = await new DailyBriefSynthesisSkill().synthesize('morning', [item], [], [])
   for (const title of ['Overnight Global', 'Macro/Policy', 'Market/Futures/Major Asset', 'Community/Sentiment']) assert.ok(result.sections.find((section) => section.title === title)?.unavailable)
   assert.ok(!result.sections.find((section) => section.title === 'A-share Important Announcements')?.unavailable)
+})
+
+test('FIX-002 Daily acquisition preserves Company metadata and guards Industry identity', async () => {
+  const fetchImpl = async () => new Response('<item><title>Fixture update</title><link>https://example.test/update</link></item>', { headers: { 'content-type': 'application/rss+xml' } })
+  const plugin = new WebResearchAcquisition({ provider: 'fixture', urls: ['https://example.test/feed'], fetchImpl, scope: 'company' })
+  const company = await plugin.discover({ company: { symbol: '600519' } })
+  assert.equal(company[0]?.metadata?.companySymbol, '600519')
+  const industry = await plugin.discover({ industry: { name: 'PCB', searchTerms: ['PCB'] } })
+  assert.equal(industry[0]?.metadata?.companySymbol, undefined)
+  assert.equal('companySymbol' in (industry[0]?.metadata ?? {}), false)
+})
+
+test('FIX-002 Daily market preserves Company and BROAD_SCOPE endpoints and returns no Industry candidates', async () => {
+  const plugin = new AkshareDailyMarketAcquisition({ companyBasic: async () => [], financialData: async () => [], historicalMarketData: async () => [] })
+  const company = await plugin.discover({ company: { symbol: '600519' }, asOf: '2026-09-08' })
+  assert.deepEqual(company.map((item) => item.metadata?.endpoint), ['600519'])
+  const broad = await plugin.discover({ company: { symbol: 'BROAD_SCOPE' }, asOf: '2026-09-08' })
+  assert.deepEqual(broad.map((item) => item.metadata?.endpoint), ['000001', '399001', '399006', '000688', 'sector'])
+  const industry = await plugin.discover({ industry: { name: 'PCB', searchTerms: ['PCB'] }, asOf: '2026-09-08' })
+  assert.deepEqual(industry, [])
 })
 
 test('FIX-003 evidence binding keeps 100 acquired candidates bounded to one referenced Raw/Source', async () => {
