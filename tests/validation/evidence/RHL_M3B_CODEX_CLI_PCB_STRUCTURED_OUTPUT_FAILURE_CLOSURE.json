@@ -1,0 +1,61 @@
+{
+  "taskId": "RHL-M3B-3B-FIX-005-CODEX-CLI-STRUCTURED-OUTPUT-FAILURE-CLOSURE",
+  "baseCommit": "aefb22a2b4beb3389f52c5291a8d081a1c95acac",
+  "generatedAt": "2026-09-12T11:37:09.457Z",
+  "backend": "codex-cli",
+  "model": "gpt-5.6-luna",
+  "effort": "medium",
+  "invocationMode": "exec-stdin-json-output-read-only",
+  "structuredOutputEnabled": true,
+  "cliVersion": "codex-cli 0.152.1",
+  "schema": {
+    "fingerprint": "95e315657e862a7e",
+    "bytes": 2111,
+    "transportCorrectionApplied": false
+  },
+  "requestContinuity": {
+    "expected": {
+      "instruction": "7a04f3501b1d420d",
+      "input": "36c1bc2fc516f169",
+      "outputContract": "9854f93073c44d96"
+    },
+    "actual": {
+      "instruction": "7a04f3501b1d420d",
+      "input": "36c1bc2fc516f169",
+      "outputContract": "9854f93073c44d96"
+    },
+    "allMatch": true
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeErrorCode": null,
+      "failureClass": "unknown_nonzero_exit",
+      "outputHash": null,
+      "outputBytes": 0
+    }
+  ],
+  "realModelCalls": 1,
+  "classification": "BACKEND_FAILURE_DIAGNOSTIC_INCONCLUSIVE",
+  "productionSelectionAuthorized": false,
+  "mutation": {
+    "knowledge": false,
+    "sourceRaw": false,
+    "gateway": false,
+    "writer": false,
+    "report": false,
+    "graph": false,
+    "productionModelSelection": false
+  },
+  "privacy": {
+    "rawStdout": false,
+    "rawStderr": false,
+    "providerOutput": false,
+    "credentials": false,
+    "reasoningTrace": false
+  },
+  "durationMs": 5911
+}

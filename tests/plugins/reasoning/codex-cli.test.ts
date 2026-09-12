@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { buildCodexCliInvocationArgs, CODEX_CLI_LUNA_CONFIG, CodexCliReasoningExecutor, normalizeCodexOutputSchema, parseCodexCliJsonlFinalResponse } from '../../../plugins/reasoning/codex-cli/executor.ts'
+import { buildCodexCliInvocationArgs, classifyCodexFailure, CODEX_CLI_LUNA_CONFIG, CodexCliReasoningExecutor, normalizeCodexOutputSchema, parseCodexCliJsonlFinalResponse } from '../../../plugins/reasoning/codex-cli/executor.ts'
 import { PiReasoningExecutor } from '../../../plugins/reasoning/pi/executor.ts'
 
 const capabilities = { maxContextTokens: 4_000, maxOutputTokens: 1_000, structuredOutputSupport: true, maxConcurrency: 1 }
@@ -54,6 +54,21 @@ test('Codex CLI JSONL parser keeps only the final assistant response', () => {
   assert.throws(() => parseCodexCliJsonlFinalResponse('{bad'), /malformed JSONL/)
 })
 
+test('Codex failure classifier safely distinguishes synthetic stdout and stderr categories', () => {
+  const cases = [
+    [{ type: 'error', error: { code: 'invalid_schema' } }, '', 'structured_output_configuration'],
+    [{ type: 'turn.failed', error: { code: 'authentication_required' } }, '', 'authentication_or_account'],
+    [{ type: 'error', error: { code: 'model_unavailable' } }, '', 'model_unavailable'],
+    [null, 'quota exceeded for fixture', 'rate_limit_or_quota'],
+    [null, 'request refused by safety policy fixture', 'safety_or_policy'],
+    [null, 'fixture service unavailable', 'transport_or_service'],
+    [null, 'synthetic failure', 'unknown_nonzero_exit'],
+  ] as const
+  for (const [event, stderr, expected] of cases) assert.equal(classifyCodexFailure(event ? JSON.stringify(event) : '', stderr).failureClass, expected)
+  assert.equal(classifyCodexFailure('{malformed', 'fixture service unavailable').failureClass, 'transport_or_service')
+  assert.equal(classifyCodexFailure('{malformed', '').failureClass, 'unknown_nonzero_exit')
+})
+
 test('Codex CLI adapter runs through the Pi completion boundary without a native ModelRuntime model', async () => {
   const root = await mkdtemp(join(tmpdir(), 'rhl-codex-cli-test-'))
   try {
@@ -67,4 +82,20 @@ test('Codex CLI adapter runs through the Pi completion boundary without a native
     assert.match(metadata.structuredOutputSchemaFingerprint ?? '', /^[a-f0-9]{16}$/)
     assert.equal(typeof metadata.structuredOutputSchemaBytes, 'number')
   } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Codex CLI records a spawned non-zero process without exposing provider channels', async () => {
+  const adapter = new CodexCliReasoningExecutor({ capabilities, executable: process.execPath, commandPrefix: [fixture, '--fail'] })
+  await assert.rejects(() => adapter.complete(undefined, { systemPrompt: 'fixture', messages: [] }, { signal: new AbortController().signal, maxTokens: 100, metadata: { operation: 'understandAndPlan' }, operationId: 'fixture-operation', outputContract: { type: 'object' } }), (error: unknown) => {
+    assert.ok(error instanceof Error)
+    assert.equal((error as any).code, 'reasoning_execution_failed')
+    assert.equal((error as any).processStarted, true)
+    assert.equal((error as any).exitState, 'nonzero_exit')
+    assert.equal((error as any).failureClass, 'unknown_nonzero_exit')
+    assert.equal((error as any).stderr, undefined)
+    assert.equal((error as any).stdout, undefined)
+    return true
+  })
+  assert.equal(adapter.executionDiagnostics().processStarted, true)
+  assert.equal(adapter.executionDiagnostics().semanticResultAvailable, false)
 })

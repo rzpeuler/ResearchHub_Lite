@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
 import { promisify } from 'node:util'
-import { ReasoningExecutorError } from '../errors.ts'
+import { ReasoningExecutorError, type ReasoningExitState, type ReasoningFailureClass } from '../errors.ts'
 import { validateReasoningCapabilities } from '../capabilities.ts'
 import type { Context } from '@earendil-works/pi-ai'
 import type { PiCompletionOptions } from '../pi/executor.ts'
@@ -41,6 +41,19 @@ export interface CodexCliRuntimeMetadata {
   readonly structuredOutputSchemaBytes?: number
 }
 
+export interface CodexCliExecutionDiagnostics {
+  readonly executableDiscovered: boolean
+  readonly processStarted: boolean
+  readonly exitState: ReasoningExitState
+  readonly semanticResultAvailable: boolean
+  readonly failureClass?: ReasoningFailureClass
+  readonly structuredEventType?: string
+  readonly safeErrorCode?: string
+}
+
+const FAILURE_PRIORITY: readonly ReasoningFailureClass[] = ['structured_output_configuration', 'authentication_or_account', 'model_unavailable', 'rate_limit_or_quota', 'safety_or_policy', 'transport_or_service', 'unknown_nonzero_exit']
+const SAFE_CODE = /^[A-Za-z0-9_.:-]{1,64}$/
+
 export interface CodexCliReasoningExecutorOptions {
   readonly capabilities: ReasoningCapabilities
   readonly executable?: string
@@ -63,6 +76,7 @@ export class CodexCliReasoningExecutor {
   private readonly reasoningEffort: CodexCliReasoningEffort
   private readonly commandPrefix: readonly string[]
   private schemaMetadata?: Pick<CodexCliRuntimeMetadata, 'structuredOutputSchemaFingerprint' | 'structuredOutputSchemaBytes'>
+  private lastDiagnosticsValue: CodexCliExecutionDiagnostics = { executableDiscovered: true, processStarted: false, exitState: 'not_started', semanticResultAvailable: false }
 
   constructor(options: CodexCliReasoningExecutorOptions) {
     this.capabilitiesValue = validateReasoningCapabilities(options.capabilities)
@@ -85,6 +99,8 @@ export class CodexCliReasoningExecutor {
   runtimeMetadata(): CodexCliRuntimeMetadata {
     return { provider: 'codex-cli', requestedModel: this.model, requestedReasoningEffort: this.reasoningEffort, invocationMode: 'exec-stdin-json-output-read-only', structuredOutputEnabled: true, ...this.schemaMetadata }
   }
+
+  executionDiagnostics(): CodexCliExecutionDiagnostics { return this.lastDiagnosticsValue }
 
   async complete(_model: unknown, context: Context, options: PiCompletionOptions): Promise<string> {
     const operation = options.metadata.operation as ReasoningOperation
@@ -109,6 +125,7 @@ export class CodexCliReasoningExecutor {
       }
       if (Buffer.byteLength(output, 'utf8') > this.maxOutputChars) throw tooLarge(operation, operationId)
       if (!output.trim()) throw new ReasoningExecutorError('reasoning_output_invalid', 'Codex CLI returned an empty final response', { operation, operationId })
+      this.lastDiagnosticsValue = { ...this.lastDiagnosticsValue, exitState: 'normal_exit', semanticResultAvailable: true }
       return output
     } finally { await rm(directory, { recursive: true, force: true }) }
   }
@@ -117,17 +134,20 @@ export class CodexCliReasoningExecutor {
     return new Promise((resolve, reject) => {
       const child = spawn(this.executable, [...args], { cwd, shell: false, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
       let stdout = ''; let stderr = ''; let settled = false; let timedOut = false
+      let processStarted = false
+      this.lastDiagnosticsValue = { executableDiscovered: true, processStarted: false, exitState: 'not_started', semanticResultAvailable: false }
       const finish = (fn: () => void) => { if (!settled) { settled = true; clearTimeout(timer); signal.removeEventListener('abort', onAbort); fn() } }
       const terminate = () => { timedOut = true; if (child.pid !== undefined) { if (process.platform === 'win32') void execFile('taskkill', ['/pid', String(child.pid), '/t', '/f'], { windowsHide: true }).catch(() => undefined); else { try { process.kill(child.pid, 'SIGTERM') } catch {} } } }
-      const onAbort = () => { terminate(); finish(() => reject(new ReasoningExecutorError('reasoning_execution_failed', 'Codex CLI reasoning execution was cancelled', { operation, operationId }))) }
-      const timer = setTimeout(() => { terminate(); finish(() => reject(new ReasoningExecutorError('reasoning_timeout', 'Codex CLI reasoning execution timed out', { operation, operationId }))) }, this.timeoutMs)
+      const onAbort = () => { terminate(); this.lastDiagnosticsValue = { ...this.lastDiagnosticsValue, processStarted, exitState: 'cancelled' }; finish(() => reject(new ReasoningExecutorError('reasoning_execution_failed', 'Codex CLI reasoning execution was cancelled', { operation, operationId, processStarted, exitState: 'cancelled', failureClass: 'timeout_or_cancel' }))) }
+      const timer = setTimeout(() => { terminate(); this.lastDiagnosticsValue = { ...this.lastDiagnosticsValue, processStarted, exitState: 'timeout' }; finish(() => reject(new ReasoningExecutorError('reasoning_timeout', 'Codex CLI reasoning execution timed out', { operation, operationId, processStarted, exitState: 'timeout', failureClass: 'timeout_or_cancel' }))) }, this.timeoutMs)
       signal.addEventListener('abort', onAbort, { once: true })
+      child.once('spawn', () => { processStarted = true; this.lastDiagnosticsValue = { ...this.lastDiagnosticsValue, processStarted: true, exitState: 'started' } })
       child.stdout.setEncoding('utf8')
       child.stdout.on('data', (data: string) => { stdout += data; if (Buffer.byteLength(stdout, 'utf8') > this.maxOutputChars * 2) { terminate(); finish(() => reject(tooLarge(operation, operationId))) } })
       child.stderr.setEncoding('utf8')
       child.stderr.on('data', (data: string) => { stderr += data; if (Buffer.byteLength(stderr, 'utf8') > 8_000) stderr = stderr.slice(-8_000) })
-      child.once('error', (error: NodeJS.ErrnoException) => finish(() => reject(new ReasoningExecutorError(error.code === 'ENOENT' ? 'reasoning_host_unavailable' : 'reasoning_execution_failed', 'Codex CLI process could not be started', { operation, operationId, cause: error }))))
-      child.once('close', (code) => { if (timedOut || signal.aborted) return; finish(() => { if (code === 0) return resolve(stdout); const codeKind = processFailureCode(stderr); return reject(new ReasoningExecutorError(codeKind, codeKind === 'reasoning_structured_output_configuration_failed' ? 'Codex CLI rejected the structured output schema' : codeKind === 'reasoning_host_unavailable' ? 'Codex CLI external setup is required' : 'Codex CLI returned a non-zero exit code', { operation, operationId, exitCode: code ?? undefined })) }) })
+      child.once('error', (error: NodeJS.ErrnoException) => finish(() => reject(new ReasoningExecutorError(error.code === 'ENOENT' ? 'reasoning_host_unavailable' : 'reasoning_execution_failed', 'Codex CLI process could not be started', { operation, operationId, processStarted, exitState: 'not_started', failureClass: 'transport_or_service' }))))
+      child.once('close', (code) => { if (timedOut || signal.aborted) return; finish(() => { if (code === 0) return resolve(stdout); const signalInfo = classifyCodexFailure(stdout, stderr); this.lastDiagnosticsValue = { executableDiscovered: true, processStarted, exitState: 'nonzero_exit', semanticResultAvailable: false, ...signalInfo }; const codeKind = signalInfo.failureClass === 'structured_output_configuration' ? 'reasoning_structured_output_configuration_failed' : signalInfo.failureClass === 'authentication_or_account' ? 'reasoning_host_unavailable' : 'reasoning_execution_failed'; return reject(new ReasoningExecutorError(codeKind, signalInfo.failureClass === 'structured_output_configuration' ? 'Codex CLI rejected the structured output schema' : signalInfo.failureClass === 'authentication_or_account' ? 'Codex CLI external setup is required' : 'Codex CLI returned a non-zero exit code', { operation, operationId, exitCode: code ?? undefined, processStarted, exitState: 'nonzero_exit', ...signalInfo })) }) })
       child.stdin.end(prompt)
     })
   }
@@ -212,7 +232,35 @@ export function parseCodexCliJsonlFinalResponse(stdout: string, maxOutputChars =
   return finalText
 }
 
+export interface CodexFailureSignal { readonly failureClass: ReasoningFailureClass; readonly structuredEventType?: string; readonly safeErrorCode?: string }
+
+export function classifyCodexFailure(stdout: string, stderr: string): CodexFailureSignal {
+  const signals: CodexFailureSignal[] = []
+  for (const line of stdout.split(/\r?\n/).filter((value) => value.trim()).slice(-256)) {
+    try {
+      const value = JSON.parse(line) as Record<string, unknown>
+      const type = typeof value.type === 'string' ? value.type.slice(0, 64) : undefined
+      const error = value.error && typeof value.error === 'object' ? value.error as Record<string, unknown> : value
+      const code = typeof error.code === 'string' && SAFE_CODE.test(error.code) ? error.code : undefined
+      const hint = `${type ?? ''} ${code ?? ''}`.toLowerCase()
+      const failureClass = classifySignalText(hint)
+      if (failureClass) signals.push({ failureClass, structuredEventType: type, safeErrorCode: code })
+    } catch { /* malformed JSONL is deliberately ignored; stderr remains authoritative */ }
+  }
+  const stderrClass = classifySignalText(stderr)
+  if (stderrClass) signals.push({ failureClass: stderrClass })
+  for (const failureClass of FAILURE_PRIORITY) { const match = signals.find((signal) => signal.failureClass === failureClass); if (match) return match }
+  return { failureClass: 'unknown_nonzero_exit' }
+}
+
 function tooLarge(operation: ReasoningOperation, operationId: string): ReasoningExecutorError { return new ReasoningExecutorError('reasoning_output_too_large', 'Codex CLI output exceeded the configured limit', { operation, operationId }) }
 function invalid(message: string): never { throw new ReasoningExecutorError('reasoning_configuration_invalid', message) }
-function isStructuredOutputRejection(stderr: string): boolean { return /output[- ]schema|structured output|json schema|schema.*(invalid|unsupported|reject)/iu.test(stderr) }
-function processFailureCode(stderr: string): 'reasoning_structured_output_configuration_failed' | 'reasoning_host_unavailable' | 'reasoning_execution_failed' { if (isStructuredOutputRejection(stderr)) return 'reasoning_structured_output_configuration_failed'; if (/login|authentication|authenticate|otp|sign.?in|account|credential|not logged in/iu.test(stderr)) return 'reasoning_host_unavailable'; return 'reasoning_execution_failed' }
+function classifySignalText(value: string): ReasoningFailureClass | undefined {
+  if (/structured[_ -]?output|output[- ]schema|json schema|(?:invalid|unsupported|reject|config).*schema|schema.*(?:invalid|unsupported|reject|config)/iu.test(value)) return 'structured_output_configuration'
+  if (/auth|login|sign.?in|account|credential|otp/iu.test(value)) return 'authentication_or_account'
+  if (/model.*(?:unavailable|not found|unknown)|model_unavailable/iu.test(value)) return 'model_unavailable'
+  if (/rate.?limit|quota|too many requests/iu.test(value)) return 'rate_limit_or_quota'
+  if (/safety|policy|refused|blocked/iu.test(value)) return 'safety_or_policy'
+  if (/transport|service|network|connection|unreachable|server/iu.test(value)) return 'transport_or_service'
+  return undefined
+}

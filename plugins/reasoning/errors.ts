@@ -10,6 +10,18 @@ export const REASONING_ERROR_CODES = [
   'reasoning_structured_output_configuration_failed',
 ] as const
 
+export type ReasoningFailureClass =
+  | 'structured_output_configuration'
+  | 'authentication_or_account'
+  | 'model_unavailable'
+  | 'rate_limit_or_quota'
+  | 'safety_or_policy'
+  | 'timeout_or_cancel'
+  | 'transport_or_service'
+  | 'unknown_nonzero_exit'
+
+export type ReasoningExitState = 'not_started' | 'started' | 'normal_exit' | 'nonzero_exit' | 'timeout' | 'cancelled'
+
 export type ReasoningErrorCode = (typeof REASONING_ERROR_CODES)[number]
 
 export class ReasoningExecutorError extends Error {
@@ -17,7 +29,13 @@ export class ReasoningExecutorError extends Error {
   readonly operation?: ReasoningOperation
   readonly operationId?: string
   readonly exitCode?: number
+  /** Legacy provider detail retained for the non-Codex adapter; Codex CLI never sets it. */
   readonly stderr?: string
+  readonly processStarted?: boolean
+  readonly exitState?: ReasoningExitState
+  readonly failureClass?: ReasoningFailureClass
+  readonly structuredEventType?: string
+  readonly safeErrorCode?: string
 
   constructor(
     code: ReasoningErrorCode,
@@ -27,6 +45,11 @@ export class ReasoningExecutorError extends Error {
       operationId?: string
       exitCode?: number
       stderr?: string
+      processStarted?: boolean
+      exitState?: ReasoningExitState
+      failureClass?: ReasoningFailureClass
+      structuredEventType?: string
+      safeErrorCode?: string
       cause?: unknown
     } = {},
   ) {
@@ -36,6 +59,11 @@ export class ReasoningExecutorError extends Error {
     this.operation = details.operation
     this.operationId = details.operationId
     this.exitCode = details.exitCode
-    this.stderr = details.stderr
+    if (details.stderr !== undefined) this.stderr = details.stderr
+    this.processStarted = details.processStarted
+    this.exitState = details.exitState
+    this.failureClass = details.failureClass
+    this.structuredEventType = details.structuredEventType
+    this.safeErrorCode = details.safeErrorCode
   }
 }
