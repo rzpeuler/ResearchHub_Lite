@@ -1,0 +1,84 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-003-CODEX-STRUCTURED-SCHEMA-COMPATIBILITY-MATRIX",
+  "baseCommit": "1f011467dc2117d3d09a48f8c9730c285da1a89c",
+  "generatedAt": "2026-09-12T11:56:54.699Z",
+  "backend": "codex-cli",
+  "model": "gpt-5.6-luna",
+  "effort": "medium",
+  "invocationMode": "exec-stdin-json-output-read-only",
+  "cliVersion": "codex-cli 0.152.1",
+  "probeOrder": [
+    "MINIMAL_STRICT_CONTROL"
+  ],
+  "actualCallCount": 1,
+  "probes": [
+    {
+      "name": "MINIMAL_STRICT_CONTROL",
+      "attempted": true,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeReasoningCode": "reasoning_execution_failed",
+      "safeFailureClass": "unknown_nonzero_exit",
+      "structuredEventType": null,
+      "safeErrorCode": null,
+      "durationMs": 6075,
+      "schemaFingerprint": "6403f2b1cc6b62ac",
+      "schemaBytes": 107,
+      "outputHash": null,
+      "outputBytes": 0,
+      "diagnostic": "Codex CLI returned a non-zero exit code"
+    }
+  ],
+  "currentDesign": {
+    "sourceFingerprint": "9854f93073c44d96",
+    "sourceBytes": 3320,
+    "expectedSourceFingerprint": "9854f93073c44d96",
+    "normalizedFingerprint": "95e315657e862a7e",
+    "normalizedBytes": 2111,
+    "expectedNormalized": {
+      "fingerprint": "95e315657e862a7e",
+      "bytes": 2111
+    }
+  },
+  "optionalPropertyAccepted": null,
+  "strictRequiredDesign": null,
+  "classification": "BACKEND_FAILURE_DIAGNOSTIC_INCONCLUSIVE",
+  "nextActionCategory": "REVIEW_BACKEND_RUNTIME_FAILURE",
+  "calls": 1,
+  "stopReason": "Probe 1 did not establish general structured-output health",
+  "durationMs": 6167,
+  "mutation": {
+    "knowledge": false,
+    "sourceRaw": false,
+    "gateway": false,
+    "writer": false,
+    "researchReport": false,
+    "graph": false,
+    "industryRequest": false,
+    "productionModelSelection": false,
+    "productionSchemaNormalizer": false
+  },
+  "privacy": {
+    "completePrompts": false,
+    "completeOutputs": false,
+    "completeSchemas": false,
+    "stdout": false,
+    "stderr": false,
+    "jsonl": false,
+    "credentials": false,
+    "authData": false,
+    "reasoningTraces": false,
+    "privatePaths": false
+  },
+  "fix005Acceptance": {
+    "acceptedScope": "diagnostic-hardening only",
+    "processStarted": true,
+    "exitState": "nonzero_exit",
+    "semanticResultAvailable": false,
+    "failureClass": "unknown_nonzero_exit",
+    "realModelCalls": 1,
+    "requestUnchanged": true,
+    "schemaCorrectionAuthorized": false
+  }
+}
