@@ -1,7 +1,8 @@
 {
-  "generatedAt": "2026-09-12T00:00:00.000Z",
-  "taskId": "RHL-M3B-3B-REAL-PI-FINAL-ACCEPTANCE-001",
-  "implementationCommit": "2e265601b1d57f87e61398a50743e6fb760c09a4",
+  "generatedAt": "2026-09-12T08:04:07.246Z",
+  "taskId": "RHL-M3B-3B-FIX-002-DESIGN-CONTRACT-COMPLETENESS-AND-DIAGNOSTIC-CLOSURE",
+  "baseCommit": "71dcd8446d3d429fad644fe151847bed1cab5ee1",
+  "implementationCommit": null,
   "classification": "REAL_MODEL_CONTRACT_BLOCKED",
   "processExitCode": 1,
   "realPiReasoningExecutor": true,
@@ -18,6 +19,90 @@
       "industry_research_design": 2
     }
   },
+  "attemptDiagnostics": [
+    {
+      "operation": "industry_research_design",
+      "attempt": 1,
+      "repair": false,
+      "parserOutcome": "executor_failed",
+      "diagnosticCodes": [
+        "provider_failure"
+      ],
+      "shape": {
+        "topLevelKeys": [],
+        "definitionHypothesis": "undefined",
+        "targetKind": "undefined",
+        "scope": {
+          "included": {
+            "type": "undefined"
+          },
+          "excluded": {
+            "type": "undefined"
+          }
+        },
+        "moduleQuestionKeys": [],
+        "keyMetrics": {
+          "type": "undefined"
+        },
+        "evidenceRequirements": {
+          "type": "undefined"
+        },
+        "searchTerms": {
+          "type": "undefined"
+        },
+        "knownGaps": {
+          "type": "undefined"
+        },
+        "verificationCandidates": {
+          "type": "undefined"
+        },
+        "outputChars": 4,
+        "outputHash": "74234e98afe7498f"
+      },
+      "failure": "Provider finish_reason: sensitive"
+    },
+    {
+      "operation": "industry_research_design",
+      "attempt": 2,
+      "repair": true,
+      "parserOutcome": "executor_failed",
+      "diagnosticCodes": [
+        "provider_failure"
+      ],
+      "shape": {
+        "topLevelKeys": [],
+        "definitionHypothesis": "undefined",
+        "targetKind": "undefined",
+        "scope": {
+          "included": {
+            "type": "undefined"
+          },
+          "excluded": {
+            "type": "undefined"
+          }
+        },
+        "moduleQuestionKeys": [],
+        "keyMetrics": {
+          "type": "undefined"
+        },
+        "evidenceRequirements": {
+          "type": "undefined"
+        },
+        "searchTerms": {
+          "type": "undefined"
+        },
+        "knownGaps": {
+          "type": "undefined"
+        },
+        "verificationCandidates": {
+          "type": "undefined"
+        },
+        "outputChars": 4,
+        "outputHash": "74234e98afe7498f"
+      },
+      "failure": "Provider finish_reason: sensitive"
+    }
+  ],
   "targetDiagnosis": {
     "target": "PCB Manufacturing",
     "kind": null
@@ -44,7 +129,7 @@
   },
   "numericAudit": {
     "unsupportedNumericObservationCount": 0,
-    "rules": "Only numeric tokens in structured quantitative Claim values are checked; IDs, dates, and structural numbering are ignored."
+    "rules": "Numeric tokens in Claim statements, structured values, and persisted report sections are source-backed; canonical IDs, valid dates, section numbering, and explicit A-share ticker identifiers are excluded."
   },
   "reportContract": {
     "persisted": false,
@@ -79,6 +164,7 @@
     "evidence-backed chain Relation admitted",
     "evidence-backed Company exposure admitted",
     "canonical Industry/Product-or-Technology/Company objects",
+    "Source/Raw provenance",
     "industry report contract",
     "canonical industry graph contract",
     "deterministic replay non-mutating outcome"
