@@ -1,0 +1,79 @@
+{
+  "taskId": "RHL-M3B-3B-FIX-004-CODEX-CLI-STRUCTURED-OUTPUT-BRIDGE",
+  "baseCommit": "f7990053997cd2df670880d58daacbe8e0c30ef4",
+  "generatedAt": "2026-09-12T10:27:59.054Z",
+  "backend": "codex-cli",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "medium",
+  "invocationMode": "exec-stdin-json-output-read-only",
+  "structuredOutputEnabled": true,
+  "cliVersion": "codex-cli 0.152.1",
+  "schema": {
+    "enabled": true,
+    "fingerprint": "95e315657e862a7e",
+    "bytes": 2111,
+    "removedProviderKeywords": [
+      "bounds",
+      "maxItems",
+      "maxLength",
+      "minItems",
+      "minLength",
+      "name",
+      "uniqueItems"
+    ]
+  },
+  "request": {
+    "operation": "industry_research_design",
+    "instructionHash": "7a04f3501b1d420d",
+    "inputHash": "36c1bc2fc516f169",
+    "outputContractHash": "9854f93073c44d96",
+    "outputContractBytes": 3320
+  },
+  "requestContinuity": {
+    "expected": {
+      "instruction": "7a04f3501b1d420d",
+      "input": "36c1bc2fc516f169",
+      "outputContract": "9854f93073c44d96"
+    },
+    "actual": {
+      "instruction": "7a04f3501b1d420d",
+      "input": "36c1bc2fc516f169",
+      "outputContract": "9854f93073c44d96"
+    },
+    "allMatch": true
+  },
+  "oneCallCount": 1,
+  "execution": {
+    "backendExecuted": false,
+    "durationMs": 5590,
+    "outputHash": null,
+    "outputBytes": 0,
+    "parser": "reasoning_execution_failed",
+    "validator": "not_run_or_failed",
+    "validatorDiagnosticCodes": [],
+    "targetKind": null,
+    "moduleQuestionKeys": [],
+    "moduleQuestionCount": 0,
+    "safeErrorCode": "reasoning_execution_failed"
+  },
+  "classification": "BACKEND_EXECUTION_FAILED",
+  "productionSelectionAuthorized": false,
+  "mutation": {
+    "knowledge": false,
+    "sourceRaw": false,
+    "gateway": false,
+    "writer": false,
+    "report": false,
+    "graph": false,
+    "productionModelSelection": false
+  },
+  "privacy": {
+    "completeRequestPersisted": false,
+    "completeOutputPersisted": false,
+    "completeOutputContractPersisted": false,
+    "normalizedSchemaPersisted": false,
+    "reasoningTracePersisted": false,
+    "credentialsPersisted": false,
+    "privatePathsPersisted": false
+  }
+}

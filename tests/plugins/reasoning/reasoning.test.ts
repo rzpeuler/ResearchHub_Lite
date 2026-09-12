@@ -4,9 +4,11 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { MockReasoningExecutor } from '../../../plugins/reasoning/mock/executor.ts'
+import { PiReasoningExecutor } from '../../../plugins/reasoning/pi/executor.ts'
 import { ReasoningExecutorError } from '../../../plugins/reasoning/errors.ts'
 import { buildCodexInvocationArgs, CodexReasoningExecutor } from '../../../plugins/reasoning/codex/executor.ts'
 import { REASONING_OPERATIONS } from '../../../plugins/reasoning/contracts.ts'
+import type { Context } from '@earendil-works/pi-ai'
 
 const capabilities = { maxContextTokens: 1000, maxOutputTokens: 500, structuredOutputSupport: false, maxConcurrency: 1 }
 
@@ -25,6 +27,21 @@ test('MockReasoningExecutor records calls and returns deterministic operation re
 
 test('reasoning capabilities reject guessed or invalid limits', () => {
   assert.throws(() => new MockReasoningExecutor({ capabilities: { ...capabilities, maxContextTokens: 0 } }), (error: unknown) => error instanceof ReasoningExecutorError && error.code === 'reasoning_configuration_invalid')
+})
+
+test('Pi completion seam receives the unchanged output contract without changing semantic Context', async () => {
+  const contract = { type: 'object', required: ['status'], properties: { status: { const: 'ok' } } }
+  let received: unknown
+  let receivedContext: Context | undefined
+  const executor = new PiReasoningExecutor({ capabilities: { ...capabilities, structuredOutputSupport: true }, completion: async (_model, context, options) => {
+    received = options.outputContract
+    receivedContext = context
+    return '{"status":"ok"}'
+  } })
+  await executor.execute({ operation: 'understandAndPlan', instruction: 'return status', input: { value: 1 }, outputContract: contract })
+  assert.strictEqual(received, contract)
+  assert.match(receivedContext?.systemPrompt ?? '', /Output contract:/)
+  assert.match(receivedContext?.messages[0]?.content as string, /"value":1/)
 })
 
 test('Codex executor pins the default model and reasoning effort explicitly', () => {

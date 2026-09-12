@@ -38,7 +38,7 @@ export async function createCodexCliLunaReasoningExecutor(options: CodexCliLunaE
   const executable = options.executable ?? await discoverCodexCliExecutable()
   const adapter = new CodexCliReasoningExecutor({ ...options, executable, model: CODEX_CLI_LUNA_CONFIG.model, reasoningEffort: CODEX_CLI_LUNA_CONFIG.reasoningEffort })
   const metadata = adapter.runtimeMetadata()
-  return new PiReasoningExecutor({ capabilities: options.capabilities, timeoutMs: options.timeoutMs, maxOutputChars: options.maxOutputChars, completion: adapter.complete.bind(adapter), runtimeMetadata: { backend: 'codex-cli', requestedModel: metadata.requestedModel, requestedReasoningEffort: metadata.requestedReasoningEffort, invocationMode: metadata.invocationMode } })
+  return new PiReasoningExecutor({ capabilities: options.capabilities, timeoutMs: options.timeoutMs, maxOutputChars: options.maxOutputChars, completion: adapter.complete.bind(adapter), runtimeMetadata: { backend: 'codex-cli', requestedModel: metadata.requestedModel, requestedReasoningEffort: metadata.requestedReasoningEffort, invocationMode: metadata.invocationMode, structuredOutputEnabled: metadata.structuredOutputEnabled } })
 }
 
 export async function discoverCodexCliExecutable(): Promise<string> {

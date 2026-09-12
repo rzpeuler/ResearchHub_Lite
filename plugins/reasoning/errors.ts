@@ -7,6 +7,7 @@ export const REASONING_ERROR_CODES = [
   'reasoning_timeout',
   'reasoning_output_invalid',
   'reasoning_output_too_large',
+  'reasoning_structured_output_configuration_failed',
 ] as const
 
 export type ReasoningErrorCode = (typeof REASONING_ERROR_CODES)[number]

@@ -25,6 +25,8 @@ export interface PiCompletionOptions {
   readonly maxTokens: number
   readonly metadata: Record<string, unknown>
   readonly operationId: string
+  /** The unchanged ResearchHub contract, supplied as transport metadata to adapters. */
+  readonly outputContract: unknown
 }
 
 export type PiCompletionResult = AssistantMessage | string
@@ -44,6 +46,7 @@ export interface PiReasoningRuntimeMetadata {
   readonly requestedModel?: string
   readonly requestedReasoningEffort?: string
   readonly invocationMode?: string
+  readonly structuredOutputEnabled?: boolean
 }
 
 export interface PiReasoningExecutorOptions {
@@ -130,6 +133,7 @@ export class PiReasoningExecutor implements ReasoningExecutor {
         maxTokens,
         metadata,
         operationId,
+        outputContract: request.outputContract,
       }, request.operation, operationId, externalSignal)
       const rawOutput = extractRawOutput(response, request.operation, operationId)
       if (Buffer.byteLength(rawOutput, 'utf8') > this.maxOutputChars) {
