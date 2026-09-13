@@ -8,6 +8,7 @@ import type { WorkflowService } from '../services/workflow-service.ts'
 import type { ResearchService } from '../services/research-service.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { DailyIntelligenceService } from '../services/daily-intelligence-service.ts'
+import type { ResearchAcquisitionPlugin } from '../../plugins/research-acquisition/contracts.ts'
 
 export interface SafeConversationSummary {
   readonly conversationId: string
@@ -76,5 +77,6 @@ export interface ResearchHubApplicationRuntimeOptions {
   readonly settingsManager?: SettingsManager
   readonly resourceLoader?: DefaultResourceLoader
   readonly researchService?: ResearchService
+  readonly industryAcquisitionPlugins?: readonly ResearchAcquisitionPlugin[]
   readonly dailyIntelligenceService?: DailyIntelligenceService
 }

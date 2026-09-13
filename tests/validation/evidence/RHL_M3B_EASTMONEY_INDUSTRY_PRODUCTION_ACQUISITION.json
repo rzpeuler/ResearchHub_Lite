@@ -1,0 +1,239 @@
+{
+  "taskId": "RHL-M3B-3B-FIX-010-EASTMONEY-DIRECT-INDUSTRY-ACQUISITION",
+  "baseCommit": "871e377da44880cad9411890e189c6029b304c0b",
+  "generatedAt": "2026-09-13T01:55:34.242Z",
+  "frozenTarget": {
+    "name": "PCB Manufacturing",
+    "alias": "Printed Circuit Board",
+    "searchTerms": [
+      "PCB 印制电路板",
+      "AI服务器 PCB HDI",
+      "深南电路 PCB",
+      "沪电股份 PCB",
+      "胜宏科技 PCB",
+      "生益科技 PCB CCL",
+      "PCB 产业链",
+      "PCB 行业 产能"
+    ],
+    "asOf": "2026-09-12T00:00:00.000Z",
+    "searchTermsHash": "ded447de9a6be6882555eb953ef3f788bc5056e0adb65bc8151392aa30f6175b",
+    "searchTermCount": 8
+  },
+  "providerConfiguration": {
+    "providerName": "eastmoney-industry-research-acquisition",
+    "endpointFamily": "https://push2.eastmoney.com/api/qt/clist/get",
+    "nativeFetchOnly": true,
+    "boardPageCap": 6,
+    "constituentPageCap": 3,
+    "pageSize": 100
+  },
+  "realHttp": {
+    "requestCount": 12,
+    "boardListPageCount": 11,
+    "constituentPageCount": 1
+  },
+  "discovery": {
+    "candidateCount": 12,
+    "candidates": [
+      {
+        "candidateId": "eastmoney-industry-BK1340",
+        "boardCode": "BK1340",
+        "boardName": "印制电路板",
+        "boardType": "industry"
+      },
+      {
+        "candidateId": "eastmoney-concept-BK0877",
+        "boardCode": "BK0877",
+        "boardName": "PCB",
+        "boardType": "concept"
+      },
+      {
+        "candidateId": "eastmoney-concept-BK1153",
+        "boardCode": "BK1153",
+        "boardName": "多模态AI",
+        "boardType": "concept"
+      },
+      {
+        "candidateId": "eastmoney-concept-BK1182",
+        "boardCode": "BK1182",
+        "boardName": "智谱AI概念",
+        "boardType": "concept"
+      },
+      {
+        "candidateId": "eastmoney-concept-BK1162",
+        "boardCode": "BK1162",
+        "boardName": "AI手机",
+        "boardType": "concept"
+      },
+      {
+        "candidateId": "eastmoney-concept-BK1127",
+        "boardCode": "BK1127",
+        "boardName": "AI芯片",
+        "boardType": "concept"
+      },
+      {
+        "candidateId": "eastmoney-concept-BK1178",
+        "boardCode": "BK1178",
+        "boardName": "AI眼镜",
+        "boardType": "concept"
+      },
+      {
+        "candidateId": "eastmoney-concept-BK1629",
+        "boardCode": "BK1629",
+        "boardName": "AI应用",
+        "boardType": "concept"
+      },
+      {
+        "candidateId": "eastmoney-concept-BK1172",
+        "boardCode": "BK1172",
+        "boardName": "AI语料",
+        "boardType": "concept"
+      },
+      {
+        "candidateId": "eastmoney-concept-BK1170",
+        "boardCode": "BK1170",
+        "boardName": "AI制药（医疗）",
+        "boardType": "concept"
+      },
+      {
+        "candidateId": "eastmoney-concept-BK0809",
+        "boardCode": "BK0809",
+        "boardName": "AI智能体",
+        "boardType": "concept"
+      },
+      {
+        "candidateId": "eastmoney-concept-BK1138",
+        "boardCode": "BK1138",
+        "boardName": "液冷服务器",
+        "boardType": "concept"
+      }
+    ]
+  },
+  "selectedCandidate": {
+    "candidateId": "eastmoney-industry-BK1340",
+    "boardCode": "BK1340",
+    "boardName": "印制电路板",
+    "boardType": "industry"
+  },
+  "normalizedSource": {
+    "kind": "structured_data",
+    "tier": 2,
+    "publisher": "Eastmoney",
+    "contentHash": "b6537323d85c684b3f42b442fe35e28762787166cd98b5a4d6cb6964bd7ff51c",
+    "canonicalUrl": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK1340&fields=f12,f13,f14",
+    "board": {
+      "boardCode": "BK1340",
+      "boardName": "印制电路板",
+      "boardType": "industry"
+    },
+    "constituentCount": 48,
+    "constituentSamples": [
+      {
+        "stockCode": "000823",
+        "companyName": "超声电子"
+      },
+      {
+        "stockCode": "001232",
+        "companyName": "嘉立创"
+      },
+      {
+        "stockCode": "001389",
+        "companyName": "广合科技"
+      },
+      {
+        "stockCode": "002134",
+        "companyName": "天津普林"
+      },
+      {
+        "stockCode": "002141",
+        "companyName": "贤丰控股"
+      },
+      {
+        "stockCode": "002384",
+        "companyName": "东山精密"
+      },
+      {
+        "stockCode": "002436",
+        "companyName": "兴森科技"
+      },
+      {
+        "stockCode": "002463",
+        "companyName": "沪电股份"
+      },
+      {
+        "stockCode": "002552",
+        "companyName": "宝鼎科技"
+      },
+      {
+        "stockCode": "002579",
+        "companyName": "中京电子"
+      },
+      {
+        "stockCode": "002636",
+        "companyName": "金安国纪"
+      },
+      {
+        "stockCode": "002815",
+        "companyName": "崇达技术"
+      },
+      {
+        "stockCode": "002913",
+        "companyName": "奥士康"
+      },
+      {
+        "stockCode": "002916",
+        "companyName": "深南电路"
+      },
+      {
+        "stockCode": "002938",
+        "companyName": "鹏鼎控股"
+      },
+      {
+        "stockCode": "300476",
+        "companyName": "胜宏科技"
+      },
+      {
+        "stockCode": "300657",
+        "companyName": "弘信电子"
+      },
+      {
+        "stockCode": "300739",
+        "companyName": "明阳电路"
+      },
+      {
+        "stockCode": "300814",
+        "companyName": "中富电路"
+      },
+      {
+        "stockCode": "300852",
+        "companyName": "四会富仕"
+      }
+    ],
+    "rights": {
+      "accessScope": "public",
+      "retentionAllowed": true,
+      "aiProcessingAllowed": true,
+      "derivativeKnowledgeAllowed": true,
+      "redistributionAllowed": false,
+      "policyBasis": "personal_noncommercial_research"
+    }
+  },
+  "finalClassification": "EASTMONEY_INDUSTRY_ACQUISITION_VALIDATED",
+  "m3bGateRerunAuthorized": true,
+  "mutation": {
+    "modelCallCount": 0,
+    "knowledgeMutation": false,
+    "gatewaySubmitCount": 0,
+    "writerCommitCount": 0,
+    "fullM3BGateRun": false
+  },
+  "privacy": {
+    "rawBodiesIncluded": false,
+    "completeDatasetIncluded": false,
+    "cookiesIncluded": false,
+    "credentialsIncluded": false,
+    "completeHeadersIncluded": false,
+    "absolutePathsIncluded": false
+  },
+  "failure": null
+}

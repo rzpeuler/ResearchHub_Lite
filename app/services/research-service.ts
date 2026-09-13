@@ -20,6 +20,7 @@ export interface ResearchServiceOptions {
   readonly mountedKnowledgeBaseRoot: string
   readonly reportRoot?: string
   readonly acquisitionPlugins: readonly ResearchAcquisitionPlugin[]
+  readonly industryAcquisitionPlugins?: readonly ResearchAcquisitionPlugin[]
   readonly akshare?: AkshareDataClient
   readonly signalStore?: ResearchSignalStore
   readonly dailySignalStore?: EventResearchSignalStore
@@ -109,7 +110,7 @@ export class ResearchService {
     const industryReasoningExecutorFactory = this.options.industryReasoningExecutorFactory
       ?? (this.options.reasoningExecutor === undefined ? undefined : async () => this.options.reasoningExecutor!)
     if (!industryReasoningExecutorFactory) throw new ApplicationServiceError('failed', 'Industry Research requires a configured ReasoningExecutor')
-    const plugins = [...this.options.acquisitionPlugins]; if (this.options.akshare) plugins.push(new AkshareIndustryResearchPlugin(this.options.akshare))
+    const plugins = [...this.options.acquisitionPlugins, ...(this.options.industryAcquisitionPlugins ?? [])]; if (this.options.akshare) plugins.push(new AkshareIndustryResearchPlugin(this.options.akshare))
     const composition = new IndustryAcquisitionComposition(plugins)
     this.options.workflowService.register({ runId: input.workflowRunId, workflowType: 'industry_deep_research', objective: `Industry research ${target.name}` })
     const completion = this.options.workflowService.start(input.workflowRunId, async (signal) => {
