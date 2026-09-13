@@ -1,0 +1,45 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-026-PRODUCTION-PORTFOLIO-REAL-PI-E2E-ACCEPTANCE",
+  "baseCommit": "805e3db41b329eb18ba174716f5c28ff6a5cbcbf",
+  "generatedAt": "2026-09-13T18:16:58.840Z",
+  "target": {
+    "nameHash": "d237e80ac4afd1c3b3e273659df072d993f7f3d07369812122f1c51fd83ebee2",
+    "aliasHashes": ["43aa64a6e9f0de8180d265ec46aaa7b0970934383d34c583615507f786e16e84", "b196f38b4334ec46d67ee5ccb0da9d31614d95d3463a7c411fe31aa4cfe51303"],
+    "searchTermHashes": ["46bb3732afeec353f1e16d2998ec246147c367376576e8ecc4f6fac03d604709", "809f17cfd206bec0365132574691bcd51413d3f296cb46099b19512d2766c73f", "9fceb52361400f99860606940544efcaf389d81c515a1ea5edb7cd74849d0314", "39cb99ef2444c650810ea2d229f8435440195fba7248732dcfa495e1e60eca11", "c4e1b774012fc7cacc55b68172e0a909081ac20771de21fb1cd7bada5ec8e93d", "0c970d386f6da1b1c61cd87f1c8562281c76683b91c9dae64aa324e79cddf6f7", "f2debfd39bcf2c7a0141f7065e4d6b8a11cb9413dd79ffa74a75c162f33b3dd6", "ef1bbacb60b5994fc4bd542621045bd9b841928a4c16adcfc457415d3b9aab12"],
+    "asOf": "2026-09-14T00:00:00.000Z"
+  },
+  "productionProviderOrder": [
+    "official-disclosure-research-acquisition",
+    "gdelt-research-acquisition",
+    "miit-industry-research-acquisition",
+    "govcn-industry-research-acquisition",
+    "eastmoney-industry-research-acquisition",
+    "cpca-industry-research-acquisition",
+    "akshare-industry-research-acquisition"
+  ],
+  "providerOutcomes": [],
+  "providerTelemetry": [],
+  "reasoning": { "operationCounts": {}, "operations": [] },
+  "eightModuleStatusSummary": [],
+  "acquisitionWaveCount": 0,
+  "gatewaySubmissionCount": 0,
+  "writerCommitCount": 0,
+  "revisionDelta": 0,
+  "canonicalObjectCounts": { "before": null, "after": null },
+  "sourceRawProvenanceAudit": { "allSourcesHaveRaw": false, "rawCount": 0 },
+  "unsupportedNumericCount": 0,
+  "graphSummary": { "root": false, "projectionHash": null },
+  "report": { "type": null, "sectionCount": 0, "sectionTitles": [], "expectedTitles": ["Executive Industry View", "Industry Scope & Definition", "Market Size & Growth", "Demand Structure & Drivers", "Supply, Capacity & Utilization", "Supply-Demand Balance & Pricing", "Industry Chain Map", "Value Capture & Industry Economics", "Competitive Landscape", "Technology & Product Roadmap", "Company Mapping & Exposure", "Catalysts", "Risks & Invalidation Conditions", "Key Metrics & Monitoring", "Research Gaps & Alternative Views", "Methodology & Provenance"] },
+  "replay": { "status": "not_run", "liveModelCalls": 0, "liveProviderCalls": 0, "semanticOperations": 0, "revisionDelta": 0, "duplicates": { "entity": false, "relation": false, "claim": false, "source": false }, "rootIdStable": false, "graphProjectionHash": null },
+  "liveRunStarted": false,
+  "finalClassification": "PORTFOLIO_E2E_LIVE_INCONCLUSIVE",
+  "failure": "Codex CLI executable was not discovered",
+  "privacy": {
+    "rawBodiesIncluded": false,
+    "completePromptsIncluded": false,
+    "completeOutputsIncluded": false,
+    "credentialsIncluded": false,
+    "privatePathsIncluded": false,
+    "reasoningTracesIncluded": false
+  }
+}
