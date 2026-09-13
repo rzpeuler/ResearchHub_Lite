@@ -1,0 +1,156 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-021-GOVCN-SITEWIDE-SEARCH-ROUTE-PROBE",
+  "baseCommit": "26dae86de8b9cce02c2d2ca1b4906b9936433f5a",
+  "generatedAt": "2026-09-13T17:20:34.654Z",
+  "target": {
+    "nameHash": "b8e35979d589b8e7",
+    "aliasHash": "33d250516d9d5c12",
+    "asOf": "2026-09-12T00:00:00.000Z",
+    "searchTermCount": 8,
+    "searchTermsHash": "ded447de9a6be6882555eb953ef3f788bc5056e0adb65bc8151392aa30f6175b"
+  },
+  "officialRoutes": {
+    "discoveryRoot": {
+      "host": "sousuo.www.gov.cn",
+      "path": "/",
+      "httpOutcome": "HTTP_200"
+    },
+    "searchPage": {
+      "host": "sousuo.www.gov.cn",
+      "path": "/sousuo/search.shtml",
+      "httpOutcome": "HTTP_200"
+    },
+    "routeFamily": "sousuo.www.gov.cn/sousuo/search.shtml"
+  },
+  "discoveredContract": null,
+  "discoveryEvidence": {
+    "sourceHashes": [
+      "eeb62684a074b3432a6574243a0677a2d683a4cacf5a9bb2731107513154cc0c",
+      "b720a4e7d7059fcac9f215aabf08d582cbf2759ee586729b8ce4deebfbca7795"
+    ],
+    "referencedAssetCount": 6,
+    "assets": [
+      {
+        "host": "sousuo.www.gov.cn",
+        "path": "/favicon.ico",
+        "kind": "static",
+        "httpOutcome": "HTTP_404",
+        "bodyHash": "2d49402cf1ca284b33a64dd41a06cb36315b3c7e5b6a55fd8ebb1989719c56a7",
+        "extractedRouteHints": [
+          "/",
+          "/images/trs_public.css",
+          "/images/trs_mobile_pub.css",
+          "/images/trs_base.css",
+          "/images/trs_404_pc.css"
+        ]
+      },
+      {
+        "host": "sousuo.www.gov.cn",
+        "path": "/www.gov.cn/govweb/xhtml/favicon.ico",
+        "kind": "static",
+        "httpOutcome": "HTTP_404",
+        "bodyHash": "2d49402cf1ca284b33a64dd41a06cb36315b3c7e5b6a55fd8ebb1989719c56a7",
+        "extractedRouteHints": [
+          "/",
+          "/images/trs_public.css",
+          "/images/trs_mobile_pub.css",
+          "/images/trs_base.css",
+          "/images/trs_404_pc.css"
+        ]
+      },
+      {
+        "host": "sousuo.www.gov.cn",
+        "path": "/libs/obox/obox.css",
+        "kind": "static",
+        "httpOutcome": "HTTP_404",
+        "bodyHash": "2d49402cf1ca284b33a64dd41a06cb36315b3c7e5b6a55fd8ebb1989719c56a7",
+        "extractedRouteHints": [
+          "/",
+          "/images/trs_public.css",
+          "/images/trs_mobile_pub.css",
+          "/images/trs_base.css",
+          "/images/trs_404_pc.css"
+        ]
+      },
+      {
+        "host": "sousuo.www.gov.cn",
+        "path": "/libs/tagsinput/jquery.tagsinput.min.css",
+        "kind": "static",
+        "httpOutcome": "HTTP_404",
+        "bodyHash": "2d49402cf1ca284b33a64dd41a06cb36315b3c7e5b6a55fd8ebb1989719c56a7",
+        "extractedRouteHints": [
+          "/",
+          "/images/trs_public.css",
+          "/images/trs_mobile_pub.css",
+          "/images/trs_base.css",
+          "/images/trs_404_pc.css"
+        ]
+      },
+      {
+        "host": "sousuo.www.gov.cn",
+        "path": "/libs/jquery-3.7.0.min.js",
+        "kind": "javascript",
+        "httpOutcome": "HTTP_404",
+        "bodyHash": "2d49402cf1ca284b33a64dd41a06cb36315b3c7e5b6a55fd8ebb1989719c56a7",
+        "extractedRouteHints": [
+          "/",
+          "/images/trs_public.css",
+          "/images/trs_mobile_pub.css",
+          "/images/trs_base.css",
+          "/images/trs_404_pc.css"
+        ]
+      },
+      {
+        "host": "sousuo.www.gov.cn",
+        "path": "/libs/carousel/jquery.carousel-zl-fb.js",
+        "kind": "javascript",
+        "httpOutcome": "HTTP_404",
+        "bodyHash": "2d49402cf1ca284b33a64dd41a06cb36315b3c7e5b6a55fd8ebb1989719c56a7",
+        "extractedRouteHints": [
+          "/",
+          "/images/trs_public.css",
+          "/images/trs_mobile_pub.css",
+          "/images/trs_base.css",
+          "/images/trs_404_pc.css"
+        ]
+      }
+    ]
+  },
+  "probes": [],
+  "boundedResultSummary": {
+    "candidateCount": 0,
+    "officialCandidateCount": 0,
+    "pcbMatchCount": 0,
+    "normalizedDocumentCount": 0
+  },
+  "documentNormalization": [],
+  "requestBudget": {
+    "totalRequests": 8,
+    "maximumRequests": 24,
+    "documentFetches": 0,
+    "maximumDocumentFetches": 2,
+    "retries": 0
+  },
+  "classification": "SITEWIDE_ROUTE_CONTRACT_UNRESOLVED",
+  "recommendation": "No production change is authorized; retain the existing ResearchAcquisitionPlugin route and scope any follow-up separately.",
+  "mutation": {
+    "productionCodeMutation": false,
+    "knowledgeMutation": false,
+    "modelCalls": 0,
+    "gatewaySubmitCount": 0,
+    "writerCommitCount": 0
+  },
+  "privacy": {
+    "rawResponseBodies": false,
+    "fullHtmlOrJavaScript": false,
+    "fullDocumentText": false,
+    "cookies": false,
+    "credentials": false,
+    "authorizationHeaders": false,
+    "privateAbsolutePaths": false,
+    "reasoningTraces": false,
+    "thirdPartySearchEngines": false,
+    "browserAutomation": false,
+    "antiBotBypass": false
+  }
+}
