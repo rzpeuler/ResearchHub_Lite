@@ -1,0 +1,292 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-013-CODEX-MODULE-SCHEMA-COMPATIBILITY",
+  "baseCommit": "cae69cc518cc38300d3a2cf7e55505c0dc045c27",
+  "generatedAt": "2026-09-13T03:07:56.225Z",
+  "diag012Acceptance": {
+    "acceptedTestEvidenceOnly": true,
+    "classification": "MODULE_TRANSPORT_BLOCKER_PROVEN",
+    "designCalls": 1,
+    "moduleCalls": 16,
+    "boundedRepairPerModule": true,
+    "synthesisRequested": false,
+    "terminalKnowledgeRevision": 0,
+    "acquisitionLimitation": {
+      "cninfoEmpty": true,
+      "gdeltEastmoneyAkshareFailed": true,
+      "evidenceRelevanceEstablished": false
+    }
+  },
+  "backend": "codex-cli",
+  "model": "gpt-5.6-luna",
+  "effort": "medium",
+  "cliVersion": "codex-cli 0.152.1",
+  "authoritativeModuleSource": {
+    "fingerprint": "9d2c118931979c45",
+    "bytes": 6341,
+    "byteEqualBeforeAfter": true
+  },
+  "baselineNormalized": {
+    "fingerprint": "afdce2f01f414709",
+    "bytes": 4585
+  },
+  "structuralFeatureCounts": {
+    "untypedPrimitiveConst": 4,
+    "enumWithoutType": 5,
+    "oneOf": 1,
+    "anyOf": 1,
+    "emptySchemaLeaves": 1,
+    "objectWithProperties": 7,
+    "normalizedStrengthenedObjectCount": 4
+  },
+  "helperTransformations": {
+    "primitiveConstTypeInference": "TEST-only, primitive consts only",
+    "guardedOneOfConversion": "TEST-only, strict unique kind const entity|relation|claim only",
+    "structuredValueLeaf": "TEST-only, exact structuredValue.value empty leaf to finite scalar anyOf"
+  },
+  "probes": [
+    {
+      "name": "FULL_MODULE_BASELINE",
+      "actualCallOrdinal": 1,
+      "contractFingerprint": "9d2c118931979c45",
+      "contractBytes": 6341,
+      "normalizedFingerprint": "afdce2f01f414709",
+      "normalizedBytes": 4585,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeFailureClass": "unknown_nonzero_exit",
+      "safeReasoningCode": "reasoning_execution_failed",
+      "safeErrorCode": null,
+      "parserStatus": "not_run",
+      "validatorStatus": "not_run",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedPrimitiveConst": 4,
+        "enumWithoutType": 5,
+        "oneOf": 1,
+        "anyOf": 1,
+        "emptySchemaLeaves": 1,
+        "objectWithProperties": 7,
+        "normalizedStrengthenedObjectCount": 0
+      }
+    },
+    {
+      "name": "UNTYPED_CONST_MINIMAL",
+      "actualCallOrdinal": 2,
+      "contractFingerprint": "6403f2b1cc6b62ac",
+      "contractBytes": 107,
+      "normalizedFingerprint": "6403f2b1cc6b62ac",
+      "normalizedBytes": 107,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeFailureClass": "unknown_nonzero_exit",
+      "safeReasoningCode": "reasoning_execution_failed",
+      "safeErrorCode": null,
+      "parserStatus": "not_run",
+      "validatorStatus": "not_run",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedPrimitiveConst": 1,
+        "enumWithoutType": 0,
+        "oneOf": 0,
+        "anyOf": 0,
+        "emptySchemaLeaves": 0,
+        "objectWithProperties": 1,
+        "normalizedStrengthenedObjectCount": 0
+      }
+    },
+    {
+      "name": "TYPED_CONST_MINIMAL",
+      "actualCallOrdinal": 3,
+      "contractFingerprint": "2221b0c680397e77",
+      "contractBytes": 123,
+      "normalizedFingerprint": "2221b0c680397e77",
+      "normalizedBytes": 123,
+      "processStarted": true,
+      "exitState": "normal_exit",
+      "semanticResultAvailable": true,
+      "safeFailureClass": null,
+      "safeReasoningCode": null,
+      "safeErrorCode": null,
+      "parserStatus": "passed",
+      "validatorStatus": "passed",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedPrimitiveConst": 0,
+        "enumWithoutType": 0,
+        "oneOf": 0,
+        "anyOf": 0,
+        "emptySchemaLeaves": 0,
+        "objectWithProperties": 1,
+        "normalizedStrengthenedObjectCount": 0
+      }
+    },
+    {
+      "name": "FULL_MODULE_CONST_TYPED",
+      "actualCallOrdinal": 4,
+      "contractFingerprint": "998fd3a9c72a3c79",
+      "contractBytes": 6405,
+      "normalizedFingerprint": "683c1265bd5d3aa7",
+      "normalizedBytes": 4649,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeFailureClass": "unknown_nonzero_exit",
+      "safeReasoningCode": "reasoning_execution_failed",
+      "safeErrorCode": null,
+      "parserStatus": "not_run",
+      "validatorStatus": "not_run",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedPrimitiveConst": 0,
+        "enumWithoutType": 5,
+        "oneOf": 1,
+        "anyOf": 1,
+        "emptySchemaLeaves": 1,
+        "objectWithProperties": 7,
+        "normalizedStrengthenedObjectCount": 0
+      }
+    },
+    {
+      "name": "NESTED_ONEOF_MINIMAL",
+      "actualCallOrdinal": 5,
+      "contractFingerprint": "51baf97faa621327",
+      "contractBytes": 412,
+      "normalizedFingerprint": "51baf97faa621327",
+      "normalizedBytes": 412,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeFailureClass": "unknown_nonzero_exit",
+      "safeReasoningCode": "reasoning_execution_failed",
+      "safeErrorCode": null,
+      "parserStatus": "not_run",
+      "validatorStatus": "not_run",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedPrimitiveConst": 0,
+        "enumWithoutType": 0,
+        "oneOf": 1,
+        "anyOf": 0,
+        "emptySchemaLeaves": 0,
+        "objectWithProperties": 3,
+        "normalizedStrengthenedObjectCount": 0
+      }
+    },
+    {
+      "name": "NESTED_ANYOF_MINIMAL",
+      "actualCallOrdinal": 6,
+      "contractFingerprint": "d92f2f270fb7b9c0",
+      "contractBytes": 412,
+      "normalizedFingerprint": "d92f2f270fb7b9c0",
+      "normalizedBytes": 412,
+      "processStarted": true,
+      "exitState": "normal_exit",
+      "semanticResultAvailable": true,
+      "safeFailureClass": null,
+      "safeReasoningCode": null,
+      "safeErrorCode": null,
+      "parserStatus": "passed",
+      "validatorStatus": "passed",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedPrimitiveConst": 0,
+        "enumWithoutType": 0,
+        "oneOf": 0,
+        "anyOf": 1,
+        "emptySchemaLeaves": 0,
+        "objectWithProperties": 3,
+        "normalizedStrengthenedObjectCount": 0
+      }
+    },
+    {
+      "name": "FULL_MODULE_GUARDED_VARIANT_NORMALIZATION",
+      "actualCallOrdinal": 7,
+      "contractFingerprint": "89cf21bed4c73a3b",
+      "contractBytes": 6405,
+      "normalizedFingerprint": "6bd1c255e5e0846c",
+      "normalizedBytes": 4649,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeFailureClass": "unknown_nonzero_exit",
+      "safeReasoningCode": "reasoning_execution_failed",
+      "safeErrorCode": null,
+      "parserStatus": "not_run",
+      "validatorStatus": "not_run",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedPrimitiveConst": 0,
+        "enumWithoutType": 5,
+        "oneOf": 0,
+        "anyOf": 2,
+        "emptySchemaLeaves": 1,
+        "objectWithProperties": 7,
+        "normalizedStrengthenedObjectCount": 0
+      }
+    },
+    {
+      "name": "FULL_MODULE_STRUCTURED_VALUE_LEAF_NORMALIZATION",
+      "actualCallOrdinal": 8,
+      "contractFingerprint": "361718293f5331af",
+      "contractBytes": 6469,
+      "normalizedFingerprint": "c6d09bf6f4685e2f",
+      "normalizedBytes": 4713,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeFailureClass": "unknown_nonzero_exit",
+      "safeReasoningCode": "reasoning_execution_failed",
+      "safeErrorCode": null,
+      "parserStatus": "not_run",
+      "validatorStatus": "not_run",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedPrimitiveConst": 0,
+        "enumWithoutType": 5,
+        "oneOf": 0,
+        "anyOf": 3,
+        "emptySchemaLeaves": 0,
+        "objectWithProperties": 7,
+        "normalizedStrengthenedObjectCount": 0
+      }
+    }
+  ],
+  "actualCallCount": 8,
+  "modelCallCount": 8,
+  "provenDifferentials": {
+    "primitiveConstTypeRequirementDifferential": "proven",
+    "nestedOneOfDifferential": "proven"
+  },
+  "transformationRequirementConclusion": {
+    "primitiveConstTypeInference": "proven_by_controlled_differential_but_insufficient_for_full_module",
+    "guardedOneOfConversion": "proven_by_controlled_differential_but_insufficient_for_full_module",
+    "structuredValueLeafNormalization": "tested_after_prior_differentials_but_not_proven_sufficient"
+  },
+  "classification": "KNOWN_MODULE_SCHEMA_DELTAS_INSUFFICIENT",
+  "nextActionCategory": "REVIEW_NEXT_CODEX_MODULE_SCHEMA_DELTA",
+  "stopReason": "Known schema deltas remained insufficient",
+  "mutation": {
+    "knowledgeMutation": false,
+    "gatewaySubmitCount": 0,
+    "writerCommitCount": 0,
+    "productionCodeMutation": false,
+    "sourceContractMutated": false,
+    "acquisitionCalls": 0
+  },
+  "privacy": {
+    "rawPrompt": false,
+    "fullInput": false,
+    "fullSchema": false,
+    "modelOutput": false,
+    "stdout": false,
+    "stderr": false,
+    "jsonl": false,
+    "credentials": false,
+    "authData": false,
+    "privatePaths": false,
+    "reasoningTraces": false
+  },
+  "maxRealModelCalls": 8
+}
