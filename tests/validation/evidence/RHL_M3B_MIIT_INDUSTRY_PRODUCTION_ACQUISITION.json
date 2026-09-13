@@ -1,12 +1,23 @@
 {
-  "taskId": "RHL-M3B-3B-IMPL-022-MIIT-OFFICIAL-INDUSTRY-ACQUISITION",
-  "generatedAt": "2026-09-13T17:41:59.927Z",
+  "taskId": "RHL-M3B-3B-FIX-023-MIIT-ROUTE-BASE-AND-LIVE-EVIDENCE",
+  "generatedAt": "2026-09-13T17:51:03.312Z",
   "target": {
-    "nameHash": "6865afa1c125c4de",
+    "nameHash": "b8e35979d589b8e7",
     "aliasHashes": [
-      "43417e4fe141f75d",
+      "33d250516d9d5c12",
       "bd684c4273355916"
     ],
+    "searchTermHashes": [
+      "5b28ee335216e1a8",
+      "36fb1d9d0b5aad94",
+      "f8cff2f4909ec87c",
+      "c70dc1312922c6d8",
+      "acb654506f0aae9d",
+      "5ca1838ec81faa4c",
+      "5c7319fd988d13bf",
+      "93d2ee309b00082c"
+    ],
+    "searchTermCount": 8,
     "asOf": "2026-09-14T00:00:00.000Z"
   },
   "requestCounts": {
@@ -14,9 +25,69 @@
     "candidateFetches": 0,
     "retries": 0
   },
+  "routeEvidence": [
+    {
+      "route": "/jgsj/dzs/wjfb/",
+      "requested": {
+        "host": "www.miit.gov.cn",
+        "path": "/jgsj/dzs/wjfb/"
+      },
+      "final": {
+        "host": "www.miit.gov.cn",
+        "path": "/jgsj/dzs/wjfb/"
+      },
+      "http": 200,
+      "finalOfficial": true,
+      "responseSize": 5766,
+      "responseSizeBucket": "0-16KiB",
+      "anchorCount": 18,
+      "officialLinkCount": 18,
+      "targetTermAnchorOrNearbyTextMatchCount": 0,
+      "responseHash": "50379eca4f6db3c3"
+    },
+    {
+      "route": "/zwgk/zcwj/wjfb/gg/",
+      "requested": {
+        "host": "www.miit.gov.cn",
+        "path": "/zwgk/zcwj/wjfb/gg/"
+      },
+      "final": {
+        "host": "www.miit.gov.cn",
+        "path": "/zwgk/zcwj/wjfb/gg/"
+      },
+      "http": 200,
+      "finalOfficial": true,
+      "responseSize": 5340,
+      "responseSizeBucket": "0-16KiB",
+      "anchorCount": 15,
+      "officialLinkCount": 15,
+      "targetTermAnchorOrNearbyTextMatchCount": 0,
+      "responseHash": "ef8b2a116529b891"
+    },
+    {
+      "route": "/jgsj/yxj/xxfb/",
+      "requested": {
+        "host": "www.miit.gov.cn",
+        "path": "/jgsj/yxj/xxfb/"
+      },
+      "final": {
+        "host": "www.miit.gov.cn",
+        "path": "/jgsj/yxj/xxfb/"
+      },
+      "http": 200,
+      "finalOfficial": true,
+      "responseSize": 5161,
+      "responseSizeBucket": "0-16KiB",
+      "anchorCount": 11,
+      "officialLinkCount": 11,
+      "targetTermAnchorOrNearbyTextMatchCount": 0,
+      "responseHash": "0e6b0e62f06bc3fa"
+    }
+  ],
   "candidates": 0,
   "normalizedSources": 0,
   "officialHosts": [],
+  "publicationDateAvailability": 0,
   "sources": [],
   "mutation": {
     "modelCalls": 0,
@@ -33,5 +104,5 @@
     "privateAbsolutePaths": false,
     "reasoningTraces": false
   },
-  "classification": "MIIT_ROUTE_OR_PARSER_GAP"
+  "classification": "MIIT_DISCOVERY_EMPTY"
 }
