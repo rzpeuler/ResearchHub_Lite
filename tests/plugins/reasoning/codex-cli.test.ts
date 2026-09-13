@@ -35,13 +35,68 @@ test('Codex schema normalizer preserves Design structure and strips ResearchHub 
 
 test('Codex schema normalizer supports dynamic enum, const and oneOf contracts and fails closed for unsafe inputs', () => {
   const normalized = normalizeCodexOutputSchema({ name: 'dynamic', type: 'object', required: ['kind'], additionalProperties: false, properties: { kind: { enum: ['a', 'b'] }, fixed: { const: 'x' }, value: { oneOf: [{ type: 'string' }, { type: 'number' }] } } })
-  assert.deepEqual(normalized.schema.properties, { kind: { enum: ['a', 'b'] }, fixed: { const: 'x' }, value: { oneOf: [{ type: 'string' }, { type: 'number' }] } })
+  assert.deepEqual(normalized.schema.properties, { kind: { enum: ['a', 'b'] }, fixed: { const: 'x', type: 'string' }, value: { oneOf: [{ type: 'string' }, { type: 'number' }] } })
   assert.throws(() => normalizeCodexOutputSchema({ type: 'object', properties: { x: { type: 'string', unknownKeyword: true } } }), (error: unknown) => error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'reasoning_configuration_invalid')
   assert.throws(() => normalizeCodexOutputSchema({ type: 'object', properties: { x: undefined } }), (error: unknown) => error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'reasoning_configuration_invalid')
   assert.throws(() => normalizeCodexOutputSchema({}), /one JSON Schema object/)
   assert.throws(() => normalizeCodexOutputSchema({ type: 'string', enum: Array.from({ length: 100000 }, (_, i) => String(i)) }), /size limit/)
   assert.throws(() => normalizeCodexOutputSchema({ type: 'number', const: Number.NaN }), (error: unknown) => error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'reasoning_configuration_invalid')
   assert.throws(() => normalizeCodexOutputSchema({ type: 'object', properties: { x: new Date(0) } }), (error: unknown) => error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'reasoning_configuration_invalid')
+})
+
+test('Codex transport applies only the proven schema compatibility set', () => {
+  const source = {
+    type: 'object', additionalProperties: false,
+    properties: {
+      text: { const: 'x' }, bool: { const: true }, integer: { const: 2 }, decimal: { const: 2.5 }, nil: { const: null }, enumOnly: { enum: ['a', 'b'] },
+      objectConst: { const: { x: 1 } }, arrayConst: { const: [1] }, unrelated: {},
+      structuredValue: { type: 'object', properties: { value: {} }, anyOf: [{ required: ['value'] }, { required: ['value'] }] },
+      choice: { oneOf: [
+        { type: 'object', additionalProperties: false, required: ['kind'], properties: { kind: { const: 'a' }, value: { type: 'string' } } },
+        { type: 'object', additionalProperties: false, required: ['kind'], properties: { kind: { const: 'b' }, value: { type: 'number' } } },
+      ] },
+    },
+  }
+  const before = JSON.stringify(source)
+  const normalized = normalizeCodexOutputSchema(source)
+  const properties = normalized.schema.properties as any
+  assert.deepEqual(properties.text, { const: 'x', type: 'string' })
+  assert.deepEqual(properties.bool, { const: true, type: 'boolean' })
+  assert.deepEqual(properties.integer, { const: 2, type: 'integer' })
+  assert.deepEqual(properties.decimal, { const: 2.5, type: 'number' })
+  assert.deepEqual(properties.nil, { const: null, type: 'null' })
+  assert.deepEqual(properties.enumOnly, { enum: ['a', 'b'] })
+  assert.deepEqual(properties.objectConst, { const: { x: 1 } })
+  assert.deepEqual(properties.arrayConst, { const: [1] })
+  assert.deepEqual(properties.unrelated, {})
+  assert.deepEqual(properties.choice.anyOf.map((x: any) => x.properties.kind.const), ['a', 'b'])
+  assert.equal(properties.choice.oneOf, undefined)
+  assert.deepEqual(properties.structuredValue.properties.value, { anyOf: [{ type: 'number' }, { type: 'string' }, { type: 'boolean' }] })
+  assert.deepEqual(properties.structuredValue.anyOf, undefined)
+  assert.equal(normalized.primitiveConstTypeCount, 7)
+  assert.equal(normalized.guardedKindOneOfConversionCount, 1)
+  assert.equal(normalized.redundantRequiredOnlyAnyOfRemovalCount, 1)
+  assert.equal(normalized.structuredValueScalarNormalizationCount, 1)
+  assert.equal(JSON.stringify(source), before)
+})
+
+test('Codex guarded oneOf conversion refuses unsafe or alternate discriminators', () => {
+  const variant = (kind: string, extra: Record<string, unknown> = {}) => ({ type: 'object', additionalProperties: false, required: ['kind'], properties: { kind: { const: kind }, value: { type: 'string' } }, ...extra })
+  for (const schema of [
+    { oneOf: [variant('a'), variant('a')] },
+    { oneOf: [variant('a'), { ...variant('b'), required: [] }] },
+    { oneOf: [variant('a'), { type: 'string' }] },
+    { oneOf: [{ ...variant('a'), additionalProperties: true }, variant('b')] },
+    { oneOf: [{ type: 'object', additionalProperties: false, required: ['discriminator'], properties: { discriminator: { const: 'a' } } }, { type: 'object', additionalProperties: false, required: ['discriminator'], properties: { discriminator: { const: 'b' } } }] },
+  ]) assert.equal((normalizeCodexOutputSchema(schema).schema as any).oneOf !== undefined, true)
+})
+
+test('Codex redundant required-only anyOf removal is conservative', () => {
+  const make = (branch: any) => normalizeCodexOutputSchema({ type: 'object', properties: { value: { type: 'object', properties: { period: { type: 'string' }, fiscalPeriod: { type: 'string' } }, anyOf: [branch] } } }).schema as any
+  assert.equal(make({ required: ['period'] }).properties.value.anyOf, undefined)
+  assert.ok(make({ required: ['period'], description: 'semantic' }).properties.value.anyOf)
+  assert.ok(make({ required: ['missing'] }).properties.value.anyOf)
+  assert.ok((normalizeCodexOutputSchema({ type: 'object', properties: { structuredValue: { type: 'object', properties: { value: { anyOf: [{ type: 'number' }, { type: 'string' }, { type: 'boolean' }] } } } } }).schema as any).properties.structuredValue.properties.value.anyOf)
 })
 
 test('Codex transport normalization makes every declared property required without mutating the source', () => {

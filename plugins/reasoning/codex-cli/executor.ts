@@ -165,12 +165,41 @@ export interface CodexOutputSchema {
   readonly removedKeywords: readonly string[]
   readonly strengthenedObjectCount: number
   readonly strengthenedObjectPaths: readonly string[]
+  readonly primitiveConstTypeCount: number
+  readonly guardedKindOneOfConversionCount: number
+  readonly redundantRequiredOnlyAnyOfRemovalCount: number
+  readonly structuredValueScalarNormalizationCount: number
 }
 
 export function normalizeCodexOutputSchema(outputContract: unknown): CodexOutputSchema {
   const removed = new Set<string>()
   let strengthenedObjectCount = 0
   const strengthenedObjectPaths: string[] = []
+  let primitiveConstTypeCount = 0
+  let guardedKindOneOfConversionCount = 0
+  let redundantRequiredOnlyAnyOfRemovalCount = 0
+  let structuredValueScalarNormalizationCount = 0
+  const isPrimitiveConst = (value: unknown): boolean => value === null || typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))
+  const inferredType = (value: unknown): string | undefined => value === null ? 'null' : typeof value === 'string' ? 'string' : typeof value === 'boolean' ? 'boolean' : typeof value === 'number' && Number.isFinite(value) ? Number.isInteger(value) ? 'integer' : 'number' : undefined
+  const isGuardedKindVariant = (value: unknown): value is Record<string, unknown> => {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
+    const variant = value as Record<string, unknown>
+    const properties = variant.properties
+    const kind = properties && typeof properties === 'object' && !Array.isArray(properties) ? (properties as Record<string, unknown>).kind : undefined
+    return variant.type === 'object' && variant.additionalProperties === false && Array.isArray(variant.required) && variant.required.includes('kind') && kind !== null && typeof kind === 'object' && !Array.isArray(kind) && Object.prototype.hasOwnProperty.call(kind, 'const') && isPrimitiveConst((kind as Record<string, unknown>).const)
+  }
+  const isRedundantRequiredOnlyAnyOf = (value: unknown, propertyKeys: readonly string[], finalRequired: readonly string[]): boolean => {
+    if (!Array.isArray(value) || value.length === 0) return false
+    const allowed = new Set(propertyKeys)
+    const required = new Set(finalRequired)
+    return value.every((branch) => {
+      if (branch === null || typeof branch !== 'object' || Array.isArray(branch)) return false
+      const keys = Object.keys(branch as Record<string, unknown>)
+      if (keys.length !== 1 || keys[0] !== 'required') return false
+      const branchRequired = (branch as Record<string, unknown>).required
+      return Array.isArray(branchRequired) && branchRequired.every((item) => typeof item === 'string' && allowed.has(item) && required.has(item))
+    })
+  }
   const convert = (value: unknown, path: string): unknown => {
     if (Array.isArray(value)) return value.map((item, index) => convert(item, `${path}[${index}]`))
     if (value === null || typeof value !== 'object') {
@@ -180,6 +209,8 @@ export function normalizeCodexOutputSchema(outputContract: unknown): CodexOutput
     }
     const prototype = Object.getPrototypeOf(value)
     if (prototype !== Object.prototype && prototype !== null) throw new Error(`outputContract contains a non-plain object at ${path}`)
+    const sourceOneOf = (value as Record<string, unknown>).oneOf
+    const sourceCanConvertOneOf = Array.isArray(sourceOneOf) && sourceOneOf.length > 0 && sourceOneOf.every(isGuardedKindVariant) && new Set(sourceOneOf.map((variant) => ((variant as Record<string, unknown>).properties as Record<string, unknown>).kind as Record<string, unknown>).map((kind) => kind.const)).size === sourceOneOf.length
     const result: Record<string, unknown> = {}
     for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
       if (RESEARCHHUB_METADATA_KEYS.has(key)) { removed.add(key); continue }
@@ -188,7 +219,18 @@ export function normalizeCodexOutputSchema(outputContract: unknown): CodexOutput
       if (key === 'properties') {
         if (child === null || typeof child !== 'object' || Array.isArray(child)) throw new Error(`outputContract properties must be an object at ${path}`)
         result[key] = Object.fromEntries(Object.entries(child as Record<string, unknown>).map(([property, schema]) => [property, convert(schema, `${path}.properties.${property}`)]))
+      } else if (key === 'const') {
+        result[key] = cloneJsonValue(child, `${path}.const`)
       } else result[key] = convert(child, `${path}.${key}`)
+    }
+    if (result.type === undefined && Object.prototype.hasOwnProperty.call(result, 'const')) {
+      const type = inferredType(result.const)
+      if (type !== undefined) { result.type = type; primitiveConstTypeCount += 1 }
+    }
+    if (sourceCanConvertOneOf) {
+      result.anyOf = result.oneOf
+      delete result.oneOf
+      guardedKindOneOfConversionCount += 1
     }
     if (result.properties !== undefined) {
       const propertyKeys = Object.keys(result.properties as Record<string, unknown>)
@@ -202,6 +244,14 @@ export function normalizeCodexOutputSchema(outputContract: unknown): CodexOutput
         if (strengthenedObjectPaths.length < 256) strengthenedObjectPaths.push(path)
       }
       result.required = propertyKeys
+      if (isRedundantRequiredOnlyAnyOf(result.anyOf, propertyKeys, propertyKeys)) {
+        delete result.anyOf
+        redundantRequiredOnlyAnyOfRemovalCount += 1
+      }
+    }
+    if (path.endsWith('.properties.structuredValue.properties.value') && Object.keys(result).length === 0) {
+      result.anyOf = [{ type: 'number' }, { type: 'string' }, { type: 'boolean' }]
+      structuredValueScalarNormalizationCount += 1
     }
     return result
   }
@@ -214,7 +264,19 @@ export function normalizeCodexOutputSchema(outputContract: unknown): CodexOutput
   let serialized: string
   try { serialized = JSON.stringify(root) } catch (error) { throw new ReasoningExecutorError('reasoning_configuration_invalid', 'Codex structured output schema is not JSON-serializable', { cause: error }) }
   if (Buffer.byteLength(serialized, 'utf8') > CODEX_SCHEMA_MAX_BYTES) invalid('Codex structured output schema exceeds the configured size limit')
-  return { schema: root, serialized, fingerprint: createHash('sha256').update(serialized).digest('hex').slice(0, 16), bytes: Buffer.byteLength(serialized, 'utf8'), removedKeywords: [...removed].sort(), strengthenedObjectCount, strengthenedObjectPaths }
+  return { schema: root, serialized, fingerprint: createHash('sha256').update(serialized).digest('hex').slice(0, 16), bytes: Buffer.byteLength(serialized, 'utf8'), removedKeywords: [...removed].sort(), strengthenedObjectCount, strengthenedObjectPaths, primitiveConstTypeCount, guardedKindOneOfConversionCount, redundantRequiredOnlyAnyOfRemovalCount, structuredValueScalarNormalizationCount }
+}
+
+function cloneJsonValue(value: unknown, path: string): unknown {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value
+  if (typeof value === 'number') { if (!Number.isFinite(value)) throw new Error(`outputContract contains a non-JSON number at ${path}`); return value }
+  if (Array.isArray(value)) return value.map((item, index) => cloneJsonValue(item, `${path}[${index}]`))
+  if (typeof value === 'object') {
+    const prototype = Object.getPrototypeOf(value)
+    if (prototype !== Object.prototype && prototype !== null) throw new Error(`outputContract contains a non-plain object at ${path}`)
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, child]) => [key, cloneJsonValue(child, `${path}.${key}`)]))
+  }
+  throw new Error(`outputContract contains a non-JSON value at ${path}`)
 }
 
 function validateSchemaShape(schema: Record<string, unknown>, path: string): void {

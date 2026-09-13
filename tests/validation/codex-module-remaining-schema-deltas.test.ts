@@ -23,7 +23,7 @@ test('exact scalar leaf normalization changes only authorized structuredValue.va
 
 test('composition is source-immutable, deterministic and idempotent', () => {
   const source = createIndustryModuleResultContract(MODULE, []); const before = JSON.stringify(source); const result = applyProvenTransformations(source, true, true)
-  assert.equal(JSON.stringify(source), before); assert.deepEqual(applyProvenTransformations(result, true, true), result); assert.deepEqual(inferPrimitiveConstTypes(convertDisjointConstOneOfToAnyOf(result)), result); assert.equal(normalizeCodexOutputSchema(source).fingerprint, 'afdce2f01f414709')
+  assert.equal(JSON.stringify(source), before); assert.deepEqual(applyProvenTransformations(result, true, true), result); assert.deepEqual(inferPrimitiveConstTypes(convertDisjointConstOneOfToAnyOf(result)), result); assert.equal(normalizeCodexOutputSchema(source).fingerprint, '736e8d9d5d72c5cb')
 })
 
 test('minimal controls have the required strict shapes', () => {

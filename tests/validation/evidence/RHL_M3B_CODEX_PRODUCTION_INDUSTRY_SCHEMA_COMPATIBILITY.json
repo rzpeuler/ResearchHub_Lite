@@ -1,0 +1,95 @@
+{
+  "taskId": "RHL-M3B-3B-FIX-015-CODEX-PROVEN-SCHEMA-COMPATIBILITY",
+  "baseCommit": "9e6601cd11c40093ffff71c473cf1f29b6e0dfe5",
+  "generatedAt": "2026-09-13T03:33:02.793Z",
+  "diag014Acceptance": {
+    "baseCommit": "9e6601cd11c40093ffff71c473cf1f29b6e0dfe5",
+    "aggregateClassification": "MODULE_TRANSPORT_COMPATIBILITY_SET_PROVEN",
+    "nextActionCategory": "IMPLEMENT_PROVEN_CODEX_SCHEMA_COMPATIBILITY_SET",
+    "harnessCaveat": "Ordinal 5 was an invalid TEST-harness argument-order attempt and was discarded; retained Probe E ordinal 6 executed once with no production mutation."
+  },
+  "approvedTransformations": [
+    "primitive const type inference",
+    "guarded strict unique kind oneOf to anyOf",
+    "redundant required-only anyOf removal",
+    "exact structuredValue.value scalar-leaf normalization"
+  ],
+  "runtimeMetadata": {
+    "backend": "codex-cli",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "medium",
+    "invocationMode": "exec-stdin-json-output-read-only",
+    "structuredOutputEnabled": true
+  },
+  "contracts": {
+    "module": {
+      "sourceFingerprint": "9d2c118931979c45",
+      "sourceBytes": 6341,
+      "normalizedFingerprint": "736e8d9d5d72c5cb",
+      "normalizedBytes": 4649,
+      "counters": {
+        "primitiveConstTypeCount": 4,
+        "guardedKindOneOfConversionCount": 1,
+        "redundantRequiredOnlyAnyOfRemovalCount": 1,
+        "structuredValueScalarNormalizationCount": 1
+      },
+      "unresolved": {
+        "untypedPrimitiveConst": 0,
+        "qualifyingDisjointKindOneOf": 0,
+        "redundantRequiredOnlyAnyOf": 0,
+        "emptyExactStructuredValueScalarLeaves": 0
+      }
+    },
+    "synthesis": {
+      "sourceFingerprint": "989a8722c3b9133e",
+      "sourceBytes": 6467,
+      "normalizedFingerprint": "6d7defaf3a9e0895",
+      "normalizedBytes": 4649,
+      "unresolved": {
+        "untypedPrimitiveConst": 0,
+        "qualifyingDisjointKindOneOf": 0,
+        "redundantRequiredOnlyAnyOf": 0,
+        "emptyExactStructuredValueScalarLeaves": 0
+      }
+    }
+  },
+  "probes": [
+    {
+      "operation": "industry_module_analysis",
+      "semanticOutput": true,
+      "parserStatus": "passed",
+      "validatorStatus": "passed",
+      "returnedStatus": "unavailable"
+    },
+    {
+      "operation": "industry_cross_module_synthesis",
+      "semanticOutput": true,
+      "parserStatus": "passed",
+      "validatorStatus": "passed"
+    }
+  ],
+  "actualModelCallCount": 2,
+  "finalClassification": "MODULE_AND_SYNTHESIS_TRANSPORT_VALIDATED",
+  "livePcbModuleDiagnosticAuthorized": true,
+  "mutation": {
+    "acquisitionCalls": 0,
+    "knowledgeMutation": false,
+    "gatewaySubmitCount": 0,
+    "writerCommitCount": 0,
+    "productionCodeMutation": true,
+    "sourceContractsMutated": false
+  },
+  "privacy": {
+    "rawPrompts": false,
+    "fullInputs": false,
+    "fullSchemas": false,
+    "modelOutputs": false,
+    "stdout": false,
+    "stderr": false,
+    "jsonl": false,
+    "credentials": false,
+    "authData": false,
+    "privateAbsolutePaths": false,
+    "reasoningTraces": false
+  }
+}
