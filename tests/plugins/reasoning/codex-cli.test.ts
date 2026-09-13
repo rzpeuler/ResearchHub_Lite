@@ -1,14 +1,56 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
-import { buildCodexCliInvocationArgs, classifyCodexFailure, CODEX_CLI_LUNA_CONFIG, CodexCliReasoningExecutor, normalizeCodexOutputSchema, parseCodexCliJsonlFinalResponse } from '../../../plugins/reasoning/codex-cli/executor.ts'
+import { buildCodexCliInvocationArgs, buildCodexCliProcessInvocation, classifyCodexFailure, CODEX_CLI_LUNA_CONFIG, CodexCliReasoningExecutor, normalizeCodexOutputSchema, parseCodexCliJsonlFinalResponse, resolveCodexCliExecutable } from '../../../plugins/reasoning/codex-cli/executor.ts'
 import { PiReasoningExecutor } from '../../../plugins/reasoning/pi/executor.ts'
 
 const capabilities = { maxContextTokens: 4_000, maxOutputTokens: 1_000, structuredOutputSupport: true, maxConcurrency: 1 }
 const fixture = join(process.cwd(), 'tests/plugins/reasoning/fixtures/fake-reasoning-host.mjs')
+
+test('Codex resolver honors explicit paths before environment, PATH, and AppData', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-codex-resolver-'))
+  try {
+    const explicit = join(root, 'explicit.exe'); const env = join(root, 'env.exe'); const pathCandidate = join(root, 'path', 'codex.exe'); const app = join(root, 'app', 'npm', 'codex.cmd')
+    await mkdir(join(root, 'path'), { recursive: true }); await mkdir(join(root, 'app', 'npm'), { recursive: true }); await writeFile(explicit, ''); await writeFile(env, ''); await writeFile(pathCandidate, ''); await writeFile(app, '')
+    const resolution = resolveCodexCliExecutable({ executable: explicit, platform: 'win32', env: { CODEX_EXECUTABLE: env, PATH: join(root, 'path'), APPDATA: join(root, 'app'), PATHEXT: '.EXE;.CMD' } })
+    assert.deepEqual(resolution, { executable: explicit, source: 'explicit', kind: 'native' })
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Codex resolver honors CODEX_EXECUTABLE and deterministic Windows PATH extensions', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-codex-resolver-'))
+  try {
+    const environment = join(root, 'codex.cmd'); const pathDir = join(root, 'path'); const pathCandidate = join(pathDir, 'codex.exe')
+    await mkdir(pathDir, { recursive: true }); await writeFile(environment, ''); await writeFile(pathCandidate, '')
+    assert.equal(resolveCodexCliExecutable({ platform: 'win32', env: { CODEX_EXECUTABLE: environment, PATH: pathDir }, }).source, 'environment')
+    assert.deepEqual(resolveCodexCliExecutable({ platform: 'win32', env: { PATH: pathDir, PATHEXT: '.EXE;.CMD' } }), { executable: pathCandidate, source: 'path', kind: 'native' })
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Codex resolver reaches bounded AppData fallback when PATH is absent or empty', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-codex-resolver-'))
+  try {
+    const app = join(root, 'appdata'); const shim = join(app, 'npm', 'codex.cmd'); await mkdir(join(app, 'npm'), { recursive: true }); await writeFile(shim, '')
+    assert.equal(resolveCodexCliExecutable({ platform: 'win32', env: { PATH: '', APPDATA: app } }).executable, shim)
+    const profile = join(root, 'profile'); const profileShim = join(profile, 'AppData', 'Roaming', 'npm', 'codex.cmd'); await mkdir(join(profile, 'AppData', 'Roaming', 'npm'), { recursive: true }); await writeFile(profileShim, '')
+    assert.equal(resolveCodexCliExecutable({ platform: 'win32', env: { USERPROFILE: profile } }).executable, profileShim)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Codex resolver fails closed when every authorized candidate is missing', () => {
+  assert.throws(() => resolveCodexCliExecutable({ platform: 'win32', env: { PATH: '', APPDATA: 'missing-app', USERPROFILE: 'missing-profile' } }), (error: unknown) => error instanceof Error && (error as any).code === 'reasoning_host_unavailable')
+})
+
+test('Windows command-shim invocation quotes spaced paths and keeps prompt off the command line', () => {
+  const args = ['exec', '--model', 'gpt-5.6-luna', '-o', 'C:\\work dir\\out.json', '-']
+  const invocation = buildCodexCliProcessInvocation('C:\\Program Files\\Codex\\codex.cmd', args, 'win32')
+  assert.equal(invocation.executable, 'cmd.exe'); assert.equal(invocation.shell, false)
+  assert.deepEqual(invocation.args.slice(0, 2), ['/d', '/s']); assert.match(invocation.args[3], /"C:\\Program Files\\Codex\\codex\.cmd"/u)
+  assert.match(invocation.args[3], /gpt-5\.6-luna/u); assert.equal(invocation.args[3].includes('user prompt'), false)
+})
 
 test('Codex CLI Luna configuration is immutable and builds the safe documented invocation', () => {
   assert.deepEqual(CODEX_CLI_LUNA_CONFIG, { backend: 'codex-cli', model: 'gpt-5.6-luna', reasoningEffort: 'medium' })

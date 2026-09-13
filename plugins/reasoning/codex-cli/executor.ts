@@ -1,7 +1,8 @@
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { accessSync, constants as fsConstants, statSync } from 'node:fs'
 import { execFile as execFileCallback, spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { extname, join } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
 import { promisify } from 'node:util'
 import { ReasoningExecutorError, type ReasoningExitState, type ReasoningFailureClass } from '../errors.ts'
@@ -25,6 +26,83 @@ const JSON_SCHEMA_TYPES = new Set(['object', 'array', 'string', 'number', 'integ
 
 export type CodexCliReasoningEffort = (typeof CODEX_REASONING_EFFORTS)[number]
 
+export type CodexCliResolutionSource = 'explicit' | 'environment' | 'path' | 'appdata'
+export type CodexCliExecutableKind = 'native' | 'command-shim'
+export interface CodexCliResolution {
+  readonly executable: string
+  readonly source: CodexCliResolutionSource
+  readonly kind: CodexCliExecutableKind
+}
+
+interface CodexCliResolutionOptions {
+  readonly executable?: string
+  readonly env?: NodeJS.ProcessEnv
+  readonly platform?: NodeJS.Platform
+  readonly fileExists?: (candidate: string) => boolean
+}
+
+const DEFAULT_FILE_EXISTS = (candidate: string): boolean => {
+  try { accessSync(candidate, fsConstants.F_OK | fsConstants.R_OK); return statSync(candidate).isFile() } catch { return false }
+}
+
+function executableKind(candidate: string): CodexCliExecutableKind { return /\.(?:cmd|bat)$/iu.test(candidate) ? 'command-shim' : 'native' }
+function isPathLike(value: string): boolean { return value.includes('/') || value.includes('\\') || /^[A-Za-z]:[\\/]/u.test(value) }
+function candidateFile(candidate: string, fileExists: (value: string) => boolean): string | undefined {
+  try {
+    if (fileExists(candidate)) return candidate
+  } catch { /* a broken candidate is simply skipped */ }
+  return undefined
+}
+
+function resolveCandidate(value: string, source: CodexCliResolutionSource, env: NodeJS.ProcessEnv, options: Required<Pick<CodexCliResolutionOptions, 'platform' | 'fileExists'>>): CodexCliResolution | undefined {
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  const direct = candidateFile(trimmed, options.fileExists)
+  if (direct) return { executable: direct, source, kind: executableKind(direct) }
+  if (isPathLike(trimmed)) return undefined
+  const pathValue = options.platform === 'win32' ? (env.Path?.trim() || env.PATH || '') : (env.PATH ?? '')
+  const pathExt = options.platform === 'win32' ? (env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean) : ['']
+  for (const entry of pathValue.split(options.platform === 'win32' ? ';' : ':').filter(Boolean)) {
+    const names = options.platform === 'win32' && !extname(trimmed) ? [trimmed, ...pathExt.map((extension) => `${trimmed}${extension.toLowerCase()}`)] : [trimmed]
+    for (const name of names) {
+      const found = candidateFile(join(entry, name), options.fileExists)
+      if (found) return { executable: found, source, kind: executableKind(found) }
+    }
+  }
+  return undefined
+}
+
+export function resolveCodexCliExecutable(options: CodexCliResolutionOptions = {}): CodexCliResolution {
+  const platform = options.platform ?? process.platform
+  const fileExists = options.fileExists ?? DEFAULT_FILE_EXISTS
+  const env = options.env ?? process.env
+  const resolveOptions = { platform, fileExists }
+  const explicit = options.executable
+  const environment = env.CODEX_EXECUTABLE?.trim()
+  const candidates: Array<[string | undefined, CodexCliResolutionSource]> = [[explicit, 'explicit'], [environment, 'environment']]
+  for (const [value, source] of candidates) {
+    if (!value) continue
+    const result = resolveCandidate(value, source, env, resolveOptions)
+    if (result) return result
+  }
+  const pathResult = resolveCandidate('codex', 'path', env, resolveOptions)
+  if (pathResult) return pathResult
+  if (platform === 'win32') {
+    const appData = env.APPDATA?.trim() || (env.USERPROFILE?.trim() ? join(env.USERPROFILE, 'AppData', 'Roaming') : undefined)
+    if (appData) for (const candidate of [join(appData, 'npm', 'codex.cmd'), join(appData, 'npm', 'codex.exe')]) {
+      const found = candidateFile(candidate, fileExists)
+      if (found) return { executable: found, source: 'appdata', kind: executableKind(found) }
+    }
+  }
+  throw new ReasoningExecutorError('reasoning_host_unavailable', 'Codex CLI executable was not discovered')
+}
+
+export function buildCodexCliProcessInvocation(executable: string, args: readonly string[], platform: NodeJS.Platform = process.platform): { executable: string; args: string[]; shell: false } {
+  if (platform !== 'win32' || !/\.(?:cmd|bat)$/iu.test(executable)) return { executable, args: [...args], shell: false }
+  const quote = (value: string): string => `"${value.replace(/(\\*)"/gu, '$1$1\\"').replace(/(\\+)$/u, '$1$1')}"`
+  return { executable: 'cmd.exe', args: ['/d', '/s', '/c', [quote(executable), ...args.map(quote)].join(' ')], shell: false }
+}
+
 export const CODEX_CLI_LUNA_CONFIG = Object.freeze({
   backend: 'codex-cli' as const,
   model: DEFAULT_MODEL,
@@ -43,6 +121,8 @@ export interface CodexCliRuntimeMetadata {
 
 export interface CodexCliExecutionDiagnostics {
   readonly executableDiscovered: boolean
+  readonly resolutionSource?: CodexCliResolutionSource
+  readonly executableKind?: CodexCliExecutableKind
   readonly processStarted: boolean
   readonly exitState: ReasoningExitState
   readonly semanticResultAvailable: boolean
@@ -69,6 +149,8 @@ export interface CodexCliReasoningExecutorOptions {
 export class CodexCliReasoningExecutor {
   private readonly capabilitiesValue: ReasoningCapabilities
   private readonly executable: string
+  private readonly executableKind: CodexCliExecutableKind
+  private readonly resolutionSource: CodexCliResolutionSource
   private readonly timeoutMs: number
   private readonly maxOutputChars: number
   private readonly tempRoot: string
@@ -80,7 +162,10 @@ export class CodexCliReasoningExecutor {
 
   constructor(options: CodexCliReasoningExecutorOptions) {
     this.capabilitiesValue = validateReasoningCapabilities(options.capabilities)
-    this.executable = options.executable ?? process.env.CODEX_EXECUTABLE ?? 'codex'
+    const resolution = resolveCodexCliExecutable({ executable: options.executable })
+    this.executable = resolution.executable
+    this.executableKind = resolution.kind
+    this.resolutionSource = resolution.source
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
     this.maxOutputChars = options.maxOutputChars ?? DEFAULT_OUTPUT_LIMIT
     this.tempRoot = options.tempRoot ?? tmpdir()
@@ -132,10 +217,11 @@ export class CodexCliReasoningExecutor {
 
   private runProcess(operation: ReasoningOperation, operationId: string, cwd: string, args: readonly string[], prompt: string, signal: AbortSignal): Promise<string> {
     return new Promise((resolve, reject) => {
-      const child = spawn(this.executable, [...args], { cwd, shell: false, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
+      const invocation = buildCodexCliProcessInvocation(this.executable, args)
+      const child = spawn(invocation.executable, invocation.args, { cwd, shell: invocation.shell, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
       let stdout = ''; let stderr = ''; let settled = false; let timedOut = false
       let processStarted = false
-      this.lastDiagnosticsValue = { executableDiscovered: true, processStarted: false, exitState: 'not_started', semanticResultAvailable: false }
+      this.lastDiagnosticsValue = { executableDiscovered: true, resolutionSource: this.resolutionSource, executableKind: this.executableKind, processStarted: false, exitState: 'not_started', semanticResultAvailable: false }
       const finish = (fn: () => void) => { if (!settled) { settled = true; clearTimeout(timer); signal.removeEventListener('abort', onAbort); fn() } }
       const terminate = () => { timedOut = true; if (child.pid !== undefined) { if (process.platform === 'win32') void execFile('taskkill', ['/pid', String(child.pid), '/t', '/f'], { windowsHide: true }).catch(() => undefined); else { try { process.kill(child.pid, 'SIGTERM') } catch {} } } }
       const onAbort = () => { terminate(); this.lastDiagnosticsValue = { ...this.lastDiagnosticsValue, processStarted, exitState: 'cancelled' }; finish(() => reject(new ReasoningExecutorError('reasoning_execution_failed', 'Codex CLI reasoning execution was cancelled', { operation, operationId, processStarted, exitState: 'cancelled', failureClass: 'timeout_or_cancel' }))) }

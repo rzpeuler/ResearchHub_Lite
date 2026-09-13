@@ -1,0 +1,19 @@
+{
+  "taskId": "RHL-M3B-3B-FIX-027-CODEX-CLI-WINDOWS-PATH-RESOLUTION",
+  "baseline": "df2ad88eef8c358a0389f6138e3a1c4b60a633b0",
+  "platform": "win32",
+  "resolutionSource": "none",
+  "executableKind": "none",
+  "discovered": false,
+  "versionAvailable": false,
+  "safeExecHelpAvailable": false,
+  "privacy": {
+    "absolutePathStored": false,
+    "usernameStored": false,
+    "appDataStored": false,
+    "userProfileStored": false,
+    "pathContentsStored": false,
+    "environmentDumpStored": false,
+    "credentialsStored": false
+  }
+}
