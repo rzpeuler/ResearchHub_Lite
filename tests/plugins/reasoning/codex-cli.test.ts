@@ -40,8 +40,47 @@ test('Codex resolver reaches bounded AppData fallback when PATH is absent or emp
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
+test('Codex resolver prefers PATH over bounded standalone Windows candidates', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-codex-resolver-'))
+  try {
+    const pathCandidate = join(root, 'path', 'codex.exe')
+    const standalone = join(root, 'local', 'Programs', 'OpenAI', 'Codex', 'bin', 'codex.exe')
+    const managed = join(root, 'profile', '.codex', 'packages', 'standalone', 'current', 'bin', 'codex.exe')
+    await mkdir(join(root, 'path'), { recursive: true }); await mkdir(join(root, 'local', 'Programs', 'OpenAI', 'Codex', 'bin'), { recursive: true }); await mkdir(join(root, 'profile', '.codex', 'packages', 'standalone', 'current', 'bin'), { recursive: true })
+    await writeFile(pathCandidate, ''); await writeFile(standalone, ''); await writeFile(managed, '')
+    assert.deepEqual(resolveCodexCliExecutable({ platform: 'win32', env: { PATH: join(root, 'path'), LOCALAPPDATA: join(root, 'local'), USERPROFILE: join(root, 'profile') } }), { executable: pathCandidate, source: 'path', kind: 'native' })
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Codex resolver discovers the official Windows standalone layout without PATH or AppData', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-codex-resolver-'))
+  try {
+    const standalone = join(root, 'local', 'Programs', 'OpenAI', 'Codex', 'bin', 'codex.exe')
+    await mkdir(join(root, 'local', 'Programs', 'OpenAI', 'Codex', 'bin'), { recursive: true }); await writeFile(standalone, '')
+    assert.deepEqual(resolveCodexCliExecutable({ platform: 'win32', env: { PATH: '', LOCALAPPDATA: join(root, 'local') } }), { executable: standalone, source: 'standalone', kind: 'native' })
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Codex resolver discovers the fixed managed current package when public standalone is absent', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-codex-resolver-'))
+  try {
+    const managed = join(root, 'profile', '.codex', 'packages', 'standalone', 'current', 'bin', 'codex.exe')
+    await mkdir(join(root, 'profile', '.codex', 'packages', 'standalone', 'current', 'bin'), { recursive: true }); await writeFile(managed, '')
+    assert.deepEqual(resolveCodexCliExecutable({ platform: 'win32', env: { PATH: '', LOCALAPPDATA: join(root, 'local'), USERPROFILE: join(root, 'profile') } }), { executable: managed, source: 'standalone', kind: 'native' })
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('Codex resolver accepts only the exact bounded local runtime path after public standalone', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-codex-resolver-'))
+  try {
+    const localRuntime = join(root, 'local', 'OpenAI', 'Codex', 'bin', 'codex.exe')
+    await mkdir(join(root, 'local', 'OpenAI', 'Codex', 'bin'), { recursive: true }); await writeFile(localRuntime, '')
+    assert.deepEqual(resolveCodexCliExecutable({ platform: 'win32', env: { PATH: '', LOCALAPPDATA: join(root, 'local') } }), { executable: localRuntime, source: 'localappdata', kind: 'native' })
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
 test('Codex resolver fails closed when every authorized candidate is missing', () => {
-  assert.throws(() => resolveCodexCliExecutable({ platform: 'win32', env: { PATH: '', APPDATA: 'missing-app', USERPROFILE: 'missing-profile' } }), (error: unknown) => error instanceof Error && (error as any).code === 'reasoning_host_unavailable')
+  assert.throws(() => resolveCodexCliExecutable({ platform: 'win32', env: { PATH: '', APPDATA: 'missing-app', LOCALAPPDATA: 'missing-local', USERPROFILE: 'missing-profile' } }), (error: unknown) => error instanceof Error && (error as any).code === 'reasoning_host_unavailable')
 })
 
 test('Windows command-shim invocation quotes spaced paths and keeps prompt off the command line', () => {

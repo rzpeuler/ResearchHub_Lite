@@ -1,12 +1,13 @@
 {
-  "taskId": "RHL-M3B-3B-FIX-027-CODEX-CLI-WINDOWS-PATH-RESOLUTION",
-  "baseline": "df2ad88eef8c358a0389f6138e3a1c4b60a633b0",
+  "taskId": "RHL-M3B-3B-FIX-028-CODEX-CLI-WINDOWS-STANDALONE-RESOLUTION",
+  "baseline": "7350cfa06cb47e8a67cad78903b25368479fb125",
   "platform": "win32",
   "resolutionSource": "none",
   "executableKind": "none",
   "discovered": false,
   "versionAvailable": false,
   "safeExecHelpAvailable": false,
+  "classification": "CLI_NOT_INSTALLED_IN_SUPPORTED_LAYOUT",
   "privacy": {
     "absolutePathStored": false,
     "usernameStored": false,

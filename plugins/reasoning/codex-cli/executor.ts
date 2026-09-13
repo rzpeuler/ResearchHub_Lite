@@ -26,7 +26,7 @@ const JSON_SCHEMA_TYPES = new Set(['object', 'array', 'string', 'number', 'integ
 
 export type CodexCliReasoningEffort = (typeof CODEX_REASONING_EFFORTS)[number]
 
-export type CodexCliResolutionSource = 'explicit' | 'environment' | 'path' | 'appdata'
+export type CodexCliResolutionSource = 'explicit' | 'environment' | 'path' | 'appdata' | 'standalone' | 'localappdata'
 export type CodexCliExecutableKind = 'native' | 'command-shim'
 export interface CodexCliResolution {
   readonly executable: string
@@ -92,6 +92,18 @@ export function resolveCodexCliExecutable(options: CodexCliResolutionOptions = {
     if (appData) for (const candidate of [join(appData, 'npm', 'codex.cmd'), join(appData, 'npm', 'codex.exe')]) {
       const found = candidateFile(candidate, fileExists)
       if (found) return { executable: found, source: 'appdata', kind: executableKind(found) }
+    }
+    const localAppData = env.LOCALAPPDATA?.trim()
+    if (localAppData) {
+      const standalone = candidateFile(join(localAppData, 'Programs', 'OpenAI', 'Codex', 'bin', 'codex.exe'), fileExists)
+      if (standalone) return { executable: standalone, source: 'standalone', kind: 'native' }
+      const localRuntime = candidateFile(join(localAppData, 'OpenAI', 'Codex', 'bin', 'codex.exe'), fileExists)
+      if (localRuntime) return { executable: localRuntime, source: 'localappdata', kind: 'native' }
+    }
+    const userProfile = env.USERPROFILE?.trim()
+    if (userProfile) {
+      const managedPackage = candidateFile(join(userProfile, '.codex', 'packages', 'standalone', 'current', 'bin', 'codex.exe'), fileExists)
+      if (managedPackage) return { executable: managedPackage, source: 'standalone', kind: 'native' }
     }
   }
   throw new ReasoningExecutorError('reasoning_host_unavailable', 'Codex CLI executable was not discovered')
