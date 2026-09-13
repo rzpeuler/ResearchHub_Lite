@@ -1,0 +1,374 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-011-PRODUCTION-REAL-PI-E2E-RERUN",
+  "baseCommit": "8a3a84ac7edbcf489d37633c6ad4dd9df4db23e5",
+  "generatedAt": "2026-09-13T02:09:17.962Z",
+  "target": {
+    "name": "PCB Manufacturing",
+    "alias": "Printed Circuit Board",
+    "asOf": "2026-09-12T00:00:00.000Z",
+    "searchTerms": [
+      "PCB 印制电路板",
+      "AI服务器 PCB HDI",
+      "深南电路 PCB",
+      "沪电股份 PCB",
+      "胜宏科技 PCB",
+      "生益科技 PCB CCL",
+      "PCB 产业链",
+      "PCB 行业 产能"
+    ]
+  },
+  "productionReasoning": {
+    "backend": "codex-cli",
+    "model": "gpt-5.6-luna",
+    "effort": "medium",
+    "structuredOutputEnabled": true,
+    "factory": "createIndustryProductionReasoningExecutor",
+    "runtimeProvider": "pi-coding-agent",
+    "actualPiReasoningExecutor": true
+  },
+  "productionComposition": {
+    "providers": [
+      "official-disclosure-research-acquisition",
+      "gdelt-research-acquisition",
+      "eastmoney-industry-research-acquisition",
+      "akshare-industry-research-acquisition"
+    ],
+    "orderingProven": true,
+    "callerOwnedResearchService": true
+  },
+  "providerOutcomes": [
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": true,
+      "providerFailed": false,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": false,
+      "providerFailed": true,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": true,
+      "providerEmpty": false,
+      "providerFailed": false,
+      "usableSourceCount": 12
+    },
+    {
+      "provider": "akshare-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": false,
+      "providerFailed": true,
+      "usableSourceCount": 0
+    }
+  ],
+  "liveRequestCounts": {
+    "modelCalls": 1,
+    "acquisitionCalls": 30
+  },
+  "normalizedSourcesByWave": [
+    {
+      "wave": 0,
+      "providers": [
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-industry-BK1340",
+          "contentHash": "1cfbf2fc8f0f513e8510613ac4af342a293add553f7b6be7f9e135c94ab90be3",
+          "kind": "structured_data",
+          "tier": 2
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-concept-BK0877",
+          "contentHash": "0de9082370f191fb31324376d2fb88d34d8a521ae36e5ae11cf3a8dd0f16c29b",
+          "kind": "structured_data",
+          "tier": 2
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-concept-BK1153",
+          "contentHash": "534d4093df957374f2b202fac8bbb40e7d918f6687325478e9dfd220ac468a07",
+          "kind": "structured_data",
+          "tier": 2
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-concept-BK1182",
+          "contentHash": "8c4252c8c35c80c6d55346efea8fc90a9ea1354dd5f3172bfa54d5245dfeaf73",
+          "kind": "structured_data",
+          "tier": 2
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-concept-BK1162",
+          "contentHash": "911e46664183ad3e53c42e6d95926137134089dd7e248468b2799d518239e796",
+          "kind": "structured_data",
+          "tier": 2
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-concept-BK1127",
+          "contentHash": "356eb9d0ae7e37851f3a0a37d56471ba3d17577463c3e75d1e1f0a640f98e04d",
+          "kind": "structured_data",
+          "tier": 2
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-industry-BK1340",
+          "contentHash": "e3cc067454ee6e13770650534697a3c4c545659a3399dd1a2d80038ad4514392",
+          "kind": "structured_data",
+          "tier": 2
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-concept-BK0877",
+          "contentHash": "b1cc845fa9fb47871c722aac6e3de10108a6cb516643e0f418de62869d9e2188",
+          "kind": "structured_data",
+          "tier": 2
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-concept-BK1153",
+          "contentHash": "a8e8add288f04add71143acb52685f5812a892610d3409f3bdc3f65330aeba08",
+          "kind": "structured_data",
+          "tier": 2
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-concept-BK1182",
+          "contentHash": "2dcfa9b7cb123c13b3dc49a2ec3eef62ecd3036831454379a8bbf34de0b29de4",
+          "kind": "structured_data",
+          "tier": 2
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-concept-BK1162",
+          "contentHash": "7a37fa7854f6f08f1cbfa9b48f47adbb208a3ade3db29a07d2b57beb2526ba90",
+          "kind": "structured_data",
+          "tier": 2
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "candidateId": "eastmoney-concept-BK1127",
+          "contentHash": "98d1e69a61281e8fbff6620bb5751dc03b4e674e8bd3ef83dd8295e2aeddbf05",
+          "kind": "structured_data",
+          "tier": 2
+        }
+      ]
+    }
+  ],
+  "eastmoney": {
+    "usable": true,
+    "canonicalBoardNames": [],
+    "boards": []
+  },
+  "operations": {
+    "counts": {
+      "industry_research_design": 1,
+      "industry_module_analysis": 16
+    },
+    "firstRunRealModel": true,
+    "automaticFallbackCalls": 0,
+    "replayRealModelCalls": 0,
+    "replaySemanticOperations": 17,
+    "replayLiveNetworkCalls": 0
+  },
+  "firstRun": {
+    "status": "blocked",
+    "initialRevision": 0,
+    "terminalRevision": 0,
+    "revisionDelta": 0,
+    "gatewaySubmitCount": 0,
+    "writerCommitCount": 0,
+    "countsBefore": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0,
+      "raw": 0
+    },
+    "countsAfter": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0,
+      "raw": 0
+    },
+    "workflow": {
+      "acquisitionWaves": null
+    }
+  },
+  "canonical": {
+    "countsAfter": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0,
+      "raw": 0
+    },
+    "ids": {
+      "entity": [],
+      "relation": [],
+      "claim": [],
+      "source": []
+    },
+    "durableRelations": {
+      "chain": null,
+      "exposure": null
+    },
+    "provenance": false
+  },
+  "numericAudit": {
+    "unsupportedNumericObservationCount": 0
+  },
+  "report": {
+    "persisted": false,
+    "reportType": null,
+    "sectionCount": 0,
+    "hasResearchGaps": false
+  },
+  "graph": {
+    "profile": null,
+    "canonicalRefs": false,
+    "root": false,
+    "productOrTechnology": false,
+    "company": false,
+    "requiredEdge": false,
+    "projectionHash": "a461bf77bc4e4d732f7afc121c70e7f70ed8bf225a082a4e01951d1eb6b5c278"
+  },
+  "replay": {
+    "status": "blocked",
+    "deltas": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0,
+      "raw": 0
+    },
+    "duplicateSemanticObjects": {
+      "entity": false,
+      "relation": false,
+      "claim": false,
+      "source": false
+    },
+    "rootIndustryRef": null,
+    "graphProjectionHash": "a461bf77bc4e4d732f7afc121c70e7f70ed8bf225a082a4e01951d1eb6b5c278",
+    "replayGraphProjectionHash": "a461bf77bc4e4d732f7afc121c70e7f70ed8bf225a082a4e01951d1eb6b5c278",
+    "modelCalls": 17,
+    "liveNetworkCalls": 0
+  },
+  "privacy": {
+    "serializedEvidenceSafe": true,
+    "sentinelAbsent": true,
+    "pathsRedacted": true,
+    "secretsAbsent": true,
+    "completeModelOutputs": false,
+    "completeProviderBodies": false
+  },
+  "industryPiGateInput": {
+    "executed": true,
+    "realPiReasoningExecutor": true,
+    "runtimeProvider": "pi-coding-agent",
+    "operations": [
+      "industry_research_design",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis"
+    ],
+    "operationCounts": {
+      "industry_research_design": 1,
+      "industry_module_analysis": 16
+    },
+    "status": "blocked",
+    "targetKind": "industry",
+    "modules": [],
+    "industryDefinitionAvailable": false,
+    "gatewaySubmitCount": 0,
+    "firstRunRevisionDelta": 0,
+    "durableClaimCount": 0,
+    "chainRelation": false,
+    "companyExposure": false,
+    "industryRoot": false,
+    "productOrTechnology": false,
+    "company": false,
+    "sourceRawProvenance": false,
+    "unsupportedNumericObservationCount": 0,
+    "semanticTypingIntact": true,
+    "report": {
+      "persisted": false,
+      "reportType": null,
+      "sectionCount": 0,
+      "hasResearchGaps": false
+    },
+    "graph": {
+      "profile": null,
+      "canonicalRefs": false,
+      "root": false,
+      "productOrTechnology": false,
+      "company": false,
+      "requiredEdge": false
+    },
+    "replay": {
+      "outcome": "blocked",
+      "rootIdStable": true,
+      "duplicateEntities": false,
+      "duplicateRelations": false,
+      "duplicateClaims": false,
+      "duplicateSources": false,
+      "duplicateRaw": false,
+      "revisionDelta": 0,
+      "graphStable": true
+    },
+    "privacy": {
+      "serializedEvidenceSafe": true,
+      "sentinelAbsent": true,
+      "pathsRedacted": true,
+      "secretsAbsent": true
+    }
+  },
+  "evaluator": {
+    "pass": false,
+    "classification": "REAL_MODEL_CONTRACT_BLOCKED",
+    "exitCode": 1,
+    "failedGates": [
+      "operation industry_cross_module_synthesis bounded count 1-2",
+      "completed Workflow status",
+      "all eight methodology modules exactly once",
+      "Industry Definition available",
+      "one Gateway submission",
+      "first-run revision delta equals one",
+      "durable Claim admitted",
+      "evidence-backed chain Relation admitted",
+      "evidence-backed Company exposure admitted",
+      "canonical Industry/Product-or-Technology/Company objects",
+      "Source/Raw provenance",
+      "industry report contract",
+      "canonical industry graph contract",
+      "deterministic replay non-mutating outcome"
+    ]
+  },
+  "additionalAcceptanceFailures": [],
+  "finalClassification": "REAL_MODEL_CONTRACT_BLOCKED",
+  "blockerCategory": "REAL_MODEL_CONTRACT_BLOCKED"
+}
