@@ -1,0 +1,760 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-012-INDUSTRY-MODULE-EVIDENCE-AND-VALIDATION-ISOLATION",
+  "baseCommit": "59c9a567dd1d0d47bca727533498b9a567a1c1a0",
+  "generatedAt": "2026-09-13T02:25:09.347Z",
+  "target": {
+    "name": "PCB Manufacturing",
+    "alias": "Printed Circuit Board",
+    "asOf": "2026-09-12T00:00:00.000Z",
+    "searchTerms": [
+      "PCB 印制电路板",
+      "AI服务器 PCB HDI",
+      "深南电路 PCB",
+      "沪电股份 PCB",
+      "胜宏科技 PCB",
+      "生益科技 PCB CCL",
+      "PCB 产业链",
+      "PCB 行业 产能"
+    ],
+    "searchTermsHash": "ded447de9a6be688",
+    "targetHash": "cecec50005c25c3d"
+  },
+  "test011Acceptance": {
+    "finalClassification": "REAL_MODEL_CONTRACT_BLOCKED",
+    "completionBackend": "codex-cli",
+    "model": "gpt-5.6-luna",
+    "effort": "medium",
+    "automaticFallbackCalls": 0,
+    "eastmoneyUsableNormalizedSources": 12,
+    "synthesisOperationOccurred": false,
+    "applicationStatus": "blocked",
+    "terminalKnowledgeBaseRevision": 0
+  },
+  "test011ObservabilityCaveat": "TEST-011 read first.workflow?.modules and first.workflow?.gatewaySubmitCount although public startIndustryResearch() does not expose internal Workflow; serialized modules: [] is not proof that no valid module existed.",
+  "replayCounterCaveat": "replay.modelCalls: 17 counts deterministic replay queue invocations; operations.replayRealModelCalls: 0 is authoritative.",
+  "productionReasoning": {
+    "factory": "createIndustryProductionReasoningExecutor",
+    "backend": "codex-cli",
+    "model": "gpt-5.6-luna",
+    "effort": "medium",
+    "structuredOutputNormalization": "current",
+    "automaticFallbackCalls": 0
+  },
+  "providers": {
+    "order": [
+      "official-disclosure-research-acquisition",
+      "gdelt-research-acquisition",
+      "eastmoney-industry-research-acquisition",
+      "akshare-industry-research-acquisition"
+    ],
+    "outcomes": [
+      {
+        "provider": "official-disclosure-research-acquisition",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": true,
+        "providerFailed": false,
+        "usableSourceCount": 0
+      },
+      {
+        "provider": "gdelt-research-acquisition",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": false,
+        "providerFailed": true,
+        "usableSourceCount": 0
+      },
+      {
+        "provider": "eastmoney-industry-research-acquisition",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": false,
+        "providerFailed": true,
+        "usableSourceCount": 0
+      },
+      {
+        "provider": "akshare-industry-research-acquisition",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": false,
+        "providerFailed": true,
+        "usableSourceCount": 0
+      }
+    ],
+    "waves": [
+      {
+        "provider": "official-disclosure-research-acquisition",
+        "ordinal": 1,
+        "discovered": 0,
+        "normalized": 0
+      },
+      {
+        "provider": "gdelt-research-acquisition",
+        "ordinal": 1,
+        "discovered": 0,
+        "normalized": 0
+      },
+      {
+        "provider": "eastmoney-industry-research-acquisition",
+        "ordinal": 1,
+        "discovered": 0,
+        "normalized": 0
+      },
+      {
+        "provider": "akshare-industry-research-acquisition",
+        "ordinal": 1,
+        "discovered": 0,
+        "normalized": 0
+      },
+      {
+        "provider": "official-disclosure-research-acquisition",
+        "ordinal": 2,
+        "discovered": 0,
+        "normalized": 0
+      },
+      {
+        "provider": "gdelt-research-acquisition",
+        "ordinal": 2,
+        "discovered": 0,
+        "normalized": 0
+      },
+      {
+        "provider": "eastmoney-industry-research-acquisition",
+        "ordinal": 2,
+        "discovered": 0,
+        "normalized": 0
+      },
+      {
+        "provider": "akshare-industry-research-acquisition",
+        "ordinal": 2,
+        "discovered": 0,
+        "normalized": 0
+      }
+    ],
+    "normalizedSources": []
+  },
+  "operationTopology": {
+    "operations": [
+      "industry_research_design",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis"
+    ],
+    "counts": {
+      "industry_research_design": 1,
+      "industry_module_analysis": 16
+    },
+    "moduleCallCount": 16,
+    "realModelCallCount": 17,
+    "synthesisRequested": false,
+    "cap": 24,
+    "classification": "MODULE_STAGE_BLOCKED",
+    "violations": []
+  },
+  "moduleFailureMatrix": [
+    {
+      "module": "industry_definition",
+      "callCount": 2,
+      "repairCount": 1,
+      "rerunCount": 0,
+      "evidenceCounts": [
+        0,
+        0
+      ],
+      "strongTargetEvidenceCounts": [
+        0,
+        0
+      ],
+      "nonRepairEvidenceCount": 0,
+      "nonRepairEvidenceEveryAttempt": 0,
+      "validatorFailureCount": 0,
+      "parserFailureCount": 0,
+      "transportFailureCount": 2,
+      "finalDiagnosticState": "transport_failed",
+      "finalSemanticStatus": "unavailable",
+      "repairRecovered": false,
+      "wave2Rerun": false,
+      "requestConstructionPrevented": false,
+      "calls": [
+        {
+          "module": "industry_definition",
+          "wave": 1,
+          "repair": false,
+          "callOrdinal": 1,
+          "globalOrdinal": 1,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "6b400a9bcd5116e9",
+          "requestBytes": 7240,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        },
+        {
+          "module": "industry_definition",
+          "wave": 1,
+          "repair": true,
+          "callOrdinal": 2,
+          "globalOrdinal": 2,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "b6657692d85197a5",
+          "requestBytes": 7359,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        }
+      ]
+    },
+    {
+      "module": "market_size_growth",
+      "callCount": 2,
+      "repairCount": 1,
+      "rerunCount": 0,
+      "evidenceCounts": [
+        0,
+        0
+      ],
+      "strongTargetEvidenceCounts": [
+        0,
+        0
+      ],
+      "nonRepairEvidenceCount": 0,
+      "nonRepairEvidenceEveryAttempt": 0,
+      "validatorFailureCount": 0,
+      "parserFailureCount": 0,
+      "transportFailureCount": 2,
+      "finalDiagnosticState": "transport_failed",
+      "finalSemanticStatus": "unavailable",
+      "repairRecovered": false,
+      "wave2Rerun": false,
+      "requestConstructionPrevented": false,
+      "calls": [
+        {
+          "module": "market_size_growth",
+          "wave": 1,
+          "repair": false,
+          "callOrdinal": 1,
+          "globalOrdinal": 3,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "206682d97e89f612",
+          "requestBytes": 7238,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        },
+        {
+          "module": "market_size_growth",
+          "wave": 1,
+          "repair": true,
+          "callOrdinal": 2,
+          "globalOrdinal": 4,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "263898c366387966",
+          "requestBytes": 7357,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        }
+      ]
+    },
+    {
+      "module": "supply_demand_analysis",
+      "callCount": 2,
+      "repairCount": 1,
+      "rerunCount": 0,
+      "evidenceCounts": [
+        0,
+        0
+      ],
+      "strongTargetEvidenceCounts": [
+        0,
+        0
+      ],
+      "nonRepairEvidenceCount": 0,
+      "nonRepairEvidenceEveryAttempt": 0,
+      "validatorFailureCount": 0,
+      "parserFailureCount": 0,
+      "transportFailureCount": 2,
+      "finalDiagnosticState": "transport_failed",
+      "finalSemanticStatus": "unavailable",
+      "repairRecovered": false,
+      "wave2Rerun": false,
+      "requestConstructionPrevented": false,
+      "calls": [
+        {
+          "module": "supply_demand_analysis",
+          "wave": 1,
+          "repair": false,
+          "callOrdinal": 1,
+          "globalOrdinal": 5,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "dafc0fcd4adf58e4",
+          "requestBytes": 7246,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        },
+        {
+          "module": "supply_demand_analysis",
+          "wave": 1,
+          "repair": true,
+          "callOrdinal": 2,
+          "globalOrdinal": 6,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "cff4642d71a6d6d6",
+          "requestBytes": 7365,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        }
+      ]
+    },
+    {
+      "module": "industry_chain_analysis",
+      "callCount": 2,
+      "repairCount": 1,
+      "rerunCount": 0,
+      "evidenceCounts": [
+        0,
+        0
+      ],
+      "strongTargetEvidenceCounts": [
+        0,
+        0
+      ],
+      "nonRepairEvidenceCount": 0,
+      "nonRepairEvidenceEveryAttempt": 0,
+      "validatorFailureCount": 0,
+      "parserFailureCount": 0,
+      "transportFailureCount": 2,
+      "finalDiagnosticState": "transport_failed",
+      "finalSemanticStatus": "unavailable",
+      "repairRecovered": false,
+      "wave2Rerun": false,
+      "requestConstructionPrevented": false,
+      "calls": [
+        {
+          "module": "industry_chain_analysis",
+          "wave": 1,
+          "repair": false,
+          "callOrdinal": 1,
+          "globalOrdinal": 7,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "b8eb1c7d7aa18e25",
+          "requestBytes": 7248,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        },
+        {
+          "module": "industry_chain_analysis",
+          "wave": 1,
+          "repair": true,
+          "callOrdinal": 2,
+          "globalOrdinal": 8,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "b4a13f6f183961a7",
+          "requestBytes": 7367,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        }
+      ]
+    },
+    {
+      "module": "competitive_landscape",
+      "callCount": 2,
+      "repairCount": 1,
+      "rerunCount": 0,
+      "evidenceCounts": [
+        0,
+        0
+      ],
+      "strongTargetEvidenceCounts": [
+        0,
+        0
+      ],
+      "nonRepairEvidenceCount": 0,
+      "nonRepairEvidenceEveryAttempt": 0,
+      "validatorFailureCount": 0,
+      "parserFailureCount": 0,
+      "transportFailureCount": 2,
+      "finalDiagnosticState": "transport_failed",
+      "finalSemanticStatus": "unavailable",
+      "repairRecovered": false,
+      "wave2Rerun": false,
+      "requestConstructionPrevented": false,
+      "calls": [
+        {
+          "module": "competitive_landscape",
+          "wave": 1,
+          "repair": false,
+          "callOrdinal": 1,
+          "globalOrdinal": 9,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "62e5fb45aceb174c",
+          "requestBytes": 7244,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        },
+        {
+          "module": "competitive_landscape",
+          "wave": 1,
+          "repair": true,
+          "callOrdinal": 2,
+          "globalOrdinal": 10,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "e4562834c57f6b9c",
+          "requestBytes": 7363,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        }
+      ]
+    },
+    {
+      "module": "technology_evolution",
+      "callCount": 2,
+      "repairCount": 1,
+      "rerunCount": 0,
+      "evidenceCounts": [
+        0,
+        0
+      ],
+      "strongTargetEvidenceCounts": [
+        0,
+        0
+      ],
+      "nonRepairEvidenceCount": 0,
+      "nonRepairEvidenceEveryAttempt": 0,
+      "validatorFailureCount": 0,
+      "parserFailureCount": 0,
+      "transportFailureCount": 2,
+      "finalDiagnosticState": "transport_failed",
+      "finalSemanticStatus": "unavailable",
+      "repairRecovered": false,
+      "wave2Rerun": false,
+      "requestConstructionPrevented": false,
+      "calls": [
+        {
+          "module": "technology_evolution",
+          "wave": 1,
+          "repair": false,
+          "callOrdinal": 1,
+          "globalOrdinal": 11,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "2f12b02dd9b733ed",
+          "requestBytes": 7242,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        },
+        {
+          "module": "technology_evolution",
+          "wave": 1,
+          "repair": true,
+          "callOrdinal": 2,
+          "globalOrdinal": 12,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "184ef5a6c47612ea",
+          "requestBytes": 7361,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        }
+      ]
+    },
+    {
+      "module": "company_mapping",
+      "callCount": 2,
+      "repairCount": 1,
+      "rerunCount": 0,
+      "evidenceCounts": [
+        0,
+        0
+      ],
+      "strongTargetEvidenceCounts": [
+        0,
+        0
+      ],
+      "nonRepairEvidenceCount": 0,
+      "nonRepairEvidenceEveryAttempt": 0,
+      "validatorFailureCount": 0,
+      "parserFailureCount": 0,
+      "transportFailureCount": 2,
+      "finalDiagnosticState": "transport_failed",
+      "finalSemanticStatus": "unavailable",
+      "repairRecovered": false,
+      "wave2Rerun": false,
+      "requestConstructionPrevented": false,
+      "calls": [
+        {
+          "module": "company_mapping",
+          "wave": 1,
+          "repair": false,
+          "callOrdinal": 1,
+          "globalOrdinal": 13,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "337114c96964b606",
+          "requestBytes": 7232,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        },
+        {
+          "module": "company_mapping",
+          "wave": 1,
+          "repair": true,
+          "callOrdinal": 2,
+          "globalOrdinal": 14,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "1db8fcd48308719e",
+          "requestBytes": 7351,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        }
+      ]
+    },
+    {
+      "module": "risk_analysis",
+      "callCount": 2,
+      "repairCount": 1,
+      "rerunCount": 0,
+      "evidenceCounts": [
+        0,
+        0
+      ],
+      "strongTargetEvidenceCounts": [
+        0,
+        0
+      ],
+      "nonRepairEvidenceCount": 0,
+      "nonRepairEvidenceEveryAttempt": 0,
+      "validatorFailureCount": 0,
+      "parserFailureCount": 0,
+      "transportFailureCount": 2,
+      "finalDiagnosticState": "transport_failed",
+      "finalSemanticStatus": "unavailable",
+      "repairRecovered": false,
+      "wave2Rerun": false,
+      "requestConstructionPrevented": false,
+      "calls": [
+        {
+          "module": "risk_analysis",
+          "wave": 1,
+          "repair": false,
+          "callOrdinal": 1,
+          "globalOrdinal": 15,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "c0ccad56d554f4aa",
+          "requestBytes": 7228,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        },
+        {
+          "module": "risk_analysis",
+          "wave": 1,
+          "repair": true,
+          "callOrdinal": 2,
+          "globalOrdinal": 16,
+          "evidenceCount": 0,
+          "evidenceIds": [],
+          "providerDistribution": {},
+          "sourceKindDistribution": {},
+          "tierDistribution": {},
+          "strongTargetEvidenceCount": 0,
+          "nonTargetEvidenceCount": 0,
+          "requestHash": "dfb05cea3032e4b6",
+          "requestBytes": 7347,
+          "transportFailed": true,
+          "transportError": {
+            "code": null,
+            "category": "executor_throw",
+            "message": "Codex CLI returned a non-zero exit code"
+          }
+        }
+      ]
+    }
+  ],
+  "parserValidator": {
+    "designParserFailures": [],
+    "moduleValidatorFailures": []
+  },
+  "application": {
+    "status": "blocked",
+    "errorSummary": "Industry Definition is mandatory and unavailable after the bounded repair/gap-fill attempt"
+  },
+  "aggregateClassification": "MODULE_TRANSPORT_BLOCKER_PROVEN",
+  "nextActionCategory": "FIX_CODEX_MODULE_STRUCTURED_OUTPUT_TRANSPORT",
+  "synthesisRequested": false,
+  "diagnosticTerminationBeforeSynthesis": true,
+  "mutation": {
+    "knowledgeMutation": false,
+    "gatewaySubmitCount": 0,
+    "writerCommitCount": 0,
+    "productionCodeMutation": false,
+    "terminalRevision": 0,
+    "canonicalObjectsCreated": false
+  },
+  "privacy": {
+    "rawPrompts": false,
+    "instructions": false,
+    "modelProse": false,
+    "completeOutputs": false,
+    "providerBodies": false,
+    "credentials": false,
+    "cookies": false,
+    "privateAbsolutePaths": false,
+    "reasoningTraces": false
+  }
+}
