@@ -12,6 +12,7 @@ import type { ReasoningExecutor } from '../../../plugins/reasoning/contracts.ts'
 import { createResearchHubTools } from '../../../app/pi/tools.ts'
 import { GovCnIndustryResearchPlugin } from '../../../plugins/research-acquisition/govcn-industry.ts'
 import { EastmoneyIndustryResearchPlugin } from '../../../plugins/research-acquisition/eastmoney-industry.ts'
+import { MiitIndustryResearchPlugin } from '../../../plugins/research-acquisition/miit-industry.ts'
 
 class FixtureExecutor implements ReasoningExecutor {
   constructor(private readonly waitForCancellation = false) {}
@@ -37,9 +38,9 @@ test('Application runtime does not resolve the Industry factory during startup',
   try { assert.equal(factoryCalls, 0); assert.ok(f.runtime.researchService) } finally { await f.server.close(); await f.runtime.close(); await Promise.resolve((f.modelRuntime as unknown as { dispose?: () => void | Promise<void> }).dispose?.()); await rm(f.root, { recursive: true, force: true }) }
 })
 
-test('internal Industry defaults order Gov.cn before Eastmoney and explicit empty list replaces defaults', async () => {
+test('internal Industry defaults order MIIT, Gov.cn, Eastmoney and explicit empty list replaces defaults', async () => {
   const first = await fixture()
-  try { const plugins = (first.runtime.researchService as unknown as { options: { industryAcquisitionPlugins: readonly unknown[] } }).options.industryAcquisitionPlugins; assert.ok(plugins[0] instanceof GovCnIndustryResearchPlugin); assert.ok(plugins[1] instanceof EastmoneyIndustryResearchPlugin) } finally { await first.server.close(); await first.runtime.close(); await Promise.resolve((first.modelRuntime as unknown as { dispose?: () => void | Promise<void> }).dispose?.()); await rm(first.root, { recursive: true, force: true }) }
+  try { const plugins = (first.runtime.researchService as unknown as { options: { industryAcquisitionPlugins: readonly unknown[] } }).options.industryAcquisitionPlugins; assert.ok(plugins[0] instanceof MiitIndustryResearchPlugin); assert.ok(plugins[1] instanceof GovCnIndustryResearchPlugin); assert.ok(plugins[2] instanceof EastmoneyIndustryResearchPlugin) } finally { await first.server.close(); await first.runtime.close(); await Promise.resolve((first.modelRuntime as unknown as { dispose?: () => void | Promise<void> }).dispose?.()); await rm(first.root, { recursive: true, force: true }) }
   const second = await fixture({ industryPlugins: [] })
   try { const plugins = (second.runtime.researchService as unknown as { options: { industryAcquisitionPlugins: readonly unknown[] } }).options.industryAcquisitionPlugins; assert.deepEqual(plugins, []) } finally { await second.server.close(); await second.runtime.close(); await Promise.resolve((second.modelRuntime as unknown as { dispose?: () => void | Promise<void> }).dispose?.()); await rm(second.root, { recursive: true, force: true }) }
 })

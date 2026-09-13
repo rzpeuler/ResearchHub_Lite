@@ -1,0 +1,37 @@
+{
+  "taskId": "RHL-M3B-3B-IMPL-022-MIIT-OFFICIAL-INDUSTRY-ACQUISITION",
+  "generatedAt": "2026-09-13T17:41:59.927Z",
+  "target": {
+    "nameHash": "6865afa1c125c4de",
+    "aliasHashes": [
+      "43417e4fe141f75d",
+      "bd684c4273355916"
+    ],
+    "asOf": "2026-09-14T00:00:00.000Z"
+  },
+  "requestCounts": {
+    "listPages": 3,
+    "candidateFetches": 0,
+    "retries": 0
+  },
+  "candidates": 0,
+  "normalizedSources": 0,
+  "officialHosts": [],
+  "sources": [],
+  "mutation": {
+    "modelCalls": 0,
+    "gatewaySubmissions": 0,
+    "writerCommits": 0,
+    "knowledgeMutations": 0
+  },
+  "privacy": {
+    "rawBodies": false,
+    "fullDocuments": false,
+    "cookies": false,
+    "credentials": false,
+    "authorizationHeaders": false,
+    "privateAbsolutePaths": false,
+    "reasoningTraces": false
+  },
+  "classification": "MIIT_ROUTE_OR_PARSER_GAP"
+}
