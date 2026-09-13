@@ -1,0 +1,385 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-014-CODEX-MODULE-REMAINING-SCHEMA-DELTAS",
+  "baseCommit": "a2d8eb6f5d4a6a93df0e413e9b11fa8cc0bc87d2",
+  "generatedAt": "2026-09-13T03:23:29.138Z",
+  "diag013Acceptance": {
+    "acceptedTestEvidenceOnly": true,
+    "baseCommit": "a2d8eb6f5d4a6a93df0e413e9b11fa8cc0bc87d2",
+    "classification": "KNOWN_MODULE_SCHEMA_DELTAS_INSUFFICIENT",
+    "primitiveConstDifferential": "proven",
+    "nestedOneOfDifferential": "proven",
+    "fullModuleConstTyped": "pre-semantic unknown_nonzero_exit",
+    "fullModuleGuardedVariantNormalization": "pre-semantic unknown_nonzero_exit",
+    "fullModuleStructuredValueLeafNormalization": "pre-semantic unknown_nonzero_exit"
+  },
+  "backend": "codex-cli",
+  "model": "gpt-5.6-luna",
+  "effort": "medium",
+  "cliVersion": "codex-cli 0.152.1",
+  "runtimeConfiguration": {
+    "backend": "codex-cli",
+    "model": "gpt-5.6-luna",
+    "effort": "medium",
+    "invocationMode": "exec-stdin-json-output-read-only",
+    "structuredOutputEnabled": true
+  },
+  "authoritativeModuleSource": {
+    "fingerprint": "9d2c118931979c45",
+    "bytes": 6341,
+    "baselineNormalizedFingerprint": "afdce2f01f414709",
+    "baselineNormalizedBytes": 4585,
+    "byteEqualBeforeAfter": true
+  },
+  "probes": [
+    {
+      "name": "REQUIRED_ONLY_ANYOF_MINIMAL",
+      "actualCallOrdinal": 1,
+      "sourceContractFingerprint": "5b99b0502aff2933",
+      "sourceContractBytes": 313,
+      "transformedContractFingerprint": "5b99b0502aff2933",
+      "transformedContractBytes": 313,
+      "productionNormalizedFingerprint": "5b99b0502aff2933",
+      "productionNormalizedBytes": 313,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeFailureClass": "unknown_nonzero_exit",
+      "safeReasoningCode": "reasoning_execution_failed",
+      "safeErrorCode": null,
+      "parserStatus": "not_run",
+      "validatorStatus": "not_run",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedEnums": 0,
+        "nestedArrays": 0,
+        "descriptions": 0,
+        "anyOfLocations": [
+          {
+            "path": "/properties/value",
+            "branchShapes": [
+              "required-only",
+              "required-only"
+            ]
+          }
+        ],
+        "oneOf": 0,
+        "objectDepth": 2,
+        "arrayDepth": 2,
+        "emptySchemaCount": 0,
+        "enumCardinalities": [],
+        "constLocations": [],
+        "additionalPropertiesValues": [
+          false,
+          false
+        ],
+        "itemsNestingDepth": 0,
+        "maxPropertyCount": 2,
+        "untypedPrimitiveConst": 0
+      }
+    },
+    {
+      "name": "REQUIRED_ONLY_ANYOF_REMOVED_MINIMAL",
+      "actualCallOrdinal": 2,
+      "sourceContractFingerprint": "ae91b57627c0fe40",
+      "sourceContractBytes": 249,
+      "transformedContractFingerprint": "ae91b57627c0fe40",
+      "transformedContractBytes": 249,
+      "productionNormalizedFingerprint": "ae91b57627c0fe40",
+      "productionNormalizedBytes": 249,
+      "processStarted": true,
+      "exitState": "normal_exit",
+      "semanticResultAvailable": true,
+      "safeFailureClass": null,
+      "safeReasoningCode": null,
+      "safeErrorCode": null,
+      "parserStatus": "passed",
+      "validatorStatus": "not_applicable",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedEnums": 0,
+        "nestedArrays": 0,
+        "descriptions": 0,
+        "anyOfLocations": [],
+        "oneOf": 0,
+        "objectDepth": 2,
+        "arrayDepth": 1,
+        "emptySchemaCount": 0,
+        "enumCardinalities": [],
+        "constLocations": [],
+        "additionalPropertiesValues": [
+          false,
+          false
+        ],
+        "itemsNestingDepth": 0,
+        "maxPropertyCount": 2,
+        "untypedPrimitiveConst": 0
+      }
+    },
+    {
+      "name": "EMPTY_SCHEMA_LEAF_MINIMAL",
+      "actualCallOrdinal": 3,
+      "sourceContractFingerprint": "fa9f0cf116303583",
+      "sourceContractBytes": 93,
+      "transformedContractFingerprint": "fa9f0cf116303583",
+      "transformedContractBytes": 93,
+      "productionNormalizedFingerprint": "fa9f0cf116303583",
+      "productionNormalizedBytes": 93,
+      "processStarted": true,
+      "exitState": "nonzero_exit",
+      "semanticResultAvailable": false,
+      "safeFailureClass": "unknown_nonzero_exit",
+      "safeReasoningCode": "reasoning_execution_failed",
+      "safeErrorCode": null,
+      "parserStatus": "not_run",
+      "validatorStatus": "not_run",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedEnums": 0,
+        "nestedArrays": 0,
+        "descriptions": 0,
+        "anyOfLocations": [],
+        "oneOf": 0,
+        "objectDepth": 1,
+        "arrayDepth": 1,
+        "emptySchemaCount": 1,
+        "enumCardinalities": [],
+        "constLocations": [],
+        "additionalPropertiesValues": [
+          false
+        ],
+        "itemsNestingDepth": 0,
+        "maxPropertyCount": 1,
+        "untypedPrimitiveConst": 0
+      }
+    },
+    {
+      "name": "FINITE_SCALAR_ANYOF_MINIMAL",
+      "actualCallOrdinal": 4,
+      "sourceContractFingerprint": "373cd6ac88eedad7",
+      "sourceContractBytes": 157,
+      "transformedContractFingerprint": "373cd6ac88eedad7",
+      "transformedContractBytes": 157,
+      "productionNormalizedFingerprint": "373cd6ac88eedad7",
+      "productionNormalizedBytes": 157,
+      "processStarted": true,
+      "exitState": "normal_exit",
+      "semanticResultAvailable": true,
+      "safeFailureClass": null,
+      "safeReasoningCode": null,
+      "safeErrorCode": null,
+      "parserStatus": "passed",
+      "validatorStatus": "not_applicable",
+      "returnedSemanticStatus": null,
+      "structuralCounts": {
+        "untypedEnums": 0,
+        "nestedArrays": 0,
+        "descriptions": 0,
+        "anyOfLocations": [
+          {
+            "path": "/properties/value",
+            "branchShapes": [
+              "number",
+              "string",
+              "boolean"
+            ]
+          }
+        ],
+        "oneOf": 0,
+        "objectDepth": 1,
+        "arrayDepth": 1,
+        "emptySchemaCount": 0,
+        "enumCardinalities": [],
+        "constLocations": [],
+        "additionalPropertiesValues": [
+          false
+        ],
+        "itemsNestingDepth": 0,
+        "maxPropertyCount": 1,
+        "untypedPrimitiveConst": 0
+      }
+    },
+    {
+      "name": "FULL_MODULE_ALL_INDEPENDENTLY_PROVEN_DELTAS",
+      "actualCallOrdinal": 6,
+      "sourceContractFingerprint": "9d2c118931979c45",
+      "sourceContractBytes": 6341,
+      "transformedContractFingerprint": "736e8d9d5d72c5cb",
+      "transformedContractBytes": 4649,
+      "productionNormalizedFingerprint": "736e8d9d5d72c5cb",
+      "productionNormalizedBytes": 4649,
+      "processStarted": true,
+      "exitState": "normal_exit",
+      "semanticResultAvailable": true,
+      "safeFailureClass": null,
+      "safeReasoningCode": null,
+      "safeErrorCode": null,
+      "parserStatus": "passed",
+      "validatorStatus": "passed",
+      "returnedSemanticStatus": "unavailable",
+      "structuralCounts": {
+        "untypedEnums": 5,
+        "nestedArrays": 0,
+        "descriptions": 14,
+        "anyOfLocations": [
+          {
+            "path": "/properties/proposals/items",
+            "branchShapes": [
+              "object",
+              "object",
+              "object"
+            ]
+          },
+          {
+            "path": "/properties/proposals/items/anyOf/2/properties/structuredValue/properties/value",
+            "branchShapes": [
+              "number",
+              "string",
+              "boolean"
+            ]
+          }
+        ],
+        "oneOf": 0,
+        "objectDepth": 3,
+        "arrayDepth": 2,
+        "emptySchemaCount": 0,
+        "enumCardinalities": [
+          3,
+          4,
+          12,
+          8,
+          8
+        ],
+        "constLocations": [
+          "/properties/module",
+          "/properties/proposals/items/anyOf/0/properties/kind",
+          "/properties/proposals/items/anyOf/1/properties/kind",
+          "/properties/proposals/items/anyOf/2/properties/kind"
+        ],
+        "additionalPropertiesValues": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "itemsNestingDepth": 2,
+        "maxPropertyCount": 9,
+        "untypedPrimitiveConst": 0
+      }
+    }
+  ],
+  "discardedRealCall": {
+    "callOrdinal": 5,
+    "reason": "TEST harness argument-order correction; no probe result retained",
+    "productionCodeMutation": false,
+    "rawDataPersisted": false
+  },
+  "redundantRequiredAnyOfDifferential": "proven",
+  "emptySchemaLeafDifferential": "proven",
+  "exactFullModuleTransformationSet": {
+    "primitiveConstTyping": true,
+    "guardedDisjointKindOneOfToAnyOf": true,
+    "removeRedundantRequiredAnyOf": true,
+    "normalizeExactStructuredValueScalarLeaf": true
+  },
+  "probeE": {
+    "name": "FULL_MODULE_ALL_INDEPENDENTLY_PROVEN_DELTAS",
+    "actualCallOrdinal": 6,
+    "sourceContractFingerprint": "9d2c118931979c45",
+    "sourceContractBytes": 6341,
+    "transformedContractFingerprint": "736e8d9d5d72c5cb",
+    "transformedContractBytes": 4649,
+    "productionNormalizedFingerprint": "736e8d9d5d72c5cb",
+    "productionNormalizedBytes": 4649,
+    "processStarted": true,
+    "exitState": "normal_exit",
+    "semanticResultAvailable": true,
+    "safeFailureClass": null,
+    "safeReasoningCode": null,
+    "safeErrorCode": null,
+    "parserStatus": "passed",
+    "validatorStatus": "passed",
+    "returnedSemanticStatus": "unavailable",
+    "structuralCounts": {
+      "untypedEnums": 5,
+      "nestedArrays": 0,
+      "descriptions": 14,
+      "anyOfLocations": [
+        {
+          "path": "/properties/proposals/items",
+          "branchShapes": [
+            "object",
+            "object",
+            "object"
+          ]
+        },
+        {
+          "path": "/properties/proposals/items/anyOf/2/properties/structuredValue/properties/value",
+          "branchShapes": [
+            "number",
+            "string",
+            "boolean"
+          ]
+        }
+      ],
+      "oneOf": 0,
+      "objectDepth": 3,
+      "arrayDepth": 2,
+      "emptySchemaCount": 0,
+      "enumCardinalities": [
+        3,
+        4,
+        12,
+        8,
+        8
+      ],
+      "constLocations": [
+        "/properties/module",
+        "/properties/proposals/items/anyOf/0/properties/kind",
+        "/properties/proposals/items/anyOf/1/properties/kind",
+        "/properties/proposals/items/anyOf/2/properties/kind"
+      ],
+      "additionalPropertiesValues": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "itemsNestingDepth": 2,
+      "maxPropertyCount": 9,
+      "untypedPrimitiveConst": 0
+    }
+  },
+  "remainingStructuralInventory": null,
+  "actualCallCount": 6,
+  "aggregateClassification": "MODULE_TRANSPORT_COMPATIBILITY_SET_PROVEN",
+  "nextActionCategory": "IMPLEMENT_PROVEN_CODEX_SCHEMA_COMPATIBILITY_SET",
+  "stopReason": "Full Module passed with proven deltas: redundantRequiredAnyOf=true, emptySchemaLeaf=true",
+  "mutation": {
+    "acquisitionCalls": 0,
+    "knowledgeMutation": false,
+    "gatewaySubmitCount": 0,
+    "writerCommitCount": 0,
+    "productionCodeMutation": false,
+    "sourceContractMutated": false
+  },
+  "privacy": {
+    "rawPrompt": false,
+    "fullInput": false,
+    "fullSchemas": false,
+    "fullModelOutput": false,
+    "stdout": false,
+    "stderr": false,
+    "jsonl": false,
+    "credentials": false,
+    "authData": false,
+    "privateAbsolutePaths": false,
+    "reasoningTraces": false
+  },
+  "maxRealModelCalls": 6
+}
