@@ -1,0 +1,111 @@
+{
+  "taskId": "RHL-M3B-3B-IMPL-024-CPCA-SPECIALIST-INDUSTRY-ACQUISITION",
+  "baseCommit": "23760a0220dc8af030c43be7a746cab05e9f6a34",
+  "generatedAt": "2026-09-13T17:58:25.267Z",
+  "target": {
+    "nameHash": "b8e35979d589b8e7",
+    "aliasHashes": [
+      "33d250516d9d5c12",
+      "bd684c4273355916"
+    ],
+    "searchTermHashes": [
+      "5b28ee335216e1a8",
+      "36fb1d9d0b5aad94",
+      "5c7319fd988d13bf",
+      "93d2ee309b00082c",
+      "561b88cc94cb034b",
+      "8d5e21dcaa14c3c5",
+      "e7672259b2679720",
+      "74621221ba1ce603"
+    ],
+    "searchTermCount": 8,
+    "asOf": "2026-09-14T00:00:00.000Z"
+  },
+  "authorizedRoutes": [
+    "/industry-287.html",
+    "/industry-279.html",
+    "/industry.html"
+  ],
+  "requestCounts": {
+    "listPages": 3,
+    "candidateFetches": 4,
+    "retries": 0,
+    "modelCalls": 0,
+    "gatewaySubmissions": 0,
+    "writerCommits": 0,
+    "knowledgeMutations": 0
+  },
+  "routeEvidence": [
+    {
+      "requested": {
+        "host": "www.cpca.org.cn",
+        "path": "/industry-287.html"
+      },
+      "final": {
+        "host": "www.cpca.org.cn",
+        "path": "/industry-287.html"
+      },
+      "http": 200,
+      "finalAuthorized": true,
+      "sizeBucket": "16-256KiB",
+      "anchorCount": 72,
+      "targetMatchCount": 0,
+      "responseHash": "9b6903985a57f09c"
+    },
+    {
+      "requested": {
+        "host": "www.cpca.org.cn",
+        "path": "/industry-279.html"
+      },
+      "final": {
+        "host": "www.cpca.org.cn",
+        "path": "/industry-279.html"
+      },
+      "http": 200,
+      "finalAuthorized": true,
+      "sizeBucket": "16-256KiB",
+      "anchorCount": 72,
+      "targetMatchCount": 0,
+      "responseHash": "edd3d0c2001a3c53"
+    },
+    {
+      "requested": {
+        "host": "www.cpca.org.cn",
+        "path": "/industry.html"
+      },
+      "final": {
+        "host": "www.cpca.org.cn",
+        "path": "/industry.html"
+      },
+      "http": 200,
+      "finalAuthorized": true,
+      "sizeBucket": "16-256KiB",
+      "anchorCount": 79,
+      "targetMatchCount": 0,
+      "responseHash": "5f18ca2ec61563b1"
+    }
+  ],
+  "candidates": 1,
+  "normalizedSources": 0,
+  "publicOutcomes": 0,
+  "restrictedOutcomes": 1,
+  "publicationDateAvailability": 0,
+  "canonicalHosts": [],
+  "sources": [],
+  "mutation": {
+    "modelCalls": 0,
+    "gatewaySubmissions": 0,
+    "writerCommits": 0,
+    "knowledgeMutations": 0
+  },
+  "privacy": {
+    "rawBodiesIncluded": false,
+    "fullDocumentsIncluded": false,
+    "cookiesIncluded": false,
+    "credentialsIncluded": false,
+    "authorizationHeadersIncluded": false,
+    "privateAbsolutePathsIncluded": false,
+    "reasoningTracesIncluded": false
+  },
+  "classification": "CPCA_RESTRICTED_ONLY"
+}
