@@ -1,7 +1,7 @@
 {
-  "taskId": "RHL-M3B-3B-IMPL-024-CPCA-SPECIALIST-INDUSTRY-ACQUISITION",
-  "baseCommit": "23760a0220dc8af030c43be7a746cab05e9f6a34",
-  "generatedAt": "2026-09-13T17:58:25.267Z",
+  "taskId": "RHL-M3B-3B-FIX-025-CPCA-RESTRICTION-AND-LIVE-CLASSIFICATION",
+  "baseCommit": "28681734d9c16ae54f4ac1acce118d0885b0773a",
+  "generatedAt": "2026-09-13T18:09:14.709Z",
   "target": {
     "nameHash": "b8e35979d589b8e7",
     "aliasHashes": [
@@ -18,7 +18,20 @@
       "e7672259b2679720",
       "74621221ba1ce603"
     ],
-    "searchTermCount": 8,
+    "targetTermHashes": [
+      "b8e35979d589b8e7",
+      "33d250516d9d5c12",
+      "bd684c4273355916",
+      "5b28ee335216e1a8",
+      "36fb1d9d0b5aad94",
+      "5c7319fd988d13bf",
+      "93d2ee309b00082c",
+      "561b88cc94cb034b",
+      "8d5e21dcaa14c3c5",
+      "e7672259b2679720",
+      "74621221ba1ce603"
+    ],
+    "targetTermCount": 11,
     "asOf": "2026-09-14T00:00:00.000Z"
   },
   "authorizedRoutes": [
@@ -27,8 +40,8 @@
     "/industry.html"
   ],
   "requestCounts": {
-    "listPages": 3,
-    "candidateFetches": 4,
+    "listPages": 6,
+    "candidateFetches": 1,
     "retries": 0,
     "modelCalls": 0,
     "gatewaySubmissions": 0,
@@ -55,6 +68,22 @@
     {
       "requested": {
         "host": "www.cpca.org.cn",
+        "path": "/industry-287-2.html"
+      },
+      "final": {
+        "host": "www.cpca.org.cn",
+        "path": "/industry-287-2.html"
+      },
+      "http": 200,
+      "finalAuthorized": true,
+      "sizeBucket": "16-256KiB",
+      "anchorCount": 73,
+      "targetMatchCount": 0,
+      "responseHash": "6e584d8b01b4ca18"
+    },
+    {
+      "requested": {
+        "host": "www.cpca.org.cn",
         "path": "/industry-279.html"
       },
       "final": {
@@ -71,6 +100,22 @@
     {
       "requested": {
         "host": "www.cpca.org.cn",
+        "path": "/industry-279-2.html"
+      },
+      "final": {
+        "host": "www.cpca.org.cn",
+        "path": "/industry-279-2.html"
+      },
+      "http": 200,
+      "finalAuthorized": true,
+      "sizeBucket": "16-256KiB",
+      "anchorCount": 73,
+      "targetMatchCount": 1,
+      "responseHash": "a207c7a06d1d5fce"
+    },
+    {
+      "requested": {
+        "host": "www.cpca.org.cn",
         "path": "/industry.html"
       },
       "final": {
@@ -83,15 +128,47 @@
       "anchorCount": 79,
       "targetMatchCount": 0,
       "responseHash": "5f18ca2ec61563b1"
+    },
+    {
+      "requested": {
+        "host": "www.cpca.org.cn",
+        "path": "/industry-358-2.html"
+      },
+      "final": {
+        "host": "www.cpca.org.cn",
+        "path": "/industry-358-2.html"
+      },
+      "http": 200,
+      "finalAuthorized": true,
+      "sizeBucket": "16-256KiB",
+      "anchorCount": 81,
+      "targetMatchCount": 0,
+      "responseHash": "4db62667522802c1"
     }
   ],
   "candidates": 1,
-  "normalizedSources": 0,
-  "publicOutcomes": 0,
-  "restrictedOutcomes": 1,
-  "publicationDateAvailability": 0,
-  "canonicalHosts": [],
-  "sources": [],
+  "normalizedSources": 1,
+  "publicOutcomes": 1,
+  "restrictedOutcomes": 0,
+  "publicationDateAvailability": 1,
+  "canonicalHosts": [
+    "www.cpca.org.cn"
+  ],
+  "sources": [
+    {
+      "titleHash": "a87c007e9b8df4e1",
+      "safeTitle": "2025年上半年中国印制电路板进出口贸易情况 2025-08-14 查看详细",
+      "canonicalHost": "www.cpca.org.cn",
+      "path": "/industry/show-5777.html",
+      "publishedAt": "2025-08-14T00:00:00.000Z",
+      "dateAvailable": true,
+      "discoveryRoute": "/industry-279.html",
+      "contentHash": "adf0466dc924cc57ea675a49a346050a1311989a7ce9857d5e772b20cb413fec",
+      "kind": "web_article",
+      "tier": 4,
+      "outcome": "NORMALIZED_PUBLIC"
+    }
+  ],
   "mutation": {
     "modelCalls": 0,
     "gatewaySubmissions": 0,
@@ -107,5 +184,5 @@
     "privateAbsolutePathsIncluded": false,
     "reasoningTracesIncluded": false
   },
-  "classification": "CPCA_RESTRICTED_ONLY"
+  "classification": "CPCA_SPECIALIST_SOURCE_PARTIAL"
 }

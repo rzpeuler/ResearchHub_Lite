@@ -20,16 +20,27 @@ const MAX_ROUTES = 3
 const MAX_PAGES = 2
 const MAX_CANDIDATES = 8
 const TRACKING = new Set(['spm', 'from', 'source', 'share', 'utm_source', 'utm_medium', 'utm_campaign'])
-const RESTRICTED = /登录|会员|购买|订阅|付费|验证码|captcha|subscription|member.?login|sign.?in|purchase/i
 const GENERIC = new Set(['industry', 'manufacturing', '行业', '产业', '制造业'])
 
+export type CpcaFailureCode = 'RESTRICTED_ACCESS_GATE' | 'UNSUPPORTED_MEDIA' | 'FETCH_OR_TRANSPORT_FAILURE' | 'PARSER_OR_NORMALIZATION_FAILURE'
+export class CpcaAcquisitionError extends Error {
+  constructor(readonly code: CpcaFailureCode, message: string) { super(message); this.name = 'CpcaAcquisitionError' }
+}
+
 const clean = (value: string, max = 1200) => value.normalize('NFKC').replace(/\s+/g, ' ').trim().slice(0, max)
-const terms = (request: Extract<ResearchAcquisitionRequest, { industry: unknown }>) => [...new Set([request.industry.name, ...(request.industry.aliases ?? []), ...request.industry.searchTerms].map((x) => clean(x)).filter(Boolean))].filter((x) => !GENERIC.has(x.toLocaleLowerCase()))
+export const cpcaTargetTerms = (request: Extract<ResearchAcquisitionRequest, { industry: unknown }>) => [...new Set([request.industry.name, ...(request.industry.aliases ?? []), ...request.industry.searchTerms].map((x) => clean(x)).filter(Boolean))].filter((x) => !GENERIC.has(x.toLocaleLowerCase()))
 const canonical = (value: string) => { const url = new URL(value); url.hash = ''; for (const key of [...url.searchParams.keys()]) if (TRACKING.has(key.toLocaleLowerCase())) url.searchParams.delete(key); return url.toString() }
 export const validCpcaUrl = (value: unknown): value is string => { try { const url = new URL(String(value)); return url.protocol === 'https:' && (url.hostname === 'cpca.org.cn' || url.hostname === 'www.cpca.org.cn') } catch { return false } }
 const dateValue = (value: string) => { const match = value.match(/20\d{2}(?:年|[-/.])\d{1,2}(?:月|[-/.])\d{1,2}日?/); if (!match) return undefined; const parsed = new Date(match[0].replace(/年|月|日/g, '-').replace(/[/.]/g, '-').replace(/-+$/, '')); return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString() }
 const score = (title: string, snippet: string | undefined, searchTerms: readonly string[]) => searchTerms.reduce((n, term) => n + (title.toLocaleLowerCase().includes(term.toLocaleLowerCase()) ? 3 : 0) + (snippet?.toLocaleLowerCase().includes(term.toLocaleLowerCase()) ? 1 : 0), 0)
 const attachment = (url: string) => /\.(pdf|docx?|xlsx?|pptx?)($|[?#])/i.test(url)
+const substantiveText = (value: string) => value.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<(script|style|nav|header|footer|aside)\b[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+export const hasCpcaAccessGate = (value: string) => {
+  const text = substantiveText(value).slice(0, 120_000)
+  const gate = /请登录|登录后|sign\s*in|member\s*login|subscription\s*required|purchase\s+to\s+(?:read|continue)/gi
+  const control = /会员|购买|订阅|付费|专享|验证码|captcha|subscription|member|purchase/i
+  return [...text.matchAll(gate)].some((match) => control.test(text.slice(Math.max(0, match.index ?? 0) - 160, Math.min(text.length, (match.index ?? 0) + match[0].length + 160))))
+}
 
 type Row = { title: string; url: string; snippet?: string; publishedAt?: string; isAttachment: boolean }
 function parseList(html: string, baseUrl: string): { rows: Row[]; next: string[] } {
@@ -62,10 +73,10 @@ export class CpcaIndustryResearchPlugin implements ResearchAcquisitionPlugin {
   private readonly resolver: Pick<DocumentInputResolver, 'parse'>
   private readonly routes: readonly string[]
   constructor(options: CpcaIndustryResearchPluginOptions = {}) { this.fetchImpl = options.fetchImpl ?? fetch; this.now = options.now ?? (() => new Date().toISOString()); this.timeoutMs = Math.min(20_000, Math.max(1, options.timeoutMs ?? 15_000)); this.listMax = Math.min(2 * 1024 * 1024, options.maxListPayloadBytes ?? 2 * 1024 * 1024); this.documentMax = Math.min(8 * 1024 * 1024, options.maxDocumentPayloadBytes ?? 8 * 1024 * 1024); this.resolver = options.documentResolver ?? new DocumentInputResolver(); this.routes = (options.routes ?? CPCA_INDUSTRY_ROUTES).slice(0, MAX_ROUTES).filter(validCpcaUrl) }
-  private async request(url: string, maximum: number, accept: string) { if (!validCpcaUrl(url)) throw new Error('CPCA URL is outside the allowed domain'); const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), this.timeoutMs); try { const response = await this.fetchImpl(url, { signal: controller.signal, headers: { accept } }); const finalUrl = canonical(response.url || url); if (!validCpcaUrl(finalUrl)) throw new Error('CPCA redirect crossed domain boundary'); if (!response.ok) throw new Error(`CPCA request failed with HTTP ${response.status}`); return { response, finalUrl, bytes: await bounded(response, maximum) } } finally { clearTimeout(timer) } }
+    private async request(url: string, maximum: number, accept: string) { if (!validCpcaUrl(url)) throw new CpcaAcquisitionError('FETCH_OR_TRANSPORT_FAILURE', 'CPCA URL is outside the allowed domain'); const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), this.timeoutMs); try { let response: Response; try { response = await this.fetchImpl(url, { signal: controller.signal, headers: { accept } }) } catch (error) { throw new CpcaAcquisitionError('FETCH_OR_TRANSPORT_FAILURE', `CPCA request transport failed: ${error instanceof Error ? error.message.slice(0, 80) : 'unknown'}`) } const finalUrl = canonical(response.url || url); if (!validCpcaUrl(finalUrl)) throw new CpcaAcquisitionError('RESTRICTED_ACCESS_GATE', 'CPCA redirect crossed domain boundary'); if (!response.ok) throw new CpcaAcquisitionError('FETCH_OR_TRANSPORT_FAILURE', `CPCA request failed with HTTP ${response.status}`); let bytes: Uint8Array; try { bytes = await bounded(response, maximum) } catch (error) { if (error instanceof CpcaAcquisitionError) throw error; throw new CpcaAcquisitionError('FETCH_OR_TRANSPORT_FAILURE', `CPCA payload could not be read: ${error instanceof Error ? error.message.slice(0, 80) : 'unknown'}`) } return { response, finalUrl, bytes } } finally { clearTimeout(timer) } }
   async discover(request: ResearchAcquisitionRequest): Promise<readonly ResearchSourceCandidate[]> {
     if ('company' in request) return []
-    const searchTerms = terms(request); if (!searchTerms.length) return []
+    const searchTerms = cpcaTargetTerms(request); if (!searchTerms.length) return []
     const found = new Map<string, ResearchSourceCandidate>()
     for (const route of this.routes) { let page = route; const visited = new Set<string>(); const routeHost = new URL(route).hostname
       for (let pageIndex = 0; pageIndex < MAX_PAGES && page; pageIndex++) { if (visited.has(page)) break; visited.add(page); const result = await this.request(page, this.listMax, 'text/html,application/xhtml+xml'); const parsed = parseList(new TextDecoder().decode(result.bytes), result.finalUrl)
@@ -78,13 +89,13 @@ export class CpcaIndustryResearchPlugin implements ResearchAcquisitionPlugin {
   async fetch(candidate: ResearchSourceCandidate): Promise<ResearchFetchedSource> {
     if (candidate.provider !== PROVIDER || candidate.tier !== 4 || !candidate.url || !validCpcaUrl(candidate.url) || candidate.candidateId !== `${PROVIDER}-${sha256(canonical(candidate.url))}`) throw new Error('candidate does not belong to CPCA')
     const result = await this.request(canonical(candidate.url), this.documentMax, 'text/html,application/xhtml+xml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-    const contentType = (result.response.headers.get('content-type') ?? '').split(';')[0].toLocaleLowerCase(); const isPdf = contentType === 'application/pdf' || result.finalUrl.toLocaleLowerCase().includes('.pdf'); const allowed = isPdf || ['text/html', 'application/xhtml+xml', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ''].includes(contentType); if (!allowed) throw new Error(`CPCA unsupported content type: ${contentType}`)
-    const content = new TextDecoder().decode(result.bytes); if (RESTRICTED.test(content.slice(0, 120_000)) || RESTRICTED.test(candidate.title)) throw new Error('CPCA content is restricted or teaser-only')
+    const contentType = (result.response.headers.get('content-type') ?? '').split(';')[0].toLocaleLowerCase(); const isPdf = contentType === 'application/pdf' || result.finalUrl.toLocaleLowerCase().includes('.pdf'); const allowed = isPdf || ['text/html', 'application/xhtml+xml', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ''].includes(contentType); if (!allowed) throw new CpcaAcquisitionError('UNSUPPORTED_MEDIA', `CPCA unsupported content type: ${contentType}`)
+    const content = new TextDecoder().decode(result.bytes); if (hasCpcaAccessGate(content)) throw new CpcaAcquisitionError('RESTRICTED_ACCESS_GATE', 'CPCA content is restricted or teaser-only')
     return { candidate: { ...candidate, url: result.finalUrl }, retrievedAt: this.now(), content, contentType, mediaType: isPdf ? 'application/pdf' : contentType || 'text/html', rawBytes: result.bytes, contentHash: sha256(result.bytes) }
   }
   async normalize(source: ResearchFetchedSource): Promise<NormalizedResearchSource> {
     if (source.candidate.provider !== PROVIDER || source.candidate.tier !== 4 || !source.rawBytes?.byteLength || !source.candidate.url || !validCpcaUrl(source.candidate.url)) throw new Error('source does not belong to CPCA')
-    const mediaType = source.mediaType ?? source.contentType ?? 'text/html'; const filename = mediaType === 'application/pdf' ? 'cpca-document.pdf' : mediaType === 'text/html' || mediaType === 'application/xhtml+xml' ? 'cpca-document.html' : 'cpca-document.bin'; const document = await this.resolver.parse({ bytes: source.rawBytes, filename, mediaType }); if (!document.normalizedText.trim() || RESTRICTED.test(document.normalizedText.slice(0, 120_000))) throw new Error('CPCA normalized content is restricted or teaser-only')
+    const mediaType = source.mediaType ?? source.contentType ?? 'text/html'; const filename = mediaType === 'application/pdf' ? 'cpca-document.pdf' : mediaType === 'text/html' || mediaType === 'application/xhtml+xml' ? 'cpca-document.html' : 'cpca-document.bin'; let document: Awaited<ReturnType<DocumentInputResolver['parse']>>; try { document = await this.resolver.parse({ bytes: source.rawBytes, filename, mediaType }) } catch { throw new CpcaAcquisitionError('PARSER_OR_NORMALIZATION_FAILURE', 'CPCA document parser failed') } if (!document.normalizedText.trim()) throw new CpcaAcquisitionError('PARSER_OR_NORMALIZATION_FAILURE', 'CPCA document has no substantive normalized content'); if (hasCpcaAccessGate(document.normalizedText)) throw new CpcaAcquisitionError('RESTRICTED_ACCESS_GATE', 'CPCA normalized content is restricted or teaser-only')
     return { candidate: source.candidate, retrievedAt: source.retrievedAt, title: source.candidate.title, content: document.normalizedText, canonicalUrl: canonical(source.candidate.url), contentHash: source.contentHash ?? sha256(source.rawBytes), rawBytes: Uint8Array.from(source.rawBytes), publisher: PUBLISHER, rights: { accessScope: 'public', retentionAllowed: true, aiProcessingAllowed: true, derivativeKnowledgeAllowed: true, redistributionAllowed: false, policyBasis: 'personal_noncommercial_research' } }
   }
 }

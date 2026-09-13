@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { classifyCpcaOutcomes } from './cpca-industry-production-acquisition.ts'
+
+const one = (outcome: any) => [{ outcome, relevant: true }]
+test('classifies public success only when both 2026 specialist bars are met', () => { assert.equal(classifyCpcaOutcomes({ discoveryStable: true, targetRelevantCandidates: 2, outcomes: [{ outcome: 'NORMALIZED_PUBLIC' }, { outcome: 'NORMALIZED_PUBLIC' }], has2026PcbAnalysis: true, has2026MarketAnalysis: true }), 'CPCA_SPECIALIST_SOURCE_PROVEN') })
+test('classifies partial public success', () => { assert.equal(classifyCpcaOutcomes({ discoveryStable: true, targetRelevantCandidates: 1, outcomes: one('NORMALIZED_PUBLIC') }), 'CPCA_SPECIALIST_SOURCE_PARTIAL') })
+test('requires every candidate outcome to be an explicit access gate for restricted-only', () => { assert.equal(classifyCpcaOutcomes({ discoveryStable: true, targetRelevantCandidates: 2, outcomes: one('RESTRICTED_ACCESS_GATE') }), 'CPCA_RESTRICTED_ONLY'); assert.equal(classifyCpcaOutcomes({ discoveryStable: true, targetRelevantCandidates: 2, outcomes: [{ outcome: 'RESTRICTED_ACCESS_GATE' }, { outcome: 'OTHER_SAFE_FAILURE' }] }), 'CPCA_ROUTE_OR_PARSER_GAP') })
+test('keeps generic navigation login from becoming a restricted classification', () => { assert.equal(classifyCpcaOutcomes({ discoveryStable: true, targetRelevantCandidates: 1, outcomes: one('NORMALIZED_PUBLIC') }), 'CPCA_SPECIALIST_SOURCE_PARTIAL') })
+test('classifies parser and unsupported-media gaps separately from restricted-only', () => { assert.equal(classifyCpcaOutcomes({ discoveryStable: true, targetRelevantCandidates: 1, outcomes: one('PARSER_OR_NORMALIZATION_FAILURE') }), 'CPCA_ROUTE_OR_PARSER_GAP'); assert.equal(classifyCpcaOutcomes({ discoveryStable: true, targetRelevantCandidates: 1, outcomes: one('UNSUPPORTED_MEDIA') }), 'CPCA_ROUTE_OR_PARSER_GAP') })
+test('classifies stable empty discovery and transport inconclusive', () => { assert.equal(classifyCpcaOutcomes({ discoveryStable: true, targetRelevantCandidates: 0, outcomes: [] }), 'CPCA_DISCOVERY_EMPTY'); assert.equal(classifyCpcaOutcomes({ discoveryStable: false, targetRelevantCandidates: 0, outcomes: one('FETCH_OR_TRANSPORT_FAILURE') }), 'LIVE_SOURCE_INCONCLUSIVE') })
