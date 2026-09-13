@@ -10,6 +10,8 @@ import { ModelRuntime } from '@earendil-works/pi-coding-agent'
 import { fauxProvider } from '@earendil-works/pi-ai'
 import type { ReasoningExecutor } from '../../../plugins/reasoning/contracts.ts'
 import { createResearchHubTools } from '../../../app/pi/tools.ts'
+import { GovCnIndustryResearchPlugin } from '../../../plugins/research-acquisition/govcn-industry.ts'
+import { EastmoneyIndustryResearchPlugin } from '../../../plugins/research-acquisition/eastmoney-industry.ts'
 
 class FixtureExecutor implements ReasoningExecutor {
   constructor(private readonly waitForCancellation = false) {}
@@ -17,13 +19,13 @@ class FixtureExecutor implements ReasoningExecutor {
   async execute(_request: never, signal?: AbortSignal) { if (this.waitForCancellation) await new Promise<void>((resolve) => signal?.addEventListener('abort', () => resolve(), { once: true })); return { operation: 'industry_design', output: {} } as never }
 }
 
-async function fixture(options: { readonly waitForCancellation?: boolean; readonly industryFactory?: () => Promise<ReasoningExecutor> } = {}) {
+async function fixture(options: { readonly waitForCancellation?: boolean; readonly industryFactory?: () => Promise<ReasoningExecutor>; readonly industryPlugins?: readonly never[] } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'runtime-industry-route-'))
   const kb = join(root, 'kb'); const cwd = join(root, 'cwd'); const workspace = join(root, 'workspace'); const agentDir = join(root, 'agent')
   await mkdir(cwd); await mkdir(workspace); await mkdir(agentDir); await createFreshKnowledgeBaseV04(kb, { knowledgeBaseId: 'kb-industry-route' })
   const modelRuntime = await ModelRuntime.create({ authPath: join(agentDir, 'auth.json'), modelsPath: null, refreshOnCreate: false, allowModelNetwork: false })
   const faux = fauxProvider({ provider: `industry-route-${Date.now()}-${Math.random()}`, models: [{ id: 'fixture-model' }] }); modelRuntime.registerNativeProvider(faux.provider)
-  const runtime = await createResearchHubApplicationRuntime({ cwd, agentDir, mountedKnowledgeBaseRoot: kb, workspaceRoot: workspace, modelRuntime, model: faux.getModel(), reasoningExecutor: new FixtureExecutor(options.waitForCancellation), industryReasoningExecutorFactory: options.industryFactory })
+  const runtime = await createResearchHubApplicationRuntime({ cwd, agentDir, mountedKnowledgeBaseRoot: kb, workspaceRoot: workspace, modelRuntime, model: faux.getModel(), reasoningExecutor: new FixtureExecutor(options.waitForCancellation), industryReasoningExecutorFactory: options.industryFactory, ...(options.industryPlugins === undefined ? {} : { industryAcquisitionPlugins: options.industryPlugins }) })
   const server = new ResearchHubRuntimeServer({ runtime, clientRoot: join(root, 'missing-client'), port: 0 })
   await server.start()
   return { root, runtime, server, modelRuntime, origin: server.address!.origin, token: server.address!.runtimeToken }
@@ -33,6 +35,13 @@ test('Application runtime does not resolve the Industry factory during startup',
   let factoryCalls = 0
   const f = await fixture({ industryFactory: async () => { factoryCalls++; return new FixtureExecutor() } })
   try { assert.equal(factoryCalls, 0); assert.ok(f.runtime.researchService) } finally { await f.server.close(); await f.runtime.close(); await Promise.resolve((f.modelRuntime as unknown as { dispose?: () => void | Promise<void> }).dispose?.()); await rm(f.root, { recursive: true, force: true }) }
+})
+
+test('internal Industry defaults order Gov.cn before Eastmoney and explicit empty list replaces defaults', async () => {
+  const first = await fixture()
+  try { const plugins = (first.runtime.researchService as unknown as { options: { industryAcquisitionPlugins: readonly unknown[] } }).options.industryAcquisitionPlugins; assert.ok(plugins[0] instanceof GovCnIndustryResearchPlugin); assert.ok(plugins[1] instanceof EastmoneyIndustryResearchPlugin) } finally { await first.server.close(); await first.runtime.close(); await Promise.resolve((first.modelRuntime as unknown as { dispose?: () => void | Promise<void> }).dispose?.()); await rm(first.root, { recursive: true, force: true }) }
+  const second = await fixture({ industryPlugins: [] })
+  try { const plugins = (second.runtime.researchService as unknown as { options: { industryAcquisitionPlugins: readonly unknown[] } }).options.industryAcquisitionPlugins; assert.deepEqual(plugins, []) } finally { await second.server.close(); await second.runtime.close(); await Promise.resolve((second.modelRuntime as unknown as { dispose?: () => void | Promise<void> }).dispose?.()); await rm(second.root, { recursive: true, force: true }) }
 })
 
 test('Industry HTTP routes accept bounded requests only with runtime security and register the Workflow', async () => {
