@@ -1,0 +1,115 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-009-INDUSTRY-ACQUISITION-FAILURE-ISOLATION",
+  "baseCommit": "af6d7bba9daa568c5a2003b985e6335117c6a93c",
+  "generatedAt": "2026-09-13T01:16:17.581Z",
+  "test008Acceptance": {
+    "finalGateClassification": "REAL_MODEL_CONTRACT_BLOCKED",
+    "firstRunRevision": 0,
+    "gatewaySubmitCount": 0,
+    "writerCommitCount": 0,
+    "reportObjects": 0,
+    "graphObjects": 0,
+    "canonicalObjects": 0,
+    "acquisitionOutcomes": {
+      "cninfo": "empty",
+      "gdelt": "discovery_failed",
+      "akshare": "discovery_failed"
+    },
+    "reasoning": {
+      "runtimeProvider": "pi-coding-agent",
+      "completionBackend": "codex-cli",
+      "model": "gpt-5.6-luna",
+      "effort": "medium",
+      "structuredOutputEnabled": true,
+      "automaticFallbackCalls": 0,
+      "designCalls": 1,
+      "boundedModuleCalls": true
+    }
+  },
+  "request": {
+    "targetName": "PCB Manufacturing",
+    "aliases": [
+      "Printed Circuit Board"
+    ],
+    "asOf": "2026-09-12T00:00:00.000Z",
+    "searchTermCount": 8,
+    "searchTermsHash": "ded447de9a6be688",
+    "targetHash": "7fdd976309046f5d",
+    "limitPerKind": 24
+  },
+  "probes": {
+    "cninfo": {
+      "provider": "CNINFO_INDUSTRY_CAPABILITY",
+      "attempted": true,
+      "returnedCandidateCount": 0,
+      "clientMethodCallCount": 0,
+      "classification": "INTENTIONAL_CAPABILITY_ABSENCE"
+    },
+    "gdelt": {
+      "provider": "GDELT_INDUSTRY_DISCOVERY",
+      "attempted": true,
+      "requestTermCount": 10,
+      "endpointHost": "api.gdeltproject.org",
+      "processOrNetworkReached": false,
+      "httpStatusCategory": null,
+      "candidateCount": 0,
+      "candidateMetadataHashes": [],
+      "classification": "DNS_OR_CONNECT_FAILURE",
+      "failure": "fetch failed"
+    },
+    "akshare": {
+      "attempted": true,
+      "pythonExecutableDiscovered": true,
+      "importSucceeded": true,
+      "importVersion": "1.18.64",
+      "classification": "AKSHARE_RUNTIME_FAILURE",
+      "sectorRowCount": 0,
+      "boardNameSamples": [],
+      "rawRowsHash": null,
+      "candidateCount": 0,
+      "relevantBoardCandidates": 0,
+      "failure": "Command failed: python -c import json,sys,akshare as ak\nkind,symbol,start_date,end_date=sys.argv[1:]\nif kind=='basic': value=ak.stock_individual_info_em(symbol=symbol)\nelif kind=='financial': value=ak.stock_financial_analysis_indicator(symb"
+    },
+    "staticAkshareInterface": {
+      "exposesSectorPerformance": true,
+      "bridgeFunction": "stock_board_industry_name_em"
+    }
+  },
+  "realExternalCallCounts": {
+    "cninfoClientList": 0,
+    "gdeltDiscovery": 1,
+    "gdeltFetch": 0,
+    "gdeltNormalize": 0,
+    "akshareImportChecks": 1,
+    "akshareSectorPerformance": 1,
+    "modelCalls": 0
+  },
+  "aggregate": {
+    "classification": "MIXED_ACQUISITION_BLOCKERS",
+    "nextActionCategory": "DESIGN_ADDITIONAL_FREE_INDUSTRY_ACQUISITION_PROVIDER"
+  },
+  "mutation": {
+    "knowledgeMutation": false,
+    "productionCodeMutation": false,
+    "gatewaySubmitCount": 0,
+    "writerCommitCount": 0,
+    "reportCreated": false,
+    "graphCreated": false,
+    "canonicalObjectsCreated": false
+  },
+  "privacy": {
+    "credentials": false,
+    "authFiles": false,
+    "cookies": false,
+    "privateAbsolutePaths": false,
+    "rawProviderBodies": false,
+    "completeArticleBodies": false,
+    "fullAkshareRows": false,
+    "modelInvocations": false
+  },
+  "constraints": {
+    "noRetries": true,
+    "noProviderFallback": true,
+    "noProductionChange": true
+  }
+}
