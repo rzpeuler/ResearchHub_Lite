@@ -1,0 +1,145 @@
+{
+  "taskId": "RHL-M3B-3B-DIAG-019-GOVCN-QUERY-COVERAGE",
+  "baseCommit": "9ffe341df5f41fdee437b3b68b7b154d912b5dd2",
+  "generatedAt": "2026-09-13T11:46:59.463Z",
+  "endpoint": "https://sousuo.www.gov.cn/search-gov/data",
+  "requestPolicy": {
+    "category": "zhengcelibrary_gw_bm_gb",
+    "searchFields": "title:content:summary",
+    "orderBy": "RELEVANCE",
+    "pageSize": 10,
+    "payloadBytesCap": 2097152,
+    "protocol": "HTTPS gov.cn only",
+    "nativeFetchOnly": true,
+    "alternateProviders": false,
+    "retries": false
+  },
+  "target": {
+    "nameHash": "b8e35979d589b8e7",
+    "searchTermCount": 8,
+    "searchTermsHash": "ded447de9a6be6882555eb953ef3f788bc5056e0adb65bc8151392aa30f6175b"
+  },
+  "productionSelection": {
+    "requestCount": 4,
+    "selectedQueryCount": 4,
+    "exactSelectedQueries": [
+      "Printed Circuit Board",
+      "PCB Manufacturing",
+      "AI服务器 PCB HDI",
+      "生益科技 PCB CCL"
+    ],
+    "selectedTermIds": [
+      "pcb-term-02",
+      "pcb-term-06"
+    ],
+    "productionFailure": null
+  },
+  "probes": [
+    {
+      "termHash": "5b28ee335216e1a8",
+      "termId": "pcb-term-01",
+      "requestCount": 1,
+      "httpOutcome": "HTTP_200",
+      "parseOutcome": "PARSED",
+      "boundedResultCount": 1,
+      "httpsGovCnCandidateCount": 0,
+      "pcbTargetMatchCount": 0,
+      "productionSelected": false
+    },
+    {
+      "termHash": "36fb1d9d0b5aad94",
+      "termId": "pcb-term-02",
+      "requestCount": 1,
+      "httpOutcome": "HTTP_200",
+      "parseOutcome": "PARSED",
+      "boundedResultCount": 0,
+      "httpsGovCnCandidateCount": 0,
+      "pcbTargetMatchCount": 0,
+      "productionSelected": true
+    },
+    {
+      "termHash": "f8cff2f4909ec87c",
+      "termId": "pcb-term-03",
+      "requestCount": 1,
+      "httpOutcome": "HTTP_200",
+      "parseOutcome": "PARSED",
+      "boundedResultCount": 1,
+      "httpsGovCnCandidateCount": 0,
+      "pcbTargetMatchCount": 0,
+      "productionSelected": false
+    },
+    {
+      "termHash": "c70dc1312922c6d8",
+      "termId": "pcb-term-04",
+      "requestCount": 1,
+      "httpOutcome": "HTTP_200",
+      "parseOutcome": "PARSED",
+      "boundedResultCount": 0,
+      "httpsGovCnCandidateCount": 0,
+      "pcbTargetMatchCount": 0,
+      "productionSelected": false
+    },
+    {
+      "termHash": "acb654506f0aae9d",
+      "termId": "pcb-term-05",
+      "requestCount": 1,
+      "httpOutcome": "HTTP_200",
+      "parseOutcome": "PARSED",
+      "boundedResultCount": 0,
+      "httpsGovCnCandidateCount": 0,
+      "pcbTargetMatchCount": 0,
+      "productionSelected": false
+    },
+    {
+      "termHash": "5ca1838ec81faa4c",
+      "termId": "pcb-term-06",
+      "requestCount": 1,
+      "httpOutcome": "HTTP_200",
+      "parseOutcome": "PARSED",
+      "boundedResultCount": 0,
+      "httpsGovCnCandidateCount": 0,
+      "pcbTargetMatchCount": 0,
+      "productionSelected": true
+    },
+    {
+      "termHash": "5c7319fd988d13bf",
+      "termId": "pcb-term-07",
+      "requestCount": 1,
+      "httpOutcome": "HTTP_200",
+      "parseOutcome": "PARSED",
+      "boundedResultCount": 0,
+      "httpsGovCnCandidateCount": 0,
+      "pcbTargetMatchCount": 0,
+      "productionSelected": false
+    },
+    {
+      "termHash": "93d2ee309b00082c",
+      "termId": "pcb-term-08",
+      "requestCount": 1,
+      "httpOutcome": "HTTP_200",
+      "parseOutcome": "PARSED",
+      "boundedResultCount": 1,
+      "httpsGovCnCandidateCount": 0,
+      "pcbTargetMatchCount": 0,
+      "productionSelected": false
+    }
+  ],
+  "classification": "SOURCE_COVERAGE_GAP",
+  "recommendation": "Do not broaden query selection; the approved source produced no valid PCB-target hit for any frozen term.",
+  "mutation": {
+    "productionCodeMutation": false,
+    "modelCalls": 0,
+    "knowledgeMutation": false,
+    "gatewaySubmitCount": 0,
+    "writerCommitCount": 0
+  },
+  "privacy": {
+    "rawResponseBodies": false,
+    "completeDocumentText": false,
+    "cookies": false,
+    "credentials": false,
+    "authorizationHeaders": false,
+    "privateAbsolutePaths": false,
+    "reasoningTraces": false
+  }
+}
