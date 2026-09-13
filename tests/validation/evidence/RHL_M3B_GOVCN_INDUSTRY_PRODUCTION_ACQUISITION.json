@@ -1,26 +1,32 @@
 {
-  "taskId": "RHL-M3B-3B-FIX-017-GOVCN-OFFICIAL-INDUSTRY-EVIDENCE",
-  "baseCommit": "312e2c8f36da3e0bcbc0ed5b46993cb45c838bab",
-  "generatedAt": "2026-09-13T05:45:12.137Z",
-  "diag016Acceptance": {
-    "accepted": true,
-    "commit": "312e2c8f36da3e0bcbc0ed5b46993cb45c838bab",
-    "productionReasoning": "codex-cli / gpt-5.6-luna / medium",
-    "automaticFallbackCalls": 0,
-    "designCalls": 1,
-    "moduleCalls": 8,
-    "moduleParserValidatorPasses": 8,
-    "finalModuleStatuses": "unavailable",
-    "synthesisRequested": false,
-    "knowledgeRevision": 0,
-    "acquisition": {
-      "cninfo": "empty",
-      "gdelt": "failed",
-      "eastmoney": "failed",
-      "akshare": "failed",
-      "normalizedSourceCount": 0
-    },
-    "interpretation": "Immediate blocker was zero live Industry evidence availability; Eastmoney board membership is insufficient alone for official Industry definition, policy, technology and industrial-chain context."
+  "taskId": "RHL-M3B-3B-FIX-018",
+  "baseCommit": "e935d076d11fe1d4308915f3207f7f02c2c560a6",
+  "generatedAt": "2026-09-13T10:45:06.774Z",
+  "diagnosis": {
+    "previousFailure": "Gov.cn response has no bounded result array",
+    "observedHttpStatus": 200,
+    "observedContentType": "application/json",
+    "resultContainerPath": "searchVO.catMap.gongbao.listVO",
+    "resultContainerCount": 1,
+    "emptyPageShape": "data: []",
+    "sanitizedRowFields": [
+      "title",
+      "url",
+      "fwdw",
+      "pubtimeStr",
+      "summary"
+    ],
+    "rawPayloadPersisted": false
+  },
+  "parserCompatibility": {
+    "sanitizedFixture": "searchVO.catMap.gongbao.listVO",
+    "acceptedCandidateCount": 1,
+    "rejectedMalformedOrUnsupportedCasesPreserved": true,
+    "provenance": {
+      "provider": "govcn",
+      "endpoint": "https://sousuo.www.gov.cn/search-gov/data",
+      "acceptedDomainPolicy": "*.gov.cn over HTTPS"
+    }
   },
   "endpointConfiguration": {
     "endpoint": "https://sousuo.www.gov.cn/search-gov/data",
@@ -44,14 +50,15 @@
     "searchTermCount": 8
   },
   "realHttp": {
-    "searchRequestCount": 1,
+    "searchRequestCount": 4,
     "documentRequestCount": 0,
     "discoveryCallCount": 1,
-    "selectedDocumentCount": 0
+    "selectedDocumentCount": 0,
+    "liveResultSetAtValidation": "no valid in-policy candidates returned for bounded target queries"
   },
   "candidates": [],
   "selectedNormalizedDocuments": [],
-  "finalClassification": "GOVCN_SEARCH_INVALID_RESPONSE",
+  "finalClassification": "GOVCN_DISCOVERY_EMPTY",
   "livePcbModuleRerunAuthorized": false,
   "mutation": {
     "modelCallCount": 0,
@@ -70,6 +77,5 @@
     "authorizationHeaders": false,
     "privateAbsolutePaths": false,
     "reasoningTraces": false
-  },
-  "failure": "Gov.cn response has no bounded result array"
+  }
 }

@@ -39,10 +39,10 @@ const canonicalize = (value: string) => { const url = new URL(value); url.hash =
 const dateValue = (value: unknown) => { const candidate = text(value, 40); if (!candidate || Number.isNaN(Date.parse(candidate))) return undefined; return new Date(candidate).toISOString() }
 
 function resultRows(payload: unknown): Row[] {
-  const root = record(payload); const data = record(root?.data)
-  const container = [data?.list, data?.results, data?.items, root?.list, root?.results].find(Array.isArray)
-  if (!container) { if (data && (data.code === '0' || data.total === 0 || data.totalCount === 0)) return []; throw new Error('Gov.cn response has no bounded result array') }
-  return (container as unknown[]).flatMap((item) => { const row = record(item); if (!row) return []; const title = text(pick(row, ['title', 'Title'])); const url = text(pick(row, ['url', 'URL', 'link', 'docUrl']), 2048); if (!title || !url || !validGovUrl(url)) return []; return [{ title, url: canonicalize(url), publisher: text(pick(row, ['pubOrg', 'publisher', 'organization', 'source'])), publishedAt: dateValue(pick(row, ['pubTime', 'publishDate', 'publishedAt', 'date'])), snippet: text(pick(row, ['summary', 'content', 'snippet', 'description'])) }] })
+  const root = record(payload); const dataValue = root?.data; const data = record(dataValue); const searchVO = record(root?.searchVO); const catMap = record(searchVO?.catMap); const gongbao = record(catMap?.gongbao)
+  const container = [data?.list, data?.results, data?.items, root?.list, root?.results, gongbao?.listVO].find(Array.isArray)
+  if (!container) { if ((Array.isArray(dataValue) && dataValue.length === 0) || (data && (Object.keys(data).length === 0 || data.code === '0' || data.total === 0 || data.totalCount === 0))) return []; throw new Error('Gov.cn response has no bounded result array') }
+  return (container as unknown[]).flatMap((item) => { const row = record(item); if (!row) return []; const title = text(pick(row, ['title', 'Title'])); const url = text(pick(row, ['url', 'URL', 'link', 'docUrl']), 2048); if (!title || !url || !validGovUrl(url)) return []; return [{ title, url: canonicalize(url), publisher: text(pick(row, ['pubOrg', 'publisher', 'organization', 'source', 'fwdw'])), publishedAt: dateValue(pick(row, ['pubTime', 'publishDate', 'publishedAt', 'date', 'pubtime', 'pubtimeStr'])), snippet: text(pick(row, ['summary', 'content', 'snippet', 'description'])) }] })
 }
 
 async function boundedText(response: Response, maximum: number): Promise<Uint8Array> {
