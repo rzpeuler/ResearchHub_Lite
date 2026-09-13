@@ -72,6 +72,14 @@ documents:
     version: 1
     status: active
     type: writing-block-template
+  - id: writing-block-template-session-rotation
+    path: docs/governance/templates/writing-blocks/session-rotation.template.json
+    audience:
+      - Sol
+      - Codex
+    version: 1
+    status: active
+    type: writing-block-template
   - id: writing-block-template-blocked
     path: docs/governance/templates/writing-blocks/blocked.template.json
     audience:
