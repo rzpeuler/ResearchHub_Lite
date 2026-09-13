@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "freeze_id": "<填写架构冻结 ID>",
+  "version": "<填写架构版本>",
+  "download_url": "https://example.com/architecture/<填写文件名>",
+  "sha256_if_known": null,
+  "reason": "<填写冻结原因>",
+  "affected_scope": [
+    "<填写受影响的项目相对路径>"
+  ],
+  "luna_follow_up": "<填写 Luna 后续动作>"
+}
