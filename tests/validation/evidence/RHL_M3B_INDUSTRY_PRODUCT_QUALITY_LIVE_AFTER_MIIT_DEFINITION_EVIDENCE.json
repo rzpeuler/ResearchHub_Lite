@@ -1,0 +1,1421 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-043-INDUSTRY-PRODUCT-QUALITY-LIVE-AFTER-MIIT-DEFINITION-EVIDENCE",
+  "baseCommit": "0bec06eceb9e8518f83bee7dc2d4459e2bf3e7fe",
+  "generatedAt": "2026-09-14T11:58:37.350Z",
+  "correctedClassifier": true,
+  "target": {
+    "nameHash": "b8e35979d589b8e71b411436f20520fee78e171746a6d451097baa81846d5a1e",
+    "aliasHashes": [
+      "33d250516d9d5c120f7dcb17cf51931b38669bcb27ebde3838a3df06db9211f5",
+      "bd684c427335591651f77131cb65cc4f3b9f0f235160ac7af1bedeb4d6f4fd1c"
+    ],
+    "searchTermHashes": [
+      "5b28ee335216e1a8e0ee4dc4b0bd434ed73a9036f610a18fe41f29e1b878c129",
+      "6acb27e30456b10d977814eead5b45f0b4545faa18cd1a1c9ca60ca300cbed34",
+      "e65ec9e4277f440fbd17a07316b582d173551b9dcb0f28f95336f9a92e08e286",
+      "fa053122a55effa6bbc1b71b4427539bb536c3236e3563b16dafdf4db90e8e17",
+      "e604ef49089b6254fc02f2bb7f300799ab77b05d740988aad02d5e54e49ea12d",
+      "d49a90f405a0db59be3dc8f0203da99ee1a408bff8e29aae43f305d9106acb3d",
+      "5dbf1d51d7fc1f15ff41a1d5a6ef9e62e2486a6478b6e00af242601625c16d39",
+      "b58f5eda01d1a2f842dfa71e4c9c059e469da1efc3cc1f7081fb0c493e65faf4"
+    ],
+    "asOf": "2026-09-14T00:00:00.000Z"
+  },
+  "selectedProductionReasoning": {
+    "backend": "codex-cli",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "medium",
+    "fallback": false
+  },
+  "privacy": {
+    "rawBodiesIncluded": false,
+    "completePromptsIncluded": false,
+    "completeModelOutputsIncluded": false,
+    "hiddenReasoningIncluded": false,
+    "credentialsIncluded": false,
+    "cookiesIncluded": false,
+    "privatePathsIncluded": false,
+    "environmentDumpIncluded": false
+  },
+  "codexPreflight": {
+    "discovered": true,
+    "versionAvailable": true,
+    "helpAvailable": true,
+    "resolutionSource": "environment",
+    "executableKind": "native",
+    "version": "codex-cli 0.154.0"
+  },
+  "authoritativeWorkflowSnapshotCaptured": true,
+  "workflow": {
+    "status": "blocked",
+    "errors": [
+      "Industry Definition is mandatory and unavailable after the bounded repair/gap-fill attempt"
+    ],
+    "diagnostics": [
+      "Duplicate evidence skipped: miit-bcccedca925291ce3f6f6a9c35c4ba2c5042c920ed05912e3ab79b48fded1e1e",
+      "Duplicate evidence skipped: eastmoney-industry-BK1340",
+      "Duplicate evidence skipped: eastmoney-concept-BK0877",
+      "Duplicate evidence skipped: eastmoney-concept-BK1153",
+      "Duplicate evidence skipped: eastmoney-concept-BK1182",
+      "Duplicate evidence skipped: eastmoney-concept-BK1162",
+      "Duplicate evidence skipped: eastmoney-concept-BK1127",
+      "Duplicate evidence skipped: cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+    ],
+    "acquisitionWaves": 2,
+    "gatewaySubmitCount": 0,
+    "moduleCallCounts": {
+      "industry_definition": 1,
+      "market_size_growth": 1,
+      "supply_demand_analysis": 1,
+      "industry_chain_analysis": 1,
+      "competitive_landscape": 1,
+      "technology_evolution": 1,
+      "company_mapping": 1,
+      "risk_analysis": 1
+    },
+    "modules": [
+      {
+        "module": "industry_definition",
+        "status": "unavailable",
+        "evidenceIds": [],
+        "gaps": [
+          {
+            "gapId": "industry-definition-evidence",
+            "module": "industry_definition",
+            "question": "What authoritative definition and scope should be used for the PCB Manufacturing industry?",
+            "reason": "No evidence was supplied, so the industry boundary and taxonomy cannot be verified.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB Manufacturing industry definition",
+              "PCB 印制电路板 industry scope",
+              "printed circuit board manufacturing classification"
+            ]
+          },
+          {
+            "gapId": "industry-segments-evidence",
+            "module": "industry_definition",
+            "question": "Which PCB product segments and manufacturing technologies belong in scope?",
+            "reason": "Evidence is needed to distinguish rigid, flexible, rigid-flex, HDI, substrate, and other PCB categories.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB product segments rigid flexible rigid-flex HDI",
+              "PCB manufacturing technology classification",
+              "AI server PCB HDI industry"
+            ]
+          },
+          {
+            "gapId": "industry-chain-evidence",
+            "module": "industry_definition",
+            "question": "What upstream materials, manufacturing stages, and downstream applications define the PCB industry chain?",
+            "reason": "The requested industry-chain context cannot be established or linked without supplied evidence.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry chain",
+              "PCB manufacturing process upstream downstream",
+              "PCB capacity industry chain"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "Industry definition unavailable: no evidence was supplied. Obtain authoritative sources defining PCB Manufacturing scope, segments, technologies, and industry-chain boundaries before creating knowledge proposals.",
+          "evidenceIds": [],
+          "proposalIds": [],
+          "relationProposalIds": [],
+          "reportOnly": true
+        },
+        "proposalCounts": {
+          "entity": 0,
+          "relation": 0,
+          "claim": 0
+        }
+      },
+      {
+        "module": "market_size_growth",
+        "status": "partial",
+        "evidenceIds": [
+          "evidence-eastmoney-industry-BK1340",
+          "evidence-eastmoney-concept-BK0877"
+        ],
+        "gaps": [
+          {
+            "gapId": "market-size-data",
+            "module": "market_size_growth",
+            "question": "What is the historical and current PCB Manufacturing market size by geography, product category, and revenue or shipment measure?",
+            "reason": "The supplied board-membership evidence contains no market-size measurements.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB global market size 2024 2025 2026 revenue",
+              "中国 PCB 市场规模 2025 2026",
+              "PCB shipments area revenue market size"
+            ]
+          },
+          {
+            "gapId": "growth-forecast-data",
+            "module": "market_size_growth",
+            "question": "What are the historical CAGR, near-term growth drivers, and forward market-growth forecasts for PCB Manufacturing?",
+            "reason": "No historical growth rates, forecasts, demand indicators, or growth-driver evidence was supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry growth forecast CAGR 2026",
+              "AI server PCB HDI demand growth forecast",
+              "PCB industry demand growth capacity utilization"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "PCB Manufacturing is supported as the analysis scope through the supplied Eastmoney 印制电路板 industry board and PCB concept board evidence. The evidence is insufficient to quantify market size or growth, so additional market research, company disclosures, shipment data, and capacity-demand indicators are required.",
+          "evidenceIds": [
+            "evidence-eastmoney-industry-BK1340",
+            "evidence-eastmoney-concept-BK0877"
+          ],
+          "proposalIds": [
+            "pcb-board-scope"
+          ],
+          "relationProposalIds": [],
+          "reportOnly": false
+        },
+        "proposalCounts": {
+          "entity": 1,
+          "relation": 0,
+          "claim": 1
+        }
+      },
+      {
+        "module": "supply_demand_analysis",
+        "status": "unavailable",
+        "evidenceIds": [],
+        "gaps": [
+          {
+            "gapId": "demand_data",
+            "module": "supply_demand_analysis",
+            "question": "What are the current and forecast demand levels for PCB products, segmented by application such as AI servers, automotive, communications, consumer electronics, and industrial equipment?",
+            "reason": "No market-demand evidence, shipment data, order trends, or forecasts were supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB demand forecast 2026",
+              "AI server PCB demand",
+              "PCB shipments by application 2025 2026"
+            ]
+          },
+          {
+            "gapId": "capacity_data",
+            "module": "supply_demand_analysis",
+            "question": "What is the current production capacity, utilization, expansion pipeline, and geographic distribution of PCB manufacturers?",
+            "reason": "No manufacturer capacity, utilization, or expansion evidence was supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry capacity utilization 2026",
+              "PCB manufacturer capacity expansion",
+              "China PCB production capacity"
+            ]
+          },
+          {
+            "gapId": "balance_indicators",
+            "module": "supply_demand_analysis",
+            "question": "Are current PCB markets characterized by shortage, balance, or oversupply, and how are lead times, inventories, and pricing evolving?",
+            "reason": "No evidence on lead times, inventory, pricing, backlog, or supply-demand balance was supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB lead times pricing inventory 2026",
+              "PCB supply demand balance",
+              "HDI PCB pricing trend"
+            ]
+          },
+          {
+            "gapId": "upstream_constraints",
+            "module": "supply_demand_analysis",
+            "question": "How do upstream materials and components, including CCL, copper foil, glass fiber, and chemicals, constrain PCB supply or costs?",
+            "reason": "No authoritative evidence was supplied on upstream availability, costs, or supplier capacity.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB CCL capacity pricing 2026",
+              "copper foil supply PCB industry",
+              "Shengyi Technology CCL capacity"
+            ]
+          },
+          {
+            "gapId": "company_exposure",
+            "module": "supply_demand_analysis",
+            "question": "What current supply-demand exposure do Shennan Circuit, WUS, Pengding Technology, and Shengyi Technology have within the PCB value chain?",
+            "reason": "The target companies were named, but no company-specific operating or capacity evidence was supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "Shennan Circuit PCB capacity utilization 2026",
+              "WUS PCB capacity utilization 2026",
+              "Pengding Technology PCB capacity expansion",
+              "Shengyi Technology CCL capacity utilization"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "Supply-demand analysis unavailable: the evidence allowlist is empty. Additional authoritative evidence is required for demand trends, capacity and utilization, market balance indicators, upstream material constraints, and company-specific exposure.",
+          "evidenceIds": [],
+          "proposalIds": [],
+          "relationProposalIds": [],
+          "reportOnly": true
+        },
+        "proposalCounts": {
+          "entity": 0,
+          "relation": 0,
+          "claim": 0
+        }
+      },
+      {
+        "module": "industry_chain_analysis",
+        "status": "unavailable",
+        "evidenceIds": [],
+        "gaps": [
+          {
+            "gapId": "industry_chain_analysis-failure",
+            "module": "industry_chain_analysis",
+            "question": "What evidence is required?",
+            "reason": "Invalid Research Gap",
+            "actionable": true
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "Module unavailable.",
+          "evidenceIds": [],
+          "proposalIds": [],
+          "relationProposalIds": []
+        },
+        "proposalCounts": {
+          "entity": 0,
+          "relation": 0,
+          "claim": 0
+        }
+      },
+      {
+        "module": "competitive_landscape",
+        "status": "partial",
+        "evidenceIds": [
+          "evidence-eastmoney-industry-BK1340",
+          "evidence-eastmoney-concept-BK0877"
+        ],
+        "gaps": [
+          {
+            "gapId": "gap-direct-competition",
+            "module": "competitive_landscape",
+            "question": "Which PCB companies directly compete in the same product and application segments?",
+            "reason": "Board membership does not establish product overlap, customer overlap, or head-to-head competition.",
+            "actionable": true,
+            "searchTerms": [
+              "深南电路 沪电股份 鹏鼎控股 胜宏科技 竞争格局",
+              "PCB company product overlap customer segments"
+            ]
+          },
+          {
+            "gapId": "gap-market-share",
+            "module": "competitive_landscape",
+            "question": "What are the market shares and rankings of major PCB manufacturers?",
+            "reason": "No revenue, shipment, area, or third-party market-share evidence was supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "全球 PCB 厂商 市占率 排名",
+              "中国 PCB 制造商 市场份额"
+            ]
+          },
+          {
+            "gapId": "gap-capacity",
+            "module": "competitive_landscape",
+            "question": "How do major competitors compare by capacity, technology, and expansion plans?",
+            "reason": "No authoritative capacity, process capability, or announced expansion data was supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry capacity expansion HDI 高多层 产能",
+              "深南电路 沪电股份 鹏鼎控股 产能"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "## PCB竞争格局（初步）\n\nEastmoney的印制电路板行业板块与PCB概念板块成分股可用于构建初始竞争对手池，其中包括深南电路、沪电股份、鹏鼎控股、胜宏科技、东山精密、兴森科技和生益科技等。现有证据仅证明这些公司被纳入相关板块，不能据此确认直接竞争关系、市场份额、产能排名或技术领先性。后续应补充产品结构、应用领域、客户、收入/出货量、产能及扩产计划等可比数据。",
+          "evidenceIds": [
+            "evidence-eastmoney-industry-BK1340",
+            "evidence-eastmoney-concept-BK0877"
+          ],
+          "proposalIds": [
+            "company-shennan-circuit",
+            "company-wus-pcb",
+            "company-pengding-technology",
+            "company-shenghong-technology",
+            "company-dongshan-precision",
+            "company-xingsen-technology",
+            "company-shengyi-technology",
+            "relation-shennan-industry",
+            "relation-wus-industry",
+            "relation-pengding-industry",
+            "relation-shenghong-industry",
+            "relation-dongshan-industry",
+            "relation-xingsen-industry",
+            "relation-shengyi-industry",
+            "claim-peer-set"
+          ],
+          "relationProposalIds": [
+            "relation-shennan-industry",
+            "relation-wus-industry",
+            "relation-pengding-industry",
+            "relation-shenghong-industry",
+            "relation-dongshan-industry",
+            "relation-xingsen-industry",
+            "relation-shengyi-industry"
+          ],
+          "reportOnly": false
+        },
+        "proposalCounts": {
+          "entity": 7,
+          "relation": 7,
+          "claim": 1
+        }
+      },
+      {
+        "module": "technology_evolution",
+        "status": "unavailable",
+        "evidenceIds": [],
+        "gaps": [
+          {
+            "gapId": "technology-evidence",
+            "module": "technology_evolution",
+            "question": "What are the major current and emerging technologies shaping PCB manufacturing?",
+            "reason": "No evidence was supplied to establish technology milestones, adoption, or commercialization status.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB manufacturing technology evolution 2024 2025 2026",
+              "printed circuit board advanced manufacturing technologies",
+              "PCB technology roadmap HDI substrate mSAP"
+            ]
+          },
+          {
+            "gapId": "ai-server-pcb",
+            "module": "technology_evolution",
+            "question": "How are AI-server and high-performance-computing applications changing PCB technology requirements?",
+            "reason": "The requested AI-server PCB topic lacks supporting evidence on layer counts, signal integrity, thermal management, materials, or demand-driven innovation.",
+            "actionable": true,
+            "searchTerms": [
+              "AI server PCB technology HDI high layer count",
+              "AI accelerator PCB signal integrity thermal management",
+              "data center PCB technology roadmap"
+            ]
+          },
+          {
+            "gapId": "company-technology",
+            "module": "technology_evolution",
+            "question": "What technologies are developed or commercialized by Shennan Circuit, WUS, Pengding Technology, and Shengyi Technology?",
+            "reason": "No authoritative company disclosures, product materials, patents, or technical evidence were supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "Shennan Circuit technology PCB annual report",
+              "WUS PCB technology annual report",
+              "Pengding Technology PCB technology CCL",
+              "Shengyi Technology copper clad laminate technology"
+            ]
+          },
+          {
+            "gapId": "industry-chain-technology",
+            "module": "technology_evolution",
+            "question": "How do PCB, CCL, copper foil, substrate, equipment, and process technologies depend on one another?",
+            "reason": "No evidence was supplied to support technology dependency or upstream/downstream relation proposals.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry chain technology dependencies",
+              "PCB CCL copper foil glass fiber technology chain",
+              "printed circuit board manufacturing supply chain technology"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "Technology evolution analysis is unavailable because the evidence allowlist is empty. The module should remain open pending authoritative evidence covering PCB manufacturing roadmaps, AI-server and HDI requirements, company-specific technology disclosures, and upstream material/process dependencies. No proposals or quantitative claims are supported.",
+          "evidenceIds": [],
+          "proposalIds": [],
+          "relationProposalIds": [],
+          "reportOnly": true
+        },
+        "proposalCounts": {
+          "entity": 0,
+          "relation": 0,
+          "claim": 0
+        }
+      },
+      {
+        "module": "company_mapping",
+        "status": "partial",
+        "evidenceIds": [
+          "evidence-eastmoney-industry-BK1340",
+          "evidence-eastmoney-concept-BK0877"
+        ],
+        "gaps": [
+          {
+            "gapId": "gap-company-role",
+            "module": "company_mapping",
+            "question": "Which mapped companies are PCB manufacturers versus upstream materials, equipment, design, or diversified companies?",
+            "reason": "Board membership alone does not establish precise value-chain role or revenue exposure.",
+            "actionable": true,
+            "searchTerms": [
+              "深南电路 PCB 主营业务 年报",
+              "沪电股份 PCB 主营业务 年报",
+              "鹏鼎控股 PCB 主营业务 年报",
+              "生益科技 覆铜板 PCB 产业链 年报"
+            ]
+          },
+          {
+            "gapId": "gap-ai-server-pcb",
+            "module": "company_mapping",
+            "question": "Which companies have verified AI-server, high-speed, HDI, or high-layer-count PCB exposure?",
+            "reason": "The supplied evidence does not support AI-server specialization or technology-level claims.",
+            "actionable": true,
+            "searchTerms": [
+              "AI server PCB HDI 深南电路",
+              "AI server PCB 沪电股份",
+              "AI server PCB 鹏鼎控股",
+              "高多层 PCB 胜宏科技"
+            ]
+          },
+          {
+            "gapId": "gap-capacity",
+            "module": "company_mapping",
+            "question": "What are the current PCB production capacities, expansion projects, and utilization rates of mapped companies?",
+            "reason": "No capacity, project, or utilization data is supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry capacity 深南电路",
+              "PCB industry capacity 沪电股份",
+              "PCB industry capacity 鹏鼎控股",
+              "PCB industry capacity 生益科技"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "PCB Manufacturing company mapping is partially supported by Eastmoney's BK1340 印制电路板 industry constituents and corroborated by BK0877 PCB concept constituents. Evidence-backed candidate mappings include 深南电路、沪电股份、鹏鼎控股、生益科技、胜宏科技、东山精密、兴森科技, each linked to the reserved industry root with belongs_to_industry. The evidence does not establish company-specific product mix, AI-server PCB exposure, supply-chain role, capacity, or revenue contribution.",
+          "evidenceIds": [
+            "evidence-eastmoney-industry-BK1340",
+            "evidence-eastmoney-concept-BK0877"
+          ],
+          "proposalIds": [
+            "entity-industry-pcb",
+            "entity-company-shennan",
+            "entity-company-wus",
+            "entity-company-pengding",
+            "entity-company-shengyi",
+            "entity-company-victory-giant",
+            "entity-company-dongshan",
+            "entity-company-fastprint",
+            "relation-shennan-industry",
+            "relation-wus-industry",
+            "relation-pengding-industry",
+            "relation-shengyi-industry",
+            "relation-victory-giant-industry",
+            "relation-dongshan-industry",
+            "relation-fastprint-industry"
+          ],
+          "relationProposalIds": [
+            "relation-shennan-industry",
+            "relation-wus-industry",
+            "relation-pengding-industry",
+            "relation-shengyi-industry",
+            "relation-victory-giant-industry",
+            "relation-dongshan-industry",
+            "relation-fastprint-industry"
+          ],
+          "reportOnly": false
+        },
+        "proposalCounts": {
+          "entity": 8,
+          "relation": 7,
+          "claim": 0
+        }
+      },
+      {
+        "module": "risk_analysis",
+        "status": "partial",
+        "evidenceIds": [],
+        "gaps": [
+          {
+            "gapId": "riskEvidence",
+            "module": "risk_analysis",
+            "question": "What authoritative evidence supports current PCB Manufacturing risks and mitigants as of 2026-09-14?",
+            "reason": "The evidence allowlist is empty, so no risk claim can be attributed or proposed.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB manufacturing industry risks 2026",
+              "PCB industry capacity utilization oversupply 2026",
+              "PCB copper foil CCL supply risk 2026",
+              "PCB environmental regulatory risk China 2026"
+            ]
+          },
+          {
+            "gapId": "companyExposure",
+            "module": "risk_analysis",
+            "question": "How exposed are Shennan Circuit, WUS PCB, Pengding Technology, and Shengyi Technology to the identified risks?",
+            "reason": "No company filings, disclosures, customer mix, capacity data, or operating metrics were supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "Shennan Circuit annual report PCB capacity customer concentration",
+              "WUS PCB annual report capacity HDI server PCB risk",
+              "Pengding Technology annual report PCB capacity customer concentration",
+              "Shengyi Technology annual report CCL capacity risk"
+            ]
+          },
+          {
+            "gapId": "advancedPCB",
+            "module": "risk_analysis",
+            "question": "What evidence supports risks specific to AI-server PCB and HDI demand, qualification, yield, and capacity expansion?",
+            "reason": "The target includes AI-server PCB and HDI, but no technical, market, or company evidence was supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "AI server PCB HDI qualification yield capacity risk 2026",
+              "high layer count PCB AI server supply chain risk",
+              "HDI PCB technology substitution risk"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "Risk analysis is limited to an evidence-gap assessment. Without supplied evidence, no supported company-specific risk claims, quantitative measures, relations, or rankings can be published. Evidence collection should prioritize capacity and utilization, input-material exposure, AI-server and HDI qualification/yield data, customer concentration, environmental compliance, and disclosures from the named companies.",
+          "evidenceIds": [],
+          "proposalIds": [],
+          "relationProposalIds": [],
+          "reportOnly": true
+        },
+        "proposalCounts": {
+          "entity": 0,
+          "relation": 0,
+          "claim": 0
+        }
+      }
+    ],
+    "evidence": [
+      {
+        "evidenceId": "evidence-miit-bcccedca925291ce3f6f6a9c35c4ba2c5042c920ed05912e3ab79b48fded1e1e",
+        "source": {
+          "candidate": {
+            "candidateId": "miit-bcccedca925291ce3f6f6a9c35c4ba2c5042c920ed05912e3ab79b48fded1e1e",
+            "kind": "official_disclosure",
+            "tier": 1,
+            "title": "中华人民共和国工业和信息化部公告2024年第46号",
+            "url": "https://www.miit.gov.cn/zwgk/zcwj/wjfb/gg/art/2024/art_aae4295d7b924abeabe37d8bcf47be53.html",
+            "provider": "miit",
+            "publishedAt": "2024-12-30T00:00:00.000Z",
+            "metadata": {
+              "officialHost": "www.miit.gov.cn",
+              "discoveryRoute": "pcb-definition-anchor",
+              "relevanceTerms": [
+                "PCB",
+                "Industry Definition"
+              ],
+              "anchor": true
+            }
+          },
+          "retrievedAt": "2026-09-14T11:59:31.174Z",
+          "title": "中华人民共和国工业和信息化部公告2024年第46号",
+          "canonicalUrl": "https://www.miit.gov.cn/zwgk/zcwj/wjfb/gg/art/2024/art_aae4295d7b924abeabe37d8bcf47be53.html",
+          "contentHash": "225fbbfc38012d33d56447361d3315a6118dfe07d1b2a54567e1794396c37a31",
+          "publisher": "Ministry of Industry and Information Technology",
+          "contentLength": 730,
+          "rights": {
+            "accessScope": "public",
+            "retentionAllowed": true,
+            "aiProcessingAllowed": true,
+            "derivativeKnowledgeAllowed": true,
+            "redistributionAllowed": false,
+            "policyBasis": "personal_noncommercial_research"
+          }
+        },
+        "excerptPresent": false
+      },
+      {
+        "evidenceId": "evidence-eastmoney-industry-BK1340",
+        "source": {
+          "candidate": {
+            "candidateId": "eastmoney-industry-BK1340",
+            "kind": "structured_data",
+            "tier": 2,
+            "title": "印制电路板 board membership",
+            "url": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK1340&fields=f12,f13,f14",
+            "provider": "eastmoney",
+            "metadata": {
+              "boardCode": "BK1340",
+              "boardName": "印制电路板",
+              "boardType": "industry",
+              "matching": "deterministic_board_name_terms"
+            }
+          },
+          "retrievedAt": "2026-09-14T11:59:33.485Z",
+          "title": "印制电路板 board membership",
+          "canonicalUrl": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK1340&fields=f12,f13,f14",
+          "contentHash": "c4d646a2063308fc1ff55d42d73648dcd176f56759b0ff22f0549b57db184f2e",
+          "publisher": "Eastmoney",
+          "contentLength": 3155,
+          "rights": {
+            "accessScope": "public",
+            "retentionAllowed": true,
+            "aiProcessingAllowed": true,
+            "derivativeKnowledgeAllowed": true,
+            "redistributionAllowed": false,
+            "policyBasis": "personal_noncommercial_research"
+          }
+        },
+        "excerptPresent": false
+      },
+      {
+        "evidenceId": "evidence-eastmoney-concept-BK0877",
+        "source": {
+          "candidate": {
+            "candidateId": "eastmoney-concept-BK0877",
+            "kind": "structured_data",
+            "tier": 2,
+            "title": "PCB board membership",
+            "url": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK0877&fields=f12,f13,f14",
+            "provider": "eastmoney",
+            "metadata": {
+              "boardCode": "BK0877",
+              "boardName": "PCB",
+              "boardType": "concept",
+              "matching": "deterministic_board_name_terms"
+            }
+          },
+          "retrievedAt": "2026-09-14T11:59:33.660Z",
+          "title": "PCB board membership",
+          "canonicalUrl": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK0877&fields=f12,f13,f14",
+          "contentHash": "59ded66adcaf1f3adb4186dbfdbdef5a777e4e1cdc249f3d11057e380e083c12",
+          "publisher": "Eastmoney",
+          "contentLength": 12320,
+          "rights": {
+            "accessScope": "public",
+            "retentionAllowed": true,
+            "aiProcessingAllowed": true,
+            "derivativeKnowledgeAllowed": true,
+            "redistributionAllowed": false,
+            "policyBasis": "personal_noncommercial_research"
+          }
+        },
+        "excerptPresent": false
+      },
+      {
+        "evidenceId": "evidence-eastmoney-concept-BK1153",
+        "source": {
+          "candidate": {
+            "candidateId": "eastmoney-concept-BK1153",
+            "kind": "structured_data",
+            "tier": 2,
+            "title": "多模态AI board membership",
+            "url": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK1153&fields=f12,f13,f14",
+            "provider": "eastmoney",
+            "metadata": {
+              "boardCode": "BK1153",
+              "boardName": "多模态AI",
+              "boardType": "concept",
+              "matching": "deterministic_board_name_terms"
+            }
+          },
+          "retrievedAt": "2026-09-14T11:59:33.717Z",
+          "title": "多模态AI board membership",
+          "canonicalUrl": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK1153&fields=f12,f13,f14",
+          "contentHash": "e5fbf1a3b27f80617d9bb826f5b26814ae1df8e4abd2f4e1ebc1d96029704883",
+          "publisher": "Eastmoney",
+          "contentLength": 5604,
+          "rights": {
+            "accessScope": "public",
+            "retentionAllowed": true,
+            "aiProcessingAllowed": true,
+            "derivativeKnowledgeAllowed": true,
+            "redistributionAllowed": false,
+            "policyBasis": "personal_noncommercial_research"
+          }
+        },
+        "excerptPresent": false
+      },
+      {
+        "evidenceId": "evidence-eastmoney-concept-BK1182",
+        "source": {
+          "candidate": {
+            "candidateId": "eastmoney-concept-BK1182",
+            "kind": "structured_data",
+            "tier": 2,
+            "title": "智谱AI概念 board membership",
+            "url": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK1182&fields=f12,f13,f14",
+            "provider": "eastmoney",
+            "metadata": {
+              "boardCode": "BK1182",
+              "boardName": "智谱AI概念",
+              "boardType": "concept",
+              "matching": "deterministic_board_name_terms"
+            }
+          },
+          "retrievedAt": "2026-09-14T11:59:33.775Z",
+          "title": "智谱AI概念 board membership",
+          "canonicalUrl": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK1182&fields=f12,f13,f14",
+          "contentHash": "852edc9c1c4b4c469913528ea1bf1684cbf0e396daf4596385d260ae592e1c4e",
+          "publisher": "Eastmoney",
+          "contentLength": 2390,
+          "rights": {
+            "accessScope": "public",
+            "retentionAllowed": true,
+            "aiProcessingAllowed": true,
+            "derivativeKnowledgeAllowed": true,
+            "redistributionAllowed": false,
+            "policyBasis": "personal_noncommercial_research"
+          }
+        },
+        "excerptPresent": false
+      },
+      {
+        "evidenceId": "evidence-eastmoney-concept-BK1162",
+        "source": {
+          "candidate": {
+            "candidateId": "eastmoney-concept-BK1162",
+            "kind": "structured_data",
+            "tier": 2,
+            "title": "AI手机 board membership",
+            "url": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK1162&fields=f12,f13,f14",
+            "provider": "eastmoney",
+            "metadata": {
+              "boardCode": "BK1162",
+              "boardName": "AI手机",
+              "boardType": "concept",
+              "matching": "deterministic_board_name_terms"
+            }
+          },
+          "retrievedAt": "2026-09-14T11:59:33.830Z",
+          "title": "AI手机 board membership",
+          "canonicalUrl": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK1162&fields=f12,f13,f14",
+          "contentHash": "f00d6135447127ec35dce58911c2e70637c8e2adc2329d29db2120485b388ce6",
+          "publisher": "Eastmoney",
+          "contentLength": 2074,
+          "rights": {
+            "accessScope": "public",
+            "retentionAllowed": true,
+            "aiProcessingAllowed": true,
+            "derivativeKnowledgeAllowed": true,
+            "redistributionAllowed": false,
+            "policyBasis": "personal_noncommercial_research"
+          }
+        },
+        "excerptPresent": false
+      },
+      {
+        "evidenceId": "evidence-eastmoney-concept-BK1127",
+        "source": {
+          "candidate": {
+            "candidateId": "eastmoney-concept-BK1127",
+            "kind": "structured_data",
+            "tier": 2,
+            "title": "AI芯片 board membership",
+            "url": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK1127&fields=f12,f13,f14",
+            "provider": "eastmoney",
+            "metadata": {
+              "boardCode": "BK1127",
+              "boardName": "AI芯片",
+              "boardType": "concept",
+              "matching": "deterministic_board_name_terms"
+            }
+          },
+          "retrievedAt": "2026-09-14T11:59:33.884Z",
+          "title": "AI芯片 board membership",
+          "canonicalUrl": "https://push2.eastmoney.com/api/qt/clist/get?fs=b:BK1127&fields=f12,f13,f14",
+          "contentHash": "75d82b06a24367e2f952d76865d9e7ee3064a284bba4e87663141d0ed667a119",
+          "publisher": "Eastmoney",
+          "contentLength": 2613,
+          "rights": {
+            "accessScope": "public",
+            "retentionAllowed": true,
+            "aiProcessingAllowed": true,
+            "derivativeKnowledgeAllowed": true,
+            "redistributionAllowed": false,
+            "policyBasis": "personal_noncommercial_research"
+          }
+        },
+        "excerptPresent": false
+      },
+      {
+        "evidenceId": "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5",
+        "source": {
+          "candidate": {
+            "candidateId": "cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5",
+            "kind": "web_article",
+            "tier": 4,
+            "title": "2025年上半年中国印制电路板进出口贸易情况 2025-08-14 查看详细",
+            "url": "https://www.cpca.org.cn/industry/show-5777.html",
+            "provider": "cpca",
+            "publishedAt": "2025-08-14T00:00:00.000Z",
+            "metadata": {
+              "discoveryRoute": "/industry-279.html",
+              "relevanceTerms": [
+                "印制电路板"
+              ],
+              "isAttachment": false
+            }
+          },
+          "retrievedAt": "2026-09-14T11:59:35.311Z",
+          "title": "2025年上半年中国印制电路板进出口贸易情况 2025-08-14 查看详细",
+          "canonicalUrl": "https://www.cpca.org.cn/industry/show-5777.html",
+          "contentHash": "adf0466dc924cc57ea675a49a346050a1311989a7ce9857d5e772b20cb413fec",
+          "publisher": "China Printed Circuit Association",
+          "contentLength": 2032,
+          "rights": {
+            "accessScope": "public",
+            "retentionAllowed": true,
+            "aiProcessingAllowed": true,
+            "derivativeKnowledgeAllowed": true,
+            "redistributionAllowed": false,
+            "policyBasis": "personal_noncommercial_research"
+          }
+        },
+        "excerptPresent": false
+      }
+    ],
+    "proposalIds": [],
+    "committedIds": [],
+    "sourceIds": [],
+    "relationIds": [],
+    "claimIds": [],
+    "knowledgeBaseRevision": 0,
+    "knowledgeBaseRevisionDelta": 0
+  },
+  "providerCoverage": [
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": true,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "wavesAttempted": [],
+      "failureCategories": []
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": true,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "wavesAttempted": [],
+      "failureCategories": []
+    },
+    {
+      "provider": "miit-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": true,
+      "usableNormalizedSourceCount": 2,
+      "distinctContentCount": 1,
+      "canonicalHostSet": [
+        "www.miit.gov.cn"
+      ],
+      "tierDistribution": {
+        "1": 2
+      },
+      "publicationDateAvailable": true,
+      "wavesAttempted": [],
+      "failureCategories": [
+        "document_parser_environment_not_ready: managed Python interpreter was not found"
+      ]
+    },
+    {
+      "provider": "govcn-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": true,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "wavesAttempted": [],
+      "failureCategories": []
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 12,
+      "distinctContentCount": 12,
+      "canonicalHostSet": [
+        "push2.eastmoney.com"
+      ],
+      "tierDistribution": {
+        "2": 12
+      },
+      "publicationDateAvailable": false,
+      "wavesAttempted": [],
+      "failureCategories": []
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 2,
+      "distinctContentCount": 1,
+      "canonicalHostSet": [
+        "www.cpca.org.cn"
+      ],
+      "tierDistribution": {
+        "4": 2
+      },
+      "publicationDateAvailable": true,
+      "wavesAttempted": [],
+      "failureCategories": []
+    },
+    {
+      "provider": "akshare-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": true,
+      "failed": true,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "wavesAttempted": [],
+      "failureCategories": [
+        "Command failed: python -c import json,sys,akshare as ak\nkind,symbol,start_date,end_date=sys.argv[1:]\nif kind=='basic': value=ak.stock_individual_info_em(symbol=symbol)\nelif kind=='financial': value=ak.stock_financial_analysis_indicator(symbol=symbol)\nelif kind=='index': value=ak.stock_zh_index_daily(symbol=symbol)\nelif kind=='sector': value=ak.stock_board_industry_name_em()\nelif kind=='calendar': value=ak.tool_trade_date_hist_sina()\nelse: value=ak.stock_zh_a_hist(symbol=symbol,period='daily',sta"
+      ]
+    }
+  ],
+  "miitAnchorAudit": {
+    "approvedPcbAnchorCount": 3,
+    "pcbAnchorsDiscovered": 3,
+    "pcbAnchorsFetched": 3,
+    "pcbAnchorsNormalized": 1,
+    "anchors": [
+      {
+        "title": "印制电路板行业规范条件",
+        "candidateId": "miit-6684405f12e71c69eac209a2cfd69df63aee1f2e3f7e7c5985d89cc8c678549c",
+        "url": "https://wap.miit.gov.cn/cms_files/filemanager/oldfile/miit/n1146295/n1652858/n1652930/n4509607/c6577041/part/6577143.pdf",
+        "tier": 1,
+        "provider": "miit",
+        "asOfEligible": true,
+        "discovered": true,
+        "fetched": true,
+        "normalized": false,
+        "outcome": [
+          "document_parser_environment_not_ready: managed Python interpreter was not found"
+        ]
+      },
+      {
+        "title": "印制电路板行业规范公告管理暂行办法",
+        "candidateId": "miit-f16c01b1e1411a06f3f9480b78c812cc66cce77b65375d1842b9cd01ab2e9ecf",
+        "url": "https://www.miit.gov.cn/cms_files/filemanager/oldfile/miit/n1146285/n1146352/n3054355/n3057643/n3057649/c6576614/part/6576630.pdf",
+        "tier": 1,
+        "provider": "miit",
+        "asOfEligible": true,
+        "discovered": true,
+        "fetched": true,
+        "normalized": false,
+        "outcome": [
+          "document_parser_environment_not_ready: managed Python interpreter was not found"
+        ]
+      },
+      {
+        "title": "中华人民共和国工业和信息化部公告2024年第46号",
+        "candidateId": "miit-bcccedca925291ce3f6f6a9c35c4ba2c5042c920ed05912e3ab79b48fded1e1e",
+        "url": "https://www.miit.gov.cn/zwgk/zcwj/wjfb/gg/art/2024/art_aae4295d7b924abeabe37d8bcf47be53.html",
+        "tier": 1,
+        "provider": "miit",
+        "asOfEligible": true,
+        "discovered": true,
+        "fetched": true,
+        "normalized": true,
+        "outcome": "success"
+      }
+    ]
+  },
+  "reasoningAudit": [
+    {
+      "identity": "industry_research_design:",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:industry_definition",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:market_size_growth",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:supply_demand_analysis",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:industry_chain_analysis",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:industry_chain_analysis",
+      "callCount": 2,
+      "boundedRepair": true,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:competitive_landscape",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:technology_evolution",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:company_mapping",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:risk_analysis",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    }
+  ],
+  "fix039Convergence": {
+    "invalidResearchGapObserved": false,
+    "repairBoundViolations": false
+  },
+  "industryDefinitionClearance": {
+    "evidenceIds": [],
+    "evidenceCount": 0,
+    "status": "unavailable",
+    "routedMiitAnchor": false
+  },
+  "canonical": {
+    "validationStatus": "passed",
+    "diagnosticCodes": [],
+    "countsBefore": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "countsAfter": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "sourceToRawProvenanceComplete": true,
+    "durableSemanticDensity": {
+      "entityCount": 0,
+      "nonRootEntityCount": 0,
+      "relationCount": 0,
+      "claimCount": 0,
+      "sourceCount": 0
+    }
+  },
+  "reportSnapshot": {
+    "status": "NOT_PRODUCED",
+    "reason": "Workflow did not persist a trustworthy report"
+  },
+  "moduleGapMatrix": [
+    {
+      "module": "industry_definition",
+      "status": "unavailable",
+      "reasoningCallCount": 1,
+      "evidenceIds": [],
+      "evidenceCount": 0,
+      "distinctProductionProviders": [],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 3,
+      "reportMaterialPresence": true,
+      "primaryGapCause": "NO_QUALIFIED_EVIDENCE_FOR_MODULE",
+      "providerEvidenceRows": []
+    },
+    {
+      "module": "market_size_growth",
+      "status": "partial",
+      "reasoningCallCount": 1,
+      "evidenceIds": [
+        "evidence-eastmoney-industry-BK1340",
+        "evidence-eastmoney-concept-BK0877"
+      ],
+      "evidenceCount": 2,
+      "distinctProductionProviders": [
+        "eastmoney"
+      ],
+      "proposalCounts": {
+        "entity": 1,
+        "relation": 0,
+        "claim": 1
+      },
+      "actionableGapCount": 2,
+      "reportMaterialPresence": true,
+      "primaryGapCause": "REPORT_PRESENTATION_GAP",
+      "providerEvidenceRows": []
+    },
+    {
+      "module": "supply_demand_analysis",
+      "status": "unavailable",
+      "reasoningCallCount": 1,
+      "evidenceIds": [],
+      "evidenceCount": 0,
+      "distinctProductionProviders": [],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 5,
+      "reportMaterialPresence": true,
+      "primaryGapCause": "NO_QUALIFIED_EVIDENCE_FOR_MODULE",
+      "providerEvidenceRows": []
+    },
+    {
+      "module": "industry_chain_analysis",
+      "status": "unavailable",
+      "reasoningCallCount": 1,
+      "evidenceIds": [],
+      "evidenceCount": 0,
+      "distinctProductionProviders": [],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 1,
+      "reportMaterialPresence": true,
+      "primaryGapCause": "NO_QUALIFIED_EVIDENCE_FOR_MODULE",
+      "providerEvidenceRows": []
+    },
+    {
+      "module": "competitive_landscape",
+      "status": "partial",
+      "reasoningCallCount": 1,
+      "evidenceIds": [
+        "evidence-eastmoney-industry-BK1340",
+        "evidence-eastmoney-concept-BK0877"
+      ],
+      "evidenceCount": 2,
+      "distinctProductionProviders": [
+        "eastmoney"
+      ],
+      "proposalCounts": {
+        "entity": 7,
+        "relation": 7,
+        "claim": 1
+      },
+      "actionableGapCount": 3,
+      "reportMaterialPresence": true,
+      "primaryGapCause": "NONE",
+      "providerEvidenceRows": []
+    },
+    {
+      "module": "technology_evolution",
+      "status": "unavailable",
+      "reasoningCallCount": 1,
+      "evidenceIds": [],
+      "evidenceCount": 0,
+      "distinctProductionProviders": [],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 4,
+      "reportMaterialPresence": true,
+      "primaryGapCause": "NO_QUALIFIED_EVIDENCE_FOR_MODULE",
+      "providerEvidenceRows": []
+    },
+    {
+      "module": "company_mapping",
+      "status": "partial",
+      "reasoningCallCount": 1,
+      "evidenceIds": [
+        "evidence-eastmoney-industry-BK1340",
+        "evidence-eastmoney-concept-BK0877"
+      ],
+      "evidenceCount": 2,
+      "distinctProductionProviders": [
+        "eastmoney"
+      ],
+      "proposalCounts": {
+        "entity": 8,
+        "relation": 7,
+        "claim": 0
+      },
+      "actionableGapCount": 3,
+      "reportMaterialPresence": true,
+      "primaryGapCause": "NONE",
+      "providerEvidenceRows": []
+    },
+    {
+      "module": "risk_analysis",
+      "status": "partial",
+      "reasoningCallCount": 1,
+      "evidenceIds": [],
+      "evidenceCount": 0,
+      "distinctProductionProviders": [],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 3,
+      "reportMaterialPresence": true,
+      "primaryGapCause": "NO_QUALIFIED_EVIDENCE_FOR_MODULE",
+      "providerEvidenceRows": []
+    }
+  ],
+  "dimensions": [
+    {
+      "dimension": "scope clarity",
+      "status": "UNAVAILABLE",
+      "rationale": "0 routed evidence item(s); traceable evidence material is present.",
+      "reportReferences": []
+    },
+    {
+      "dimension": "factual evidence density",
+      "status": "USABLE",
+      "rationale": "6 routed evidence item(s); traceable evidence material is present.",
+      "reportReferences": []
+    },
+    {
+      "dimension": "quantitative and KPI usefulness",
+      "status": "USABLE",
+      "rationale": "2 routed evidence item(s); traceable evidence material is present.",
+      "reportReferences": []
+    },
+    {
+      "dimension": "industry-chain and value-capture usefulness",
+      "status": "UNAVAILABLE",
+      "rationale": "0 routed evidence item(s); traceable evidence material is present.",
+      "reportReferences": []
+    },
+    {
+      "dimension": "company-mapping usefulness",
+      "status": "USABLE",
+      "rationale": "2 routed evidence item(s); traceable evidence material is present.",
+      "reportReferences": []
+    },
+    {
+      "dimension": "catalysts, risks, monitoring, and invalidation usefulness",
+      "status": "UNAVAILABLE",
+      "rationale": "0 routed evidence item(s); traceable evidence material is present.",
+      "reportReferences": []
+    }
+  ],
+  "numericalAudit": {
+    "assertions": [],
+    "unsupportedNumericCount": 0
+  },
+  "companyMappingAudit": {
+    "namedCompanies": [],
+    "evidenceBackedCompanies": [],
+    "durableCanonicalCompanies": [],
+    "supportedExposureStatements": [],
+    "unsupportedExposureStatements": []
+  },
+  "industryChainAudit": {
+    "upstreamInputs": "GAP_ONLY",
+    "midstreamManufacturing": "EVIDENCE_BACKED",
+    "downstreamApplications": "GAP_ONLY",
+    "supplyDemand": "GAP_ONLY",
+    "capacityUtilization": "GAP_ONLY",
+    "pricingEconomics": "GAP_ONLY",
+    "technologyRoadmap": "GAP_ONLY",
+    "competitiveLandscape": "GAP_ONLY"
+  },
+  "keyMetricsAudit": {
+    "namedMeasurableMetrics": [],
+    "currentObservations": [],
+    "periodUnitAvailability": false,
+    "genericChecklistOnly": true
+  },
+  "researchGapsAudit": {
+    "observedProviderOrModuleGaps": [
+      "What authoritative definition and scope should be used for the PCB Manufacturing industry?",
+      "Which PCB product segments and manufacturing technologies belong in scope?",
+      "What upstream materials, manufacturing stages, and downstream applications define the PCB industry chain?",
+      "What is the historical and current PCB Manufacturing market size by geography, product category, and revenue or shipment measure?",
+      "What are the historical CAGR, near-term growth drivers, and forward market-growth forecasts for PCB Manufacturing?",
+      "What are the current and forecast demand levels for PCB products, segmented by application such as AI servers, automotive, communications, consumer electronics, and industrial equipment?",
+      "What is the current production capacity, utilization, expansion pipeline, and geographic distribution of PCB manufacturers?",
+      "Are current PCB markets characterized by shortage, balance, or oversupply, and how are lead times, inventories, and pricing evolving?",
+      "How do upstream materials and components, including CCL, copper foil, glass fiber, and chemicals, constrain PCB supply or costs?",
+      "What current supply-demand exposure do Shennan Circuit, WUS, Pengding Technology, and Shengyi Technology have within the PCB value chain?",
+      "What evidence is required?",
+      "Which PCB companies directly compete in the same product and application segments?",
+      "What are the market shares and rankings of major PCB manufacturers?",
+      "How do major competitors compare by capacity, technology, and expansion plans?",
+      "What are the major current and emerging technologies shaping PCB manufacturing?",
+      "How are AI-server and high-performance-computing applications changing PCB technology requirements?",
+      "What technologies are developed or commercialized by Shennan Circuit, WUS, Pengding Technology, and Shengyi Technology?",
+      "How do PCB, CCL, copper foil, substrate, equipment, and process technologies depend on one another?",
+      "Which mapped companies are PCB manufacturers versus upstream materials, equipment, design, or diversified companies?",
+      "Which companies have verified AI-server, high-speed, HDI, or high-layer-count PCB exposure?",
+      "What are the current PCB production capacities, expansion projects, and utilization rates of mapped companies?",
+      "What authoritative evidence supports current PCB Manufacturing risks and mitigants as of 2026-09-14?",
+      "How exposed are Shennan Circuit, WUS PCB, Pengding Technology, and Shengyi Technology to the identified risks?",
+      "What evidence supports risks specific to AI-server PCB and HDI demand, qualification, yield, and capacity expansion?"
+    ],
+    "substantiveAlternativeViews": []
+  },
+  "methodologyAudit": {
+    "sourceLimitations": [
+      "miit-industry-research-acquisition",
+      "govcn-industry-research-acquisition",
+      "akshare-industry-research-acquisition"
+    ],
+    "unavailableRoutes": [],
+    "tiersRecorded": true,
+    "materialProvenanceRecorded": true
+  },
+  "evidencePriorities": [
+    {
+      "priority": "P0",
+      "affectedModules": [
+        "industry_definition"
+      ],
+      "missingEvidenceType": "authoritative MIIT definition anchor normalization",
+      "currentProviderEvidence": [
+        "miit-industry-research-acquisition"
+      ],
+      "historicalProviderEvidence": [
+        "miit-industry-research-acquisition"
+      ],
+      "actionCategory": "EXISTING_PROVIDER_RELIABILITY",
+      "expectedUserFacingBenefit": "Clear mandatory PCB scope and definition so Industry research can proceed."
+    }
+  ],
+  "finalClassification": "PRODUCT_QUALITY_BLOCKED_BY_EVIDENCE"
+}
