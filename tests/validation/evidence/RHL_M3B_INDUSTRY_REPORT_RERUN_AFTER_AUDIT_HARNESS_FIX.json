@@ -1,0 +1,5 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-041-INDUSTRY-PRODUCT-QUALITY-RERUN-AFTER-AUDIT-HARNESS-FIX",
+  "status": "NOT_PRODUCED",
+  "reason": "Workflow did not persist a trustworthy report"
+}

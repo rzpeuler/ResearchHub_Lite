@@ -1,0 +1,1538 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-041-INDUSTRY-PRODUCT-QUALITY-RERUN-AFTER-AUDIT-HARNESS-FIX",
+  "baseCommit": "30ae2bd3806e0c9879c05f1a288f8ecd5012cf9c",
+  "generatedAt": "2026-09-14T09:44:39.597Z",
+  "codexPreflight": {
+    "discovered": true,
+    "versionAvailable": true,
+    "helpAvailable": true,
+    "resolutionSource": "environment",
+    "executableKind": "native",
+    "version": "codex-cli 0.154.0"
+  },
+  "target": {
+    "nameHash": "b8e35979d589b8e71b411436f20520fee78e171746a6d451097baa81846d5a1e",
+    "aliasHashes": [
+      "33d250516d9d5c120f7dcb17cf51931b38669bcb27ebde3838a3df06db9211f5",
+      "bd684c427335591651f77131cb65cc4f3b9f0f235160ac7af1bedeb4d6f4fd1c"
+    ],
+    "searchTermHashes": [
+      "5b28ee335216e1a8e0ee4dc4b0bd434ed73a9036f610a18fe41f29e1b878c129",
+      "6acb27e30456b10d977814eead5b45f0b4545faa18cd1a1c9ca60ca300cbed34",
+      "e65ec9e4277f440fbd17a07316b582d173551b9dcb0f28f95336f9a92e08e286",
+      "fa053122a55effa6bbc1b71b4427539bb536c3236e3563b16dafdf4db90e8e17",
+      "e604ef49089b6254fc02f2bb7f300799ab77b05d740988aad02d5e54e49ea12d",
+      "d49a90f405a0db59be3dc8f0203da99ee1a408bff8e29aae43f305d9106acb3d",
+      "5dbf1d51d7fc1f15ff41a1d5a6ef9e62e2486a6478b6e00af242601625c16d39",
+      "b58f5eda01d1a2f842dfa71e4c9c059e469da1efc3cc1f7081fb0c493e65faf4"
+    ],
+    "asOf": "2026-09-14T00:00:00.000Z"
+  },
+  "fix039Accepted": true,
+  "privacy": {
+    "rawBodiesIncluded": false,
+    "hiddenReasoningIncluded": false,
+    "credentialsIncluded": false,
+    "privatePathsIncluded": false
+  },
+  "workflow": {
+    "status": "blocked",
+    "errors": [
+      "Industry Definition is mandatory and unavailable after the bounded repair/gap-fill attempt"
+    ],
+    "diagnostics": [
+      "Duplicate evidence skipped: cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+    ],
+    "moduleCallCounts": {
+      "industry_definition": 1,
+      "market_size_growth": 1,
+      "supply_demand_analysis": 1,
+      "industry_chain_analysis": 1,
+      "competitive_landscape": 1,
+      "technology_evolution": 1,
+      "company_mapping": 1,
+      "risk_analysis": 1
+    },
+    "modules": [
+      {
+        "module": "industry_definition",
+        "status": "unavailable",
+        "analysis": "No supplied evidence, existing knowledge, or local references are available to define the PCB Manufacturing industry for the requested as-of date. The industry scope, boundaries, products, processes, and inclusion criteria therefore cannot be established without unsupported inference.",
+        "evidenceIds": [],
+        "proposals": [],
+        "gaps": [
+          {
+            "gapId": "pcb-industry-definition-evidence",
+            "module": "industry_definition",
+            "question": "What authoritative sources define the scope, products, processes, and boundaries of PCB Manufacturing as of 2026-09-14?",
+            "reason": "The evidence allowlist is empty, so the requested industry definition cannot be verified or converted into entity, relation, or claim proposals.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB Manufacturing industry definition",
+              "printed circuit board manufacturing process and product scope",
+              "PCB industry chain authoritative source",
+              "印制电路板 行业 定义 制造 范围"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "Industry definition unavailable: no evidence or existing knowledge was supplied. Obtain authoritative sources before defining PCB Manufacturing or proposing entities, relations, or claims.",
+          "evidenceIds": [],
+          "proposalIds": [],
+          "relationProposalIds": [],
+          "reportOnly": true
+        }
+      },
+      {
+        "module": "market_size_growth",
+        "status": "partial",
+        "analysis": "现有证据仅支持中国印制电路板行业2025年上半年进出口贸易规模与增速判断，不能代表全球或中国PCB制造市场总产值，也不足以形成完整年度及未来增长预测。CPCA援引海关数据称，2025年上半年中国印制电路板进出口总额为154.77亿美元，同比增长19.7%；其中出口120.3亿美元，同比增长27.1%，进口34.5亿美元，同比下降0.5%，贸易顺差85.8亿美元，同比增长43.1%。证据显示外贸活动回升向好，出口增长显著强于进口，但缺少产量、销售额、价格、区域拆分及未来预测数据。",
+        "evidenceIds": [
+          "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+        ],
+        "proposals": [
+          {
+            "proposalId": "pcb_trade_total_h1_2025",
+            "kind": "claim",
+            "subjectKey": "industry",
+            "claimType": "fact",
+            "statement": "2025年上半年中国印制电路板进出口总额为154.77亿美元，同比增长19.7%。",
+            "sourceCandidateIds": [
+              "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+            ],
+            "structuredValue": {
+              "metric": "中国印制电路板进出口总额",
+              "value": 154.77,
+              "unit": "亿美元",
+              "comparator": "eq",
+              "period": "2025年上半年",
+              "fiscalPeriod": "2025H1",
+              "semanticKey": "china_pcb_trade_total"
+            }
+          },
+          {
+            "proposalId": "pcb_exports_h1_2025",
+            "kind": "claim",
+            "subjectKey": "industry",
+            "claimType": "fact",
+            "statement": "2025年上半年中国印制电路板出口金额为120.3亿美元，同比增长27.1%。",
+            "sourceCandidateIds": [
+              "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+            ],
+            "structuredValue": {
+              "metric": "中国印制电路板出口金额",
+              "value": 120.3,
+              "unit": "亿美元",
+              "comparator": "eq",
+              "period": "2025年上半年",
+              "fiscalPeriod": "2025H1",
+              "semanticKey": "china_pcb_exports"
+            }
+          },
+          {
+            "proposalId": "pcb_imports_h1_2025",
+            "kind": "claim",
+            "subjectKey": "industry",
+            "claimType": "fact",
+            "statement": "2025年上半年中国印制电路板进口金额为34.5亿美元，同比下降0.5%。",
+            "sourceCandidateIds": [
+              "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+            ],
+            "structuredValue": {
+              "metric": "中国印制电路板进口金额",
+              "value": 34.5,
+              "unit": "亿美元",
+              "comparator": "eq",
+              "period": "2025年上半年",
+              "fiscalPeriod": "2025H1",
+              "semanticKey": "china_pcb_imports"
+            }
+          },
+          {
+            "proposalId": "pcb_trade_surplus_h1_2025",
+            "kind": "claim",
+            "subjectKey": "industry",
+            "claimType": "fact",
+            "statement": "2025年上半年中国印制电路板贸易顺差为85.8亿美元，同比增长43.1%。",
+            "sourceCandidateIds": [
+              "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+            ],
+            "structuredValue": {
+              "metric": "中国印制电路板贸易顺差",
+              "value": 85.8,
+              "unit": "亿美元",
+              "comparator": "eq",
+              "period": "2025年上半年",
+              "fiscalPeriod": "2025H1",
+              "semanticKey": "china_pcb_trade_surplus"
+            }
+          }
+        ],
+        "gaps": [
+          {
+            "gapId": "pcb_market_value",
+            "module": "market_size_growth",
+            "question": "中国及全球PCB制造市场的市场规模、口径和年度销售额是多少？",
+            "reason": "现有证据仅提供中国2025年上半年进出口金额，未提供制造业产值或销售额，也未覆盖全球市场。",
+            "actionable": true,
+            "searchTerms": [
+              "全球 PCB 制造市场规模 2025",
+              "中国 PCB 产值 2025",
+              "PCB market size 2025"
+            ]
+          },
+          {
+            "gapId": "pcb_growth_forecast",
+            "module": "market_size_growth",
+            "question": "PCB制造市场未来三至五年的增长率和驱动因素是什么？",
+            "reason": "现有证据仅包含2025年上半年同比变化，没有年度预测或中长期增长率。",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry growth forecast 2026 2030",
+              "AI server PCB demand forecast",
+              "PCB 行业 增长预测 2026 2030"
+            ]
+          },
+          {
+            "gapId": "pcb_segment_mix",
+            "module": "market_size_growth",
+            "question": "HDI、高多层板、封装基板及传统PCB等细分市场的规模和增速如何？",
+            "reason": "证据未按产品类型、应用领域或技术等级拆分。",
+            "actionable": true,
+            "searchTerms": [
+              "HDI PCB market size growth",
+              "AI server PCB HDI demand",
+              "PCB 细分市场 规模 增速"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "### PCB制造市场规模与增长（证据范围）\n\nCPCA援引海关数据指出，2025年上半年中国印制电路板进出口总额为154.77亿美元，同比增长19.7%；出口120.3亿美元，同比增长27.1%；进口34.5亿美元，同比下降0.5%；贸易顺差85.8亿美元，同比增长43.1%。这表明中国PCB外贸在2025年上半年回升，出口表现明显强于进口。\n\n上述数据属于贸易流量指标，不等同于中国或全球PCB制造市场销售额、产值或装机需求。因此，当前模块仅能部分支持“市场外贸规模及短期变化”判断，尚不能支持完整的市场规模、细分结构或中长期增长预测。",
+          "evidenceIds": [
+            "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+          ],
+          "proposalIds": [
+            "pcb_trade_total_h1_2025",
+            "pcb_exports_h1_2025",
+            "pcb_imports_h1_2025",
+            "pcb_trade_surplus_h1_2025"
+          ],
+          "relationProposalIds": [],
+          "reportOnly": false
+        }
+      },
+      {
+        "module": "supply_demand_analysis",
+        "status": "partial",
+        "analysis": "No evidence was supplied, so a verified supply-demand analysis for PCB Manufacturing cannot be established. The relevant assessment should cover demand drivers such as AI servers and high-density interconnect demand, as well as supply factors including PCB capacity, technology mix, CCL availability, utilization, lead times, geographic concentration, and planned expansions. No unsupported market size, growth rate, capacity, utilization, pricing, or company-specific conclusion is asserted.",
+        "evidenceIds": [],
+        "proposals": [],
+        "gaps": [
+          {
+            "gapId": "supplyDemandEvidence",
+            "module": "supply_demand_analysis",
+            "question": "What is the current and forecast demand for PCB products, especially AI-server, HDI, and advanced substrates?",
+            "reason": "No evidence was supplied to quantify demand, growth, product mix, or end-market drivers.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB demand forecast 2026 AI server HDI",
+              "AI server PCB demand forecast",
+              "advanced PCB market demand forecast"
+            ]
+          },
+          {
+            "gapId": "capacityEvidence",
+            "module": "supply_demand_analysis",
+            "question": "What is the current and planned PCB manufacturing capacity, utilization, and lead-time position?",
+            "reason": "No evidence was supplied to assess supply availability, capacity additions, bottlenecks, or cycle conditions.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry capacity utilization 2026",
+              "PCB manufacturing capacity expansion",
+              "PCB lead times capacity constraints"
+            ]
+          },
+          {
+            "gapId": "chainEvidence",
+            "module": "supply_demand_analysis",
+            "question": "How do CCL and other upstream inputs constrain PCB supply and pricing?",
+            "reason": "No evidence was supplied on upstream material capacity, inventories, pricing, or supplier concentration.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry chain CCL capacity pricing",
+              "Shengyi Technology CCL capacity",
+              "Pengding Technology PCB CCL supply chain"
+            ]
+          },
+          {
+            "gapId": "companyEvidence",
+            "module": "supply_demand_analysis",
+            "question": "What do authoritative disclosures indicate about Shennan Circuit and WUS PCB supply-demand exposure?",
+            "reason": "No evidence was supplied to support company-specific supply, demand, capacity, or market-position conclusions.",
+            "actionable": true,
+            "searchTerms": [
+              "Shennan Circuit PCB capacity demand investor relations",
+              "WUS PCB capacity demand investor relations"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "Supply-demand analysis is incomplete because no evidence was supplied. A reliable assessment requires current and forecast PCB demand by application and technology, manufacturing capacity and utilization, planned expansions, lead times, and upstream CCL availability. Company-specific conclusions for Shennan Circuit, WUS, Pengding Technology, and Shengyi Technology require authoritative disclosures.",
+          "evidenceIds": [],
+          "proposalIds": [],
+          "relationProposalIds": [],
+          "reportOnly": true
+        }
+      },
+      {
+        "module": "industry_chain_analysis",
+        "status": "unavailable",
+        "analysis": "No evidence was supplied, so the PCB manufacturing industry chain cannot be substantiated in this run. The chain would ordinarily cover upstream materials and equipment, PCB fabrication, assembly and testing, and downstream applications such as AI servers, but no entities, relationships, supplier links, capacity facts, or quantitative claims are proposed without evidence.",
+        "evidenceIds": [],
+        "proposals": [],
+        "gaps": [
+          {
+            "gapId": "gap-pcb-chain-evidence",
+            "module": "industry_chain_analysis",
+            "question": "What authoritative sources document the PCB manufacturing value chain from upstream inputs through downstream applications?",
+            "reason": "No evidence or local references were supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry chain authoritative source",
+              "PCB upstream materials equipment fabrication assembly downstream applications"
+            ]
+          },
+          {
+            "gapId": "gap-pcb-supplier-links",
+            "module": "industry_chain_analysis",
+            "question": "Which companies have directly evidenced supplier, component, or material relationships in PCB manufacturing?",
+            "reason": "Supplier relationships require direct authoritative evidence and none is available.",
+            "actionable": true,
+            "searchTerms": [
+              "Shennan Circuit PCB supplier relationship authoritative",
+              "WUS PCB supplier relationship authoritative",
+              "Pengding Technology PCB CCL supplier relationship",
+              "Shengyi Technology PCB CCL relationship"
+            ]
+          },
+          {
+            "gapId": "gap-pcb-capacity-demand",
+            "module": "industry_chain_analysis",
+            "question": "What evidence supports PCB capacity, demand, or AI-server and HDI application trends as of 2026-09-14?",
+            "reason": "No current market, capacity, demand, or application evidence was supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry capacity 2026 authoritative",
+              "AI server PCB HDI demand 2026 authoritative"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "Industry-chain analysis is unavailable because the evidence allowlist is empty. No evidence-free relation or claim proposals are permitted. Obtain authoritative sources covering the PCB value chain, direct supplier relationships, and current capacity or demand before producing a supported analysis.",
+          "evidenceIds": [],
+          "proposalIds": [],
+          "relationProposalIds": [],
+          "reportOnly": true
+        }
+      },
+      {
+        "module": "competitive_landscape",
+        "status": "unavailable",
+        "analysis": "No evidence was supplied for the PCB Manufacturing competitive landscape as of 2026-09-14. Competitor positioning, market shares, capacity, technology differentiation, customer mix, and industry-chain relationships cannot be established without authoritative sources.",
+        "evidenceIds": [],
+        "proposals": [],
+        "gaps": [
+          {
+            "gapId": "competitiveLandscapeEvidence",
+            "module": "competitive_landscape",
+            "question": "Which PCB manufacturers are the principal competitors, and how do their capacity, technologies, end markets, and geographic footprints compare?",
+            "reason": "The evidence allowlist is empty, so no competitor or relationship claims can be supported.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB manufacturing competitive landscape",
+              "AI server PCB HDI competitors",
+              "Shennan Circuit PCB capacity",
+              "WUS PCB capacity",
+              "Pengding Technology PCB",
+              "PCB industry capacity"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "Competitive landscape analysis unavailable: no evidence was supplied. Obtain authoritative company filings, capacity disclosures, customer or product documentation, and industry research before assessing competitors or proposing competitive relationships.",
+          "evidenceIds": [],
+          "proposalIds": [],
+          "relationProposalIds": [],
+          "reportOnly": true
+        }
+      },
+      {
+        "module": "technology_evolution",
+        "status": "unavailable",
+        "analysis": "No evidence was supplied for PCB Manufacturing technology evolution as of 2026-09-14. Therefore, no technology trends, technology relationships, company developments, forecasts, risks, or quantitative claims can be supported. Evidence-free entity candidates are unnecessary because the industry root is already specified.",
+        "evidenceIds": [],
+        "proposals": [],
+        "gaps": [
+          {
+            "gapId": "technologyEvolutionEvidence",
+            "module": "technology_evolution",
+            "question": "What major PCB manufacturing technology developments, adoption trends, and commercialization milestones should be recognized as of 2026-09-14?",
+            "reason": "The evidence allowlist is empty, so technology evolution claims and relations cannot be proposed or validated.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB manufacturing technology evolution",
+              "AI server PCB HDI technology",
+              "advanced PCB manufacturing technologies 2025 2026",
+              "PCB manufacturing capacity technology trends"
+            ]
+          },
+          {
+            "gapId": "companyTechnologyEvidence",
+            "module": "technology_evolution",
+            "question": "What authoritative evidence links Shennan Circuit, WUS, Pengding Technology, or Shengyi Technology to specific PCB or PCB-material technology developments?",
+            "reason": "No company-specific evidence was supplied, and unsupported company technology relations must not be invented.",
+            "actionable": true,
+            "searchTerms": [
+              "Shennan Circuit PCB technology development",
+              "WUS PCB technology development",
+              "Pengding Technology PCB CCL technology",
+              "Shengyi Technology PCB CCL technology"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "Technology evolution analysis unavailable: no evidence was supplied. No evidence-backed proposals or claims can be issued. Targeted evidence collection is required for PCB manufacturing technology trends, AI-server/HDI developments, material innovation, capacity technology, and company-specific technology activities.",
+          "evidenceIds": [],
+          "proposalIds": [],
+          "relationProposalIds": [],
+          "reportOnly": true
+        }
+      },
+      {
+        "module": "company_mapping",
+        "status": "unavailable",
+        "analysis": "No evidence was supplied for the PCB Manufacturing company-mapping request. Companies, products, technologies, industry relationships, and quantitative claims cannot be proposed or verified without evidence. The requested mapping remains open pending authoritative company sources and direct relationship evidence.",
+        "evidenceIds": [],
+        "proposals": [],
+        "gaps": [
+          {
+            "gapId": "company-mapping-evidence",
+            "module": "company_mapping",
+            "question": "Which companies should be mapped to PCB Manufacturing and what roles do they play in the industry chain?",
+            "reason": "The evidence allowlist is empty, so no company identity or role can be verified.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB Manufacturing major companies",
+              "PCB 印制电路板 companies",
+              "PCB industry chain companies"
+            ]
+          },
+          {
+            "gapId": "company-mapping-products",
+            "module": "company_mapping",
+            "question": "Which products or technologies are offered or developed by the candidate PCB companies?",
+            "reason": "No authoritative product, technology, or company disclosures were supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "AI server PCB HDI company products",
+              "Shennan Circuit PCB products",
+              "WUS PCB products",
+              "Pengding Technology PCB products"
+            ]
+          },
+          {
+            "gapId": "company-mapping-suppliers",
+            "module": "company_mapping",
+            "question": "Which direct supplier relationships exist among PCB manufacturers and material providers?",
+            "reason": "supplier_of relations require direct authoritative evidence, which is absent.",
+            "actionable": true,
+            "searchTerms": [
+              "Shengyi Technology PCB CCL supply relationship",
+              "Pengding Technology PCB CCL supplier",
+              "PCB CCL supplier relationship"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "Company mapping for PCB Manufacturing is unavailable because no evidence was supplied. No entity, relation, or claim candidates are proposed. Evidence is needed to verify company identities, industry roles, products, technologies, competitive relationships, and direct supplier relationships.",
+          "evidenceIds": [],
+          "proposalIds": [],
+          "relationProposalIds": [],
+          "reportOnly": true
+        }
+      },
+      {
+        "module": "risk_analysis",
+        "status": "partial",
+        "analysis": "基于现有证据，PCB制造业的主要可识别风险集中在国际贸易与区域需求暴露：2025年上半年中国PCB进出口总额154.77亿美元，同比增长19.7%；出口120.3亿美元，同比增长27.1%，显示行业对海外市场具有较高业务关联度。出口伙伴主要集中于全球主要电子电路产地，东南亚国家和墨西哥出口增幅明显，而美国出口金额基本持平，贸易伙伴变化可能带来区域需求、关税、贸易政策与供应链调整风险。进口额同比下降0.5%，且来自越南、泰国、菲律宾的进口增长、来自德国、奥地利和美国的进口下降，表明进口来源结构正在变化，可能增加供应链重构和局部材料或设备获取的不确定性。现有证据不足以评估产能过剩、原材料价格、技术替代、环保监管、客户集中度及单家公司风险。",
+        "evidenceIds": [
+          "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+        ],
+        "proposals": [
+          {
+            "proposalId": "risk.trade_exposure",
+            "kind": "claim",
+            "subjectKey": "industry",
+            "claimType": "risk",
+            "statement": "中国PCB制造业对海外市场和国际电子电路产地具有较高业务暴露，出口伙伴变化可能带来区域需求、贸易政策与供应链调整风险。",
+            "sourceCandidateIds": [
+              "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+            ],
+            "structuredValue": {
+              "metric": "中国PCB出口金额",
+              "value": 120.3,
+              "unit": "亿美元",
+              "comparator": "eq",
+              "period": "2025年上半年",
+              "fiscalPeriod": "2025H1",
+              "semanticKey": "china_pcb_export_value"
+            }
+          },
+          {
+            "proposalId": "risk.import_mix_change",
+            "kind": "claim",
+            "subjectKey": "industry",
+            "claimType": "risk",
+            "statement": "中国PCB进口来源结构出现区域分化：越南、泰国和菲律宾进口同比增长超过20%，德国、奥地利和美国进口同比下降超过20%，供应链重构可能增加局部来源依赖和获取不确定性。",
+            "sourceCandidateIds": [
+              "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+            ],
+            "structuredValue": {
+              "metric": "中国PCB进口金额同比增速",
+              "value": -0.5,
+              "unit": "%",
+              "comparator": "eq",
+              "period": "2025年上半年",
+              "fiscalPeriod": "2025H1",
+              "semanticKey": "china_pcb_import_yoy"
+            }
+          },
+          {
+            "proposalId": "risk.trade_partner_concentration",
+            "kind": "claim",
+            "subjectKey": "industry",
+            "claimType": "risk",
+            "statement": "中国PCB主要进出口贸易伙伴集中在全球主要电子电路产地，行业可能面临区域市场波动和跨境贸易条件变化的集中暴露。",
+            "sourceCandidateIds": [
+              "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+            ],
+            "structuredValue": {
+              "metric": "中国PCB进出口总额同比增速",
+              "value": 19.7,
+              "unit": "%",
+              "comparator": "eq",
+              "period": "2025年上半年",
+              "fiscalPeriod": "2025H1",
+              "semanticKey": "china_pcb_trade_total_yoy"
+            }
+          }
+        ],
+        "gaps": [
+          {
+            "gapId": "gap.capacity",
+            "module": "risk_analysis",
+            "question": "PCB行业是否存在结构性产能过剩或低稼动率风险？",
+            "reason": "现有证据仅包含进出口数据，没有产能、产量、稼动率或投资项目数据。",
+            "actionable": true,
+            "searchTerms": [
+              "PCB industry capacity utilization China 2025",
+              "PCB行业产能利用率 2025",
+              "2026上半年PCB行业投资项目概况"
+            ]
+          },
+          {
+            "gapId": "gap.materials",
+            "module": "risk_analysis",
+            "question": "铜箔、覆铜板、树脂及关键设备的价格和供应是否构成成本或供应中断风险？",
+            "reason": "现有证据未覆盖原材料、设备供应商或价格变化。",
+            "actionable": true,
+            "searchTerms": [
+              "PCB CCL copper foil price supply risk 2025",
+              "覆铜板 铜箔 供应链 风险 2025",
+              "Pengding Technology PCB CCL Shengyi Technology"
+            ]
+          },
+          {
+            "gapId": "gap.trade_policy",
+            "module": "risk_analysis",
+            "question": "关税、出口管制及主要市场政策变化对PCB出口的影响程度如何？",
+            "reason": "证据显示出口市场广泛，但未提供关税、制裁、出口管制或政策冲击信息。",
+            "actionable": true,
+            "searchTerms": [
+              "PCB tariff export control United States China 2025",
+              "PCB贸易政策 关税 出口管制 2025"
+            ]
+          },
+          {
+            "gapId": "gap.technology",
+            "module": "risk_analysis",
+            "question": "AI服务器PCB、HDI及高多层板技术迭代是否造成替代或资本开支风险？",
+            "reason": "目标检索词涉及AI服务器PCB和HDI，但现有证据未提供技术路线、认证周期或竞争格局信息。",
+            "actionable": true,
+            "searchTerms": [
+              "AI server PCB HDI technology risk 2025",
+              "AI服务器 PCB HDI 技术演进 风险",
+              "Shennan Circuit PCB WUS PCB"
+            ]
+          },
+          {
+            "gapId": "gap.company",
+            "module": "risk_analysis",
+            "question": "主要PCB公司是否存在客户集中、项目延期、海外产能或经营分化风险？",
+            "reason": "现有证据未包含公司财务、客户结构、产能布局或经营数据。",
+            "actionable": true,
+            "searchTerms": [
+              "Shennan Circuit PCB annual report risk 2025",
+              "WUS PCB annual report risk 2025",
+              "鹏鼎控股 PCB 年报 风险 2025"
+            ]
+          }
+        ],
+        "reportMaterial": {
+          "markdown": "## 风险分析\n\n现有证据支持的风险主要来自国际贸易暴露和进口来源结构变化。2025年上半年中国PCB进出口总额154.77亿美元，同比增长19.7%；出口120.3亿美元，同比增长27.1%。主要贸易伙伴集中于全球电子电路产地，东南亚和墨西哥出口增长较快，美国出口基本持平。进口来源则出现分化：越南、泰国和菲律宾进口增长超过20%，德国、奥地利和美国进口下降超过20%。\n\n因此，行业需重点关注海外区域需求波动、贸易政策变化、进口供应链重构及关键来源依赖。对于产能利用率、原材料价格、技术升级、环保监管和公司经营风险，当前证据不足，结论应保持待验证状态。",
+          "evidenceIds": [
+            "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+          ],
+          "proposalIds": [
+            "risk.trade_exposure",
+            "risk.import_mix_change",
+            "risk.trade_partner_concentration"
+          ],
+          "relationProposalIds": [],
+          "reportOnly": false
+        }
+      }
+    ],
+    "acquisitionWaves": 2,
+    "gatewaySubmitCount": 0,
+    "knowledgeBaseRevisionDelta": 0,
+    "proposalIds": [],
+    "committedIds": [],
+    "sourceIds": [],
+    "relationIds": [],
+    "claimIds": []
+  },
+  "providerCoverage": [
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [],
+      "wavesAttempted": []
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [
+        "GDELT request failed with HTTP 429",
+        "fetch failed"
+      ],
+      "wavesAttempted": []
+    },
+    {
+      "provider": "miit-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [],
+      "wavesAttempted": []
+    },
+    {
+      "provider": "govcn-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [],
+      "wavesAttempted": []
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [
+        "fetch failed"
+      ],
+      "wavesAttempted": []
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 1,
+      "canonicalHostSet": [
+        "www.cpca.org.cn"
+      ],
+      "tierDistribution": {
+        "4": 2
+      },
+      "publicationDateAvailable": true,
+      "failureCategories": [],
+      "wavesAttempted": []
+    },
+    {
+      "provider": "akshare-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [
+        "Command failed: python -c import json,sys,akshare as ak\nkind,symbol,start_date,end_date=sys.argv[1:]\nif kind=='basic': value=ak.stock_individual_info_em(symbol=symbol)\nelif kind=='financial': value=ak.stock_financial_analysis_indicator(symbol=symbol)\nelif kind=='index': value=ak.stock_zh_index_daily(symbol=symbol)\nelif kind=='sector': value=ak.stock_board_industry_name_em()\nelif kind=='calendar': value=ak.tool_trade_date_hist_sina()\nelse: value=ak.stock_zh_a_hist(symbol=symbol,period='daily',sta"
+      ],
+      "wavesAttempted": []
+    }
+  ],
+  "reasoningAudit": [
+    {
+      "identity": "industry_research_design:",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:industry_definition",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:market_size_growth",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:supply_demand_analysis",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:industry_chain_analysis",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:competitive_landscape",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:technology_evolution",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:company_mapping",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    },
+    {
+      "identity": "industry_module_analysis:risk_analysis",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null
+    }
+  ],
+  "researchGapConvergence": [
+    {
+      "module": "industry_definition",
+      "status": "unavailable",
+      "analysis": "No supplied evidence, existing knowledge, or local references are available to define the PCB Manufacturing industry for the requested as-of date. The industry scope, boundaries, products, processes, and inclusion criteria therefore cannot be established without unsupported inference.",
+      "evidenceIds": [],
+      "proposals": [],
+      "gaps": [
+        {
+          "gapId": "pcb-industry-definition-evidence",
+          "module": "industry_definition",
+          "question": "What authoritative sources define the scope, products, processes, and boundaries of PCB Manufacturing as of 2026-09-14?",
+          "reason": "The evidence allowlist is empty, so the requested industry definition cannot be verified or converted into entity, relation, or claim proposals.",
+          "actionable": true,
+          "searchTerms": [
+            "PCB Manufacturing industry definition",
+            "printed circuit board manufacturing process and product scope",
+            "PCB industry chain authoritative source",
+            "印制电路板 行业 定义 制造 范围"
+          ]
+        }
+      ],
+      "reportMaterial": {
+        "markdown": "Industry definition unavailable: no evidence or existing knowledge was supplied. Obtain authoritative sources before defining PCB Manufacturing or proposing entities, relations, or claims.",
+        "evidenceIds": [],
+        "proposalIds": [],
+        "relationProposalIds": [],
+        "reportOnly": true
+      }
+    },
+    {
+      "module": "market_size_growth",
+      "status": "partial",
+      "analysis": "现有证据仅支持中国印制电路板行业2025年上半年进出口贸易规模与增速判断，不能代表全球或中国PCB制造市场总产值，也不足以形成完整年度及未来增长预测。CPCA援引海关数据称，2025年上半年中国印制电路板进出口总额为154.77亿美元，同比增长19.7%；其中出口120.3亿美元，同比增长27.1%，进口34.5亿美元，同比下降0.5%，贸易顺差85.8亿美元，同比增长43.1%。证据显示外贸活动回升向好，出口增长显著强于进口，但缺少产量、销售额、价格、区域拆分及未来预测数据。",
+      "evidenceIds": [
+        "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+      ],
+      "proposals": [
+        {
+          "proposalId": "pcb_trade_total_h1_2025",
+          "kind": "claim",
+          "subjectKey": "industry",
+          "claimType": "fact",
+          "statement": "2025年上半年中国印制电路板进出口总额为154.77亿美元，同比增长19.7%。",
+          "sourceCandidateIds": [
+            "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+          ],
+          "structuredValue": {
+            "metric": "中国印制电路板进出口总额",
+            "value": 154.77,
+            "unit": "亿美元",
+            "comparator": "eq",
+            "period": "2025年上半年",
+            "fiscalPeriod": "2025H1",
+            "semanticKey": "china_pcb_trade_total"
+          }
+        },
+        {
+          "proposalId": "pcb_exports_h1_2025",
+          "kind": "claim",
+          "subjectKey": "industry",
+          "claimType": "fact",
+          "statement": "2025年上半年中国印制电路板出口金额为120.3亿美元，同比增长27.1%。",
+          "sourceCandidateIds": [
+            "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+          ],
+          "structuredValue": {
+            "metric": "中国印制电路板出口金额",
+            "value": 120.3,
+            "unit": "亿美元",
+            "comparator": "eq",
+            "period": "2025年上半年",
+            "fiscalPeriod": "2025H1",
+            "semanticKey": "china_pcb_exports"
+          }
+        },
+        {
+          "proposalId": "pcb_imports_h1_2025",
+          "kind": "claim",
+          "subjectKey": "industry",
+          "claimType": "fact",
+          "statement": "2025年上半年中国印制电路板进口金额为34.5亿美元，同比下降0.5%。",
+          "sourceCandidateIds": [
+            "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+          ],
+          "structuredValue": {
+            "metric": "中国印制电路板进口金额",
+            "value": 34.5,
+            "unit": "亿美元",
+            "comparator": "eq",
+            "period": "2025年上半年",
+            "fiscalPeriod": "2025H1",
+            "semanticKey": "china_pcb_imports"
+          }
+        },
+        {
+          "proposalId": "pcb_trade_surplus_h1_2025",
+          "kind": "claim",
+          "subjectKey": "industry",
+          "claimType": "fact",
+          "statement": "2025年上半年中国印制电路板贸易顺差为85.8亿美元，同比增长43.1%。",
+          "sourceCandidateIds": [
+            "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+          ],
+          "structuredValue": {
+            "metric": "中国印制电路板贸易顺差",
+            "value": 85.8,
+            "unit": "亿美元",
+            "comparator": "eq",
+            "period": "2025年上半年",
+            "fiscalPeriod": "2025H1",
+            "semanticKey": "china_pcb_trade_surplus"
+          }
+        }
+      ],
+      "gaps": [
+        {
+          "gapId": "pcb_market_value",
+          "module": "market_size_growth",
+          "question": "中国及全球PCB制造市场的市场规模、口径和年度销售额是多少？",
+          "reason": "现有证据仅提供中国2025年上半年进出口金额，未提供制造业产值或销售额，也未覆盖全球市场。",
+          "actionable": true,
+          "searchTerms": [
+            "全球 PCB 制造市场规模 2025",
+            "中国 PCB 产值 2025",
+            "PCB market size 2025"
+          ]
+        },
+        {
+          "gapId": "pcb_growth_forecast",
+          "module": "market_size_growth",
+          "question": "PCB制造市场未来三至五年的增长率和驱动因素是什么？",
+          "reason": "现有证据仅包含2025年上半年同比变化，没有年度预测或中长期增长率。",
+          "actionable": true,
+          "searchTerms": [
+            "PCB industry growth forecast 2026 2030",
+            "AI server PCB demand forecast",
+            "PCB 行业 增长预测 2026 2030"
+          ]
+        },
+        {
+          "gapId": "pcb_segment_mix",
+          "module": "market_size_growth",
+          "question": "HDI、高多层板、封装基板及传统PCB等细分市场的规模和增速如何？",
+          "reason": "证据未按产品类型、应用领域或技术等级拆分。",
+          "actionable": true,
+          "searchTerms": [
+            "HDI PCB market size growth",
+            "AI server PCB HDI demand",
+            "PCB 细分市场 规模 增速"
+          ]
+        }
+      ],
+      "reportMaterial": {
+        "markdown": "### PCB制造市场规模与增长（证据范围）\n\nCPCA援引海关数据指出，2025年上半年中国印制电路板进出口总额为154.77亿美元，同比增长19.7%；出口120.3亿美元，同比增长27.1%；进口34.5亿美元，同比下降0.5%；贸易顺差85.8亿美元，同比增长43.1%。这表明中国PCB外贸在2025年上半年回升，出口表现明显强于进口。\n\n上述数据属于贸易流量指标，不等同于中国或全球PCB制造市场销售额、产值或装机需求。因此，当前模块仅能部分支持“市场外贸规模及短期变化”判断，尚不能支持完整的市场规模、细分结构或中长期增长预测。",
+        "evidenceIds": [
+          "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+        ],
+        "proposalIds": [
+          "pcb_trade_total_h1_2025",
+          "pcb_exports_h1_2025",
+          "pcb_imports_h1_2025",
+          "pcb_trade_surplus_h1_2025"
+        ],
+        "relationProposalIds": [],
+        "reportOnly": false
+      }
+    },
+    {
+      "module": "supply_demand_analysis",
+      "status": "partial",
+      "analysis": "No evidence was supplied, so a verified supply-demand analysis for PCB Manufacturing cannot be established. The relevant assessment should cover demand drivers such as AI servers and high-density interconnect demand, as well as supply factors including PCB capacity, technology mix, CCL availability, utilization, lead times, geographic concentration, and planned expansions. No unsupported market size, growth rate, capacity, utilization, pricing, or company-specific conclusion is asserted.",
+      "evidenceIds": [],
+      "proposals": [],
+      "gaps": [
+        {
+          "gapId": "supplyDemandEvidence",
+          "module": "supply_demand_analysis",
+          "question": "What is the current and forecast demand for PCB products, especially AI-server, HDI, and advanced substrates?",
+          "reason": "No evidence was supplied to quantify demand, growth, product mix, or end-market drivers.",
+          "actionable": true,
+          "searchTerms": [
+            "PCB demand forecast 2026 AI server HDI",
+            "AI server PCB demand forecast",
+            "advanced PCB market demand forecast"
+          ]
+        },
+        {
+          "gapId": "capacityEvidence",
+          "module": "supply_demand_analysis",
+          "question": "What is the current and planned PCB manufacturing capacity, utilization, and lead-time position?",
+          "reason": "No evidence was supplied to assess supply availability, capacity additions, bottlenecks, or cycle conditions.",
+          "actionable": true,
+          "searchTerms": [
+            "PCB industry capacity utilization 2026",
+            "PCB manufacturing capacity expansion",
+            "PCB lead times capacity constraints"
+          ]
+        },
+        {
+          "gapId": "chainEvidence",
+          "module": "supply_demand_analysis",
+          "question": "How do CCL and other upstream inputs constrain PCB supply and pricing?",
+          "reason": "No evidence was supplied on upstream material capacity, inventories, pricing, or supplier concentration.",
+          "actionable": true,
+          "searchTerms": [
+            "PCB industry chain CCL capacity pricing",
+            "Shengyi Technology CCL capacity",
+            "Pengding Technology PCB CCL supply chain"
+          ]
+        },
+        {
+          "gapId": "companyEvidence",
+          "module": "supply_demand_analysis",
+          "question": "What do authoritative disclosures indicate about Shennan Circuit and WUS PCB supply-demand exposure?",
+          "reason": "No evidence was supplied to support company-specific supply, demand, capacity, or market-position conclusions.",
+          "actionable": true,
+          "searchTerms": [
+            "Shennan Circuit PCB capacity demand investor relations",
+            "WUS PCB capacity demand investor relations"
+          ]
+        }
+      ],
+      "reportMaterial": {
+        "markdown": "Supply-demand analysis is incomplete because no evidence was supplied. A reliable assessment requires current and forecast PCB demand by application and technology, manufacturing capacity and utilization, planned expansions, lead times, and upstream CCL availability. Company-specific conclusions for Shennan Circuit, WUS, Pengding Technology, and Shengyi Technology require authoritative disclosures.",
+        "evidenceIds": [],
+        "proposalIds": [],
+        "relationProposalIds": [],
+        "reportOnly": true
+      }
+    },
+    {
+      "module": "industry_chain_analysis",
+      "status": "unavailable",
+      "analysis": "No evidence was supplied, so the PCB manufacturing industry chain cannot be substantiated in this run. The chain would ordinarily cover upstream materials and equipment, PCB fabrication, assembly and testing, and downstream applications such as AI servers, but no entities, relationships, supplier links, capacity facts, or quantitative claims are proposed without evidence.",
+      "evidenceIds": [],
+      "proposals": [],
+      "gaps": [
+        {
+          "gapId": "gap-pcb-chain-evidence",
+          "module": "industry_chain_analysis",
+          "question": "What authoritative sources document the PCB manufacturing value chain from upstream inputs through downstream applications?",
+          "reason": "No evidence or local references were supplied.",
+          "actionable": true,
+          "searchTerms": [
+            "PCB industry chain authoritative source",
+            "PCB upstream materials equipment fabrication assembly downstream applications"
+          ]
+        },
+        {
+          "gapId": "gap-pcb-supplier-links",
+          "module": "industry_chain_analysis",
+          "question": "Which companies have directly evidenced supplier, component, or material relationships in PCB manufacturing?",
+          "reason": "Supplier relationships require direct authoritative evidence and none is available.",
+          "actionable": true,
+          "searchTerms": [
+            "Shennan Circuit PCB supplier relationship authoritative",
+            "WUS PCB supplier relationship authoritative",
+            "Pengding Technology PCB CCL supplier relationship",
+            "Shengyi Technology PCB CCL relationship"
+          ]
+        },
+        {
+          "gapId": "gap-pcb-capacity-demand",
+          "module": "industry_chain_analysis",
+          "question": "What evidence supports PCB capacity, demand, or AI-server and HDI application trends as of 2026-09-14?",
+          "reason": "No current market, capacity, demand, or application evidence was supplied.",
+          "actionable": true,
+          "searchTerms": [
+            "PCB industry capacity 2026 authoritative",
+            "AI server PCB HDI demand 2026 authoritative"
+          ]
+        }
+      ],
+      "reportMaterial": {
+        "markdown": "Industry-chain analysis is unavailable because the evidence allowlist is empty. No evidence-free relation or claim proposals are permitted. Obtain authoritative sources covering the PCB value chain, direct supplier relationships, and current capacity or demand before producing a supported analysis.",
+        "evidenceIds": [],
+        "proposalIds": [],
+        "relationProposalIds": [],
+        "reportOnly": true
+      }
+    },
+    {
+      "module": "competitive_landscape",
+      "status": "unavailable",
+      "analysis": "No evidence was supplied for the PCB Manufacturing competitive landscape as of 2026-09-14. Competitor positioning, market shares, capacity, technology differentiation, customer mix, and industry-chain relationships cannot be established without authoritative sources.",
+      "evidenceIds": [],
+      "proposals": [],
+      "gaps": [
+        {
+          "gapId": "competitiveLandscapeEvidence",
+          "module": "competitive_landscape",
+          "question": "Which PCB manufacturers are the principal competitors, and how do their capacity, technologies, end markets, and geographic footprints compare?",
+          "reason": "The evidence allowlist is empty, so no competitor or relationship claims can be supported.",
+          "actionable": true,
+          "searchTerms": [
+            "PCB manufacturing competitive landscape",
+            "AI server PCB HDI competitors",
+            "Shennan Circuit PCB capacity",
+            "WUS PCB capacity",
+            "Pengding Technology PCB",
+            "PCB industry capacity"
+          ]
+        }
+      ],
+      "reportMaterial": {
+        "markdown": "Competitive landscape analysis unavailable: no evidence was supplied. Obtain authoritative company filings, capacity disclosures, customer or product documentation, and industry research before assessing competitors or proposing competitive relationships.",
+        "evidenceIds": [],
+        "proposalIds": [],
+        "relationProposalIds": [],
+        "reportOnly": true
+      }
+    },
+    {
+      "module": "technology_evolution",
+      "status": "unavailable",
+      "analysis": "No evidence was supplied for PCB Manufacturing technology evolution as of 2026-09-14. Therefore, no technology trends, technology relationships, company developments, forecasts, risks, or quantitative claims can be supported. Evidence-free entity candidates are unnecessary because the industry root is already specified.",
+      "evidenceIds": [],
+      "proposals": [],
+      "gaps": [
+        {
+          "gapId": "technologyEvolutionEvidence",
+          "module": "technology_evolution",
+          "question": "What major PCB manufacturing technology developments, adoption trends, and commercialization milestones should be recognized as of 2026-09-14?",
+          "reason": "The evidence allowlist is empty, so technology evolution claims and relations cannot be proposed or validated.",
+          "actionable": true,
+          "searchTerms": [
+            "PCB manufacturing technology evolution",
+            "AI server PCB HDI technology",
+            "advanced PCB manufacturing technologies 2025 2026",
+            "PCB manufacturing capacity technology trends"
+          ]
+        },
+        {
+          "gapId": "companyTechnologyEvidence",
+          "module": "technology_evolution",
+          "question": "What authoritative evidence links Shennan Circuit, WUS, Pengding Technology, or Shengyi Technology to specific PCB or PCB-material technology developments?",
+          "reason": "No company-specific evidence was supplied, and unsupported company technology relations must not be invented.",
+          "actionable": true,
+          "searchTerms": [
+            "Shennan Circuit PCB technology development",
+            "WUS PCB technology development",
+            "Pengding Technology PCB CCL technology",
+            "Shengyi Technology PCB CCL technology"
+          ]
+        }
+      ],
+      "reportMaterial": {
+        "markdown": "Technology evolution analysis unavailable: no evidence was supplied. No evidence-backed proposals or claims can be issued. Targeted evidence collection is required for PCB manufacturing technology trends, AI-server/HDI developments, material innovation, capacity technology, and company-specific technology activities.",
+        "evidenceIds": [],
+        "proposalIds": [],
+        "relationProposalIds": [],
+        "reportOnly": true
+      }
+    },
+    {
+      "module": "company_mapping",
+      "status": "unavailable",
+      "analysis": "No evidence was supplied for the PCB Manufacturing company-mapping request. Companies, products, technologies, industry relationships, and quantitative claims cannot be proposed or verified without evidence. The requested mapping remains open pending authoritative company sources and direct relationship evidence.",
+      "evidenceIds": [],
+      "proposals": [],
+      "gaps": [
+        {
+          "gapId": "company-mapping-evidence",
+          "module": "company_mapping",
+          "question": "Which companies should be mapped to PCB Manufacturing and what roles do they play in the industry chain?",
+          "reason": "The evidence allowlist is empty, so no company identity or role can be verified.",
+          "actionable": true,
+          "searchTerms": [
+            "PCB Manufacturing major companies",
+            "PCB 印制电路板 companies",
+            "PCB industry chain companies"
+          ]
+        },
+        {
+          "gapId": "company-mapping-products",
+          "module": "company_mapping",
+          "question": "Which products or technologies are offered or developed by the candidate PCB companies?",
+          "reason": "No authoritative product, technology, or company disclosures were supplied.",
+          "actionable": true,
+          "searchTerms": [
+            "AI server PCB HDI company products",
+            "Shennan Circuit PCB products",
+            "WUS PCB products",
+            "Pengding Technology PCB products"
+          ]
+        },
+        {
+          "gapId": "company-mapping-suppliers",
+          "module": "company_mapping",
+          "question": "Which direct supplier relationships exist among PCB manufacturers and material providers?",
+          "reason": "supplier_of relations require direct authoritative evidence, which is absent.",
+          "actionable": true,
+          "searchTerms": [
+            "Shengyi Technology PCB CCL supply relationship",
+            "Pengding Technology PCB CCL supplier",
+            "PCB CCL supplier relationship"
+          ]
+        }
+      ],
+      "reportMaterial": {
+        "markdown": "Company mapping for PCB Manufacturing is unavailable because no evidence was supplied. No entity, relation, or claim candidates are proposed. Evidence is needed to verify company identities, industry roles, products, technologies, competitive relationships, and direct supplier relationships.",
+        "evidenceIds": [],
+        "proposalIds": [],
+        "relationProposalIds": [],
+        "reportOnly": true
+      }
+    },
+    {
+      "module": "risk_analysis",
+      "status": "partial",
+      "analysis": "基于现有证据，PCB制造业的主要可识别风险集中在国际贸易与区域需求暴露：2025年上半年中国PCB进出口总额154.77亿美元，同比增长19.7%；出口120.3亿美元，同比增长27.1%，显示行业对海外市场具有较高业务关联度。出口伙伴主要集中于全球主要电子电路产地，东南亚国家和墨西哥出口增幅明显，而美国出口金额基本持平，贸易伙伴变化可能带来区域需求、关税、贸易政策与供应链调整风险。进口额同比下降0.5%，且来自越南、泰国、菲律宾的进口增长、来自德国、奥地利和美国的进口下降，表明进口来源结构正在变化，可能增加供应链重构和局部材料或设备获取的不确定性。现有证据不足以评估产能过剩、原材料价格、技术替代、环保监管、客户集中度及单家公司风险。",
+      "evidenceIds": [
+        "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+      ],
+      "proposals": [
+        {
+          "proposalId": "risk.trade_exposure",
+          "kind": "claim",
+          "subjectKey": "industry",
+          "claimType": "risk",
+          "statement": "中国PCB制造业对海外市场和国际电子电路产地具有较高业务暴露，出口伙伴变化可能带来区域需求、贸易政策与供应链调整风险。",
+          "sourceCandidateIds": [
+            "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+          ],
+          "structuredValue": {
+            "metric": "中国PCB出口金额",
+            "value": 120.3,
+            "unit": "亿美元",
+            "comparator": "eq",
+            "period": "2025年上半年",
+            "fiscalPeriod": "2025H1",
+            "semanticKey": "china_pcb_export_value"
+          }
+        },
+        {
+          "proposalId": "risk.import_mix_change",
+          "kind": "claim",
+          "subjectKey": "industry",
+          "claimType": "risk",
+          "statement": "中国PCB进口来源结构出现区域分化：越南、泰国和菲律宾进口同比增长超过20%，德国、奥地利和美国进口同比下降超过20%，供应链重构可能增加局部来源依赖和获取不确定性。",
+          "sourceCandidateIds": [
+            "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+          ],
+          "structuredValue": {
+            "metric": "中国PCB进口金额同比增速",
+            "value": -0.5,
+            "unit": "%",
+            "comparator": "eq",
+            "period": "2025年上半年",
+            "fiscalPeriod": "2025H1",
+            "semanticKey": "china_pcb_import_yoy"
+          }
+        },
+        {
+          "proposalId": "risk.trade_partner_concentration",
+          "kind": "claim",
+          "subjectKey": "industry",
+          "claimType": "risk",
+          "statement": "中国PCB主要进出口贸易伙伴集中在全球主要电子电路产地，行业可能面临区域市场波动和跨境贸易条件变化的集中暴露。",
+          "sourceCandidateIds": [
+            "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+          ],
+          "structuredValue": {
+            "metric": "中国PCB进出口总额同比增速",
+            "value": 19.7,
+            "unit": "%",
+            "comparator": "eq",
+            "period": "2025年上半年",
+            "fiscalPeriod": "2025H1",
+            "semanticKey": "china_pcb_trade_total_yoy"
+          }
+        }
+      ],
+      "gaps": [
+        {
+          "gapId": "gap.capacity",
+          "module": "risk_analysis",
+          "question": "PCB行业是否存在结构性产能过剩或低稼动率风险？",
+          "reason": "现有证据仅包含进出口数据，没有产能、产量、稼动率或投资项目数据。",
+          "actionable": true,
+          "searchTerms": [
+            "PCB industry capacity utilization China 2025",
+            "PCB行业产能利用率 2025",
+            "2026上半年PCB行业投资项目概况"
+          ]
+        },
+        {
+          "gapId": "gap.materials",
+          "module": "risk_analysis",
+          "question": "铜箔、覆铜板、树脂及关键设备的价格和供应是否构成成本或供应中断风险？",
+          "reason": "现有证据未覆盖原材料、设备供应商或价格变化。",
+          "actionable": true,
+          "searchTerms": [
+            "PCB CCL copper foil price supply risk 2025",
+            "覆铜板 铜箔 供应链 风险 2025",
+            "Pengding Technology PCB CCL Shengyi Technology"
+          ]
+        },
+        {
+          "gapId": "gap.trade_policy",
+          "module": "risk_analysis",
+          "question": "关税、出口管制及主要市场政策变化对PCB出口的影响程度如何？",
+          "reason": "证据显示出口市场广泛，但未提供关税、制裁、出口管制或政策冲击信息。",
+          "actionable": true,
+          "searchTerms": [
+            "PCB tariff export control United States China 2025",
+            "PCB贸易政策 关税 出口管制 2025"
+          ]
+        },
+        {
+          "gapId": "gap.technology",
+          "module": "risk_analysis",
+          "question": "AI服务器PCB、HDI及高多层板技术迭代是否造成替代或资本开支风险？",
+          "reason": "目标检索词涉及AI服务器PCB和HDI，但现有证据未提供技术路线、认证周期或竞争格局信息。",
+          "actionable": true,
+          "searchTerms": [
+            "AI server PCB HDI technology risk 2025",
+            "AI服务器 PCB HDI 技术演进 风险",
+            "Shennan Circuit PCB WUS PCB"
+          ]
+        },
+        {
+          "gapId": "gap.company",
+          "module": "risk_analysis",
+          "question": "主要PCB公司是否存在客户集中、项目延期、海外产能或经营分化风险？",
+          "reason": "现有证据未包含公司财务、客户结构、产能布局或经营数据。",
+          "actionable": true,
+          "searchTerms": [
+            "Shennan Circuit PCB annual report risk 2025",
+            "WUS PCB annual report risk 2025",
+            "鹏鼎控股 PCB 年报 风险 2025"
+          ]
+        }
+      ],
+      "reportMaterial": {
+        "markdown": "## 风险分析\n\n现有证据支持的风险主要来自国际贸易暴露和进口来源结构变化。2025年上半年中国PCB进出口总额154.77亿美元，同比增长19.7%；出口120.3亿美元，同比增长27.1%。主要贸易伙伴集中于全球电子电路产地，东南亚和墨西哥出口增长较快，美国出口基本持平。进口来源则出现分化：越南、泰国和菲律宾进口增长超过20%，德国、奥地利和美国进口下降超过20%。\n\n因此，行业需重点关注海外区域需求波动、贸易政策变化、进口供应链重构及关键来源依赖。对于产能利用率、原材料价格、技术升级、环保监管和公司经营风险，当前证据不足，结论应保持待验证状态。",
+        "evidenceIds": [
+          "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+        ],
+        "proposalIds": [
+          "risk.trade_exposure",
+          "risk.import_mix_change",
+          "risk.trade_partner_concentration"
+        ],
+        "relationProposalIds": [],
+        "reportOnly": false
+      }
+    }
+  ],
+  "canonical": {
+    "validationStatus": "passed",
+    "diagnosticCodes": [],
+    "countsBefore": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "countsAfter": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "sourceToRawProvenanceComplete": true
+  },
+  "reportSnapshot": {
+    "taskId": "RHL-M3B-3B-TEST-041-INDUSTRY-PRODUCT-QUALITY-RERUN-AFTER-AUDIT-HARNESS-FIX",
+    "status": "NOT_PRODUCED",
+    "reason": "Workflow did not persist a trustworthy report"
+  },
+  "moduleMatrix": [
+    {
+      "module": "industry_definition",
+      "status": "unavailable",
+      "reasoningCallCount": 1,
+      "evidenceIds": [],
+      "evidenceCount": 0,
+      "distinctProductionProviders": [],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 1,
+      "reportMaterial": true,
+      "primaryGapCause": "NO_QUALIFIED_EVIDENCE_FOR_MODULE"
+    },
+    {
+      "module": "market_size_growth",
+      "status": "partial",
+      "reasoningCallCount": 1,
+      "evidenceIds": [
+        "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+      ],
+      "evidenceCount": 1,
+      "distinctProductionProviders": [
+        "cpca"
+      ],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 4
+      },
+      "actionableGapCount": 3,
+      "reportMaterial": true,
+      "primaryGapCause": "NONE"
+    },
+    {
+      "module": "supply_demand_analysis",
+      "status": "partial",
+      "reasoningCallCount": 1,
+      "evidenceIds": [],
+      "evidenceCount": 0,
+      "distinctProductionProviders": [],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 4,
+      "reportMaterial": true,
+      "primaryGapCause": "NO_QUALIFIED_EVIDENCE_FOR_MODULE"
+    },
+    {
+      "module": "industry_chain_analysis",
+      "status": "unavailable",
+      "reasoningCallCount": 1,
+      "evidenceIds": [],
+      "evidenceCount": 0,
+      "distinctProductionProviders": [],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 3,
+      "reportMaterial": true,
+      "primaryGapCause": "NO_QUALIFIED_EVIDENCE_FOR_MODULE"
+    },
+    {
+      "module": "competitive_landscape",
+      "status": "unavailable",
+      "reasoningCallCount": 1,
+      "evidenceIds": [],
+      "evidenceCount": 0,
+      "distinctProductionProviders": [],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 1,
+      "reportMaterial": true,
+      "primaryGapCause": "NO_QUALIFIED_EVIDENCE_FOR_MODULE"
+    },
+    {
+      "module": "technology_evolution",
+      "status": "unavailable",
+      "reasoningCallCount": 1,
+      "evidenceIds": [],
+      "evidenceCount": 0,
+      "distinctProductionProviders": [],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 2,
+      "reportMaterial": true,
+      "primaryGapCause": "NO_QUALIFIED_EVIDENCE_FOR_MODULE"
+    },
+    {
+      "module": "company_mapping",
+      "status": "unavailable",
+      "reasoningCallCount": 1,
+      "evidenceIds": [],
+      "evidenceCount": 0,
+      "distinctProductionProviders": [],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 3,
+      "reportMaterial": true,
+      "primaryGapCause": "NO_QUALIFIED_EVIDENCE_FOR_MODULE"
+    },
+    {
+      "module": "risk_analysis",
+      "status": "partial",
+      "reasoningCallCount": 1,
+      "evidenceIds": [
+        "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+      ],
+      "evidenceCount": 1,
+      "distinctProductionProviders": [
+        "cpca"
+      ],
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 3
+      },
+      "actionableGapCount": 5,
+      "reportMaterial": true,
+      "primaryGapCause": "NONE"
+    }
+  ],
+  "dimensions": [
+    {
+      "dimension": "scope clarity",
+      "status": "UNAVAILABLE",
+      "rationale": "0 routed evidence item(s); material is traceable to acquired evidence."
+    },
+    {
+      "dimension": "factual evidence density",
+      "status": "USABLE",
+      "rationale": "2 routed evidence item(s); material is traceable to acquired evidence."
+    },
+    {
+      "dimension": "quantitative and KPI usefulness",
+      "status": "USABLE",
+      "rationale": "1 routed evidence item(s); material is traceable to acquired evidence."
+    },
+    {
+      "dimension": "industry-chain and value-capture usefulness",
+      "status": "UNAVAILABLE",
+      "rationale": "0 routed evidence item(s); material is traceable to acquired evidence."
+    },
+    {
+      "dimension": "company-mapping usefulness",
+      "status": "UNAVAILABLE",
+      "rationale": "0 routed evidence item(s); material is traceable to acquired evidence."
+    },
+    {
+      "dimension": "catalysts, risks, monitoring, and invalidation usefulness",
+      "status": "USABLE",
+      "rationale": "1 routed evidence item(s); material is traceable to acquired evidence."
+    }
+  ],
+  "numericalAudit": {
+    "assertions": [],
+    "unsupportedNumericCount": 0
+  },
+  "finalClassification": "PRODUCT_QUALITY_LIVE_INCONCLUSIVE"
+}
