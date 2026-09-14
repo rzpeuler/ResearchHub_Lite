@@ -1,0 +1,251 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-040-INDUSTRY-PRODUCT-QUALITY-DIRECT-PUBLIC-PORTFOLIO-AFTER-GAPID-FIX",
+  "baseCommit": "add57c0ece6460658ee3d43540cdf8dda8b6e393",
+  "generatedAt": "2026-09-14T09:28:58.136Z",
+  "codexPreflight": {
+    "discovered": true,
+    "versionAvailable": true,
+    "helpAvailable": true,
+    "resolutionSource": "environment",
+    "executableKind": "native",
+    "version": "codex-cli 0.154.0"
+  },
+  "target": {
+    "nameHash": "b8e35979d589b8e71b411436f20520fee78e171746a6d451097baa81846d5a1e",
+    "aliasHashes": [
+      "33d250516d9d5c120f7dcb17cf51931b38669bcb27ebde3838a3df06db9211f5",
+      "bd684c427335591651f77131cb65cc4f3b9f0f235160ac7af1bedeb4d6f4fd1c"
+    ],
+    "searchTermHashes": [
+      "5b28ee335216e1a8e0ee4dc4b0bd434ed73a9036f610a18fe41f29e1b878c129",
+      "6acb27e30456b10d977814eead5b45f0b4545faa18cd1a1c9ca60ca300cbed34",
+      "e65ec9e4277f440fbd17a07316b582d173551b9dcb0f28f95336f9a92e08e286",
+      "fa053122a55effa6bbc1b71b4427539bb536c3236e3563b16dafdf4db90e8e17",
+      "e604ef49089b6254fc02f2bb7f300799ab77b05d740988aad02d5e54e49ea12d",
+      "d49a90f405a0db59be3dc8f0203da99ee1a408bff8e29aae43f305d9106acb3d",
+      "5dbf1d51d7fc1f15ff41a1d5a6ef9e62e2486a6478b6e00af242601625c16d39",
+      "b58f5eda01d1a2f842dfa71e4c9c059e469da1efc3cc1f7081fb0c493e65faf4"
+    ],
+    "asOf": "2026-09-14T00:00:00.000Z"
+  },
+  "fix039Accepted": true,
+  "test038Comparison": "direct production Workflow previously reached two waves but mandatory Industry Definition remained unavailable with Invalid Research Gap degradation",
+  "privacy": {
+    "rawBodiesIncluded": false,
+    "hiddenReasoningIncluded": false,
+    "credentialsIncluded": false,
+    "privatePathsIncluded": false
+  },
+  "workflow": {
+    "status": "failed",
+    "errors": [
+      "numericalAudit is not defined"
+    ]
+  },
+  "providerCoverage": [
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [],
+      "wavesAttempted": []
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [
+        "GDELT request failed with HTTP 429"
+      ],
+      "wavesAttempted": []
+    },
+    {
+      "provider": "miit-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [],
+      "wavesAttempted": []
+    },
+    {
+      "provider": "govcn-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [],
+      "wavesAttempted": []
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [
+        "fetch failed"
+      ],
+      "wavesAttempted": []
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 1,
+      "canonicalHostSet": [
+        "www.cpca.org.cn"
+      ],
+      "tierDistribution": {
+        "4": 2
+      },
+      "publicationDateAvailable": true,
+      "failureCategories": [],
+      "wavesAttempted": [
+        1,
+        2
+      ]
+    },
+    {
+      "provider": "akshare-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "canonicalHostSet": [],
+      "tierDistribution": {},
+      "publicationDateAvailable": false,
+      "failureCategories": [
+        "Command failed: python -c import json,sys,akshare as ak\nkind,symbol,start_date,end_date=sys.argv[1:]\nif kind=='basic': value=ak.stock_individual_info_em(symbol=symbol)\nelif kind=='financial': value=ak.stock_financial_analysis_indicator(symbol=symbol)\nelif kind=='index': value=ak.stock_zh_index_daily(symbol=symbol)\nelif kind=='sector': value=ak.stock_board_industry_name_em()\nelif kind=='calendar': value=ak.tool_trade_date_hist_sina()\nelse: value=ak.stock_zh_a_hist(symbol=symbol,period='daily',sta"
+      ],
+      "wavesAttempted": []
+    }
+  ],
+  "reasoningAudit": [
+    {
+      "identity": "industry_research_design:",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null,
+      "initialResearchGapInvalid": false,
+      "repairResearchGapInvalid": false
+    },
+    {
+      "identity": "industry_module_analysis:industry_definition",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null,
+      "initialResearchGapInvalid": false,
+      "repairResearchGapInvalid": false
+    },
+    {
+      "identity": "industry_module_analysis:market_size_growth",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null,
+      "initialResearchGapInvalid": false,
+      "repairResearchGapInvalid": false
+    },
+    {
+      "identity": "industry_module_analysis:supply_demand_analysis",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null,
+      "initialResearchGapInvalid": false,
+      "repairResearchGapInvalid": false
+    },
+    {
+      "identity": "industry_module_analysis:industry_chain_analysis",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null,
+      "initialResearchGapInvalid": false,
+      "repairResearchGapInvalid": false
+    },
+    {
+      "identity": "industry_module_analysis:industry_chain_analysis",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null,
+      "initialResearchGapInvalid": false,
+      "repairResearchGapInvalid": false
+    },
+    {
+      "identity": "industry_module_analysis:competitive_landscape",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null,
+      "initialResearchGapInvalid": false,
+      "repairResearchGapInvalid": false
+    },
+    {
+      "identity": "industry_module_analysis:technology_evolution",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null,
+      "initialResearchGapInvalid": false,
+      "repairResearchGapInvalid": false
+    },
+    {
+      "identity": "industry_module_analysis:company_mapping",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null,
+      "initialResearchGapInvalid": false,
+      "repairResearchGapInvalid": false
+    },
+    {
+      "identity": "industry_module_analysis:risk_analysis",
+      "callCount": 1,
+      "boundedRepair": false,
+      "returned": true,
+      "localValidationCategory": null,
+      "initialResearchGapInvalid": false,
+      "repairResearchGapInvalid": false
+    }
+  ],
+  "finalClassification": "PRODUCT_QUALITY_LIVE_INCONCLUSIVE"
+}
