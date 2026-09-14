@@ -1,0 +1,104 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-048-DOCUMENT-PARSER-SETUP-STALL-STAGE-DIAGNOSIS",
+  "baseCommit": "d0980a3f32f46927b9703968ef374eb28271ed44",
+  "test047Acceptance": {
+    "accepted": true,
+    "status": "COMPLETED",
+    "testsStatus": "FAILED",
+    "finalClassification": "DOCUMENT_PARSER_SMOKE_INCONCLUSIVE",
+    "setupResultReasonNotRootCause": true,
+    "controlledSetupCount": 1,
+    "preSetupStatus": "MANAGED_PYTHON_MISSING",
+    "postInterruptionStatus": "MANAGED_PYTHON_MISSING",
+    "fetchAttempted": false,
+    "normalizationAttempted": false
+  },
+  "ordinaryCheck": {
+    "status": "MANAGED_PYTHON_MISSING",
+    "pythonReady": false,
+    "dependencyReady": false,
+    "artifactsReady": false,
+    "bridgeReady": false
+  },
+  "finalRuntime": {
+    "finalVenvExists": false,
+    "finalManagedPythonExists": false,
+    "finalModelsExists": false,
+    "finalModelsNonEmpty": false,
+    "stagingParentExists": true,
+    "staleRunCount": 1,
+    "backupPresence": false
+  },
+  "staleStaging": {
+    "observations": [
+      {
+        "ordinal": "stale_1",
+        "stagedVenvExists": true,
+        "stagedPythonExists": true,
+        "stagedModelsExists": false,
+        "stagedModelsNonEmpty": false,
+        "backupVenvExists": false,
+        "backupModelsExists": false
+      }
+    ]
+  },
+  "stagedPythonProbes": [
+    {
+      "candidateLabel": "staged_1",
+      "executableAvailable": true,
+      "version": "3.12.10",
+      "venvAvailable": true,
+      "pipAvailable": true,
+      "doclingImportAvailable": false
+    }
+  ],
+  "systemPythonProbes": [
+    {
+      "candidateLabel": "system_python",
+      "executableAvailable": true,
+      "version": "3.12.10",
+      "venvAvailable": true,
+      "pipAvailable": true,
+      "doclingImportAvailable": true,
+      "doclingVersion": "2.116.0"
+    },
+    {
+      "candidateLabel": "system_py_3",
+      "executableAvailable": true,
+      "version": "3.12.10",
+      "venvAvailable": true,
+      "pipAvailable": true,
+      "doclingImportAvailable": true,
+      "doclingVersion": "2.116.0"
+    }
+  ],
+  "packageIndexAvailability": {
+    "attempted": true,
+    "success": false,
+    "elapsedBucket": "UNDER_1S",
+    "errorCategory": "UNKNOWN"
+  },
+  "pypiMetadataAvailability": {
+    "attempted": true,
+    "success": true,
+    "httpStatus": 200,
+    "elapsedBucket": "UNDER_1S"
+  },
+  "bootstrapAudit": {
+    "commandHardTimeoutPresent": false,
+    "stageTelemetryPresent": false
+  },
+  "localizedStage": "PIP_STAGE",
+  "privacy": {
+    "absolutePathsPersisted": false,
+    "userProfilePathsPersisted": false,
+    "rawPackageOutputPersisted": false,
+    "environmentValuesPersisted": false,
+    "proxyValuesPersisted": false,
+    "tokensOrCredentialsPersisted": false,
+    "modelContentsPersisted": false,
+    "packageInventoriesPersisted": false,
+    "evidenceSelfCheck": true
+  },
+  "finalClassification": "SETUP_STALL_BOOTSTRAP_TIMEOUT_OBSERVABILITY_GAP"
+}
