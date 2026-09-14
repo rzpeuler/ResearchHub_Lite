@@ -1,0 +1,339 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-032-INDUSTRY-REPORT-PRODUCT-QUALITY-MODULE-GAP-REVIEW",
+  "baseline": "2b5770c503235cadc9b1841111978fdef352de70",
+  "generatedAt": "2026-09-14T07:00:47.897Z",
+  "codexPreflight": {
+    "discovered": true,
+    "versionAvailable": true,
+    "helpAvailable": true,
+    "resolutionSource": "environment",
+    "executableKind": "native",
+    "version": "codex-cli 0.154.0"
+  },
+  "target": {
+    "nameHash": "d237e80ac4afd1c3b3e273659df072d993f7f3d07369812122f1c51fd83ebee2",
+    "aliasHashes": [
+      "43aa64a6e9f0de8180d265ec46aaa7b0970934383d34c583615507f786e16e84",
+      "b196f38b4334ec46d67ee5ccb0da9d31614d95d3463a7c411fe31aa4cfe51303"
+    ],
+    "searchTermHashes": [
+      "46bb3732afeec353f1e16d2998ec246147c367376576e8ecc4f6fac03d604709",
+      "809f17cfd206bec0365132574691bcd51413d3f296cb46099b19512d2766c73f",
+      "9fceb52361400f99860606940544efcaf389d81c515a1ea5edb7cd74849d0314",
+      "39cb99ef2444c650810ea2d229f8435440195fba7248732dcfa495e1e60eca11",
+      "b7a88278b0e20fee771c649443a293e30a64f43240b2e891b643f4f0617ad9d4",
+      "0c970d386f6da1b1c61cd87f1c8562281c76683b91c9dae64aa324e79cddf6f7",
+      "f2debfd39bcf2c7a0141f7065e4d6b8a11cb9413dd79ffa74a75c162f33b3dd6",
+      "ef1bbacb60b5994fc4bd542621045bd9b841928a4c16adcfc457415d3b9aab12"
+    ],
+    "asOf": "2026-09-14T00:00:00.000Z"
+  },
+  "providerOutcomes": [
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": true,
+      "providerFailed": false,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": false,
+      "providerFailed": true,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "miit-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": true,
+      "providerFailed": false,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "govcn-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": true,
+      "providerFailed": false,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": false,
+      "providerFailed": true,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": true,
+      "providerEmpty": false,
+      "providerFailed": false,
+      "usableSourceCount": 2
+    },
+    {
+      "provider": "akshare-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": false,
+      "providerFailed": true,
+      "usableSourceCount": 0
+    }
+  ],
+  "moduleGapMatrix": [
+    {
+      "module": "industry_definition",
+      "status": "unavailable",
+      "evidenceIds": [],
+      "distinctProductionProviders": [],
+      "evidenceCount": 0,
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 0,
+      "rerunAfterWave2": false,
+      "reportMaterialLength": 0,
+      "reportMaterialTraceable": true,
+      "primaryCause": "PROVIDER_EXTERNAL_FAILURE"
+    },
+    {
+      "module": "market_size_growth",
+      "status": "unavailable",
+      "evidenceIds": [],
+      "distinctProductionProviders": [],
+      "evidenceCount": 0,
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 0,
+      "rerunAfterWave2": false,
+      "reportMaterialLength": 0,
+      "reportMaterialTraceable": true,
+      "primaryCause": "PROVIDER_EXTERNAL_FAILURE"
+    },
+    {
+      "module": "supply_demand_analysis",
+      "status": "unavailable",
+      "evidenceIds": [],
+      "distinctProductionProviders": [],
+      "evidenceCount": 0,
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 0,
+      "rerunAfterWave2": false,
+      "reportMaterialLength": 0,
+      "reportMaterialTraceable": true,
+      "primaryCause": "PROVIDER_EXTERNAL_FAILURE"
+    },
+    {
+      "module": "industry_chain_analysis",
+      "status": "unavailable",
+      "evidenceIds": [],
+      "distinctProductionProviders": [],
+      "evidenceCount": 0,
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 0,
+      "rerunAfterWave2": false,
+      "reportMaterialLength": 0,
+      "reportMaterialTraceable": true,
+      "primaryCause": "PROVIDER_EXTERNAL_FAILURE"
+    },
+    {
+      "module": "competitive_landscape",
+      "status": "unavailable",
+      "evidenceIds": [],
+      "distinctProductionProviders": [],
+      "evidenceCount": 0,
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 0,
+      "rerunAfterWave2": false,
+      "reportMaterialLength": 0,
+      "reportMaterialTraceable": true,
+      "primaryCause": "PROVIDER_EXTERNAL_FAILURE"
+    },
+    {
+      "module": "technology_evolution",
+      "status": "unavailable",
+      "evidenceIds": [],
+      "distinctProductionProviders": [],
+      "evidenceCount": 0,
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 0,
+      "rerunAfterWave2": false,
+      "reportMaterialLength": 0,
+      "reportMaterialTraceable": true,
+      "primaryCause": "PROVIDER_EXTERNAL_FAILURE"
+    },
+    {
+      "module": "company_mapping",
+      "status": "unavailable",
+      "evidenceIds": [],
+      "distinctProductionProviders": [],
+      "evidenceCount": 0,
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 0,
+      "rerunAfterWave2": false,
+      "reportMaterialLength": 0,
+      "reportMaterialTraceable": true,
+      "primaryCause": "PROVIDER_EXTERNAL_FAILURE"
+    },
+    {
+      "module": "risk_analysis",
+      "status": "unavailable",
+      "evidenceIds": [],
+      "distinctProductionProviders": [],
+      "evidenceCount": 0,
+      "proposalCounts": {
+        "entity": 0,
+        "relation": 0,
+        "claim": 0
+      },
+      "actionableGapCount": 0,
+      "rerunAfterWave2": false,
+      "reportMaterialLength": 0,
+      "reportMaterialTraceable": true,
+      "primaryCause": "PROVIDER_EXTERNAL_FAILURE"
+    }
+  ],
+  "sectionQualityAudit": [],
+  "dimensions": [
+    {
+      "dimension": "scope clarity",
+      "status": "THIN",
+      "rationale": "0 routed evidence item(s); sections Industry Scope & Definition contain bounded material."
+    },
+    {
+      "dimension": "factual evidence density",
+      "status": "THIN",
+      "rationale": "0 routed evidence item(s); sections Executive Industry View, Methodology & Provenance contain bounded material."
+    },
+    {
+      "dimension": "quantitative/KPI usefulness",
+      "status": "THIN",
+      "rationale": "0 routed evidence item(s); sections Market Size & Growth, Key Metrics & Monitoring contain bounded material."
+    },
+    {
+      "dimension": "industry-chain and value-capture usefulness",
+      "status": "THIN",
+      "rationale": "0 routed evidence item(s); sections Industry Chain Map, Value Capture & Industry Economics contain bounded material."
+    },
+    {
+      "dimension": "company-mapping usefulness",
+      "status": "THIN",
+      "rationale": "0 routed evidence item(s); sections Company Mapping & Exposure contain bounded material."
+    },
+    {
+      "dimension": "catalysts, risks, monitoring, and invalidation usefulness",
+      "status": "THIN",
+      "rationale": "0 routed evidence item(s); sections Catalysts, Risks & Invalidation Conditions, Key Metrics & Monitoring contain bounded material."
+    }
+  ],
+  "numericalAudit": {
+    "assertions": [],
+    "unsupportedNumericCount": 0
+  },
+  "companyMappingAudit": {
+    "distinctNamedCompanies": [],
+    "distinctNamedCompanyCount": 0,
+    "evidenceBackedCompanyCount": 0,
+    "durableEntityRelationClaimCount": 0,
+    "exposureExceedsEvidence": false
+  },
+  "industryChainCoverageAudit": {
+    "upstream": "gap-only",
+    "midstream": "gap-only",
+    "downstreamApplication": "gap-only",
+    "supplyDemand": "gap-only",
+    "capacityUtilization": "gap-only",
+    "pricingEconomics": "gap-only",
+    "technologyRoadmap": "gap-only",
+    "competitiveLandscape": "gap-only"
+  },
+  "monitoringAudit": {
+    "sectionHasMeasurableMetrics": false,
+    "hasCurrentObservations": false
+  },
+  "canonicalTraceabilityAudit": {
+    "countsBefore": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "countsAfter": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "allSourcesHaveRaw": true,
+    "reportReferencesResolve": true
+  },
+  "recommendedSourceGapPriorities": [
+    {
+      "priority": "P0",
+      "affectedModules": [
+        null
+      ],
+      "missingEvidenceType": "undefined evidence",
+      "providerOutcome": "current production composition did not supply qualifying evidence",
+      "expectedProductQualityBenefit": "replace gap-only material with traceable module conclusions"
+    },
+    {
+      "priority": "P1",
+      "affectedModules": [
+        null
+      ],
+      "missingEvidenceType": "undefined evidence",
+      "providerOutcome": "current production composition did not supply qualifying evidence",
+      "expectedProductQualityBenefit": "replace gap-only material with traceable module conclusions"
+    },
+    {
+      "priority": "P2",
+      "affectedModules": [
+        null
+      ],
+      "missingEvidenceType": "undefined evidence",
+      "providerOutcome": "current production composition did not supply qualifying evidence",
+      "expectedProductQualityBenefit": "replace gap-only material with traceable module conclusions"
+    }
+  ],
+  "privacyFlags": {
+    "rawBodiesIncluded": false,
+    "hiddenReasoningIncluded": false,
+    "credentialsIncluded": false,
+    "privatePathsIncluded": false
+  },
+  "liveRunStarted": true,
+  "reportCaptureStatus": "no_trustworthy_report_before_production_runtime_termination",
+  "finalClassification": "PRODUCT_QUALITY_LIVE_INCONCLUSIVE"
+}
