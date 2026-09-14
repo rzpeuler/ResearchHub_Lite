@@ -1,0 +1,187 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-033-INDUSTRY-MODEL-RUNTIME-LIVE-DIAGNOSIS",
+  "baseline": "d7259b05b6725d6b860128d031b9906136cbeaf2",
+  "codexPreflight": {
+    "discovered": true,
+    "resolutionSource": "environment",
+    "executableKind": "native",
+    "versionAvailable": true,
+    "version": "codex-cli 0.154.0",
+    "helpAvailable": true
+  },
+  "selectedModel": {
+    "backend": "codex-cli",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "medium"
+  },
+  "fixture": {
+    "candidateId": "test033-pcb-fixture-001",
+    "contentHash": "9afe1817ea3d70e0fe06dda69c701f73ce5b7670b938994725707eaf249671f2",
+    "contentHashAlgorithm": "sha256",
+    "publisher": "Deterministic Test Fixture",
+    "publishedAt": "2026-09-01T00:00:00.000Z",
+    "bodyPersisted": false
+  },
+  "reasoning": {
+    "operationCounts": {
+      "industry_research_design": 1,
+      "industry_module_analysis": 9,
+      "industry_cross_module_synthesis": 2
+    },
+    "operations": [
+      {
+        "operation": "industry_research_design",
+        "ordinal": 1,
+        "started": "2026-09-14T07:29:07.146Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": false,
+        "elapsed": "10-60s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 2,
+        "started": "2026-09-14T07:29:47.120Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": false,
+        "elapsed": "10-60s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 3,
+        "started": "2026-09-14T07:30:10.685Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": true,
+        "elapsed": "10-60s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 4,
+        "started": "2026-09-14T07:30:32.756Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": true,
+        "elapsed": "10-60s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 5,
+        "started": "2026-09-14T07:31:01.006Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": true,
+        "elapsed": "10-60s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 6,
+        "started": "2026-09-14T07:31:48.862Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": true,
+        "elapsed": "10-60s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 7,
+        "started": "2026-09-14T07:32:29.753Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": true,
+        "elapsed": "10-60s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 8,
+        "started": "2026-09-14T07:32:50.516Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": true,
+        "elapsed": "10-60s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 9,
+        "started": "2026-09-14T07:33:09.343Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": true,
+        "elapsed": "10-60s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 10,
+        "started": "2026-09-14T07:33:33.033Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": true,
+        "elapsed": "10-60s"
+      },
+      {
+        "operation": "industry_cross_module_synthesis",
+        "ordinal": 11,
+        "started": "2026-09-14T07:33:53.179Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": false,
+        "elapsed": "10-60s"
+      },
+      {
+        "operation": "industry_cross_module_synthesis",
+        "ordinal": 12,
+        "started": "2026-09-14T07:34:33.958Z",
+        "returned": true,
+        "locallyValidated": true,
+        "repairCall": true,
+        "elapsed": "10-60s"
+      }
+    ]
+  },
+  "workflow": {
+    "terminalStatus": "blocked",
+    "errors": [
+      "V04_CANONICAL_INVALID: V04_STRUCTURED_VALUE: Claim structuredValue is not valid for Schema 0.4"
+    ],
+    "moduleSummary": []
+  },
+  "acquisitionWaveCount": 1,
+  "gatewaySubmissionCount": 0,
+  "revisionDelta": 0,
+  "canonicalObjectCounts": {
+    "before": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "after": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    }
+  },
+  "report": {
+    "present": false,
+    "type": null,
+    "sectionCount": 0,
+    "sectionTitles": [],
+    "frozenTitlesPresent": false
+  },
+  "failure": {
+    "category": "local-structured-output-validation",
+    "smallestFailingBoundary": "model-output-contract-validation"
+  },
+  "privacyFlags": {
+    "rawBodiesIncluded": false,
+    "completePromptsIncluded": false,
+    "completeOutputsIncluded": false,
+    "credentialsIncluded": false,
+    "privatePathsIncluded": false,
+    "reasoningTracesIncluded": false,
+    "publicProviderCalls": false
+  },
+  "finalClassification": "MODEL_RUNTIME_EXTERNAL_INCONCLUSIVE"
+}
