@@ -413,14 +413,21 @@ export const createIndustrySynthesisContract = (
       properties: {
         ...material(allowedEvidence, [...allowedProposals, ...allowedRelations])
           .properties,
+        proposalIds: {
+          type: "array",
+          minItems: 0,
+          maxItems: 24,
+          uniqueItems: true,
+          items: localId,
+        },
         relationProposalIds: {
           type: "array",
           minItems: 0,
           maxItems: 24,
           uniqueItems: true,
-          items: allowedRelations.length
-            ? { enum: [...allowedRelations] }
-            : localId,
+          // Same-response Relation proposals do not exist when the schema is
+          // built. Exact membership is checked after parsing.
+          items: localId,
         },
       },
     },
@@ -431,7 +438,7 @@ export const createIndustrySynthesisContract = (
     existingRelationProposalIds: [...allowedRelations],
   },
   proposalRules:
-    "New proposal IDs are local; references are restricted to the supplied validated sets.",
+    "New proposal IDs are local; report references are checked after parsing against supplied and same-response proposals.",
 });
 export const INDUSTRY_SYNTHESIS_CONTRACT = createIndustrySynthesisContract(
   [],

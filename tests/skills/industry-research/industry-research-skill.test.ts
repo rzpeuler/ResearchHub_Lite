@@ -169,6 +169,7 @@ test("Industry Skill repair carries bounded prior candidate and diagnostics, and
   assert.equal(requests.length, 2);
   assert.match(requests[1].instruction, /Prior:/);
   assert.match(requests[1].instruction, /Diagnostics:/);
+  assert.doesNotMatch(requests[1].instruction, /"invalid"\s*:\s*true/);
 });
 test("Industry Skill exposes exact operations and all eight modules", async () => {
   const skill = new IndustryResearchSkill(executor(design));
@@ -710,12 +711,130 @@ test("Industry module and synthesis contracts bind exact modules and allowlists"
   const synthesis = createIndustrySynthesisContract(["e1"], ["p1"], ["r1"]);
   assert.deepEqual(synthesis.allowlists.existingRelationProposalIds, ["r1"]);
   assert.equal(
-    (
-      synthesis.properties.reportMaterial.properties.relationProposalIds
-        .items as any
-    ).enum[0],
-    "r1",
+    synthesis.properties.reportMaterial.properties.proposalIds.items.pattern,
+    "^[A-Za-z][A-Za-z0-9._-]*$",
   );
+  assert.equal(
+    synthesis.properties.reportMaterial.properties.relationProposalIds.items
+      .pattern,
+    "^[A-Za-z][A-Za-z0-9._-]*$",
+  );
+});
+
+test("CrossModuleSynthesis admits same-response proposals and enforces final reference membership", () => {
+  const base = {
+    executiveView: "view",
+    analysis: "analysis",
+    evidenceIds: ["e1"],
+    gaps: [],
+    alternativeViews: [],
+  };
+  const claim = {
+    proposalId: "new-claim",
+    kind: "claim",
+    subjectKey: "company",
+    claimType: "fact",
+    statement: "The company supplies the product.",
+    sourceCandidateIds: ["e1"],
+  };
+  const relation = {
+    proposalId: "new-relation",
+    kind: "relation",
+    subjectKey: "company",
+    targetKey: "product",
+    relationType: "offers_product",
+    sourceCandidateIds: ["e1"],
+  };
+  assert.doesNotThrow(() =>
+    validateCrossModuleSynthesis(
+      {
+        ...base,
+        proposals: [claim, relation],
+        reportMaterial: {
+          markdown: "new proposals",
+          evidenceIds: ["e1"],
+          proposalIds: ["new-claim", "new-relation", "module-claim"],
+          relationProposalIds: ["new-relation", "module-relation"],
+        },
+      },
+      ["e1"],
+      ["module-claim", "module-relation"],
+      ["module-relation"],
+    ),
+  );
+  for (const [key, value] of [
+    ["proposalIds", ["unknown"]],
+    ["relationProposalIds", ["unknown"]],
+    ["relationProposalIds", ["module-claim"]],
+  ] as const) {
+    assert.throws(
+      () =>
+        validateCrossModuleSynthesis(
+          {
+            ...base,
+            proposals: [],
+            reportMaterial: {
+              markdown: "bad reference",
+              evidenceIds: ["e1"],
+              proposalIds: key === "proposalIds" ? value : [],
+              relationProposalIds:
+                key === "relationProposalIds" ? value : [],
+            },
+          },
+          ["e1"],
+          ["module-claim"],
+          ["module-relation"],
+        ),
+      /local report material/,
+    );
+  }
+  assert.throws(
+    () =>
+      validateCrossModuleSynthesis(
+        { ...base, proposals: [{ ...claim, proposalId: "module-claim" }], reportMaterial: { markdown: "collision", evidenceIds: ["e1"], proposalIds: [], relationProposalIds: [] } },
+        ["e1"],
+        ["module-claim"],
+        [],
+      ),
+    (error: unknown) =>
+      error instanceof Error &&
+      (error as { code?: string }).code === "synthesis_proposal_collision",
+  );
+});
+
+test("Industry synthesis repairs once and returns the valid repaired result", async () => {
+  let calls = 0;
+  const claim = {
+    proposalId: "repaired-claim",
+    kind: "claim",
+    subjectKey: "company",
+    claimType: "fact",
+    statement: "A bounded repaired claim.",
+    sourceCandidateIds: ["e1"],
+  };
+  const fake: ReasoningExecutor = {
+    capabilities: () => ({ maxContextTokens: 1000, maxOutputTokens: 1000, structuredOutputSupport: true, maxConcurrency: 1 }),
+    execute: async (r) => {
+      calls++;
+      return {
+        operation: r.operation,
+        output: calls === 1
+          ? { executiveView: "bad", analysis: "bad", evidenceIds: ["e1"], proposals: [], gaps: [], alternativeViews: [], reportMaterial: { markdown: "bad", evidenceIds: ["e1"], proposalIds: ["unknown"] } }
+          : { executiveView: "good", analysis: "good", evidenceIds: ["e1"], proposals: [claim], gaps: [], alternativeViews: [], reportMaterial: { markdown: "good", evidenceIds: ["e1"], proposalIds: ["repaired-claim"] } },
+      };
+    },
+  };
+  const result = await new IndustryResearchSkill(fake).synthesize({ modules: [], evidence: [{ evidenceId: "e1", source }], existingKnowledge: [] });
+  assert.equal(calls, 2);
+  assert.equal(result.proposals[0].proposalId, "repaired-claim");
+});
+
+test("Industry synthesis fails closed after exactly one repair attempt", async () => {
+  let calls = 0;
+  const fake = executor({ executiveView: "bad", analysis: "bad", evidenceIds: ["e1"], proposals: [], gaps: [], alternativeViews: [], reportMaterial: { markdown: "bad", evidenceIds: ["e1"], proposalIds: ["unknown"] } });
+  const counted: ReasoningExecutor = { ...fake, execute: async (r) => { calls++; return fake.execute(r); } };
+  await assert.rejects(() => new IndustryResearchSkill(counted).synthesize({ modules: [], evidence: [{ evidenceId: "e1", source }], existingKnowledge: [] }), /local report material/);
+  assert.equal(calls, 2);
 });
 
 test("Industry proposal variants and quantitative claims state evidence and period requirements", () => {

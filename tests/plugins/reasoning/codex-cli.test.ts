@@ -237,6 +237,19 @@ test('Codex transport normalization preserves supported schema semantics and acc
   }
 })
 
+test('Codex normalizes synthesis same-response local references without widening them to canonical IDs', async () => {
+  const { createIndustrySynthesisContract } = await import('../../../skills/industry-research/contracts.ts')
+  const { schema } = normalizeCodexOutputSchema(createIndustrySynthesisContract(['e1'], ['module-claim'], ['module-relation']))
+  const material = (schema as any).properties.reportMaterial
+  assert.match(material.properties.proposalIds.items.description, /Local ID only/u)
+  assert.match(material.properties.relationProposalIds.items.description, /Local ID only/u)
+  assert.equal(material.properties.proposalIds.items.enum, undefined)
+  assert.equal(material.properties.relationProposalIds.items.enum, undefined)
+  assert.equal(material.properties.proposalIds.items.type, 'string')
+  assert.equal(material.properties.relationProposalIds.items.type, 'string')
+  assert.equal(material.properties.proposalIds.items.enum, undefined)
+})
+
 test('Codex CLI JSONL parser keeps only the final assistant response', () => {
   const stdout = [
     JSON.stringify({ type: 'thread.started', thread_id: 'public-fixture' }),

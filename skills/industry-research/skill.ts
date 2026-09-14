@@ -52,7 +52,8 @@ export type IndustryDiagnosticCode =
   | "proposal_invalid"
   | "report_material_invalid"
   | "synthesis_shape_invalid"
-  | "synthesis_evidence_invalid";
+  | "synthesis_evidence_invalid"
+  | "synthesis_proposal_collision";
 export class IndustryValidationError extends Error {
   constructor(
     readonly code: IndustryDiagnosticCode,
@@ -273,6 +274,7 @@ function material(
     v.evidenceIds.some((x) => !ev.has(x)) ||
     !uniq(v.proposalIds) ||
     v.proposalIds.some((x) => !ps.has(x)) ||
+    (v.reportOnly !== undefined && typeof v.reportOnly !== "boolean") ||
     (v.relationProposalIds !== undefined &&
       (!uniq(v.relationProposalIds) ||
         v.relationProposalIds.some((x) => !rs.has(x))))
@@ -349,6 +351,16 @@ export function validateCrossModuleSynthesis(
     v.alternativeViews.some((x) => x.length > 1200)
   )
     fail("synthesis_shape_invalid", "Invalid cross-module synthesis evidence");
+  const proposedIds = new Set<string>();
+  for (const candidate of v.proposals) {
+    const id = obj(candidate) ? candidate.proposalId : undefined;
+    if (typeof id === "string" && (moduleIds.includes(id) || proposedIds.has(id)))
+      fail(
+        "synthesis_proposal_collision",
+        "Synthesis proposal ID collides with an existing or same-response proposal",
+      );
+    if (typeof id === "string") proposedIds.add(id);
+  }
   const ev = new Set(supplied),
     seen = new Set(moduleIds),
     ps = v.proposals.map((x) => proposal(x, ev, seen));
@@ -444,7 +456,7 @@ export class IndustryResearchSkill {
     diagnostic?: unknown,
   ) {
     const context = repair
-      ? ` Repair invocation: Prior: correct the candidate. Diagnostics: ${JSON.stringify(diagnostic)}.${prior === undefined ? " No usable prior object was parsed." : ` Prior: ${JSON.stringify(boundedJson(prior)).slice(0, 6000)}`}`
+      ? ` Repair invocation: Prior: rejected candidate omitted. Diagnostics: ${JSON.stringify(diagnostic)}. Return a complete replacement without repeating private or source content.`
       : "";
     const text =
       op === "industry_research_design"
