@@ -38,6 +38,15 @@ test('dependency is pinned, model families are fixed, and bootstrap uses a base 
   assert.deepEqual(plan.venv, { executable: 'py', args: ['-3', '-m', 'venv', 'managed-venv'], systemSitePackages: false }); assert.deepEqual(bootstrapPlan('linux').models.args.slice(0, 3), ['models', 'download', 'layout']); assert.equal(bootstrapPlan('linux').models.args.includes('tableformer'), true)
 })
 
+test('pip install budget and command policy are bounded and explicit', async () => {
+  assert.equal(STAGE_TIMEOUTS.pipInstall, 1_800_000)
+  assert.deepEqual({ ...STAGE_TIMEOUTS, pipInstall: undefined }, { basePythonProbe: 30_000, venvCreation: 120_000, pipInstall: undefined, dependencyVerify: 30_000, modelDownload: 900_000, bridgeSmoke: 180_000, finalVerification: 180_000 })
+  const args = bootstrapPlan('linux').install.args
+  for (const value of ['--no-input', '--progress-bar', 'off', '--timeout', '30', '--retries', '2', '--prefer-binary', '--disable-pip-version-check', '-r', 'config/document-parser/requirements.txt']) assert.ok(args.includes(value), `missing ${value}`)
+  for (const value of ['--no-deps', '--only-binary', '--index-url', '--extra-index-url']) assert.equal(args.includes(value), false, `unexpected ${value}`)
+  const f = await fixture(); try { await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: f.execute }); const actual = f.calls.find((call) => call.args.includes('pip'))?.args ?? []; assert.deepEqual(actual.slice(0, 3), ['-m', 'pip', 'install']); for (const value of ['--no-input', '--progress-bar', 'off', '--timeout', '30', '--retries', '2', '--prefer-binary', '--disable-pip-version-check']) assert.ok(actual.includes(value), `actual command missing ${value}`); assert.equal(actual[actual.indexOf('-r') + 1], join(f.root, 'config/document-parser/requirements.txt')) } finally { await rm(f.root, { recursive: true, force: true }) }
+})
+
 test('candidate selection is bounded and explicit Python takes precedence', () => {
   assert.deepEqual(candidatePlan('win32').map((candidate: Candidate) => [candidate.executable, candidate.args]), [['py', ['-3']], ['python', []]]); assert.deepEqual(candidatePlan('linux').map((candidate: Candidate) => [candidate.executable, candidate.args]), [['python3', []], ['python', []]]); assert.deepEqual(candidatePlan('win32', 'C:\\tools\\python.exe').map((candidate: Candidate) => candidate.executable), ['C:\\tools\\python.exe'])
 })
@@ -79,6 +88,10 @@ test('every external subprocess receives a finite stage timeout', async () => {
   const f = await fixture(); try { await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: f.execute }); assert.ok(f.calls.length > 0); assert.equal(f.calls.every((call) => Number.isFinite(call.options?.timeoutMs) && (call.options?.timeoutMs ?? 0) > 0), true); assert.ok(f.calls.some((call) => call.options?.timeoutMs === STAGE_TIMEOUTS.pipInstall)); assert.ok(f.calls.some((call) => call.options?.timeoutMs === STAGE_TIMEOUTS.modelDownload)) } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
+test('short injected pip timeout overrides the default without changing other budgets', async () => {
+  const f = await fixture(); try { await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: f.execute, timeouts: { pipInstall: 7 } }); const pip = f.calls.find((call) => call.args.includes('pip')); assert.equal(pip?.options?.timeoutMs, 7); assert.equal(f.calls.find((call) => call.args.includes('venv'))?.options?.timeoutMs, STAGE_TIMEOUTS.venvCreation); assert.equal(f.calls.find((call) => call.args.includes('models'))?.options?.timeoutMs, STAGE_TIMEOUTS.modelDownload) } finally { await rm(f.root, { recursive: true, force: true }) }
+})
+
 test('real child timeout resolves with timedOut and does not hang', async () => {
   const result = await runCommand(execPath, ['-e', 'setTimeout(() => {}, 1000)'], { timeoutMs: 20 }); assert.equal(result.ok, false); assert.equal(result.timedOut, true)
 })
@@ -96,9 +109,13 @@ test('timeout classifications stop setup before downstream stages and persist bo
   ] as const) await t.test(name, async () => {
     const f = await fixture(); try {
       const execute = (async (executable: string, args: string[], options?: CommandOptions) => { if ((marker === 'pip' && args.includes('pip')) || (marker === 'models' && args.includes('models')) || (marker === 'bridge' && !args.includes('-c') && !args.includes('venv') && !args.includes('pip') && !args.includes('models'))) return { ok: false, stdout: 'raw-output', stderr: 'token=private', timedOut: true }; return f.execute(executable, args, options) }) as Execute
-      const result = await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute, timeouts: { pipInstall: 5, modelDownload: 5, bridgeSmoke: 5 } }); assert.equal(result.reason, expected); const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); assert.deepEqual({ stage: state.stage, status: state.status, reason: state.reason }, { stage: marker === 'pip' ? 'PIP_INSTALL' : marker === 'models' ? 'MODEL_DOWNLOAD' : 'BRIDGE_SMOKE', status: 'TIMED_OUT', reason: expected }); assert.equal(f.calls.some((call) => downstream.some((value) => call.args.join(' ').toLowerCase().includes(value))), false)
+      const result = await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute, timeouts: { pipInstall: 5, modelDownload: 5, bridgeSmoke: 5 } }); assert.equal(result.reason, expected); const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); assert.deepEqual({ stage: state.stage, status: state.status, reason: state.reason }, { stage: marker === 'pip' ? 'PIP_INSTALL' : marker === 'models' ? 'MODEL_DOWNLOAD' : 'BRIDGE_SMOKE', status: 'TIMED_OUT', reason: expected }); if (marker === 'pip') assert.equal(state.lastCompletedStage, 'VENV_CREATE'); assert.equal(f.calls.some((call) => downstream.some((value) => call.args.join(' ').toLowerCase().includes(value))), false)
     } finally { await rm(f.root, { recursive: true, force: true }) }
   })
+})
+
+test('pip failure remains distinct from pip timeout', async () => {
+  const f = await fixture(); try { const result = await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: (async (executable: string, args: string[], options?: CommandOptions) => args.includes('pip') ? { ok: false, stdout: '', stderr: 'index failure' } : f.execute(executable, args, options)) as Execute }); assert.equal(result.reason, 'PIP_INSTALL_FAILED'); const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); assert.deepEqual({ stage: state.stage, status: state.status, reason: state.reason }, { stage: 'PIP_INSTALL', status: 'FAILED', reason: 'PIP_INSTALL_FAILED' }) } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
 test('setup telemetry records running stages, ordered completion, READY, and interruption safely', async (t) => {
