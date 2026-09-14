@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { execPath } from 'node:process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 // @ts-expect-error The implementation is intentionally a project-local .mjs CLI.
-import { bootstrapPlan, candidatePlan, DOCLING_VERSION, MODEL_FAMILIES, preflight, setup } from '../../scripts/document-parser-runtime.mjs'
+import { bootstrapPlan, candidatePlan, DOCLING_VERSION, MODEL_FAMILIES, preflight, runCommand, setup, STAGE_TIMEOUTS } from '../../scripts/document-parser-runtime.mjs'
 
 type Candidate = { executable: string; args: string[] }
-type CommandOptions = { cwd?: string; env?: Record<string, string | undefined> }
-type Result = { ok: boolean; stdout: string; stderr: string }
+type CommandOptions = { cwd?: string; env?: Record<string, string | undefined>; timeoutMs?: number }
+type Result = { ok: boolean; stdout: string; stderr: string; timedOut?: boolean }
 type Execute = (executable: string, args: string[], options?: CommandOptions) => Promise<Result>
 const probePayload = (docling = true) => JSON.stringify({ version: '3.12.0', venv: true, pip: true, docling, doclingVersion: docling ? DOCLING_VERSION : null })
 
@@ -72,4 +73,41 @@ test('staged bridge smoke is offline and failed staging preserves final runtime;
 test('promotion and final verification failures are bounded and recoverable', async (t) => {
   await t.test('promotion failure', async () => { const f = await fixture({ finalVenv: true, finalModels: true, finalDocling: false }); let failed = false; try { const result = await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: f.execute, move: async (source: string, destination: string) => { if (!failed && destination === join(f.root, '.researchhub-document-parser', 'models')) { failed = true; throw new Error('simulated promotion failure') }; await (await import('node:fs/promises')).rename(source, destination) } }); assert.equal(result.reason, 'PROMOTION_FAILED'); assert.equal((await (await import('node:fs/promises')).readFile(join(f.root, '.researchhub-document-parser', 'venv', 'bin', 'python'), 'utf8')), 'managed'); f.setFinalDocling(false); assert.equal((await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: f.execute })).status, 'READY') } finally { await rm(f.root, { recursive: true, force: true }) } })
   await t.test('final verification failure', async () => { const f = await fixture({ finalVenv: true, finalModels: true, finalDocling: false }); try { const result = await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: (async (executable: string, args: string[], options?: CommandOptions) => { const value = await f.execute(executable, args, options); if (args.includes('-c') && executable.includes(join('.researchhub-document-parser', 'venv')) && !executable.includes(join('.staging', ''))) return { ok: true, stdout: probePayload(false), stderr: '' }; return value }) as Execute }); assert.equal(result.reason, 'PROMOTION_FAILED') } finally { await rm(f.root, { recursive: true, force: true }) } })
+})
+
+test('every external subprocess receives a finite stage timeout', async () => {
+  const f = await fixture(); try { await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: f.execute }); assert.ok(f.calls.length > 0); assert.equal(f.calls.every((call) => Number.isFinite(call.options?.timeoutMs) && (call.options?.timeoutMs ?? 0) > 0), true); assert.ok(f.calls.some((call) => call.options?.timeoutMs === STAGE_TIMEOUTS.pipInstall)); assert.ok(f.calls.some((call) => call.options?.timeoutMs === STAGE_TIMEOUTS.modelDownload)) } finally { await rm(f.root, { recursive: true, force: true }) }
+})
+
+test('real child timeout resolves with timedOut and does not hang', async () => {
+  const result = await runCommand(execPath, ['-e', 'setTimeout(() => {}, 1000)'], { timeoutMs: 20 }); assert.equal(result.ok, false); assert.equal(result.timedOut, true)
+})
+
+test('base probe, venv, and final verification timeouts are explicit and bounded', async (t) => {
+  for (const [name, expected, marker] of [['base', 'BASE_PYTHON_PROBE_TIMEOUT', 'base'], ['venv', 'VENV_CREATION_TIMEOUT', 'venv']] as const) await t.test(name, async () => { const f = await fixture(); try { const execute = (async (executable: string, args: string[], options?: CommandOptions) => { if ((marker === 'base' && args.includes('-c') && executable === 'fixture-python') || (marker === 'venv' && args.includes('venv'))) return { ok: false, stdout: '', stderr: '', timedOut: true }; return f.execute(executable, args, options) }) as Execute; assert.equal((await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute, timeouts: { basePythonProbe: 5, venvCreation: 5 } })).reason, expected) } finally { await rm(f.root, { recursive: true, force: true }) } })
+  await t.test('final verification', async () => { const f = await fixture({ finalVenv: true, finalModels: true, finalDocling: false }); let finalProbeCount = 0; const marker = join('.researchhub-document-parser', 'venv'); try { const execute = (async (executable: string, args: string[], options?: CommandOptions) => { if (args.includes('-c') && executable.includes(marker) && !executable.includes(join('.staging', ''))) { finalProbeCount += 1; if (finalProbeCount > 1) return { ok: false, stdout: '', stderr: '', timedOut: true } } return f.execute(executable, args, options) }) as Execute; assert.equal((await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute, timeouts: { basePythonProbe: 5, bridgeSmoke: 5 } })).reason, 'FINAL_VERIFICATION_TIMEOUT'); assert.equal(await (await import('node:fs/promises')).readFile(join(f.root, '.researchhub-document-parser', 'venv', 'bin', 'python'), 'utf8'), 'managed') } finally { await rm(f.root, { recursive: true, force: true }) } })
+})
+
+test('timeout classifications stop setup before downstream stages and persist bounded telemetry', async (t) => {
+  for (const [name, expected, marker, downstream] of [
+    ['pip', 'PIP_INSTALL_TIMEOUT', 'pip', ['models', 'bridge']],
+    ['models', 'MODEL_DOWNLOAD_TIMEOUT', 'models', ['bridge']],
+    ['bridge', 'BRIDGE_SMOKE_TIMEOUT', 'bridge', ['promotion']]
+  ] as const) await t.test(name, async () => {
+    const f = await fixture(); try {
+      const execute = (async (executable: string, args: string[], options?: CommandOptions) => { if ((marker === 'pip' && args.includes('pip')) || (marker === 'models' && args.includes('models')) || (marker === 'bridge' && !args.includes('-c') && !args.includes('venv') && !args.includes('pip') && !args.includes('models'))) return { ok: false, stdout: 'raw-output', stderr: 'token=private', timedOut: true }; return f.execute(executable, args, options) }) as Execute
+      const result = await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute, timeouts: { pipInstall: 5, modelDownload: 5, bridgeSmoke: 5 } }); assert.equal(result.reason, expected); const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); assert.deepEqual({ stage: state.stage, status: state.status, reason: state.reason }, { stage: marker === 'pip' ? 'PIP_INSTALL' : marker === 'models' ? 'MODEL_DOWNLOAD' : 'BRIDGE_SMOKE', status: 'TIMED_OUT', reason: expected }); assert.equal(f.calls.some((call) => downstream.some((value) => call.args.join(' ').toLowerCase().includes(value))), false)
+    } finally { await rm(f.root, { recursive: true, force: true }) }
+  })
+})
+
+test('setup telemetry records running stages, ordered completion, READY, and interruption safely', async (t) => {
+  await t.test('running before pip and ordered completion', async () => {
+    const f = await fixture(); const observed: string[] = []; try { const execute = (async (executable: string, args: string[], options?: CommandOptions) => { if (args.includes('pip') || args.includes('models')) { const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); observed.push(`${args.includes('pip') ? 'PIP_INSTALL' : 'MODEL_DOWNLOAD'}:${state.stage}:${state.status}:${state.lastCompletedStage}`) } return f.execute(executable, args, options) }) as Execute; const result = await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute }); assert.equal(result.status, 'READY'); assert.deepEqual(observed.slice(0, 2), ['PIP_INSTALL:PIP_INSTALL:RUNNING:VENV_CREATE', 'MODEL_DOWNLOAD:MODEL_DOWNLOAD:RUNNING:DEPENDENCY_VERIFY']); const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); assert.deepEqual({ stage: state.stage, status: state.status, lastCompletedStage: state.lastCompletedStage }, { stage: 'READY', status: 'SUCCEEDED', lastCompletedStage: 'READY' }); assert.equal(JSON.stringify(state).includes('raw-output'), false) } finally { await rm(f.root, { recursive: true, force: true }) }
+  })
+  await t.test('external interruption leaves active stage RUNNING', async () => { const f = await fixture(); try { await assert.rejects(() => setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: (async (executable: string, args: string[], options?: CommandOptions) => { if (args.includes('pip')) throw new Error('simulated external interruption'); return f.execute(executable, args, options) }) as Execute })); const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); assert.deepEqual({ stage: state.stage, status: state.status }, { stage: 'PIP_INSTALL', status: 'RUNNING' }) } finally { await rm(f.root, { recursive: true, force: true }) } })
+})
+
+test('READY setup records telemetry without reinstalling or redownloading', async () => {
+  const f = await fixture({ finalVenv: true, finalModels: true }); try { f.calls.length = 0; assert.equal((await setup({ root: f.root, platform: 'linux', execute: f.execute })).status, 'READY'); assert.equal(f.calls.every((call) => !call.args.includes('pip') && !call.args.includes('models') && !call.args.includes('venv')), true); await access(join(f.root, '.researchhub-document-parser', 'setup-state.json')); } finally { await rm(f.root, { recursive: true, force: true }) }
 })
