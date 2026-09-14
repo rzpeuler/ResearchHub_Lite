@@ -1,0 +1,191 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-035-INDUSTRY-MODEL-RUNTIME-RERUN-AFTER-V04-CONVERGENCE",
+  "baseline": "f2620dd485dbb31297702df0390935b7bbc9ce4f",
+  "codexPreflight": {
+    "discovered": true,
+    "resolutionSource": "environment",
+    "executableKind": "native",
+    "versionAvailable": true,
+    "version": "codex-cli 0.154.0",
+    "helpAvailable": true
+  },
+  "selectedModel": {
+    "backend": "codex-cli",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "medium",
+    "fallback": false
+  },
+  "fixture": {
+    "candidateId": "test035-pcb-fixture-001",
+    "contentHash": "0b74c961b4c4b5736d7f226f9ac4945e445d8df9b931aa07b1227d02bd05431f",
+    "contentHashAlgorithm": "sha256",
+    "publisher": "Deterministic Test Fixture",
+    "publishedAt": "2026-09-01T00:00:00.000Z",
+    "bodyPersisted": false
+  },
+  "reasoning": {
+    "operationCounts": {
+      "industry_research_design": 1,
+      "industry_module_analysis": 9,
+      "industry_cross_module_synthesis": 2
+    },
+    "operations": [
+      {
+        "operation": "industry_research_design",
+        "ordinal": 1,
+        "returnedStatus": "success",
+        "boundedRepairInference": false,
+        "elapsed": "<1s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 2,
+        "returnedStatus": "success",
+        "boundedRepairInference": false,
+        "elapsed": "<1s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 3,
+        "returnedStatus": "success",
+        "boundedRepairInference": true,
+        "elapsed": "<1s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 4,
+        "returnedStatus": "success",
+        "boundedRepairInference": true,
+        "elapsed": "<1s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 5,
+        "returnedStatus": "success",
+        "boundedRepairInference": true,
+        "elapsed": "<1s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 6,
+        "returnedStatus": "success",
+        "boundedRepairInference": true,
+        "elapsed": "<1s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 7,
+        "returnedStatus": "success",
+        "boundedRepairInference": true,
+        "elapsed": "<1s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 8,
+        "returnedStatus": "success",
+        "boundedRepairInference": true,
+        "elapsed": "<1s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 9,
+        "returnedStatus": "success",
+        "boundedRepairInference": true,
+        "elapsed": "<1s"
+      },
+      {
+        "operation": "industry_module_analysis",
+        "ordinal": 10,
+        "returnedStatus": "success",
+        "boundedRepairInference": true,
+        "elapsed": "<1s"
+      },
+      {
+        "operation": "industry_cross_module_synthesis",
+        "ordinal": 11,
+        "returnedStatus": "success",
+        "boundedRepairInference": false,
+        "elapsed": "<1s"
+      },
+      {
+        "operation": "industry_cross_module_synthesis",
+        "ordinal": 12,
+        "returnedStatus": "success",
+        "boundedRepairInference": true,
+        "elapsed": "<1s"
+      }
+    ]
+  },
+  "workflow": {
+    "terminalStatus": "failed",
+    "modules": [],
+    "allEightModuleIdentities": false
+  },
+  "acquisitionWaveCount": 0,
+  "gatewaySubmissionCount": 0,
+  "revisionDelta": 0,
+  "canonicalObjectCounts": {
+    "before": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "after": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    }
+  },
+  "canonicalValidation": {
+    "status": "passed",
+    "diagnosticCodes": []
+  },
+  "structuredValueAudit": {
+    "quantitativeClaimCandidatesObserved": 0,
+    "schema04CompatibleStructuredValueCandidates": 0,
+    "locallyRejectedIncompatibleCandidates": 0,
+    "canonicalV04StructuredValueDiagnostics": 0,
+    "allowedFieldNames": [
+      "metric",
+      "value",
+      "unit",
+      "comparator",
+      "period",
+      "fiscalPeriod",
+      "semanticKey"
+    ],
+    "comparatorSet": [
+      "eq",
+      "gt",
+      "gte",
+      "lt",
+      "lte",
+      "approx"
+    ],
+    "allValidatedKeysAllowed": true,
+    "allComparatorsCanonical": true
+  },
+  "report": {
+    "persisted": false,
+    "type": null,
+    "sectionCount": 0,
+    "sectionTitles": [],
+    "frozenTitlesPresent": false
+  },
+  "failure": {
+    "category": "reasoning-runtime-error",
+    "smallestFailingBoundary": null
+  },
+  "privacyFlags": {
+    "rawBodiesIncluded": false,
+    "completePromptsIncluded": false,
+    "completeOutputsIncluded": false,
+    "credentialsIncluded": false,
+    "privatePathsIncluded": false,
+    "reasoningTracesIncluded": false,
+    "publicProviderCalls": false
+  },
+  "finalClassification": "MODEL_RUNTIME_EXTERNAL_INCONCLUSIVE"
+}
