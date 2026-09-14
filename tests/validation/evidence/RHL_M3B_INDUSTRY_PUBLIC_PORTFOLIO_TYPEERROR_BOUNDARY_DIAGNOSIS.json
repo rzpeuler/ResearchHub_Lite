@@ -1,0 +1,1701 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-038-INDUSTRY-PUBLIC-PORTFOLIO-TYPEERROR-BOUNDARY-DIAGNOSIS",
+  "baseCommit": "59005c23106568748c7b135fcd49efe2665adaad",
+  "generatedAt": "2026-09-14T09:09:14.296Z",
+  "test037Acceptance": "PRODUCT_QUALITY_LIVE_INCONCLUSIVE accepted; outer-catch TypeError is not production-fix evidence",
+  "target": {
+    "nameHash": "b8e35979d589b8e71b411436f20520fee78e171746a6d451097baa81846d5a1e",
+    "aliasHashes": [
+      "33d250516d9d5c120f7dcb17cf51931b38669bcb27ebde3838a3df06db9211f5",
+      "bd684c427335591651f77131cb65cc4f3b9f0f235160ac7af1bedeb4d6f4fd1c"
+    ],
+    "searchTermHashes": [
+      "5b28ee335216e1a8e0ee4dc4b0bd434ed73a9036f610a18fe41f29e1b878c129",
+      "6acb27e30456b10d977814eead5b45f0b4545faa18cd1a1c9ca60ca300cbed34",
+      "e65ec9e4277f440fbd17a07316b582d173551b9dcb0f28f95336f9a92e08e286",
+      "fa053122a55effa6bbc1b71b4427539bb536c3236e3563b16dafdf4db90e8e17",
+      "95dd5ae6e4bd71fc994b3b29c47114c6c872ca46ddc7f5d3655bb4bef6da1999",
+      "d49a90f405a0db59be3dc8f0203da99ee1a408bff8e29aae43f305d9106acb3d",
+      "5dbf1d51d7fc1f15ff41a1d5a6ef9e62e2486a6478b6e00af242601625c16d39",
+      "b58f5eda01d1a2f842dfa71e4c9c059e469da1efc3cc1f7081fb0c493e65faf4"
+    ],
+    "asOf": "2026-09-14T00:00:00.000Z"
+  },
+  "codexPreflight": {
+    "source": "environment",
+    "executableKind": "native",
+    "discovered": true,
+    "versionAvailable": true,
+    "helpAvailable": true,
+    "version": "codex-cli 0.154.0"
+  },
+  "timeline": [
+    {
+      "stage": "PREFLIGHT",
+      "returned": true
+    },
+    {
+      "stage": "REASONING_DESIGN",
+      "identity": "industry_research_design",
+      "ordinal": 1,
+      "globalOrdinal": 1,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "ACQUISITION_WAVE_1",
+      "wave": 1,
+      "attempted": true
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "official-disclosure-research-acquisition",
+      "attempted": true,
+      "returned": true,
+      "candidateCount": 0
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "gdelt-research-acquisition",
+      "attempted": true,
+      "threw": true,
+      "error": "TypeError"
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "miit-industry-research-acquisition",
+      "attempted": true,
+      "returned": true,
+      "candidateCount": 0
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "govcn-industry-research-acquisition",
+      "attempted": true,
+      "returned": true,
+      "candidateCount": 0
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "returned": true,
+      "candidateCount": 6
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-industry-BK1340",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-industry-BK1340",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK0877",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK0877",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1153",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1153",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1182",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1182",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1162",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1162",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1127",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1127",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "cpca-industry-research-acquisition",
+      "attempted": true,
+      "returned": true,
+      "candidateCount": 1
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "cpca-industry-research-acquisition",
+      "candidateId": "cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "cpca-industry-research-acquisition",
+      "candidateId": "cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "akshare-industry-research-acquisition",
+      "attempted": true,
+      "threw": true,
+      "error": "Error",
+      "returned": true,
+      "normalizedSourceCount": 7,
+      "outcomes": [
+        {
+          "provider": "official-disclosure-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": false,
+          "providerEmpty": true,
+          "providerFailed": false,
+          "usableSourceCount": 0
+        },
+        {
+          "provider": "gdelt-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": false,
+          "providerEmpty": false,
+          "providerFailed": true,
+          "usableSourceCount": 0
+        },
+        {
+          "provider": "miit-industry-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": false,
+          "providerEmpty": true,
+          "providerFailed": false,
+          "usableSourceCount": 0
+        },
+        {
+          "provider": "govcn-industry-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": false,
+          "providerEmpty": true,
+          "providerFailed": false,
+          "usableSourceCount": 0
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": true,
+          "providerEmpty": false,
+          "providerFailed": false,
+          "usableSourceCount": 6
+        },
+        {
+          "provider": "cpca-industry-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": true,
+          "providerEmpty": false,
+          "providerFailed": false,
+          "usableSourceCount": 1
+        },
+        {
+          "provider": "akshare-industry-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": false,
+          "providerEmpty": false,
+          "providerFailed": true,
+          "usableSourceCount": 0
+        }
+      ]
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "industry_definition",
+      "ordinal": 1,
+      "globalOrdinal": 2,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "industry_definition",
+      "ordinal": 2,
+      "globalOrdinal": 3,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "market_size_growth",
+      "ordinal": 1,
+      "globalOrdinal": 4,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "market_size_growth",
+      "ordinal": 2,
+      "globalOrdinal": 5,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "supply_demand_analysis",
+      "ordinal": 1,
+      "globalOrdinal": 6,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "supply_demand_analysis",
+      "ordinal": 2,
+      "globalOrdinal": 7,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "industry_chain_analysis",
+      "ordinal": 1,
+      "globalOrdinal": 8,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "industry_chain_analysis",
+      "ordinal": 2,
+      "globalOrdinal": 9,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "competitive_landscape",
+      "ordinal": 1,
+      "globalOrdinal": 10,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "technology_evolution",
+      "ordinal": 1,
+      "globalOrdinal": 11,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "company_mapping",
+      "ordinal": 1,
+      "globalOrdinal": 12,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "risk_analysis",
+      "ordinal": 1,
+      "globalOrdinal": 13,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "REASONING_MODULE",
+      "identity": "risk_analysis",
+      "ordinal": 2,
+      "globalOrdinal": 14,
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "ACQUISITION_WAVE_2",
+      "wave": 2,
+      "attempted": true
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "official-disclosure-research-acquisition",
+      "attempted": true,
+      "returned": true,
+      "candidateCount": 0
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "gdelt-research-acquisition",
+      "attempted": true,
+      "threw": true,
+      "error": "Error"
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "miit-industry-research-acquisition",
+      "attempted": true,
+      "returned": true,
+      "candidateCount": 0
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "govcn-industry-research-acquisition",
+      "attempted": true,
+      "returned": true,
+      "candidateCount": 0
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "returned": true,
+      "candidateCount": 6
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-industry-BK1340",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-industry-BK1340",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK0877",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK0877",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1153",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1153",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1182",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1182",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1162",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1162",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1127",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1127",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "cpca-industry-research-acquisition",
+      "attempted": true,
+      "returned": true,
+      "candidateCount": 1
+    },
+    {
+      "stage": "PROVIDER_FETCH",
+      "provider": "cpca-industry-research-acquisition",
+      "candidateId": "cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5",
+      "attempted": true,
+      "returned": true
+    },
+    {
+      "stage": "PROVIDER_NORMALIZE",
+      "provider": "cpca-industry-research-acquisition",
+      "candidateId": "cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5",
+      "attempted": true,
+      "returned": true,
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "PROVIDER_DISCOVER",
+      "provider": "akshare-industry-research-acquisition",
+      "attempted": true,
+      "threw": true,
+      "error": "Error",
+      "returned": true,
+      "normalizedSourceCount": 7,
+      "outcomes": [
+        {
+          "provider": "official-disclosure-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": false,
+          "providerEmpty": true,
+          "providerFailed": false,
+          "usableSourceCount": 0
+        },
+        {
+          "provider": "gdelt-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": false,
+          "providerEmpty": false,
+          "providerFailed": true,
+          "usableSourceCount": 0
+        },
+        {
+          "provider": "miit-industry-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": false,
+          "providerEmpty": true,
+          "providerFailed": false,
+          "usableSourceCount": 0
+        },
+        {
+          "provider": "govcn-industry-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": false,
+          "providerEmpty": true,
+          "providerFailed": false,
+          "usableSourceCount": 0
+        },
+        {
+          "provider": "eastmoney-industry-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": true,
+          "providerEmpty": false,
+          "providerFailed": false,
+          "usableSourceCount": 6
+        },
+        {
+          "provider": "cpca-industry-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": true,
+          "providerEmpty": false,
+          "providerFailed": false,
+          "usableSourceCount": 1
+        },
+        {
+          "provider": "akshare-industry-research-acquisition",
+          "providerAttempted": true,
+          "providerSucceeded": false,
+          "providerEmpty": false,
+          "providerFailed": true,
+          "usableSourceCount": 0
+        }
+      ]
+    },
+    {
+      "stage": "WORKFLOW_RETURN",
+      "returned": true,
+      "status": "blocked"
+    },
+    {
+      "stage": "TEST_AUDIT",
+      "returned": true
+    }
+  ],
+  "normalizedSourceShapeAudit": [
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-industry-BK1340",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK0877",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1153",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1182",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1162",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1127",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "candidateId": "cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-industry-BK1340",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK0877",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1153",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1182",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1162",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "candidateId": "eastmoney-concept-BK1127",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "candidateId": "cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5",
+      "shape": {
+        "types": {
+          "candidate": "object",
+          "candidateId": "missing",
+          "kind": "missing",
+          "tier": "missing",
+          "title": "string",
+          "url": "missing",
+          "provider": "missing",
+          "publishedAt": "missing",
+          "metadata": "missing",
+          "retrievedAt": "string",
+          "canonicalUrl": "string",
+          "contentHash": "string",
+          "publisher": "string",
+          "rights": "object",
+          "content": "string"
+        },
+        "contradictions": [
+          {
+            "field": "metadata",
+            "expected": "object",
+            "actual": "missing"
+          }
+        ]
+      }
+    }
+  ],
+  "exception": {
+    "message": "Industry Definition is mandatory and unavailable after the bounded repair/gap-fill attempt",
+    "category": "UNKNOWN_ERROR",
+    "frames": [],
+    "firstProjectFrame": null
+  },
+  "smallestFailingBoundary": null,
+  "workflow": {
+    "status": "blocked",
+    "errors": [
+      "Industry Definition is mandatory and unavailable after the bounded repair/gap-fill attempt"
+    ],
+    "diagnostics": [
+      "Duplicate evidence skipped: eastmoney-industry-BK1340",
+      "Duplicate evidence skipped: eastmoney-concept-BK0877",
+      "Duplicate evidence skipped: eastmoney-concept-BK1153",
+      "Duplicate evidence skipped: eastmoney-concept-BK1182",
+      "Duplicate evidence skipped: eastmoney-concept-BK1162",
+      "Duplicate evidence skipped: eastmoney-concept-BK1127",
+      "Duplicate evidence skipped: cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+    ],
+    "moduleCallCounts": {
+      "industry_definition": 1,
+      "market_size_growth": 1,
+      "supply_demand_analysis": 1,
+      "industry_chain_analysis": 1,
+      "competitive_landscape": 1,
+      "technology_evolution": 1,
+      "company_mapping": 1,
+      "risk_analysis": 1
+    },
+    "acquisitionWaves": 2,
+    "gatewaySubmitCount": 0,
+    "revision": 0,
+    "proposalIds": [],
+    "committedIds": [],
+    "sourceIds": [],
+    "relationIds": [],
+    "claimIds": [],
+    "modules": [
+      {
+        "module": "industry_definition",
+        "status": "unavailable",
+        "evidenceIds": [],
+        "gaps": [
+          {
+            "gapId": "industry_definition-failure",
+            "module": "industry_definition",
+            "question": "What evidence is required?",
+            "reason": "Invalid Research Gap",
+            "actionable": true
+          }
+        ]
+      },
+      {
+        "module": "market_size_growth",
+        "status": "unavailable",
+        "evidenceIds": [],
+        "gaps": [
+          {
+            "gapId": "market_size_growth-failure",
+            "module": "market_size_growth",
+            "question": "What evidence is required?",
+            "reason": "Invalid Research Gap",
+            "actionable": true
+          }
+        ]
+      },
+      {
+        "module": "supply_demand_analysis",
+        "status": "unavailable",
+        "evidenceIds": [],
+        "gaps": [
+          {
+            "gapId": "supply_demand_analysis-failure",
+            "module": "supply_demand_analysis",
+            "question": "What evidence is required?",
+            "reason": "Invalid Research Gap",
+            "actionable": true
+          }
+        ]
+      },
+      {
+        "module": "industry_chain_analysis",
+        "status": "unavailable",
+        "evidenceIds": [],
+        "gaps": [
+          {
+            "gapId": "industry_chain_analysis-failure",
+            "module": "industry_chain_analysis",
+            "question": "What evidence is required?",
+            "reason": "Invalid Research Gap",
+            "actionable": true
+          }
+        ]
+      },
+      {
+        "module": "competitive_landscape",
+        "status": "partial",
+        "evidenceIds": [
+          "evidence-eastmoney-industry-BK1340",
+          "evidence-eastmoney-concept-BK0877"
+        ],
+        "gaps": [
+          {
+            "gapId": "gap-market-share",
+            "module": "competitive_landscape",
+            "question": "各主要PCB制造商的全球及中国市场份额、收入规模和排名如何？",
+            "reason": "当前证据只有板块成分股归属，没有市场份额或财务规模数据。",
+            "actionable": true,
+            "searchTerms": [
+              "PCB manufacturer market share China 2026",
+              "深南电路 沪电股份 鹏鼎控股 胜宏科技 市占率 营收"
+            ]
+          },
+          {
+            "gapId": "gap-segmentation",
+            "module": "competitive_landscape",
+            "question": "主要公司分别聚焦哪些PCB细分产品和应用领域？",
+            "reason": "当前证据未区分HDI、高多层板、服务器板、汽车板、消费电子板等产品结构。",
+            "actionable": true,
+            "searchTerms": [
+              "PCB company product mix HDI server automotive",
+              "深南电路 沪电股份 鹏鼎控股 产品结构 PCB"
+            ]
+          },
+          {
+            "gapId": "gap-capacity",
+            "module": "competitive_landscape",
+            "question": "主要公司的产能、扩产计划、良率和交付能力如何比较？",
+            "reason": "当前证据未提供产能、资本开支或扩产信息。",
+            "actionable": true,
+            "searchTerms": [
+              "PCB capacity expansion 2026 China",
+              "PCB industry capacity 深南电路 沪电股份 胜宏科技"
+            ]
+          },
+          {
+            "gapId": "gap-customer",
+            "module": "competitive_landscape",
+            "question": "主要公司的核心客户、客户集中度和AI服务器等终端暴露度如何？",
+            "reason": "当前证据未提供客户关系或终端应用收入占比，无法验证AI服务器PCB竞争位置。",
+            "actionable": true,
+            "searchTerms": [
+              "AI server PCB supplier customer exposure China",
+              "沪电股份 胜宏科技 深南电路 AI服务器 PCB 客户"
+            ]
+          }
+        ]
+      },
+      {
+        "module": "technology_evolution",
+        "status": "unavailable",
+        "evidenceIds": [],
+        "gaps": [
+          {
+            "gapId": "technology-evolution-evidence",
+            "module": "technology_evolution",
+            "question": "What are the major PCB technology trends and process innovations as of 2026-09-14?",
+            "reason": "No evidence was supplied.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB technology evolution 2024 2025 2026",
+              "PCB process innovation HDI mSAP substrate technology"
+            ]
+          },
+          {
+            "gapId": "ai-server-pcb",
+            "module": "technology_evolution",
+            "question": "How are AI-server and high-speed computing requirements changing PCB designs and materials?",
+            "reason": "No evidence was supplied for AI-server PCB technology.",
+            "actionable": true,
+            "searchTerms": [
+              "AI server PCB HDI high speed materials",
+              "AI accelerator PCB technology trends"
+            ]
+          },
+          {
+            "gapId": "materials-evolution",
+            "module": "technology_evolution",
+            "question": "How are CCL, copper foil, dielectric, and other PCB material technologies evolving?",
+            "reason": "No evidence was supplied for materials evolution.",
+            "actionable": true,
+            "searchTerms": [
+              "PCB CCL material technology evolution",
+              "high frequency high speed PCB laminate copper foil technology"
+            ]
+          },
+          {
+            "gapId": "company-technology-mapping",
+            "module": "technology_evolution",
+            "question": "Which named companies are developing or adopting relevant PCB technologies?",
+            "reason": "Company technology relationships require direct authoritative evidence.",
+            "actionable": true,
+            "searchTerms": [
+              "Shennan Circuit PCB technology HDI official",
+              "WUS PCB technology official",
+              "Pengding Technology PCB technology official",
+              "Shengyi Technology CCL technology official"
+            ]
+          }
+        ]
+      },
+      {
+        "module": "company_mapping",
+        "status": "supported",
+        "evidenceIds": [
+          "evidence-eastmoney-industry-BK1340",
+          "evidence-eastmoney-concept-BK0877"
+        ],
+        "gaps": [
+          {
+            "gapId": "gap-company-completeness",
+            "module": "company_mapping",
+            "question": "What is the complete and current constituent list for the PCB manufacturing industry, including stock codes and market venues?",
+            "reason": "The supplied industry-board excerpt is truncated and cannot establish exhaustive coverage.",
+            "actionable": true,
+            "searchTerms": [
+              "Eastmoney BK1340 complete constituents",
+              "印制电路板 BK1340 成分股 完整名单"
+            ]
+          },
+          {
+            "gapId": "gap-company-role",
+            "module": "company_mapping",
+            "question": "Which mapped companies are PCB manufacturers versus upstream materials, equipment providers, or diversified companies?",
+            "reason": "Board membership supports industry association but does not establish each company’s specific role in the value chain.",
+            "actionable": true,
+            "searchTerms": [
+              "深南电路 鹏鼎控股 沪电股份 兴森科技 PCB 主营业务",
+              "PCB industry chain company roles China"
+            ]
+          },
+          {
+            "gapId": "gap-target-companies",
+            "module": "company_mapping",
+            "question": "What authoritative evidence supports the requested Shennan Circuit, WUS, Pengding Technology, and Shengyi Technology company mappings and product capabilities?",
+            "reason": "The provided evidence contains board membership but not detailed company disclosures or capability-level verification.",
+            "actionable": true,
+            "searchTerms": [
+              "深南电路 PCB HDI AI服务器 年报",
+              "沪电股份 PCB AI服务器 年报",
+              "鹏鼎控股 PCB 年报",
+              "生益科技 覆铜板 PCB 年报"
+            ]
+          }
+        ]
+      },
+      {
+        "module": "risk_analysis",
+        "status": "partial",
+        "evidenceIds": [
+          "evidence-eastmoney-industry-BK1340",
+          "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
+        ],
+        "gaps": [
+          {
+            "gapId": "gap_trade_policy",
+            "module": "risk_analysis",
+            "question": "主要出口市场的关税、出口管制和贸易政策变化将如何影响中国PCB企业？",
+            "reason": "现有证据仅描述贸易规模和伙伴变化，未提供政策情景或企业暴露度。",
+            "actionable": true,
+            "searchTerms": [
+              "中国PCB 2026 关税 出口管制 美国 东南亚 墨西哥",
+              "PCB贸易政策风险 2026"
+            ]
+          },
+          {
+            "gapId": "gap_supply_chain",
+            "module": "risk_analysis",
+            "question": "覆铜板、铜箔、玻纤布、设备及化学品等关键环节是否存在供应集中或替代困难？",
+            "reason": "现有证据未覆盖PCB上游材料和设备供应商结构。",
+            "actionable": true,
+            "searchTerms": [
+              "PCB产业链 覆铜板 铜箔 供应集中度 风险",
+              "PCB关键材料 供应链风险 中国"
+            ]
+          },
+          {
+            "gapId": "gap_company_risk",
+            "module": "risk_analysis",
+            "question": "主要PCB上市公司的客户集中度、产能利用率、资本开支和海外收入暴露分别如何？",
+            "reason": "Eastmoney证据可确认行业板块成员，但未提供公司经营和财务风险指标。",
+            "actionable": true,
+            "searchTerms": [
+              "深南电路 沪电股份 鹏鼎控股 PCB 产能利用率 客户集中度 2025年报",
+              "胜宏科技 景旺电子 生益科技 海外收入 风险"
+            ]
+          },
+          {
+            "gapId": "gap_environment",
+            "module": "risk_analysis",
+            "question": "PCB生产的环保、安全和污染物排放监管是否构成区域性经营风险？",
+            "reason": "现有证据未覆盖环保合规、排放成本或监管处罚信息。",
+            "actionable": true,
+            "searchTerms": [
+              "PCB 环保监管 排放 合规 风险 2025 2026",
+              "印制电路板 电镀 环保政策 中国"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "canonical": {
+    "countsBefore": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "countsAfter": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "status": "passed",
+    "diagnosticCodes": []
+  },
+  "report": {
+    "persisted": false,
+    "sectionCount": 0,
+    "reportType": null
+  },
+  "privacy": {
+    "rawBodies": false,
+    "credentials": false,
+    "privatePaths": false,
+    "reasoningTraces": false
+  },
+  "finalClassification": "TYPEERROR_EXTERNAL_OR_MODEL_INCONCLUSIVE"
+}
