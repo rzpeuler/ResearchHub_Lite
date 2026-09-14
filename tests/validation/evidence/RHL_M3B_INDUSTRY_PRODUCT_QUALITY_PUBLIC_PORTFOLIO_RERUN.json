@@ -1,0 +1,667 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-037-INDUSTRY-PRODUCT-QUALITY-PUBLIC-PORTFOLIO-RERUN",
+  "baseline": "e627d29e84f1925fd15ad746597e71fe84f5c7b6",
+  "generatedAt": "2026-09-14T08:34:17.347Z",
+  "codexPreflight": {
+    "discovered": true,
+    "versionAvailable": true,
+    "helpAvailable": true,
+    "resolutionSource": "environment",
+    "executableKind": "native",
+    "version": "codex-cli 0.154.0"
+  },
+  "liveRunStarted": true,
+  "error": "Cannot read properties of undefined (reading 'some')",
+  "providerOutcomes": [
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "phase": "discover",
+      "succeeded": true,
+      "candidates": 0
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "phase": "discover",
+      "succeeded": false,
+      "failed": true,
+      "error": "fetch failed"
+    },
+    {
+      "provider": "miit-industry-research-acquisition",
+      "phase": "discover",
+      "succeeded": true,
+      "candidates": 0
+    },
+    {
+      "provider": "govcn-industry-research-acquisition",
+      "phase": "discover",
+      "succeeded": true,
+      "candidates": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "discover",
+      "succeeded": true,
+      "candidates": 6
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK0877",
+      "contentHash": "5f616ab1288b2bd7293a49108c7391e1cccff3e0777893bc2c750f61f03f8f06",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK1153",
+      "contentHash": "e6701d365dc7c7128e08ccda9cabee854f632a835c1b241461ee5419da9ad926",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK1182",
+      "contentHash": "b8e28a734de3c1579181759d27c683aa0c7d9dcac8612b609368ff3542db2c35",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK1162",
+      "contentHash": "6ae3e21a6da694a6d09b4b827c4b16aa2dc1585948b886cf1890901797264892",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK1127",
+      "contentHash": "4baadd2cbeae5bc869f88d8486f6dec9320574124a7a5326d5273b7e606ec967",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK1178",
+      "contentHash": "e130237f65a28a43868854af3a93f20cc0c841f456dc2680f7aec32129618c63",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "phase": "discover",
+      "succeeded": true,
+      "candidates": 0
+    },
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "phase": "discover",
+      "succeeded": true,
+      "candidates": 0
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "phase": "discover",
+      "succeeded": false,
+      "failed": true,
+      "error": "GDELT request failed with HTTP 429"
+    },
+    {
+      "provider": "miit-industry-research-acquisition",
+      "phase": "discover",
+      "succeeded": true,
+      "candidates": 0
+    },
+    {
+      "provider": "govcn-industry-research-acquisition",
+      "phase": "discover",
+      "succeeded": true,
+      "candidates": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "discover",
+      "succeeded": true,
+      "candidates": 6
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK0877",
+      "contentHash": "0c3d27f2f3c831491a65c5711df0f2eb9450e2e0c70d359361a2303dbe1d4499",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK1153",
+      "contentHash": "d87d9abb41cc79ff95dc54a452aaa83f69426ce2c2d6e6626a52ed905588b280",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK1182",
+      "contentHash": "1243dad772a68a9ac9135888bc6aa74d729f31b315d3e1deed8bbbfacbbc7a1c",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK1162",
+      "contentHash": "7ed9d5adbe19dffe366316b147887808bfecdbc38cdee8b1adaa423f6e90e1ba",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK1127",
+      "contentHash": "e47209e28d33f3ec73f6a45d965fd1d6c2b89bbd46e42d336955b90c168d05e5",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "normalized",
+      "succeeded": true,
+      "candidateId": "eastmoney-concept-BK1178",
+      "contentHash": "5c36750258e1fc079435c70193deca8c5830c6dc153a9a6765757c1300506d27",
+      "canonicalHost": "push2.eastmoney.com"
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "phase": "discover",
+      "succeeded": true,
+      "candidates": 0
+    }
+  ],
+  "finalClassification": "PRODUCT_QUALITY_LIVE_INCONCLUSIVE",
+  "privacyFlags": {
+    "rawBodiesIncluded": false,
+    "hiddenReasoningIncluded": false,
+    "credentialsIncluded": false,
+    "privatePathsIncluded": false
+  },
+  "test036Acceptance": "RUNTIME_PATH_HEALTHY",
+  "historicalComparison": {
+    "test031": "partial evidence accepted",
+    "test032": "live inconclusive; not reused as product-quality conclusion"
+  },
+  "selectedModel": {
+    "backend": "codex-cli",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "medium",
+    "fallback": false
+  },
+  "productionProviderOrder": [
+    "official-disclosure-research-acquisition",
+    "gdelt-research-acquisition",
+    "miit-industry-research-acquisition",
+    "govcn-industry-research-acquisition",
+    "eastmoney-industry-research-acquisition",
+    "cpca-industry-research-acquisition",
+    "akshare-industry-research-acquisition"
+  ],
+  "providerCoverageMatrix": [
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": true,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": true,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": "fetch failed",
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "miit-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": true,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "govcn-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": true,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": true,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": true,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "attempted": true,
+      "succeeded": false,
+      "empty": false,
+      "failed": true,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": "GDELT request failed with HTTP 429",
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "miit-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": true,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "govcn-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": true,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": false,
+      "failed": false,
+      "usableNormalizedSourceCount": 1,
+      "distinctContentCount": 1,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "attempted": true,
+      "succeeded": true,
+      "empty": true,
+      "failed": false,
+      "usableNormalizedSourceCount": 0,
+      "distinctContentCount": 0,
+      "sourceTierDistribution": {},
+      "canonicalHostSet": [],
+      "publicationDateAvailability": null,
+      "failureCategory": null,
+      "historicalObservedOutcomeCategories": [],
+      "recurrenceCount": 0
+    }
+  ],
+  "reasoningCallAudit": {
+    "liveModelCallCount": null,
+    "designCallCount": null,
+    "synthesisCallCount": null,
+    "perModuleCallCounts": {
+      "industry_definition": null,
+      "market_size_growth": null,
+      "supply_demand_analysis": null,
+      "industry_chain_analysis": null,
+      "competitive_landscape": null,
+      "technology_evolution": null,
+      "company_mapping": null,
+      "risk_analysis": null
+    },
+    "repairBoundViolation": null
+  },
+  "workflow": {
+    "status": null,
+    "errors": [
+      "Cannot read properties of undefined (reading 'some')"
+    ],
+    "diagnostics": [],
+    "acquisitionWaves": null,
+    "gatewaySubmitCount": null,
+    "proposalIds": [],
+    "committedIds": [],
+    "sourceIds": [],
+    "relationIds": [],
+    "claimIds": [],
+    "knowledgeBaseRevision": null
+  },
+  "canonicalProvenanceAudit": {
+    "status": "not_reached",
+    "validationStatus": "not_reached",
+    "diagnosticCodes": [],
+    "sourceRawProvenanceComplete": null,
+    "reportReferencesResolve": null
+  },
+  "report": {
+    "type": null,
+    "sectionCount": 0,
+    "sectionTitles": [],
+    "expectedTitles": [
+      "Executive Industry View",
+      "Industry Scope & Definition",
+      "Market Size & Growth",
+      "Demand Structure & Drivers",
+      "Supply, Capacity & Utilization",
+      "Supply-Demand Balance & Pricing",
+      "Industry Chain Map",
+      "Value Capture & Industry Economics",
+      "Competitive Landscape",
+      "Technology & Product Roadmap",
+      "Company Mapping & Exposure",
+      "Catalysts",
+      "Risks & Invalidation Conditions",
+      "Key Metrics & Monitoring",
+      "Research Gaps & Alternative Views",
+      "Methodology & Provenance"
+    ],
+    "snapshotAvailable": false
+  },
+  "moduleGapMatrix": [],
+  "productDimensions": [],
+  "numericalAudit": {
+    "assertions": [],
+    "unsupportedNumericCount": 0
+  },
+  "companyMappingAudit": {
+    "distinctNamedCompanies": [],
+    "distinctNamedCompanyCount": 0,
+    "evidenceBackedCompanyCount": 0,
+    "durableCompanyCount": 0,
+    "exposureStatementsWithSourceSupport": 0,
+    "exposureExceedsEvidence": null
+  },
+  "industryChainCoverageAudit": {},
+  "monitoringAudit": {},
+  "researchGapsAudit": {
+    "status": "not_reached"
+  },
+  "methodologyProvenanceAudit": {
+    "status": "not_reached"
+  },
+  "durableSemanticDensity": {},
+  "recommendedEvidencePriorities": [],
+  "authoritativeErrors": [
+    "Cannot read properties of undefined (reading 'some')"
+  ],
+  "authoritativeDiagnostics": [],
+  "nextStep": "Diagnose the authoritative production Workflow/model boundary behind the captured error, then rerun the exact bounded review once."
+}

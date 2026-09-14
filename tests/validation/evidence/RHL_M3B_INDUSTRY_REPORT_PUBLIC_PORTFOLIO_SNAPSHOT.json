@@ -1,0 +1,14 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-037-INDUSTRY-PRODUCT-QUALITY-PUBLIC-PORTFOLIO-RERUN",
+  "reportAvailable": false,
+  "sectionCount": 0,
+  "sections": [],
+  "reason": "The single live run terminated before a trustworthy user-facing report object was available.",
+  "privacyFlags": {
+    "rawBodiesIncluded": false,
+    "completeOutputsIncluded": false,
+    "hiddenReasoningIncluded": false,
+    "credentialsIncluded": false,
+    "privatePathsIncluded": false
+  }
+}
