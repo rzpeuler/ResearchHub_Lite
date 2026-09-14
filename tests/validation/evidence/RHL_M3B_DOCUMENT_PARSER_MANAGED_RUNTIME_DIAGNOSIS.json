@@ -1,0 +1,94 @@
+{
+  "task043Context": {
+    "accepted": true,
+    "finalClassification": "PRODUCT_QUALITY_BLOCKED_BY_EVIDENCE",
+    "workflowStatus": "blocked",
+    "acquisitionWaves": 2,
+    "gatewaySubmitCount": 0,
+    "canonicalRevisionDelta": 0,
+    "mandatoryIndustryDefinition": "unavailable",
+    "pdfAnchorNormalizationFailures": 2
+  },
+  "productionParserContract": {
+    "defaultManagedPython": "default_managed_python",
+    "defaultManagedArtifacts": "default_managed_artifacts",
+    "bridge": "plugins/document/parsers/docling/bridge/docling_bridge.py",
+    "offline": true
+  },
+  "configuredOverrides": {
+    "pythonExecutableConfigured": false,
+    "artifactsPathConfigured": false
+  },
+  "defaultManagedRuntime": {
+    "semanticLabel": "default_managed_python",
+    "exists": false,
+    "executable": false
+  },
+  "selectedInterpreter": {
+    "candidateLabel": "default_managed_python",
+    "executableAvailable": false,
+    "venvModuleAvailable": false,
+    "pipModuleAvailable": false,
+    "doclingImportAvailable": false
+  },
+  "systemPythonProbes": [
+    {
+      "candidateLabel": "system_python",
+      "executableAvailable": true,
+      "version": "3.12.10",
+      "venvModuleAvailable": true,
+      "pipModuleAvailable": true,
+      "doclingImportAvailable": true,
+      "doclingVersion": "2.116.0"
+    },
+    {
+      "candidateLabel": "system_py_3",
+      "executableAvailable": true,
+      "version": "3.12.10",
+      "venvModuleAvailable": true,
+      "pipModuleAvailable": true,
+      "doclingImportAvailable": true,
+      "doclingVersion": "2.116.0"
+    }
+  ],
+  "doclingDependency": {
+    "importAvailable": false,
+    "version": null
+  },
+  "artifacts": {
+    "exists": false,
+    "isDirectory": false,
+    "nonEmpty": false,
+    "entryCount": 0,
+    "semanticLabel": "default_managed_artifacts"
+  },
+  "defaultManagedArtifacts": {
+    "exists": false,
+    "isDirectory": false,
+    "nonEmpty": false,
+    "entryCount": 0,
+    "semanticLabel": "default_managed_artifacts"
+  },
+  "bridge": {
+    "path": "plugins/document/parsers/docling/bridge/docling_bridge.py",
+    "exists": true,
+    "readable": true
+  },
+  "offlineSmoke": {
+    "status": "skipped"
+  },
+  "repositoryBootstrapMechanism": {
+    "packageScriptPresent": false,
+    "scriptsSetupFilePresent": false,
+    "present": false
+  },
+  "privacy": {
+    "absolutePathsPersisted": false,
+    "userProfilePathsPersisted": false,
+    "environmentValuesPersisted": false,
+    "credentialsOrTokensPersisted": false,
+    "rawEnvironmentDumpPersisted": false,
+    "fixtureTextPersisted": false
+  },
+  "finalClassification": "REPOSITORY_BOOTSTRAP_GAP"
+}
