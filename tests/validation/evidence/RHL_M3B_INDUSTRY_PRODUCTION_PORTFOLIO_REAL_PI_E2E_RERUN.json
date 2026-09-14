@@ -1,0 +1,460 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-029-PRODUCTION-PORTFOLIO-REAL-PI-E2E-RERUN",
+  "baseline": "9311c1ffde8315aee63530b78685d68a88ecaee6",
+  "generatedAt": "2026-09-14T03:13:05.176Z",
+  "codexPreflight": {
+    "discovered": true,
+    "resolutionSource": "environment",
+    "executableKind": "native",
+    "versionAvailable": true,
+    "version": "codex-cli 0.154.0",
+    "helpAvailable": true
+  },
+  "target": {
+    "nameHash": "d237e80ac4afd1c3b3e273659df072d993f7f3d07369812122f1c51fd83ebee2",
+    "aliasHashes": [
+      "43aa64a6e9f0de8180d265ec46aaa7b0970934383d34c583615507f786e16e84",
+      "b196f38b4334ec46d67ee5ccb0da9d31614d95d3463a7c411fe31aa4cfe51303"
+    ],
+    "searchTermHashes": [
+      "46bb3732afeec353f1e16d2998ec246147c367376576e8ecc4f6fac03d604709",
+      "809f17cfd206bec0365132574691bcd51413d3f296cb46099b19512d2766c73f",
+      "9fceb52361400f99860606940544efcaf389d81c515a1ea5edb7cd74849d0314",
+      "39cb99ef2444c650810ea2d229f8435440195fba7248732dcfa495e1e60eca11",
+      "c4e1b774012fc7cacc55b68172e0a909081ac20771de21fb1cd7bada5ec8e93d",
+      "0c970d386f6da1b1c61cd87f1c8562281c76683b91c9dae64aa324e79cddf6f7",
+      "f2debfd39bcf2c7a0141f7065e4d6b8a11cb9413dd79ffa74a75c162f33b3dd6",
+      "ef1bbacb60b5994fc4bd542621045bd9b841928a4c16adcfc457415d3b9aab12"
+    ],
+    "asOf": "2026-09-14T00:00:00.000Z"
+  },
+  "productionProviderOrder": [
+    "official-disclosure-research-acquisition",
+    "gdelt-research-acquisition",
+    "miit-industry-research-acquisition",
+    "govcn-industry-research-acquisition",
+    "eastmoney-industry-research-acquisition",
+    "cpca-industry-research-acquisition",
+    "akshare-industry-research-acquisition"
+  ],
+  "providerOutcomes": [
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": true,
+      "providerFailed": false,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": false,
+      "providerFailed": true,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "miit-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": true,
+      "providerFailed": false,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "govcn-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": true,
+      "providerFailed": false,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": false,
+      "providerFailed": true,
+      "usableSourceCount": 0
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": true,
+      "providerEmpty": false,
+      "providerFailed": false,
+      "usableSourceCount": 2
+    },
+    {
+      "provider": "akshare-industry-research-acquisition",
+      "providerAttempted": true,
+      "providerSucceeded": false,
+      "providerEmpty": false,
+      "providerFailed": true,
+      "usableSourceCount": 0
+    }
+  ],
+  "providerTelemetry": [
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": false,
+      "empty": null,
+      "failed": true,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null,
+      "error": "Unexpected token 'Q', \"Queries co\"... is not valid JSON"
+    },
+    {
+      "provider": "miit-industry-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null
+    },
+    {
+      "provider": "govcn-industry-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": false,
+      "empty": null,
+      "failed": true,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null,
+      "error": "fetch failed"
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "phase": "normalized",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 1,
+      "tier": 4,
+      "canonicalHost": "www.cpca.org.cn",
+      "publicationDateAvailable": true,
+      "contentHash": "adf0466dc924cc57ea675a49a346050a1311989a7ce9857d5e772b20cb413fec"
+    },
+    {
+      "provider": "official-disclosure-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null
+    },
+    {
+      "provider": "gdelt-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": false,
+      "empty": null,
+      "failed": true,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null,
+      "error": "GDELT request failed with HTTP 429"
+    },
+    {
+      "provider": "miit-industry-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null
+    },
+    {
+      "provider": "govcn-industry-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null
+    },
+    {
+      "provider": "eastmoney-industry-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": false,
+      "empty": null,
+      "failed": true,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null,
+      "error": "fetch failed"
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null
+    },
+    {
+      "provider": "cpca-industry-research-acquisition",
+      "phase": "normalized",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 1,
+      "tier": 4,
+      "canonicalHost": "www.cpca.org.cn",
+      "publicationDateAvailable": true,
+      "contentHash": "adf0466dc924cc57ea675a49a346050a1311989a7ce9857d5e772b20cb413fec"
+    },
+    {
+      "provider": "test-029-deterministic-replay-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null
+    },
+    {
+      "provider": "test-029-deterministic-replay-acquisition",
+      "phase": "normalized",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 1,
+      "tier": 4,
+      "canonicalHost": "www.cpca.org.cn",
+      "publicationDateAvailable": true,
+      "contentHash": "adf0466dc924cc57ea675a49a346050a1311989a7ce9857d5e772b20cb413fec"
+    },
+    {
+      "provider": "test-029-deterministic-replay-acquisition",
+      "phase": "normalized",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 1,
+      "tier": 4,
+      "canonicalHost": "www.cpca.org.cn",
+      "publicationDateAvailable": true,
+      "contentHash": "adf0466dc924cc57ea675a49a346050a1311989a7ce9857d5e772b20cb413fec"
+    },
+    {
+      "provider": "test-029-deterministic-replay-acquisition",
+      "phase": "discover",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 0,
+      "tier": null,
+      "canonicalHost": null,
+      "publicationDateAvailable": null,
+      "contentHash": null
+    },
+    {
+      "provider": "test-029-deterministic-replay-acquisition",
+      "phase": "normalized",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 1,
+      "tier": 4,
+      "canonicalHost": "www.cpca.org.cn",
+      "publicationDateAvailable": true,
+      "contentHash": "adf0466dc924cc57ea675a49a346050a1311989a7ce9857d5e772b20cb413fec"
+    },
+    {
+      "provider": "test-029-deterministic-replay-acquisition",
+      "phase": "normalized",
+      "attempted": true,
+      "succeeded": true,
+      "empty": null,
+      "failed": false,
+      "usableSourceCount": 1,
+      "tier": 4,
+      "canonicalHost": "www.cpca.org.cn",
+      "publicationDateAvailable": true,
+      "contentHash": "adf0466dc924cc57ea675a49a346050a1311989a7ce9857d5e772b20cb413fec"
+    }
+  ],
+  "reasoning": {
+    "operationCounts": {
+      "industry_research_design": 1,
+      "industry_module_analysis": 8,
+      "industry_cross_module_synthesis": 2
+    },
+    "operations": [
+      "industry_research_design",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_module_analysis",
+      "industry_cross_module_synthesis",
+      "industry_cross_module_synthesis"
+    ]
+  },
+  "liveRunStatus": "not_completed",
+  "eightModuleStatusSummary": [],
+  "acquisitionWaveCount": null,
+  "gatewaySubmissionCount": null,
+  "writerCommitCount": 0,
+  "revisionDelta": 0,
+  "canonicalObjectCounts": {
+    "before": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    },
+    "after": {
+      "entity": 0,
+      "relation": 0,
+      "claim": 0,
+      "source": 0
+    }
+  },
+  "sourceRawProvenanceAudit": {
+    "allSourcesHaveRaw": true,
+    "rawCount": 0
+  },
+  "unsupportedNumericCount": 0,
+  "graphSummary": {
+    "root": false,
+    "projectionHash": "a461bf77bc4e4d73"
+  },
+  "report": {
+    "type": null,
+    "sectionCount": 0,
+    "sectionTitles": [],
+    "expectedTitles": [
+      "Executive Industry View",
+      "Industry Scope & Definition",
+      "Market Size & Growth",
+      "Demand Structure & Drivers",
+      "Supply, Capacity & Utilization",
+      "Supply-Demand Balance & Pricing",
+      "Industry Chain Map",
+      "Value Capture & Industry Economics",
+      "Competitive Landscape",
+      "Technology & Product Roadmap",
+      "Company Mapping & Exposure",
+      "Catalysts",
+      "Risks & Invalidation Conditions",
+      "Key Metrics & Monitoring",
+      "Research Gaps & Alternative Views",
+      "Methodology & Provenance"
+    ]
+  },
+  "replay": {
+    "status": "failed",
+    "liveModelCalls": 0,
+    "liveProviderCalls": 0,
+    "semanticOperations": 11,
+    "revisionDelta": 0,
+    "duplicates": {
+      "entity": false,
+      "relation": false,
+      "claim": false,
+      "source": false
+    },
+    "rootIdStable": true,
+    "graphProjectionHash": "a461bf77bc4e4d73"
+  },
+  "privacy": {
+    "rawBodiesIncluded": false,
+    "completePromptsIncluded": false,
+    "completeOutputsIncluded": false,
+    "credentialsIncluded": false,
+    "privatePathsIncluded": false,
+    "reasoningTracesIncluded": false
+  },
+  "finalClassification": "PORTFOLIO_E2E_PRODUCTION_DEFECT"
+}
