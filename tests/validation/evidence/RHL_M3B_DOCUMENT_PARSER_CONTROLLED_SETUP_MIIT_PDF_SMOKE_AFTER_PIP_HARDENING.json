@@ -1,0 +1,108 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-052-DOCUMENT-PARSER-CONTROLLED-SETUP-MIIT-PDF-SMOKE-AFTER-PIP-HARDENING",
+  "baseCommit": "49e7dd9ae576505ed4addfe29476a3fd86bd1fd0",
+  "fix051Acceptance": {
+    "accepted": true,
+    "status": "COMPLETED",
+    "testsStatus": "FAILED",
+    "testsEvidenceOnly": true,
+    "commitRelation": "exactly_one_commit_ahead_of_TEST_050",
+    "parent": "89f1bc2ee18bea327adbaf687a3cd1f193780ffa",
+    "head": "49e7dd9ae576505ed4addfe29476a3fd86bd1fd0",
+    "modifiedFiles": [
+      "scripts/document-parser-runtime.mjs",
+      "tests/scripts/document-parser-runtime.test.ts",
+      "docs/task-reports/RHL-M3B-3B-FIX-051-DOCUMENT-PARSER-PIP-INSTALL-BUDGET-HARDENING.md"
+    ],
+    "pipInstallOuterBudgetMs": 1800000,
+    "pipPolicyAccepted": true
+  },
+  "preRunState": {
+    "finalVenvExists": false,
+    "finalManagedPythonExists": false,
+    "finalModelsExists": false,
+    "finalModelsNonEmpty": false,
+    "staleStagingCount": 2,
+    "setupTelemetryPresent": true
+  },
+  "preflight": {
+    "status": "MANAGED_PYTHON_MISSING",
+    "pythonReady": false,
+    "dependencyReady": false,
+    "artifactsReady": false,
+    "bridgeReady": false
+  },
+  "preSetupTelemetry": {
+    "schemaVersion": 1,
+    "stage": "PIP_INSTALL",
+    "status": "RUNNING",
+    "lastCompletedStage": "VENV_CREATE",
+    "elapsedBucket": "1_5S"
+  },
+  "setupInvoked": true,
+  "setupInvocationCount": 1,
+  "setupResult": {
+    "status": "READY"
+  },
+  "postSetupTelemetry": {
+    "schemaVersion": 1,
+    "stage": "READY",
+    "status": "SUCCEEDED",
+    "lastCompletedStage": "READY",
+    "elapsedBucket": "GTE_120S"
+  },
+  "postSetupPreflight": {
+    "status": "READY",
+    "pythonReady": true,
+    "dependencyReady": true,
+    "artifactsReady": true,
+    "bridgeReady": true
+  },
+  "selectedMiitAnchor": {
+    "title": "印制电路板行业规范条件",
+    "url": "https://wap.miit.gov.cn/cms_files/filemanager/oldfile/miit/n1146295/n1652858/n1652930/n4509607/c6577041/part/6577143.pdf",
+    "publishedAt": "2013-09-17T00:00:00.000Z",
+    "candidateId": "miit-6684405f12e71c69eac209a2cfd69df63aee1f2e3f7e7c5985d89cc8c678549c",
+    "provider": "miit",
+    "tier": 1,
+    "kind": "official_disclosure",
+    "officialHost": "wap.miit.gov.cn",
+    "asOf": "2026-09-14T00:00:00.000Z",
+    "asOfEligible": true
+  },
+  "fetch": {
+    "attempted": true,
+    "status": "succeeded",
+    "byteCount": 163004,
+    "mediaType": "application/pdf",
+    "contentHash": "e7683d07af5da1207f28dc9c18a622d1e313b215c8022ca7862ac2c6b6a91f30"
+  },
+  "normalization": {
+    "attempted": true,
+    "status": "succeeded",
+    "normalizedCharacterCount": 4999,
+    "contentHash": "e7683d07af5da1207f28dc9c18a622d1e313b215c8022ca7862ac2c6b6a91f30",
+    "publisher": "Ministry of Industry and Information Technology",
+    "rightsSummary": "public"
+  },
+  "relevance": {
+    "pcbIdentity": true,
+    "scopeBoundary": true
+  },
+  "privacy": {
+    "absolutePathsPersisted": false,
+    "executablePathsPersisted": false,
+    "stagingPathsPersisted": false,
+    "rawSetupOutputPersisted": false,
+    "environmentValuesPersisted": false,
+    "proxyValuesPersisted": false,
+    "credentialsPersisted": false,
+    "rawPdfBytesPersisted": false,
+    "normalizedFullTextPersisted": false,
+    "packageIndexesPersisted": false,
+    "packageCachesPersisted": false,
+    "dependencyModelInventoriesPersisted": false,
+    "evidenceSelfCheck": true
+  },
+  "finalClassification": "DOCUMENT_PARSER_MIIT_PDF_READY"
+}
