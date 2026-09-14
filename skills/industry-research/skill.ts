@@ -18,6 +18,7 @@ import {
   type LocalReportMaterial,
   type ResearchDesign,
   type ResearchGap,
+  isValidIndustryStructuredValue,
 } from "./contracts.ts";
 type R = Record<string, unknown>;
 const obj = (v: unknown): v is R =>
@@ -221,17 +222,7 @@ function proposal(
     if (v[k] !== undefined && (!uniq(v[k]) || v[k].some((x) => !local(x))))
       fail("proposal_invalid", "Proposal contains invalid local link");
   if (v.kind === "claim" && v.structuredValue != null) {
-    const x = v.structuredValue;
-    if (
-      !obj(x) ||
-      !text(x.metric) ||
-      !("value" in x) ||
-      !finite(x.value) ||
-      !text(x.unit) ||
-      !text(x.comparator) ||
-      (x.period !== undefined && !text(x.period)) ||
-      (x.fiscalPeriod !== undefined && !text(x.fiscalPeriod))
-    )
+    if (!isValidIndustryStructuredValue(v.structuredValue))
       fail("proposal_invalid", "Malformed quantitative structured value");
   }
   seen.add(v.proposalId);

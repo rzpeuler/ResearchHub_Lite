@@ -7,7 +7,7 @@ import { validateUsableAcquisitionPayload } from '../../plugins/research-acquisi
 import { validateRelationAttributesV03 } from '../../knowledge/validation/v03-validation-core.ts'
 import type { NormalizedResearchSource } from '../../plugins/research-acquisition/contracts.ts'
 import { IndustryResearchSkill } from '../../skills/industry-research/skill.ts'
-import { INDUSTRY_MODULES, type IndustryModuleResult, type IndustryResearchModule, type ModuleEvidence, type ResearchDesign, type ResearchGap } from '../../skills/industry-research/contracts.ts'
+import { INDUSTRY_MODULES, isValidIndustryStructuredValue, type IndustryModuleResult, type IndustryResearchModule, type ModuleEvidence, type ResearchDesign, type ResearchGap } from '../../skills/industry-research/contracts.ts'
 import type { SemanticProductionProposal } from '../../knowledge/production/contracts.ts'
 import { validateResearchReport, writeResearchReport } from '../../app/services/research-report.ts'
 import type { IndustryDeepResearchInput, IndustryDeepResearchResult } from './contracts.ts'
@@ -61,9 +61,9 @@ function gate(modules: readonly IndustryModuleResult[], synthesis: { proposals: 
     if (rejected.has(p.subjectKey)||rejected.has(p.targetKey ?? '')||!durable(p)||!d||!relationTypes.has(p.relationType ?? '')||!st||!tt||!(d.sourceTypes as readonly string[]).includes(st)||!(d.targetTypes as readonly string[]).includes(tt)||!validateRelationAttributesV03(p.relationType!,p.attributes).valid||!supplier) { diagnostics.push(`Relation rejected: ${p.proposalId}`); continue }
     relations.set(p.proposalId,p); out.push(p)
   }
-  const structured=(v:unknown)=>{ if(!v||typeof v!=='object'||Array.isArray(v)) return false; const x=v as Record<string,unknown>; return typeof x.metric==='string'&&x.metric.trim()!==''&&'value' in x&&(typeof x.value==='number'?Number.isFinite(x.value):typeof x.value==='string'?x.value.trim()!=='':typeof x.value==='boolean')&&typeof x.unit==='string'&&x.unit.trim()!==''&&typeof x.comparator==='string'&&x.comparator.trim()!==''&&((typeof x.period==='string'&&x.period.trim()!=='')||(typeof x.fiscalPeriod==='string'&&x.fiscalPeriod.trim()!=='')) }
+const structured=isValidIndustryStructuredValue
   const claims=normalized.filter((p)=>p.kind==='claim').filter((p)=>{ if(!durable(p)||!p.statement?.trim()||!claimTypes.has(p.claimType ?? '')||rejected.has(p.subjectKey)||(!valid.has(p.subjectKey)&&!relations.has(p.subjectKey))||(p.structuredValue!=null&&!structured(p.structuredValue))){diagnostics.push(`Claim rejected: ${p.proposalId}`);return false} return true }).sort((a,b)=>a.proposalId.localeCompare(b.proposalId))
-  const slot=(p:SemanticProductionProposal)=>{const v=p.structuredValue as Record<string,unknown>|undefined;return stable({subject:p.subjectKey,type:p.claimType,metric:v?.metric??null,period:v?.period??null,fiscalPeriod:v?.fiscalPeriod??null,geography:v?.geography??null,measurementDefinition:v?.measurementDefinition??null,sourceMethodology:v?.sourceMethodology??null})}
+const slot=(p:SemanticProductionProposal)=>{const v=p.structuredValue as Record<string,unknown>|undefined;return stable({subject:p.subjectKey,type:p.claimType,metric:v?.metric??null,period:v?.period??null,fiscalPeriod:v?.fiscalPeriod??null,semanticKey:v?.semanticKey??null})}
   const claimGroups=new Map<string,SemanticProductionProposal[]>(); for(const p of claims)(claimGroups.get(slot(p)) ?? (claimGroups.set(slot(p),[]),claimGroups.get(slot(p))!)).push(p)
   const admitted=new Set<string>(), finalClaims:SemanticProductionProposal[]=[]
   for(const [slotKey,ps] of claimGroups){const values=new Set(ps.map((p)=>stable({ value: p.structuredValue, statement: p.statement }))), contradiction=(a:SemanticProductionProposal,b:SemanticProductionProposal)=>[...(a.contradictsProposalIds??[])].includes(b.proposalId)||[...(b.contradictsProposalIds??[])].includes(a.proposalId); if(values.size>1&&!ps.every((a,i)=>ps.slice(i+1).every((b)=>contradiction(a,b)))){diagnostics.push(`Unsupported same-slot conflict excluded: ${slotKey}`);continue};for(const p of ps){admitted.add(p.proposalId);finalClaims.push(p)}}

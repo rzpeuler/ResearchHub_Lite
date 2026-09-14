@@ -1,5 +1,6 @@
 import type { NormalizedResearchSource } from "../../plugins/research-acquisition/contracts.ts";
 import type { SemanticProductionProposal } from "../../knowledge/production/contracts.ts";
+import { KNOWLEDGE_SCHEMA_V04 } from "../../knowledge/schema/executable-schema-v04.ts";
 export const INDUSTRY_MODULES = [
   "industry_definition",
   "market_size_growth",
@@ -11,6 +12,30 @@ export const INDUSTRY_MODULES = [
   "risk_analysis",
 ] as const;
 export type IndustryResearchModule = (typeof INDUSTRY_MODULES)[number];
+export const INDUSTRY_STRUCTURED_VALUE_FIELDS = KNOWLEDGE_SCHEMA_V04.claim.structuredValueFields;
+export const INDUSTRY_STRUCTURED_VALUE_COMPARATORS = KNOWLEDGE_SCHEMA_V04.claim.comparators;
+const structuredValueFieldSet = new Set<string>(INDUSTRY_STRUCTURED_VALUE_FIELDS);
+const structuredValueComparatorSet = new Set<string>(INDUSTRY_STRUCTURED_VALUE_COMPARATORS);
+
+export function isValidIndustryStructuredValue(value: unknown): value is {
+  metric: string;
+  value: number | string | boolean;
+  unit: string;
+  comparator: (typeof INDUSTRY_STRUCTURED_VALUE_COMPARATORS)[number];
+  period?: string;
+  fiscalPeriod?: string;
+  semanticKey?: string;
+} {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const x = value as Record<string, unknown>;
+  if (Object.keys(x).some((key) => !structuredValueFieldSet.has(key))) return false;
+  if (typeof x.metric !== "string" || x.metric.trim() === "" || x.metric.length > 200) return false;
+  if (!(typeof x.value === "number" ? Number.isFinite(x.value) : typeof x.value === "string" ? x.value.trim() !== "" : typeof x.value === "boolean")) return false;
+  if (typeof x.unit !== "string" || x.unit.trim() === "" || x.unit.length > 80) return false;
+  if (typeof x.comparator !== "string" || !structuredValueComparatorSet.has(x.comparator)) return false;
+  if ((x.period !== undefined && (typeof x.period !== "string" || x.period.trim() === "" || x.period.length > 80)) || (x.fiscalPeriod !== undefined && (typeof x.fiscalPeriod !== "string" || x.fiscalPeriod.trim() === "" || x.fiscalPeriod.length > 80)) || (x.semanticKey !== undefined && (typeof x.semanticKey !== "string" || x.semanticKey.trim() === "" || x.semanticKey.length > 200))) return false;
+  return (typeof x.period === "string" && x.period.trim() !== "") || (typeof x.fiscalPeriod === "string" && x.fiscalPeriod.trim() !== "" );
+}
 export type IndustryTargetKind =
   "industry" | "theme" | "product" | "technology" | "uncertain";
 export const INDUSTRY_RELATION_TYPES = [
@@ -189,12 +214,10 @@ const structuredValue = {
     metric: boundedString(200),
     value: {},
     unit: boundedString(80),
-    comparator: boundedString(40),
+    comparator: { enum: [...INDUSTRY_STRUCTURED_VALUE_COMPARATORS] },
     period: boundedString(80),
     fiscalPeriod: boundedString(80),
-    geography: boundedString(200),
-    measurementDefinition: boundedString(500),
-    sourceMethodology: boundedString(500),
+    semanticKey: boundedString(200),
   },
 };
 const entityProposal = {

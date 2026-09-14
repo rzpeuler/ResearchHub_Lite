@@ -114,6 +114,16 @@ test('Codex schema normalizer preserves Design structure and strips ResearchHub 
   assert.equal(JSON.stringify(normalized.schema).includes('proposalRules'), false)
 })
 
+test('Codex schema normalizer preserves the Schema 0.4 Industry structured value contract', async () => {
+  const { createIndustryModuleResultContract } = await import('../../../skills/industry-research/contracts.ts')
+  const source = createIndustryModuleResultContract('risk_analysis', ['e1'])
+  const normalized = normalizeCodexOutputSchema(source)
+  const structured = (normalized.schema.properties as any).proposals.items.anyOf[2].properties.structuredValue
+  assert.equal(structured.additionalProperties, false)
+  assert.deepEqual(Object.keys(structured.properties).sort(), ['comparator', 'fiscalPeriod', 'metric', 'period', 'semanticKey', 'unit', 'value'])
+  assert.deepEqual(structured.properties.comparator.enum, ['eq', 'gt', 'gte', 'lt', 'lte', 'approx'])
+})
+
 test('Codex schema normalizer supports dynamic enum, const and oneOf contracts and fails closed for unsafe inputs', () => {
   const normalized = normalizeCodexOutputSchema({ name: 'dynamic', type: 'object', required: ['kind'], additionalProperties: false, properties: { kind: { enum: ['a', 'b'] }, fixed: { const: 'x' }, value: { oneOf: [{ type: 'string' }, { type: 'number' }] } } })
   assert.deepEqual(normalized.schema.properties, { kind: { enum: ['a', 'b'] }, fixed: { const: 'x', type: 'string' }, value: { oneOf: [{ type: 'string' }, { type: 'number' }] } })

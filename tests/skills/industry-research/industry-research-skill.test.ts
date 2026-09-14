@@ -872,7 +872,7 @@ test("Industry proposal variants and quantitative claims state evidence and peri
         claimType: "fact",
         statement: "q",
         sourceCandidateIds: ["e1"],
-        structuredValue: { metric: "m", value: 1, unit: "u", comparator: "eq" },
+        structuredValue: { metric: "m", value: 1, unit: "u", comparator: "eq", period: "2026" },
       },
     ],
   };
@@ -880,4 +880,32 @@ test("Industry proposal variants and quantitative claims state evidence and peri
   assert.doesNotThrow(() =>
     validateIndustryModuleResult(quantitative, "risk_analysis", ["e1"]),
   );
+});
+
+test("Industry structured values converge with Schema 0.4 fields and comparators", () => {
+  const base = { proposalId: "p", kind: "claim", subjectKey: "local", claimType: "fact", statement: "q", sourceCandidateIds: ["e1"] };
+  const valid = (structuredValue: Record<string, unknown>) => validateIndustryModuleResult({ ...moduleOutput("risk_analysis"), proposals: [{ ...base, structuredValue }] }, "risk_analysis", ["e1"]);
+  assert.throws(() => valid({ metric: "m", value: 1, unit: "u", comparator: "eq", period: "2026", geography: "US" }), /quantitative/);
+  assert.throws(() => valid({ metric: "m", value: 1, unit: "u", comparator: "equal", period: "2026" }), /quantitative/);
+  for (const comparator of ["eq", "gt", "gte", "lt", "lte", "approx"]) assert.doesNotThrow(() => valid({ metric: "m", value: 1, unit: "u", comparator, period: "2026" }));
+  assert.doesNotThrow(() => valid({ metric: "m", value: 1, unit: "u", comparator: "eq", period: "2026", semanticKey: "capacity" }));
+});
+
+test("Industry structured value repair accepts one compatible replacement and fails closed on a repeated incompatible result", async () => {
+  const candidate = (structuredValue: Record<string, unknown>) => ({ ...moduleOutput("risk_analysis"), proposals: [{ proposalId: "p", kind: "claim", subjectKey: "local", claimType: "fact", statement: "q", sourceCandidateIds: ["e1"], structuredValue }] });
+  let calls = 0;
+  const repaired = new IndustryResearchSkill({ ...executor(null), execute: async (r) => { calls++; return { operation: r.operation, output: calls === 1 ? candidate({ metric: "m", value: 1, unit: "u", comparator: "eq", period: "2026", measurementDefinition: "bad" }) : candidate({ metric: "m", value: 1, unit: "u", comparator: "eq", period: "2026", semanticKey: "ok" }) }; } }).analyze("risk_analysis", { target: { name: "x" }, evidence: [{ evidenceId: "e1", source }], existingKnowledge: [], localReferences: [] });
+  assert.equal((await repaired).proposals[0].structuredValue?.semanticKey, "ok");
+  assert.equal(calls, 2);
+  calls = 0;
+  const failed = await new IndustryResearchSkill({ ...executor(null), execute: async (r) => { calls++; return { operation: r.operation, output: candidate({ metric: "m", value: 1, unit: "u", comparator: "equal", period: "2026" }) }; } }).analyze("risk_analysis", { target: { name: "x" }, evidence: [{ evidenceId: "e1", source }], existingKnowledge: [], localReferences: [] });
+  assert.equal(failed.status, "unavailable");
+  assert.equal(calls, 2);
+});
+
+test("Industry model contract exposes only Schema 0.4 structured value fields and comparator enum", () => {
+  const structured = (createIndustryModuleResultContract("risk_analysis", ["e1"]).properties.proposals.items.oneOf[2] as any).properties.structuredValue;
+  assert.equal(structured.additionalProperties, false);
+  assert.deepEqual(Object.keys(structured.properties).sort(), ["comparator", "fiscalPeriod", "metric", "period", "semanticKey", "unit", "value"]);
+  assert.deepEqual(structured.properties.comparator.enum, ["eq", "gt", "gte", "lt", "lte", "approx"]);
 });
