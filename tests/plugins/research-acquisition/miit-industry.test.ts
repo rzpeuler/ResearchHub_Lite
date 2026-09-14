@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { MiitIndustryResearchPlugin, MIIT_INDUSTRY_ROUTES } from '../../../plugins/research-acquisition/miit-industry.ts'
+import { MiitIndustryResearchPlugin, MIIT_INDUSTRY_ROUTES, MIIT_PCB_DEFINITION_ANCHORS } from '../../../plugins/research-acquisition/miit-industry.ts'
 import { sha256 } from '../../../plugins/research-acquisition/hash.ts'
 
 const req = { industry: { name: 'PCB Manufacturing', aliases: ['Printed Circuit Board', '印制电路板'], searchTerms: ['PCB', '电子信息制造业'] }, asOf: '2026-09-14T00:00:00.000Z', limitPerKind: 8 }
@@ -10,7 +10,7 @@ const response = (body: string, type = 'text/html', url = '') => { const r = new
 
 test('discovers bounded authorized MIIT list pages, ranks, dates and suppresses duplicates', async () => {
   const calls: string[] = []; const plugin = new MiitIndustryResearchPlugin({ documentResolver: resolver, fetchImpl: async (input) => { const url = String(input); calls.push(url); return response(html('PCB policy', 'https://www.miit.gov.cn/a.htm') + html('generic', 'https://www.miit.gov.cn/g.htm') + html('PCB recent', 'https://www.miit.gov.cn/b.htm', '2025-04-01') + '<a href="https://www.miit.gov.cn/jgsj/dzs/wjfb/?page=2">下一页</a>') } })
-  const items = await plugin.discover(req); assert.equal(calls.length, 6); assert.ok(calls.every((x) => new URL(x).hostname.endsWith('miit.gov.cn'))); assert.deepEqual(items.map((x) => x.url), ['https://www.miit.gov.cn/a.htm', 'https://www.miit.gov.cn/b.htm']); assert.equal(items[1]!.publishedAt, '2026-01-02T00:00:00.000Z')
+  const items = await plugin.discover(req); assert.equal(calls.length, 6); assert.ok(calls.every((x) => new URL(x).hostname.endsWith('miit.gov.cn'))); assert.deepEqual(items.map((x) => x.url), [...MIIT_PCB_DEFINITION_ANCHORS.map((x) => x.url), 'https://www.miit.gov.cn/a.htm', 'https://www.miit.gov.cn/b.htm']); assert.equal(items[4]!.publishedAt, '2026-01-02T00:00:00.000Z')
 })
 test('Company is isolated and empty discovery is safe', async () => { let calls = 0; const p = new MiitIndustryResearchPlugin({ fetchImpl: async () => { calls++; throw new Error('network') } }); assert.deepEqual(await p.discover({ company: { symbol: '600519' } }), []); assert.equal(calls, 0); assert.deepEqual(await p.discover({ ...req, industry: { name: 'industry', searchTerms: [] } }), []) })
 test('fetch and normalize HTML and directly linked PDF with provenance and rights', async () => {
@@ -32,7 +32,7 @@ test('resolves relative articles and pagination from each current list URL', asy
     throw new Error(`unexpected ${url}`)
   } })
   const items = await p.discover(req)
-  assert.deepEqual(items.map((x) => x.url), [
+  assert.deepEqual(items.map((x) => x.url), [...MIIT_PCB_DEFINITION_ANCHORS.map((x) => x.url),
     'https://www.miit.gov.cn/jgsj/yxj/xxfb/article-3.htm',
     'https://www.miit.gov.cn/zwgk/zcwj/wjfb/gg/article-2.htm',
     'https://www.miit.gov.cn/zwgk/zcwj/wjfb/gg/page/2/article-2b.htm'
@@ -45,10 +45,55 @@ test('rejects an off-domain discovery redirect before parsing and uses an on-dom
   await assert.rejects(() => bad.discover(req), /redirect/)
   const good = new MiitIndustryResearchPlugin({ routes: [MIIT_INDUSTRY_ROUTES[1]], fetchImpl: async () => response('<a href="article.htm">PCB</a>', 'text/html', 'https://sub.miit.gov.cn/current/list/') })
   const items = await good.discover(req)
-  assert.equal(items[0]!.url, 'https://sub.miit.gov.cn/current/list/article.htm')
+  assert.equal(items[3]!.url, 'https://sub.miit.gov.cn/current/list/article.htm')
 })
 
 test('aborts a stalled MIIT request at the configured timeout', async () => {
   const p = new MiitIndustryResearchPlugin({ timeoutMs: 5, fetchImpl: async (_input, init) => await new Promise<Response>((_resolve, reject) => { init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))) }) })
   await assert.rejects(() => p.discover(req), /aborted|AbortError/)
+})
+
+test('discovers bounded authoritative PCB anchors for all supported target forms', async () => {
+  const p = new MiitIndustryResearchPlugin({ fetchImpl: async () => response('<a href="https://www.miit.gov.cn/pcb-list.htm">PCB list</a>') })
+  for (const name of ['PCB Manufacturing', 'Printed Circuit Board', '\u5370\u5236\u7535\u8def\u677f']) {
+    const items = await p.discover({ industry: { name, aliases: [], searchTerms: [] }, asOf: '2026-09-14T00:00:00.000Z', limitPerKind: 8 })
+    const anchors = items.filter((x) => (x.metadata as any)?.anchor)
+    assert.deepEqual(anchors.map((x) => x.url), MIIT_PCB_DEFINITION_ANCHORS.map((x) => x.url))
+    assert.equal(new Set(items.map((x) => x.url)).size, items.length)
+    assert.ok(anchors.every((x) => x.tier === 1 && x.provider === 'miit' && new URL(x.url!).hostname.endsWith('miit.gov.cn')))
+    assert.deepEqual(anchors.map((x) => x.candidateId), MIIT_PCB_DEFINITION_ANCHORS.map((x) => `miit-${sha256(x.url)}`))
+  }
+})
+
+test('does not activate PCB anchors for an unrelated Industry and excludes future anchors by asOf', async () => {
+  const p = new MiitIndustryResearchPlugin({ fetchImpl: async () => response('') })
+  const unrelated = await p.discover({ industry: { name: 'Semiconductor Equipment', searchTerms: [] }, asOf: '2026-09-14T00:00:00.000Z', limitPerKind: 8 })
+  assert.equal(unrelated.some((x) => (x.metadata as any)?.anchor), false)
+  const beforeAnnouncement = await p.discover({ industry: { name: 'PCB Manufacturing', searchTerms: [] }, asOf: '2024-12-29T00:00:00.000Z', limitPerKind: 8 })
+  assert.equal(beforeAnnouncement.some((x) => x.url === MIIT_PCB_DEFINITION_ANCHORS[2]!.url), false)
+  assert.equal(beforeAnnouncement.length, 2)
+})
+
+test('deduplicates normal discovery against an authoritative anchor without losing the anchor', async () => {
+  const anchor = MIIT_PCB_DEFINITION_ANCHORS[0]!.url
+  const p = new MiitIndustryResearchPlugin({ fetchImpl: async () => response(`<a href="${anchor}?utm_source=test">duplicate anchor</a><a href="https://www.miit.gov.cn/normal.htm">PCB normal</a>`) })
+  const items = await p.discover({ industry: { name: 'PCB Manufacturing', searchTerms: [] }, asOf: '2026-09-14T00:00:00.000Z', limitPerKind: 4 })
+  assert.equal(items.filter((x) => x.url === anchor).length, 1)
+  assert.equal(items[0]!.url, anchor)
+})
+
+test('fetches and normalizes representative PDF and HTML anchors through the existing seam', async () => {
+  const pdfFixture = new TextEncoder().encode('PCB production enterprises are in scope; dedicated equipment and dedicated material manufacturing are outside the management scope.')
+  const htmlFixture = '<html><body>公告2024年第46号 continues to apply the PCB industry specification framework.</body></html>'
+  const p = new MiitIndustryResearchPlugin({
+    fetchImpl: async (input) => response(String(input).endsWith('.pdf') ? new TextDecoder().decode(pdfFixture) : htmlFixture, String(input).endsWith('.pdf') ? 'application/pdf' : 'text/html'),
+    documentResolver: { async parse(source: { bytes: Uint8Array }) { return { documentId: 'fixture', parser: 'fixture', metadata: {}, sections: [], blocks: [], normalizedText: new TextDecoder().decode(source.bytes).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(), warnings: [] } } } as any
+  })
+  for (const anchor of [MIIT_PCB_DEFINITION_ANCHORS[0]!, MIIT_PCB_DEFINITION_ANCHORS[2]!]) {
+    const candidate = { candidateId: `miit-${sha256(anchor.url)}`, kind: 'official_disclosure' as const, tier: 1 as const, title: anchor.title, provider: 'miit', url: anchor.url, publishedAt: anchor.publishedAt }
+    const normalized = await p.normalize(await p.fetch(candidate))
+    assert.equal(normalized.canonicalUrl, anchor.url)
+    assert.match(normalized.content, /PCB|\u5370制电路板|公告/)
+    assert.equal(normalized.rights.policyBasis, 'personal_noncommercial_research')
+  }
 })
