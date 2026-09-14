@@ -110,7 +110,7 @@ test('Codex schema normalizer preserves Design structure and strips ResearchHub 
   assert.deepEqual(Object.keys((normalized.schema.properties as any).moduleQuestions.properties), [...INDUSTRY_MODULES])
   assert.deepEqual((normalized.schema.properties as any).scope.required, ['included', 'excluded'])
   assert.deepEqual((normalized.schema.properties as any).verificationCandidates.items.required, ['name', 'kind', 'reason'])
-  assert.deepEqual([...normalized.removedKeywords].sort(), ['bounds', 'maxItems', 'maxLength', 'minItems', 'minLength', 'name', 'uniqueItems'])
+  assert.deepEqual([...normalized.removedKeywords].sort(), ['bounds', 'maxItems', 'maxLength', 'minItems', 'minLength', 'name', 'pattern', 'uniqueItems'])
   assert.equal(JSON.stringify(normalized.schema).includes('proposalRules'), false)
 })
 
@@ -230,11 +230,13 @@ test('Codex transport normalization preserves supported schema semantics and acc
   const { INDUSTRY_RESEARCH_DESIGN_CONTRACT, INDUSTRY_MODULE_RESULT_CONTRACT, INDUSTRY_SYNTHESIS_CONTRACT } = await import('../../../skills/industry-research/contracts.ts')
   const source = JSON.stringify(INDUSTRY_RESEARCH_DESIGN_CONTRACT)
   const normalized = normalizeCodexOutputSchema(INDUSTRY_RESEARCH_DESIGN_CONTRACT)
-  assert.equal(createHash('sha256').update(source).digest('hex').slice(0, 16), '9854f93073c44d96')
+  assert.equal(createHash('sha256').update(source).digest('hex').slice(0, 16), 'b2d53042cd0f2b88')
   assert.equal(JSON.stringify(INDUSTRY_RESEARCH_DESIGN_CONTRACT), source)
-  assert.equal(normalized.fingerprint, '88711c17a6837ae7')
-  assert.equal(normalized.bytes, 2125)
+  assert.equal(normalized.fingerprint, '2ff5ce2b631ceb26')
+  assert.equal(normalized.bytes, 2243)
   assert.deepEqual((normalized.schema as any).properties.knownGaps.items.required, ['gapId', 'module', 'question', 'reason', 'actionable', 'searchTerms'])
+  assert.equal((INDUSTRY_RESEARCH_DESIGN_CONTRACT as any).properties.knownGaps.items.properties.gapId.pattern, '^[A-Za-z][A-Za-z0-9._-]*$')
+  assert.equal((INDUSTRY_RESEARCH_DESIGN_CONTRACT as any).properties.knownGaps.items.properties.gapId.maxLength, 120)
   for (const contract of [INDUSTRY_MODULE_RESULT_CONTRACT, INDUSTRY_SYNTHESIS_CONTRACT]) {
     const result = normalizeCodexOutputSchema(contract)
     const visit = (node: any): void => {
@@ -244,6 +246,20 @@ test('Codex transport normalization preserves supported schema semantics and acc
       } else if (Array.isArray(node)) for (const value of node) visit(value)
     }
     visit(result.schema)
+  }
+})
+
+test('Codex normalization preserves the strict gap ID contract on module and synthesis surfaces', async () => {
+  const { createIndustryModuleResultContract, createIndustrySynthesisContract } = await import('../../../skills/industry-research/contracts.ts')
+  for (const contract of [createIndustryModuleResultContract('risk_analysis', []), createIndustrySynthesisContract([], [], [])]) {
+    const rawGapId = (contract.properties.gaps.items.properties.gapId)
+    assert.equal(rawGapId.pattern, '^[A-Za-z][A-Za-z0-9._-]*$')
+    assert.equal(rawGapId.maxLength, 120)
+    const { schema } = normalizeCodexOutputSchema(contract)
+    const gapId = (schema as any).properties.gaps.items.properties.gapId
+    assert.equal(gapId.pattern, undefined)
+    assert.equal(gapId.maxLength, undefined)
+    assert.equal((schema as any).properties.gaps.items.additionalProperties, false)
   }
 })
 

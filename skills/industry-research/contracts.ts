@@ -16,6 +16,17 @@ export const INDUSTRY_STRUCTURED_VALUE_FIELDS = KNOWLEDGE_SCHEMA_V04.claim.struc
 export const INDUSTRY_STRUCTURED_VALUE_COMPARATORS = KNOWLEDGE_SCHEMA_V04.claim.comparators;
 const structuredValueFieldSet = new Set<string>(INDUSTRY_STRUCTURED_VALUE_FIELDS);
 const structuredValueComparatorSet = new Set<string>(INDUSTRY_STRUCTURED_VALUE_COMPARATORS);
+export const INDUSTRY_LOCAL_ID_PATTERN = "^[A-Za-z][A-Za-z0-9._-]*$";
+export const INDUSTRY_LOCAL_ID_MAX_LENGTH = 120;
+const industryLocalIdPattern = new RegExp(INDUSTRY_LOCAL_ID_PATTERN);
+const industryCanonicalIdPattern = /^(entity|relation|claim|source|raw|changeset|review-case):/i;
+
+export function isValidIndustryLocalId(value: unknown): value is string {
+  return typeof value === "string" &&
+    value.length <= INDUSTRY_LOCAL_ID_MAX_LENGTH &&
+    industryLocalIdPattern.test(value) &&
+    !industryCanonicalIdPattern.test(value);
+}
 
 export function isValidIndustryStructuredValue(value: unknown): value is {
   metric: string;
@@ -170,7 +181,14 @@ const gap = {
   additionalProperties: false,
   required: ["gapId", "module", "question", "reason", "actionable"],
   properties: {
-    gapId: boundedString(120),
+    gapId: {
+      type: "string",
+      minLength: 1,
+      pattern: INDUSTRY_LOCAL_ID_PATTERN,
+      maxLength: INDUSTRY_LOCAL_ID_MAX_LENGTH,
+      description:
+        "Local ID only; never canonical entity:, relation:, claim:, source:, raw:, changeset: or review-case:.",
+    },
     module: { enum: [...INDUSTRY_MODULES] },
     question: boundedString(500),
     reason: boundedString(1000),
@@ -190,8 +208,8 @@ const verificationCandidate = {
 };
 const localId = {
   type: "string",
-  pattern: "^[A-Za-z][A-Za-z0-9._-]*$",
-  maxLength: 120,
+  pattern: INDUSTRY_LOCAL_ID_PATTERN,
+  maxLength: INDUSTRY_LOCAL_ID_MAX_LENGTH,
   description:
     "Local ID only; never canonical entity:, relation:, claim:, source:, raw:, changeset: or review-case:.",
 };

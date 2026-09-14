@@ -38,7 +38,7 @@ const taskId = 'RHL-M3B-3B-DIAG-002-CODEX-CLI-PCB-DESIGN-COMPATIBILITY'
 const baseCommit = '5c63d540c36b7ccbfa9afe58ffbba886e7fe0dae'
 const repoRoot = resolve(import.meta.dirname, '../..')
 const evidencePath = resolve(repoRoot, 'tests/validation/evidence/RHL_M3B_CODEX_CLI_PCB_DESIGN_COMPATIBILITY.json')
-const expectedFingerprints = { instruction: '7a04f3501b1d420d', input: '36c1bc2fc516f169', outputContract: '9854f93073c44d96' }
+const expectedFingerprints = { instruction: '7a04f3501b1d420d', input: '36c1bc2fc516f169', outputContract: 'b2d53042cd0f2b88' }
 const capabilities = { maxContextTokens: 128_000, maxOutputTokens: 16_384, structuredOutputSupport: true, maxConcurrency: 1 }
 const shortHash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 16)
 const byteSize = (value: unknown) => Buffer.byteLength(JSON.stringify(value), 'utf8')

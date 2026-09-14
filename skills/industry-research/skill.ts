@@ -19,19 +19,18 @@ import {
   type ResearchDesign,
   type ResearchGap,
   isValidIndustryStructuredValue,
+  isValidIndustryLocalId,
 } from "./contracts.ts";
 type R = Record<string, unknown>;
 const obj = (v: unknown): v is R =>
   typeof v === "object" && v !== null && !Array.isArray(v);
-const canon = /^(entity|relation|claim|source|raw|changeset|review-case):/i,
-  ident = /^[A-Za-z][A-Za-z0-9._-]*$/;
 const text = (v: unknown): v is string =>
   typeof v === "string" && v.trim() !== "";
 const arr = (v: unknown): v is readonly unknown[] => Array.isArray(v);
 const uniq = (v: unknown): v is readonly string[] =>
   arr(v) && v.every(text) && new Set(v).size === v.length;
 const local = (v: unknown): v is string =>
-  typeof v === "string" && ident.test(v) && !canon.test(v);
+  isValidIndustryLocalId(v);
 const finite = (v: unknown) =>
   typeof v === "number"
     ? Number.isFinite(v)
@@ -168,10 +167,7 @@ function proposal(
   if (
     !obj(v) ||
     !local(v.proposalId) ||
-    seen.has(v.proposalId) ||
-    [v.proposalId, v.subjectKey, v.targetKey].some(
-      (x) => x !== undefined && canon.test(String(x)),
-    )
+    seen.has(v.proposalId)
   )
     fail(
       "proposal_invalid",
@@ -182,7 +178,10 @@ function proposal(
     !local(v.subjectKey) ||
     (v.targetKey !== undefined && !local(v.targetKey))
   )
-    fail("proposal_invalid", "Unsupported or unsafe semantic proposal");
+    fail(
+      "proposal_invalid",
+      "Proposal contains canonical-looking identifier or invalid local ID",
+    );
   if (
     v.kind === "entity" &&
     (!["industry", "product", "technology", "company"].includes(

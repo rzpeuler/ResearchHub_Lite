@@ -11,7 +11,7 @@ import { INDUSTRY_MODULES, INDUSTRY_RESEARCH_DESIGN_CONTRACT } from '../../skill
 import type { ReasoningExecutor, ReasoningRequest } from '../../plugins/reasoning/contracts.ts'
 
 export type StructuredOutputClassification = 'COMPATIBLE_VALID_INDUSTRY_DESIGN' | 'COMPATIBLE_VALID_NONINDUSTRY_DIAGNOSIS' | 'MODEL_OUTPUT_INVALID' | 'STRUCTURED_OUTPUT_CONFIGURATION_FAILED' | 'BACKEND_EXECUTION_FAILED' | 'BLOCKED_EXTERNAL_SETUP' | 'REQUEST_CONTINUITY_FAILED'
-export const EXPECTED_FINGERPRINTS = { instruction: '7a04f3501b1d420d', input: '36c1bc2fc516f169', outputContract: '9854f93073c44d96' } as const
+export const EXPECTED_FINGERPRINTS = { instruction: '7a04f3501b1d420d', input: '36c1bc2fc516f169', outputContract: 'b2d53042cd0f2b88' } as const
 const execFile = promisify(execFileCallback)
 const taskId = 'RHL-M3B-3B-FIX-004-CODEX-CLI-STRUCTURED-OUTPUT-BRIDGE'
 const baseCommit = 'f7990053997cd2df670880d58daacbe8e0c30ef4'

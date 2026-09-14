@@ -14,6 +14,9 @@ import {
   INDUSTRY_SYNTHESIS_CONTRACT,
   createIndustryModuleResultContract,
   createIndustrySynthesisContract,
+  INDUSTRY_LOCAL_ID_PATTERN,
+  INDUSTRY_LOCAL_ID_MAX_LENGTH,
+  isValidIndustryLocalId,
 } from "../../../skills/industry-research/contracts.ts";
 const design = {
   definitionHypothesis: "A bounded manufacturing industry.",
@@ -494,6 +497,23 @@ test("Industry Skill rejects duplicate or malformed ResearchDesign arrays and ga
   );
 });
 
+test("Industry local ID authority accepts valid IDs and rejects non-local gap IDs", () => {
+  for (const id of ["missing_market_size", "gap-capacity-2026", "company.mapping"])
+    assert.equal(isValidIndustryLocalId(id), true);
+  for (const id of ["has space", "entity:canonical", "1-leading-digit", "slash/id", "缺口"])
+    assert.equal(isValidIndustryLocalId(id), false);
+  assert.equal(isValidIndustryLocalId("a".repeat(INDUSTRY_LOCAL_ID_MAX_LENGTH)), true);
+  assert.equal(isValidIndustryLocalId("a".repeat(INDUSTRY_LOCAL_ID_MAX_LENGTH + 1)), false);
+  for (const value of [
+    INDUSTRY_RESEARCH_DESIGN_CONTRACT.properties.knownGaps.items,
+    INDUSTRY_MODULE_RESULT_CONTRACT.properties.gaps.items,
+    INDUSTRY_SYNTHESIS_CONTRACT.properties.gaps.items,
+  ]) {
+    assert.equal(value.properties.gapId.pattern, INDUSTRY_LOCAL_ID_PATTERN);
+    assert.equal(value.properties.gapId.maxLength, INDUSTRY_LOCAL_ID_MAX_LENGTH);
+  }
+});
+
 test("Industry Skill rejects invalid verification kind, canonical IDs, resolution fields, links, and quantitative values", () => {
   assert.throws(
     () =>
@@ -827,6 +847,35 @@ test("Industry synthesis repairs once and returns the valid repaired result", as
   const result = await new IndustryResearchSkill(fake).synthesize({ modules: [], evidence: [{ evidenceId: "e1", source }], existingKnowledge: [] });
   assert.equal(calls, 2);
   assert.equal(result.proposals[0].proposalId, "repaired-claim");
+});
+
+test("Industry module repairs a model-admitted invalid gap ID exactly once", async () => {
+  let calls = 0;
+  const fake: ReasoningExecutor = {
+    capabilities: () => ({ maxContextTokens: 1000, maxOutputTokens: 1000, structuredOutputSupport: true, maxConcurrency: 1 }),
+    execute: async (r) => {
+      calls++;
+      const gapId = calls === 1 ? "gap with spaces" : "gap-capacity-2026";
+      return { operation: r.operation, output: { module: "risk_analysis", status: "partial", analysis: "gap", evidenceIds: ["e1"], proposals: [], gaps: [{ gapId, module: "risk_analysis", question: "q", reason: "r", actionable: true }], reportMaterial: { markdown: "gap", evidenceIds: ["e1"], proposalIds: [] } } };
+    },
+  };
+  const result = await new IndustryResearchSkill(fake).analyze("risk_analysis", { target: { name: "Fixture" }, evidence: [{ evidenceId: "e1", source }], existingKnowledge: [], localReferences: [] });
+  assert.equal(calls, 2);
+  assert.equal(result.gaps[0].gapId, "gap-capacity-2026");
+});
+
+test("Industry module fails closed after one repeated invalid gap ID repair", async () => {
+  let calls = 0;
+  const fake: ReasoningExecutor = {
+    capabilities: () => ({ maxContextTokens: 1000, maxOutputTokens: 1000, structuredOutputSupport: true, maxConcurrency: 1 }),
+    execute: async (r) => {
+      calls++;
+      return { operation: r.operation, output: { module: "risk_analysis", status: "partial", analysis: "gap", evidenceIds: ["e1"], proposals: [], gaps: [{ gapId: "gap with spaces", module: "risk_analysis", question: "q", reason: "r", actionable: true }], reportMaterial: { markdown: "gap", evidenceIds: ["e1"], proposalIds: [] } } };
+    },
+  };
+  const result = await new IndustryResearchSkill(fake).analyze("risk_analysis", { target: { name: "Fixture" }, evidence: [{ evidenceId: "e1", source }], existingKnowledge: [], localReferences: [] });
+  assert.equal(calls, 2);
+  assert.equal(result.status, "unavailable");
 });
 
 test("Industry synthesis fails closed after exactly one repair attempt", async () => {

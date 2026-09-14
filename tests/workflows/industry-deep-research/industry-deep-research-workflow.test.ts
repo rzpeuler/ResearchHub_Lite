@@ -47,6 +47,26 @@ test('Workflow acceptance matrix covers all four non-industry target diagnoses i
 
 test('Workflow blocks when Industry Definition remains unavailable after one repair', async () => { const x = await fixtureRun({ reasoningExecutor: { ...exec(), execute: async (r) => { if (String(r.operation) === 'industry_module_analysis' && (r.input as { module: string }).module === 'industry_definition') return { operation: r.operation, output: { invalid: true } }; return exec().execute(r) } } }); try { assert.equal(x.result.status, 'blocked'); assert.equal(x.result.gatewaySubmitCount, 0); assert.equal(x.result.knowledgeBaseRevision, 0); assert.equal(x.result.acquisitionWaves, 2); assert.equal(x.result.moduleCallCounts.industry_definition, 1); assert.deepEqual(await readdir(x.reports), []) } finally { await cleanup(x) } })
 
+test('Workflow repairs an invalid Industry Definition gap ID and clears the mandatory boundary', async () => {
+  let definitionCalls = 0
+  const reasoning: ReasoningExecutor = { ...exec(), execute: async (r) => {
+    if (String(r.operation) === 'industry_module_analysis' && (r.input as { module: string }).module === 'industry_definition') {
+      definitionCalls++
+      const gapId = definitionCalls === 1 ? 'gap with spaces' : 'definition-gap-2026'
+      return { operation: r.operation, output: { module: 'industry_definition', status: 'partial', analysis: 'definition gap', evidenceIds: ['evidence-s1'], proposals: [], gaps: [{ gapId, module: 'industry_definition', question: 'definition', reason: 'missing', actionable: true }], reportMaterial: { markdown: 'definition gap', evidenceIds: ['evidence-s1'], proposalIds: [] } } }
+    }
+    return exec().execute(r)
+  } }
+  const x = await fixtureRun({ reasoningExecutor: reasoning })
+  try {
+    assert.equal(definitionCalls, 2)
+    assert.equal(x.result.status, 'completed', x.result.errors.join('; '))
+    assert.equal(x.result.gatewaySubmitCount, 1)
+    assert.equal(x.result.knowledgeBaseRevision, 1)
+    assert.equal(JSON.parse(await readFile(`${x.result.report?.outputPath}.json`, 'utf8')).sections.length, 16)
+  } finally { await cleanup(x) }
+})
+
 test('Workflow no-gap acceptance proves one wave and one call for each module', async () => { const calls: string[] = []; const x = await fixtureRun({ reasoningExecutor: { ...exec(), execute: async (r) => { calls.push(String(r.operation)); return exec().execute(r) } } }); try { assert.equal(x.result.status, 'completed'); assert.equal(x.result.acquisitionWaves, 1); assert.deepEqual(x.result.moduleCallCounts, Object.fromEntries(INDUSTRY_MODULES.map((m) => [m, 1]))); assert.equal(calls.filter((v) => v === 'industry_module_analysis').length, 8) } finally { await cleanup(x) } })
 
 test('Workflow Wave-2 acceptance admits one new source, reruns only its affected module, and never starts Wave 3', async () => { const counts = new Map<string, number>(); const calls: Array<{ module: string; evidence: string[] }> = []; const gap = { gapId: 'capacity-gap', module: 'supply_demand_analysis' as const, question: 'capacity gap', reason: 'missing capacity', actionable: true, searchTerms: ['capacity-gap'] }; const e2 = { ...source('s2'), title: 'capacity-gap evidence', content: 'capacity-gap newly admitted evidence', contentHash: sha256('capacity-gap newly admitted evidence') }; const x = await fixtureRun({ reasoningExecutor: { ...exec(), execute: async (r) => { const op = String(r.operation); if (op === 'industry_module_analysis') { const module = (r.input as { module: string }).module; const n = (counts.get(module) ?? 0) + 1; counts.set(module, n); calls.push({ module, evidence: ((r.input as { evidence: Array<{ evidenceId: string }> }).evidence ?? []).map((e) => e.evidenceId) }); if (module === 'supply_demand_analysis' && n === 1) return { operation: r.operation, output: { module, status: 'partial', analysis: 'gap', evidenceIds: ['evidence-s1'], proposals: [], gaps: [gap], reportMaterial: { markdown: 'gap', evidenceIds: ['evidence-s1'], proposalIds: [] } } } } return exec().execute(r) } }, acquisitionWave: async ({ wave }) => wave === 1 ? [source('s1')] : [e2] }); try { assert.equal(x.result.status, 'completed'); assert.equal(x.result.acquisitionWaves, 2); assert.equal(x.result.moduleCallCounts.supply_demand_analysis, 2); for (const m of INDUSTRY_MODULES.filter((m) => m !== 'supply_demand_analysis')) assert.equal(x.result.moduleCallCounts[m], 1); assert.ok(calls.find((c) => c.module === 'supply_demand_analysis' && c.evidence.includes('evidence-s2'))) } finally { await cleanup(x) } })
