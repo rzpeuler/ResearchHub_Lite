@@ -1,0 +1,35 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-036-INDUSTRY-RUNTIME-TERMINAL-BOUNDARY-DIAGNOSIS",
+  "baseline": "531b6771b9ba86c4411a84dd4af82c79f873cdcb",
+  "test035Acceptance": "MODEL_RUNTIME_EXTERNAL_INCONCLUSIVE; preserved immutable history",
+  "codexPreflight": { "discovered": true, "resolutionSource": "environment", "executableKind": "native", "versionAvailable": true, "version": "codex-cli 0.154.0", "helpAvailable": true },
+  "selectedModel": { "backend": "codex-cli", "model": "gpt-5.6-luna", "reasoningEffort": "medium", "fallback": false },
+  "target": { "name": "PCB Manufacturing", "aliases": ["Printed Circuit Board", "印制电路板"], "asOf": "2026-09-14T00:00:00.000Z" },
+  "fixture": { "candidateId": "test036-pcb-fixture-001", "contentHash": "18c233bd76932d2c3fe528ffd9e72d0ddd8c8c55c873fb83334c25f152abff39", "contentHashAlgorithm": "sha256", "publisher": "Deterministic Test Fixture", "publishedAt": "2026-09-01T00:00:00.000Z", "bodyPersisted": false, "publicProviderCalls": false },
+  "diagnosticBlindSpotsCorrected": ["authoritative IndustryDeepResearchResult.errors drives classification", "module identity drives per-module repair attribution"],
+  "reasoning": {
+    "moduleCallCounts": { "industry_definition": 1, "market_size_growth": 1, "supply_demand_analysis": 1, "industry_chain_analysis": 1, "competitive_landscape": 1, "technology_evolution": 1, "company_mapping": 1, "risk_analysis": 1 },
+    "designCallCount": 1, "synthesisCallCount": 1, "repairBoundViolations": false,
+    "invocations": [
+      { "operation": "industry_research_design", "perIdentityOrdinal": 1, "globalOrdinal": 1, "returnedOrThrew": "returned", "boundedRepairInference": false, "sanitizedErrorCategory": null },
+      { "operation": "industry_module_analysis", "module": "industry_definition", "perIdentityOrdinal": 1, "globalOrdinal": 2, "returnedOrThrew": "returned", "boundedRepairInference": false, "sanitizedErrorCategory": null },
+      { "operation": "industry_module_analysis", "module": "market_size_growth", "perIdentityOrdinal": 1, "globalOrdinal": 3, "returnedOrThrew": "returned", "boundedRepairInference": false, "sanitizedErrorCategory": null },
+      { "operation": "industry_module_analysis", "module": "supply_demand_analysis", "perIdentityOrdinal": 1, "globalOrdinal": 4, "returnedOrThrew": "returned", "boundedRepairInference": false, "sanitizedErrorCategory": null },
+      { "operation": "industry_module_analysis", "module": "industry_chain_analysis", "perIdentityOrdinal": 1, "globalOrdinal": 5, "returnedOrThrew": "returned", "boundedRepairInference": false, "sanitizedErrorCategory": null },
+      { "operation": "industry_module_analysis", "module": "competitive_landscape", "perIdentityOrdinal": 1, "globalOrdinal": 6, "returnedOrThrew": "returned", "boundedRepairInference": false, "sanitizedErrorCategory": null },
+      { "operation": "industry_module_analysis", "module": "technology_evolution", "perIdentityOrdinal": 1, "globalOrdinal": 7, "returnedOrThrew": "returned", "boundedRepairInference": false, "sanitizedErrorCategory": null },
+      { "operation": "industry_module_analysis", "module": "company_mapping", "perIdentityOrdinal": 1, "globalOrdinal": 8, "returnedOrThrew": "returned", "boundedRepairInference": false, "sanitizedErrorCategory": null },
+      { "operation": "industry_module_analysis", "module": "risk_analysis", "perIdentityOrdinal": 1, "globalOrdinal": 9, "returnedOrThrew": "returned", "boundedRepairInference": false, "sanitizedErrorCategory": null },
+      { "operation": "industry_cross_module_synthesis", "perIdentityOrdinal": 1, "globalOrdinal": 10, "returnedOrThrew": "returned", "boundedRepairInference": false, "sanitizedErrorCategory": null }
+    ]
+  },
+  "workflow": { "terminalStatus": "completed", "errors": [], "diagnostics": ["Duplicate evidence skipped: test036-pcb-fixture-001", "Compatible redundant root proposal dropped: pcb-manufacturing-industry"] },
+  "acquisitionWaveCount": 2, "gatewaySubmissionCount": 1, "knowledgeBaseRevision": 1, "revisionDelta": 1,
+  "proposalCount": 0, "committedIdCount": 2, "sourceIdCount": 1, "relationIdCount": 0, "claimIdCount": 0,
+  "modules": ["industry_definition", "market_size_growth", "supply_demand_analysis", "industry_chain_analysis", "competitive_landscape", "technology_evolution", "company_mapping", "risk_analysis"],
+  "canonicalValidation": { "status": "passed", "diagnosticCodes": [] },
+  "structuredValueAudit": { "status": "not_reached", "reason": "no canonical quantitative Claim persisted" },
+  "report": { "persisted": true, "type": "industry_research", "sectionCount": 16, "frozenTitlesPresent": true },
+  "privacyFlags": { "rawBodiesIncluded": false, "completePromptsIncluded": false, "completeOutputsIncluded": false, "fixtureBodiesIncluded": false, "credentialsIncluded": false, "privatePathsIncluded": false, "stderrIncluded": false, "reasoningTracesIncluded": false, "publicProviderCalls": false },
+  "finalClassification": "RUNTIME_PATH_HEALTHY"
+}
