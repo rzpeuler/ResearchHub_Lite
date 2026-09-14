@@ -1,4 +1,5 @@
 node_modules/
+.researchhub-document-parser/
 dist/
 coverage/
 .superpowers/

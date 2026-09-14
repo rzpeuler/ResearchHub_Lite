@@ -16,7 +16,9 @@
     "brief:morning": "tsx scripts/daily-brief-cli.ts morning",
     "brief:evening": "tsx scripts/daily-brief-cli.ts evening",
     "test": "npm run client:test && npm run test:node",
-    "test:node": "node tests/run-node-tests.mjs"
+    "test:node": "node tests/run-node-tests.mjs",
+    "document-parser:check": "node scripts/document-parser-runtime.mjs --check",
+    "document-parser:setup": "node scripts/document-parser-runtime.mjs --setup"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.0",
