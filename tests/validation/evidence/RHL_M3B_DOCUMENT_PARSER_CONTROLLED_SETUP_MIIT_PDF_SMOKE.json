@@ -1,0 +1,56 @@
+{
+  "taskId": "RHL-M3B-3B-TEST-047-DOCUMENT-PARSER-CONTROLLED-SETUP-MIIT-PDF-SMOKE",
+  "baseCommit": "5ded94e4c6ff7cce820521fb5182fe00cb9915d6",
+  "fix046Acceptance": {
+    "accepted": true,
+    "status": "COMPLETED",
+    "testsStatus": "FAILED",
+    "commit": "5ded94e4c6ff7cce820521fb5182fe00cb9915d6"
+  },
+  "preSetup": {
+    "status": "MANAGED_PYTHON_MISSING",
+    "pythonReady": false,
+    "dependencyReady": false,
+    "artifactsReady": false,
+    "bridgeReady": false
+  },
+  "setupInvoked": true,
+  "setupResult": {
+    "status": "INCONCLUSIVE",
+    "reason": "EXTERNAL_SETUP_STALLED"
+  },
+  "postSetup": {
+    "status": "MANAGED_PYTHON_MISSING",
+    "pythonReady": false,
+    "dependencyReady": false,
+    "artifactsReady": false,
+    "bridgeReady": false
+  },
+  "selectedAnchor": {
+    "title": "印制电路板行业规范条件",
+    "url": "https://wap.miit.gov.cn/cms_files/filemanager/oldfile/miit/n1146295/n1652858/n1652930/n4509607/c6577041/part/6577143.pdf",
+    "publishedAt": "2013-09-17T00:00:00.000Z",
+    "candidateId": "miit-6684405f12e71c69eac209a2cfd69df63aee1f2e3f7e7c5985d89cc8c678549c",
+    "provider": "miit",
+    "tier": 1,
+    "kind": "official_disclosure",
+    "officialHost": "wap.miit.gov.cn",
+    "asOfEligible": true
+  },
+  "fetch": {
+    "attempted": false
+  },
+  "normalization": {
+    "attempted": false
+  },
+  "privacy": {
+    "absolutePathsPersisted": false,
+    "userProfilePathsPersisted": false,
+    "environmentValuesPersisted": false,
+    "rawPackageOutputPersisted": false,
+    "rawPdfBytesPersisted": false,
+    "normalizedFullTextPersisted": false,
+    "evidenceSelfCheck": true
+  },
+  "finalClassification": "DOCUMENT_PARSER_SMOKE_INCONCLUSIVE"
+}
