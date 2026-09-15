@@ -12,8 +12,8 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- Latest implementation commit: `ebe6a051c34d62763144c3616d1b0aa306e6fe00` (`feat: add read-only research report catalog`)
-- Remote: `origin/main` synchronized through the latest ledger reconciliation
+- Latest implementation commit: `eb049e13db85854b8193107cad412a320020f683` (`feat: add governed research run launcher`)
+- Remote: `origin/main` synchronized; latest implementation commit is recorded above
 - Working tree: clean
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
