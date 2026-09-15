@@ -12,9 +12,9 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- HEAD: `0132072` (second-target generality validation and mission checkpoint reconciliation committed)
-- Remote: `origin/main` at `0132072`
-- Working tree: clean
+- HEAD: `7228bdd` (alias routing changes pending commit)
+- Remote: `origin/main` at `7228bdd`
+- Working tree: alias evidence routing changes and report are pending commit
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
 - Phase 3 critical path: `PARTIAL`
@@ -34,6 +34,7 @@ research reuse.
 | Thesis Red Team | IMPLEMENTED_AND_VERIFIED | Stage A/B, invalidation, evidence binding, report, and real-Pi evidence exist. |
 | Industry eight-module deterministic loop | IMPLEMENTED_AND_VERIFIED | Eight modules, bounded Wave 2, one Gateway/Writer, sixteen sections, graph and replay tests pass. |
 | Industry bounded second-target generality | IMPLEMENTED_AND_VERIFIED | Deterministic `AI Server Hardware` validation completed eight modules, one Gateway/Writer submission, canonical reload, and stable no-new-semantic replay. |
+| Industry alias evidence routing | IMPLEMENTED_AND_VERIFIED | Bounded aliases and design search terms now participate in fallback routing; focused 44-test workflow suite and a fresh TEST-054 rerun passed without changing evidence qualification or persistence boundaries. |
 | Industry real product-quality E2E | PARTIAL | Fresh TEST-054 completed two waves, routed MIIT definition evidence, executed all eight modules, submitted Gateway/Writer, reloaded canonical Knowledge, and generated the 16-section report; it remains blocked because the live public portfolio supplied no qualified evidence for the other seven modules. |
 | Industry graph projection | IMPLEMENTED_AND_VERIFIED | Existing directory/rooted graph APIs and Industry replay tests pass; full product-quality evidence remains incomplete. |
 | Morning/Evening Brief engine | IMPLEMENTED_AND_VERIFIED | Fresh FIX-003 real-Pi run completed both morning/evening briefs with enrichment, change assessment, synthesis, and Knowledge seed/Gateway context; no secrets or raw bodies were included. |
@@ -53,6 +54,7 @@ research reuse.
 | RHL-P1-REALITY | 1 | ACCEPTED | Establish this matrix and backlog from current source, tests, reports, and live evidence. |
 | RHL-P3-INDUSTRY-ROUTING | 3 | ACCEPTED_IMPLEMENTATION_PARTIAL_PRODUCT | Route authoritative MIIT PCB anchors to `industry_definition`, preserve Wave-2 search terms, make accepted-evidence telemetry truthful, and record fresh TEST-054. Commit `852162e`; the product-quality gate remains open for seven-module evidence coverage. |
 | RHL-P3-INDUSTRY-GENERALITY | 3 | ACCEPTED_BOUNDED | Rerun the Industry flow against `AI Server Hardware`; eight modules, one Gateway/Writer submission, canonical reload, and stable no-new-semantic replay passed. |
+| RHL-P3-INDUSTRY-ALIAS-ROUTING | 3 | ACCEPTED | Include bounded target aliases in Industry evidence routing; focused regression and fresh TEST-054 rerun passed, while the live seven-module evidence gap remains. |
 | RHL-P1-TEST-HEALTH | 1 | ACCEPTED_RECONCILED | Five consecutive `VAL-HTTP-001` runs passed; no valuation semantic change was made and the prior timing failure was not reproduced. |
 | RHL-P2-DOCUMENT-STATUS | 2 | ACCEPTED | Reconcile current entry documents with verified source/test reality while preserving historical architecture and task-report evidence. |
 | RHL-P2-CONTINUOUS-RESEARCH | 8 | ACCEPTED_BOUNDED_DAILY_SLICE | Implement and verify the bounded Daily maintenance path through existing Claim projection, Gateway/Writer, reload, and replay; broader unified maintenance remains open. |
