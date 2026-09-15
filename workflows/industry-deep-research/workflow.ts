@@ -71,14 +71,14 @@ const slot=(p:SemanticProductionProposal)=>{const v=p.structuredValue as Record<
   return out
 }
 const moduleEvidenceTerms: Readonly<Record<IndustryResearchModule, readonly string[]>> = {
-  industry_definition: ['定义', '范围', '规范', '标准', 'definition', 'scope'],
-  market_size_growth: ['市场', '规模', '营收', '产值', '增长', '收入', 'market', 'revenue', 'growth'],
-  supply_demand_analysis: ['产能', '利用率', '需求', '供需', '库存', '价格', '投资项目', 'capacity', 'utilization', 'demand', 'supply', 'pricing'],
-  industry_chain_analysis: ['产业链', '上游', '下游', '材料', '设备', '制程', '供应链', 'chain', 'upstream', 'downstream', 'process'],
-  competitive_landscape: ['企业', '竞争', '排名', '份额', '营收', '客户', '公司', 'competitor', 'market share'],
-  technology_evolution: ['技术', '工艺', '制程', 'AI', 'HDI', '材料', '设备', '技术路线', 'technology', 'process'],
-  company_mapping: ['企业', '公司', '主营', '客户', '供应商', '深南电路', '沪电股份', '鹏鼎科技', '生益科技', 'company', 'business'],
-  risk_analysis: ['风险', '政策', '贸易', '环保', '产能', '利润', '合规', 'risk', 'regulation', 'margin'],
+  industry_definition: ['定义', '范围', '规范', '标准', '行业分类', 'definition', 'scope'],
+  market_size_growth: ['市场', '规模', '营收', '产值', '增长', '收入', '投资概况', '市场规模', 'market', 'revenue', 'growth'],
+  supply_demand_analysis: ['产能', '利用率', '需求', '供需', '库存', '价格', '投资项目', '产量', '销量', '产销率', '订单', 'capacity', 'utilization', 'demand', 'supply', 'pricing'],
+  industry_chain_analysis: ['产业链', '上游', '下游', '材料', '设备', '制程', '供应链', '供应商', '原材料', 'chain', 'upstream', 'downstream', 'process'],
+  competitive_landscape: ['企业', '厂商', '竞争', '排名', '百强', '份额', '集中度', '营收', '客户', '公司', 'competitor', 'market share'],
+  technology_evolution: ['技术', '工艺', '制程', 'AI', 'HDI', '高阶', '高速', '材料', '设备', '技术路线', 'technology', 'process'],
+  company_mapping: ['企业', '厂商', '公司', '主营', '客户', '供应商', '营收', '排名', '分布', '深南电路', '沪电股份', '鹏鼎科技', '生益科技', 'company', 'business'],
+  risk_analysis: ['风险', '政策', '贸易', '环保', '产能', '利润', '成本', '原材料', '产能消化', '合规', 'risk', 'regulation', 'margin'],
 };
 function evidenceRelevance(e: ModuleEvidence, m: IndustryResearchModule, design: ResearchDesign, target: IndustryTargetInput, gap?: ResearchGap): number {
   const md = e.source.candidate.metadata ?? {};
