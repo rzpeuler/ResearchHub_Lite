@@ -46,11 +46,11 @@ class IndustryExecutor implements ReasoningExecutor {
   }
 }
 
-function fixturePlugin(sequence: readonly NormalizedResearchSource[] = [source('fixture-source')]): ResearchAcquisitionPlugin {
+function fixturePlugin(sequence: readonly NormalizedResearchSource[] = [source('fixture-source')], observedSearchTerms?: string[][]): ResearchAcquisitionPlugin {
   let index = 0
   return {
     name: 'fixture-industry-provider',
-    async discover() { return [sequence[Math.min(index, sequence.length - 1)]!.candidate] },
+    async discover(request) { if ('industry' in request) observedSearchTerms?.push([...(request.industry?.searchTerms ?? [])]); return [sequence[Math.min(index, sequence.length - 1)]!.candidate] },
     async fetch(candidate: ResearchSourceCandidate): Promise<ResearchFetchedSource> { const item = sequence.find((value) => value.candidate.candidateId === candidate.candidateId)!; return { candidate, retrievedAt: item.retrievedAt, content: item.content, rawBytes: new TextEncoder().encode(item.content), contentHash: item.contentHash } },
     async normalize(): Promise<NormalizedResearchSource> { return sequence[Math.min(index++, sequence.length - 1)]! },
   }
@@ -100,11 +100,12 @@ test('Application Industry research projects canonical graph and replays semanti
 
 test('Application Industry research aggregates bounded provider evidence across two waves', async () => {
   const executor = new IndustryExecutor(true)
-  const f = await fixture({ executor, plugins: [fixturePlugin([source('wave-one'), source('wave-two', 'Official capacity-gap evidence for the PCB industry.')])] })
+  const observedSearchTerms: string[][] = []
+  const f = await fixture({ executor, plugins: [fixturePlugin([source('wave-one'), source('wave-two', 'Official capacity-gap evidence for the PCB industry.')], observedSearchTerms)] })
   try {
-    const result = await f.service.startIndustryResearch({ workflowRunId: 'industry-app-two-wave', name: 'Fixture PCB Industry', maxSources: 4 }).completion
+    const result = await f.service.startIndustryResearch({ workflowRunId: 'industry-app-two-wave', name: 'Fixture PCB Industry', searchTerms: ['base-search-term'], maxSources: 4 }).completion
     assert.equal(result.status, 'completed'); assert.ok(result.providerOutcomes[0])
     const outcome = result.providerOutcomes[0] as { usableSourceCount: number; providerSucceeded: boolean; providerAttempted: boolean }
-    assert.equal(outcome.providerAttempted, true); assert.equal(outcome.providerSucceeded, true); assert.equal(outcome.usableSourceCount, 2); assert.ok(result.acquisitionDiagnostics.length <= 32)
+    assert.equal(outcome.providerAttempted, true); assert.equal(outcome.providerSucceeded, true); assert.equal(outcome.usableSourceCount, 2); assert.deepEqual(observedSearchTerms, [['base-search-term'], ['capacity-gap', 'base-search-term']]); assert.ok(result.acquisitionDiagnostics.length <= 32)
   } finally { await rm(f.root, { recursive: true, force: true }); await rm(f.reports, { recursive: true, force: true }) }
 })

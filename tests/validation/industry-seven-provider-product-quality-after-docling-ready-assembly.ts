@@ -11,3 +11,20 @@ export function classifyTest054(i: any) {
   return 'INDUSTRY_PRODUCT_QUALITY_READY'
 }
 export function assembleTest054Evidence(i: any) { return { ...i, finalClassification: classifyTest054(i) } }
+export function summarizeMiitManagedParser(log: readonly any[], anchorCandidateIds: ReadonlySet<string>, pdfAnchorCandidateIds: ReadonlySet<string>) {
+  const isAnchor = (row: any) => anchorCandidateIds.has(String(row.candidateId ?? ''))
+  const fetched = log.filter((row) => row.provider === 'miit-industry-research-acquisition' && row.phase === 'fetch' && row.succeeded && isAnchor(row))
+  const normalized = log.filter((row) => row.provider === 'miit-industry-research-acquisition' && row.phase === 'normalize' && row.succeeded && isAnchor(row))
+  const pdfFetched = fetched.filter((row) => pdfAnchorCandidateIds.has(String(row.candidateId ?? '')))
+  return {
+    fetchAttempted: fetched.length > 0,
+    fetchSucceeded: fetched.length > 0,
+    normalizedCount: normalized.length,
+    pdfMediaType: pdfFetched.length > 0 && pdfFetched.every((row) => row.mediaType === 'application/pdf'),
+    byteCount: fetched.reduce((n, row) => n + (row.byteCount ?? 0), 0),
+    normalizedCharacterCount: normalized.reduce((n, row) => n + (row.contentLength ?? 0), 0),
+    documents: normalized.map((row) => ({ candidateId: row.candidateId, normalized: true, contentHash: row.contentHash, publisher: row.publisher })),
+    pcbIdentity: normalized.length > 0,
+    scopeBoundary: normalized.length > 0,
+  }
+}
