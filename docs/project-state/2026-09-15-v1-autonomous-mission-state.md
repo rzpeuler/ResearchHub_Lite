@@ -66,7 +66,7 @@ research reuse.
 ## Acceptance gates
 
 - [x] Phase 0 cleanup accepted and synchronized.
-- [x] Typecheck, client typecheck, client build, parser preflight, and full product test suite pass after the latest Industry evidence changes (Node `985/985`, client `27/27`; Vite emitted `dist/client`; one prior Windows temp cleanup race passed on rerun).
+- [x] Typecheck, client typecheck, client build, parser preflight, and full product test suite pass after the latest Industry evidence changes (Node `987/987`, client `27/27`; Vite emitted `dist/client`).
 - [x] Industry strict product-quality evidence gate completes with one wave, eight modules, report/canonical/reload path, and explicit research gaps preserved.
 - [x] Industry flow is rerun against a second distinct research target for bounded generality.
 - [x] Remaining deterministic test health is explicitly reconciled; five consecutive VAL-HTTP-001 runs passed.
