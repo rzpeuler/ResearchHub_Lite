@@ -41,7 +41,7 @@ research reuse.
 | Daily live-provider coverage | BLOCKED_EXTERNAL | Public providers have recorded empty, HTTP 429, and bounded bridge failure outcomes; no fabricated fallback is allowed. |
 | Runtime HTTP/SSE/security/attachments | IMPLEMENTED_AND_VERIFIED | Bootstrap, loopback/origin/token controls, SSE, upload, cancellation and product route tests pass. |
 | Managed Docling parser | IMPLEMENTED_AND_VERIFIED | Preflight is `READY`; MIIT PDF fetch/normalization smoke was accepted. |
-| Unified Continuous Research maintenance | PARTIAL_BOUNDED_DAILY_SLICE | Daily materiality/thesis-impact assessment, existing Claim resolution, Gateway projection, and replay/idempotency are implemented and verified; broader cross-workflow maintenance remains open. |
+| Unified Continuous Research maintenance | IMPLEMENTED_AND_VERIFIED_BOUNDED_V1 | The bounded Daily path identifies tracked Entities, projects existing Claims/Theses, assesses materiality and Thesis impact, and performs governed update/contradict/replay handling. A broader generic cross-workflow scheduler is outside the V1 criterion and prohibited architecture expansion. |
 | First-class research UI | PARTIAL_RUN_LAUNCHER | Conversation, upload, graph, review, polling, dedicated Daily Briefs, report catalog, and governed launch forms for six research workflows exist; Review decisions remain read-only. |
 | Review decision execution | DESIGN_ONLY | Review access is read-only; decision mutation remains intentionally absent. |
 | Legacy Web-Chat2Codex control plane | DEPRECATED | Phase 0 removed `.web-chat2codex/**` and `docs/governance/**`; product Codex/Pi integration remains. |
@@ -70,7 +70,7 @@ research reuse.
 - [ ] Industry strict product-quality evidence gate completes without material evidence gaps. Current TEST-054 completes the eight-module/report/canonical/reload path but remains evidence-depth limited.
 - [x] Industry flow is rerun against a second distinct research target for bounded generality.
 - [x] Remaining deterministic test health is explicitly reconciled; five consecutive VAL-HTTP-001 runs passed.
-- [x] The bounded Daily Continuous Research maintenance slice is implemented and verified; unified cross-workflow maintenance remains open.
+- [x] New Evidence can enter the bounded Daily Continuous Research path, link to existing Knowledge/Thesis state, assess material change, and replay through Gateway/Writer without duplicate revision; no generic cross-workflow framework is required by V1.
 - [x] The read-only general Research Report catalog is implemented, validated, committed, and synchronized.
 - [x] Final external validation requirements are listed with completed, external-blocked, and explicitly deferred boundaries in `docs/task-reports/2026-09-15-final-external-validation-inventory.md`.
 

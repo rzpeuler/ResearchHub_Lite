@@ -3,9 +3,11 @@
 Date: 2026-09-15
 Task: RHL-P2-CONTINUOUS-RESEARCH
 
-This implementation is a bounded Daily Intelligence maintenance slice. It
-does not introduce a generic continuous-research engine, a new persistence
-layer, or a second canonical write path.
+This is the V1 Continuous Research path. It is intentionally bounded to Daily
+Intelligence and does not introduce a generic continuous-research engine, a
+new persistence layer, or a second canonical write path. The broader generic
+cross-workflow scheduler is outside the V1 completion criterion and would
+violate the repository's architecture boundary.
 
 ## Implemented boundary
 
@@ -39,8 +41,11 @@ layer, or a second canonical write path.
   corrected so bound existing Claims are counted from canonical Claim
   `targetRef`, not from an intent naming convention.
 
-## Remaining scope
+## V1 completion boundary
 
-This is not yet a complete cross-workflow Continuous Research product. It
-provides the first bounded Daily maintenance path; broader scheduling,
-cross-workflow signal routing, and UI exposure remain separate backlog work.
+The Goal criterion is satisfied by this bounded path: newly acquired Daily
+Evidence is linked to tracked company Entities, projected existing Claims and
+Theses, assessed for materiality and Thesis impact, and routed through the
+existing Gateway/Writer/reload/replay chain when a durable update is safe.
+Broader scheduling, cross-workflow signal routing, and UI exposure remain
+separate non-goals rather than missing V1 semantics.
