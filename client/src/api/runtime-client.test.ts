@@ -57,4 +57,12 @@ describe('RuntimeClient', () => {
     const client = new RuntimeClient(async () => json({ code: 'not_found', error: 'Resource not found' }, 404))
     await expect(client.getKnowledgeGraph({ rootRef: 'entity:missing' })).rejects.toMatchObject({ code: 'not_found', status: 404 })
   })
+
+  it('reads bounded Daily Brief history and one persisted brief without a mutation token', async () => {
+    const paths: string[] = []; const headers: Headers[] = []
+    const client = new RuntimeClient(async (input, init) => { paths.push(String(input)); headers.push(new Headers(init?.headers)); return json(paths.length === 1 ? { briefs: [] } : { reportId: 'daily-morning-2026-09-08', briefType: 'morning', tradeDate: '2026-09-08', generatedAt: '2026-09-08T08:00:00.000Z', asOf: '2026-09-08T07:00:00.000Z', timezone: 'Asia/Shanghai', revision: 1, workflowRunId: 'daily-run', sections: [], topSignals: [], providerOutcomes: [], quality: { topCount: 0, reportItemWithSourceRatio: 0, reportItemCount: 0, claimCount: 0 }, consensusStatement: 'Unavailable', committedKnowledgeRefs: [], reviewCaseCount: 0, calendarConfidence: 'fallback' }) })
+    await client.listDailyBriefs(20); await client.getDailyBrief('daily-morning-2026-09-08')
+    expect(paths).toEqual(['/api/daily-briefs?limit=20', '/api/daily-briefs/daily-morning-2026-09-08'])
+    expect(headers.every((value) => value.has('X-ResearchHub-Runtime-Token') === false)).toBe(true)
+  })
 })

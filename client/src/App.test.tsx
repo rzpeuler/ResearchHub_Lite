@@ -18,6 +18,7 @@ describe('Homepage shell', () => {
       if (path === '/api/conversations/current') return json({ conversationId: 'c1', isStreaming: false, isIdle: true, pendingMessageCount: 0, thinkingLevel: 'off' })
       if (path === '/api/conversations/messages') return json({ conversationId: 'c1', messages: [] })
       if (path === '/api/conversations') return json({ conversations: [] })
+      if (path === '/api/daily-briefs?limit=20') return json({ briefs: [] })
       return json({ code: 'not_found', error: 'not found' }, 404)
     }) as typeof fetch
   })
@@ -38,16 +39,25 @@ describe('Homepage shell', () => {
     expect(screen.queryByText('Reject')).toBeNull()
   })
 
-  it('exposes the three product destinations and keeps Knowledge Graph safe in no-KB mode', async () => {
+  it('exposes the four product destinations and keeps Knowledge Graph safe in no-KB mode', async () => {
     render(<App />)
     await waitFor(() => expect(screen.getByRole('link', { name: 'Research' }).getAttribute('aria-current')).toBe('page'))
     expect(screen.getByRole('link', { name: 'Knowledge Graph' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Daily Briefs' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Reviews' })).toBeTruthy()
     fireEvent.click(screen.getByRole('link', { name: 'Knowledge Graph' }))
     expect(await screen.findByRole('heading', { name: 'Knowledge Graph' })).toBeTruthy()
     expect(screen.getByText('Mount a canonical Knowledge Base to browse the Directory and explore a rooted graph.')).toBeTruthy()
     expect(screen.queryByRole('canvas')).toBeNull()
     expect(screen.queryByText('Search Knowledge')).toBeNull()
+  })
+
+  it('renders the Daily Brief reader as a read-only route', async () => {
+    render(<App />)
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Daily Briefs' })).toBeTruthy())
+    fireEvent.click(screen.getByRole('link', { name: 'Daily Briefs' }))
+    expect(await screen.findByRole('heading', { name: 'Daily Briefs' })).toBeTruthy()
+    expect(screen.getByText('No persisted Daily Briefs')).toBeTruthy()
   })
 
   it('renders Reviews as a separate read-only page in no-KB mode', async () => {

@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
-import { RuntimeClient, RuntimeClientError, type AttachmentRef, type ClientEvent, type ConversationMessage, type ConversationSummary, type KnowledgeBaseStatus, type ReviewDetail, type ReviewListResponse, type SessionState, type WorkflowRun } from './api/runtime-client'
+import { RuntimeClient, RuntimeClientError, type AttachmentRef, type ClientEvent, type ConversationMessage, type ConversationSummary, type DailyBriefReport, type DailyBriefSummary, type KnowledgeBaseStatus, type ReviewDetail, type ReviewListResponse, type SessionState, type WorkflowRun } from './api/runtime-client'
 import { startWorkflowPolling, terminalWorkflowStatuses } from './app/workflow-polling'
 import { KnowledgeGraphPage } from './app/graph/KnowledgeGraphPage'
 import './styles.css'
 
-type Route = 'research' | 'graph' | 'reviews'
+type Route = 'research' | 'briefs' | 'graph' | 'reviews'
 type ResearchContextPanel = 'attachments' | 'workflow' | 'review'
 type LoadState = 'loading' | 'ready' | 'error'
 const knownTools: Record<string, string> = { researchhub_status: 'ResearchHub status', search_knowledge: 'Knowledge search', get_knowledge_object: 'Knowledge object lookup', ingest_document: 'Document ingestion', get_workflow_status: 'Workflow status', cancel_workflow: 'Workflow cancellation', list_review_cases: 'Review case list', get_review_case: 'Review case detail' }
 
-function routeForPath(pathname: string): Route { return pathname === '/graph' ? 'graph' : pathname === '/reviews' ? 'reviews' : 'research' }
+function routeForPath(pathname: string): Route { return pathname === '/briefs' ? 'briefs' : pathname === '/graph' ? 'graph' : pathname === '/reviews' ? 'reviews' : 'research' }
 function routePath(route: Route): string { return route === 'research' ? '/research' : `/${route}` }
 function errorText(error: unknown): string { return error instanceof RuntimeClientError ? error.message : 'ResearchHub runtime operation failed' }
 function toolLabel(name: string | undefined): string { return name === undefined ? 'Tool execution' : knownTools[name] ?? 'Tool execution' }
@@ -27,7 +27,7 @@ function safeStructured(value: unknown, depth = 0): string {
 
 interface TopBarProps { readonly route: Route; readonly knowledgeBase?: KnowledgeBaseStatus; readonly onNavigate: (route: Route) => void }
 function TopBar({ route, knowledgeBase, onNavigate }: TopBarProps): ReactElement {
-  const links: readonly [Route, string][] = [['research', 'Research'], ['graph', 'Knowledge Graph'], ['reviews', 'Reviews']]
+  const links: readonly [Route, string][] = [['research', 'Research'], ['briefs', 'Daily Briefs'], ['graph', 'Knowledge Graph'], ['reviews', 'Reviews']]
   return <header className="topbar"><div className="topbar-left"><div className="brand"><span className="brand-mark">RH</span><span className="brand-name">ResearchHub</span></div><nav className="primary-nav" aria-label="Primary"><ul>{links.map(([item, label]) => <li key={item}><a className={route === item ? 'nav-link active' : 'nav-link'} href={routePath(item)} aria-current={route === item ? 'page' : undefined} onClick={(event) => { event.preventDefault(); onNavigate(item) }}>{label}</a></li>)}</ul></nav></div><div className="runtime-status"><span className="status-dot" /> <span>Local Runtime</span><span className="status-sub">{knowledgeBase ? 'KB mounted' : 'No KB mounted'}</span></div></header>
 }
 
@@ -37,6 +37,11 @@ function ReviewsPage({ knowledgeBase, reviews, reviewDetail, reviewsBusy, onSele
 }
 
 function DailyBriefCard(): ReactElement { return <section className="daily-brief-card" aria-label="Daily Intelligence"><div><span className="eyebrow">PERSONAL RESEARCH</span><h2>Daily Intelligence</h2><p>Morning 08:00 · Evening 20:30 · Asia/Shanghai</p></div><span className="read-only-badge">Public sources</span><small>Generate or read bounded briefs from the Pi tools or API. Unavailable sections remain explicit.</small></section> }
+
+interface BriefsPageProps { readonly briefs?: readonly DailyBriefSummary[]; readonly selected?: DailyBriefReport; readonly busy: boolean; readonly error: string; readonly onSelect: (reportId: string) => void }
+function BriefsPage({ briefs, selected, busy, error, onSelect }: BriefsPageProps): ReactElement {
+  return <main className="page-frame briefs-page" aria-labelledby="briefs-title"><div className="page-heading"><div><span className="eyebrow">PERSONAL RESEARCH</span><h1 id="briefs-title">Daily Briefs</h1></div><span className="read-only-badge">Read-only</span></div><p>Browse persisted Morning and Evening Intelligence outputs with section-level evidence kept visible.</p>{error ? <div className="notice" role="alert"><strong>Daily Briefs unavailable</strong><p>{error}</p></div> : busy ? <p className="muted">Loading Daily Briefs…</p> : briefs && briefs.length > 0 ? <div className="briefs-layout"><section aria-label="Daily Brief history"><div className="section-title"><div><span className="eyebrow">HISTORY</span><h2>{briefs.length} brief{briefs.length === 1 ? '' : 's'}</h2></div></div><div className="result-list">{briefs.map((brief) => <button className={`result-item ${selected?.reportId === brief.reportId ? 'selected' : ''}`} key={brief.reportId} onClick={() => onSelect(brief.reportId)}><strong>{brief.briefType === 'morning' ? 'Morning' : 'Evening'} · {brief.tradeDate}</strong><span>{brief.quality.topCount} top signals · {Math.round(brief.quality.reportItemWithSourceRatio * 100)}% sourced</span><small>{brief.reportId}</small></button>)}</div></section>{selected ? <section className="brief-detail" aria-label="Daily Brief detail"><div className="detail-title"><div><span className="eyebrow">{selected.briefType === 'morning' ? 'MORNING' : 'EVENING'} BRIEF</span><h2>{selected.tradeDate}</h2></div><small>Revision {selected.revision} · {selected.timezone}</small></div><p className="brief-methodology">As of {selected.asOf}. {selected.consensusStatement}</p><div className="brief-metrics"><span><b>{selected.quality.reportItemCount ?? 0}</b> items</span><span><b>{selected.quality.claimCount ?? 0}</b> claims</span><span><b>{selected.reviewCaseCount}</b> reviews</span></div>{selected.sections.map((section) => <article className={`brief-section ${section.unavailable ? 'unavailable' : ''}`} key={section.id}><div className="brief-section-heading"><h3>{section.title}</h3>{section.unavailable ? <span>Unavailable</span> : null}</div>{section.items.map((item) => <div className="brief-item" key={item.itemId}><strong>{item.headline}</strong><p>{item.markdown}</p>{item.sourceRefs.length > 0 ? <small>Sources: {item.sourceRefs.join(', ')}</small> : null}</div>)}</article>)}</section> : <div className="notice detail-empty"><strong>Select a brief</strong><p>Choose a persisted brief to inspect its bounded sections and provenance.</p></div>}</div> : <div className="notice"><strong>No persisted Daily Briefs</strong><p>Run Daily Intelligence through the Agent or API to create a brief.</p></div>}</main>
+}
 
 interface ResearchPageProps {
   readonly session?: SessionState
@@ -103,6 +108,9 @@ export default function App(): ReactElement {
   const [reviews, setReviews] = useState<ReviewListResponse>()
   const [reviewDetail, setReviewDetail] = useState<ReviewDetail>()
   const [reviewsBusy, setReviewsBusy] = useState(false)
+  const [briefs, setBriefs] = useState<readonly DailyBriefSummary[]>()
+  const [selectedBrief, setSelectedBrief] = useState<DailyBriefReport>()
+  const [briefsBusy, setBriefsBusy] = useState(false)
   const latestConversation = useRef('')
   const workflowRef = useRef<WorkflowRun | undefined>(undefined)
   workflowRef.current = workflow
@@ -139,6 +147,12 @@ export default function App(): ReactElement {
     void client.listReviews().then(setReviews).catch((caught) => setError(errorText(caught))).finally(() => setReviewsBusy(false))
   }, [client, knowledgeBase, loadState, route])
 
+  useEffect(() => {
+    if (loadState !== 'ready' || route !== 'briefs') { setBriefs(undefined); setSelectedBrief(undefined); return }
+    setBriefsBusy(true); setError('')
+    void client.listDailyBriefs(20).then((items) => { setBriefs(items); setSelectedBrief(undefined) }).catch((caught) => setError(errorText(caught))).finally(() => setBriefsBusy(false))
+  }, [client, loadState, route])
+
   const handleEvent = useCallback((event: ClientEvent): void => {
     if (event.conversationId !== latestConversation.current && event.type !== 'session.changed') return
     if (event.type === 'agent.started') { setStreaming(true); setThinking(false); setStreamText(''); setToolEvents([]) }
@@ -166,8 +180,9 @@ export default function App(): ReactElement {
   const addToKnowledge = async (): Promise<void> => { if (!attachment || !knowledgeBase) return; setBusy(true); setError(''); try { const result = await client.startProduction(attachment.attachmentId); setWorkflowRunId(result.runId); setWorkflow(result.workflow); setContextPanel('workflow') } catch (caught) { setError(errorText(caught)) } finally { setBusy(false) } }
   const cancelWorkflow = async (): Promise<void> => { if (!workflowRunId) return; setBusy(true); try { await client.cancelWorkflow(workflowRunId); setWorkflow(await client.workflow(workflowRunId)) } catch (caught) { setError(errorText(caught)) } finally { setBusy(false) } }
   const selectReview = async (reviewCaseId: string): Promise<void> => { try { setReviewDetail(await client.getReview(reviewCaseId)) } catch (caught) { setError(errorText(caught)) } }
+  const selectBrief = async (reportId: string): Promise<void> => { try { setSelectedBrief(await client.getDailyBrief(reportId)) } catch (caught) { setError(errorText(caught)) } }
 
   if (loadState === 'loading') return <main className="state-screen"><div className="state-card"><span className="eyebrow">RESEARCHHUB RUNTIME</span><h1>Loading workspace</h1><p>Connecting to the local application runtime…</p><div className="loader" /></div></main>
   if (loadState === 'error') return <main className="state-screen"><div className="state-card"><span className="eyebrow">RUNTIME UNAVAILABLE</span><h1>ResearchHub could not start</h1><p>{loadError}</p><button onClick={() => window.location.reload()}>Reload page</button></div></main>
-  return <div className="app-shell"><TopBar route={route} knowledgeBase={knowledgeBase} onNavigate={navigate} />{route === 'research' ? <ResearchPage session={session} conversations={conversations} messages={messages} streaming={streaming} thinking={thinking} streamText={streamText} toolEvents={toolEvents} queue={queue} composer={composer} busy={busy} error={error} attachment={attachment} attachmentBusy={attachmentBusy} workflowRunId={workflowRunId} workflow={workflow} knowledgeBase={knowledgeBase} openReviewCases={openReviewCases} contextPanel={contextPanel} setComposer={setComposer} setContextPanel={setContextPanel} newConversation={() => void newConversation()} switchConversation={(id) => void switchConversation(id)} runCommand={(operation) => void runCommand(operation)} abort={() => void abort()} upload={(file) => void upload(file)} addToKnowledge={() => void addToKnowledge()} cancelWorkflow={() => void cancelWorkflow()} dismissError={() => setError('')} onNavigate={navigate} /> : route === 'graph' ? <KnowledgeGraphPage knowledgeBase={knowledgeBase} client={client} /> : <ReviewsPage knowledgeBase={knowledgeBase} reviews={reviews} reviewDetail={reviewDetail} reviewsBusy={reviewsBusy} onSelect={(id) => void selectReview(id)} onCloseDetail={() => setReviewDetail(undefined)} />}</div>
+  return <div className="app-shell"><TopBar route={route} knowledgeBase={knowledgeBase} onNavigate={navigate} />{route === 'research' ? <ResearchPage session={session} conversations={conversations} messages={messages} streaming={streaming} thinking={thinking} streamText={streamText} toolEvents={toolEvents} queue={queue} composer={composer} busy={busy} error={error} attachment={attachment} attachmentBusy={attachmentBusy} workflowRunId={workflowRunId} workflow={workflow} knowledgeBase={knowledgeBase} openReviewCases={openReviewCases} contextPanel={contextPanel} setComposer={setComposer} setContextPanel={setContextPanel} newConversation={() => void newConversation()} switchConversation={(id) => void switchConversation(id)} runCommand={(operation) => void runCommand(operation)} abort={() => void abort()} upload={(file) => void upload(file)} addToKnowledge={() => void addToKnowledge()} cancelWorkflow={() => void cancelWorkflow()} dismissError={() => setError('')} onNavigate={navigate} /> : route === 'briefs' ? <BriefsPage briefs={briefs} selected={selectedBrief} busy={briefsBusy} error={error} onSelect={(id) => void selectBrief(id)} /> : route === 'graph' ? <KnowledgeGraphPage knowledgeBase={knowledgeBase} client={client} /> : <ReviewsPage knowledgeBase={knowledgeBase} reviews={reviews} reviewDetail={reviewDetail} reviewsBusy={reviewsBusy} onSelect={(id) => void selectReview(id)} onCloseDetail={() => setReviewDetail(undefined)} />}</div>
 }

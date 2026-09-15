@@ -12,9 +12,9 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- HEAD: `852162eb48a0cfdea8bf420e0309a2dbb96da798` (continuous maintenance changes pending commit)
-- Remote: `origin/main` at `852162eb48a0cfdea8bf420e0309a2dbb96da798`
-- Working tree: bounded Continuous Research maintenance changes and fresh validation evidence are pending commit
+- HEAD: `d9f70a3b8fed59d87ceee5cf5f4e6a1faa6ad116` (UI exposure changes pending commit)
+- Remote: `origin/main` at `d9f70a3b8fed59d87ceee5cf5f4e6a1faa6ad116`
+- Working tree: bounded Daily Brief reader changes are pending commit
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
 - Phase 3 critical path: `PARTIAL`
@@ -40,7 +40,7 @@ research reuse.
 | Runtime HTTP/SSE/security/attachments | IMPLEMENTED_AND_VERIFIED | Bootstrap, loopback/origin/token controls, SSE, upload, cancellation and product route tests pass. |
 | Managed Docling parser | IMPLEMENTED_AND_VERIFIED | Preflight is `READY`; MIIT PDF fetch/normalization smoke was accepted. |
 | Unified Continuous Research maintenance | PARTIAL_BOUNDED_DAILY_SLICE | Daily materiality/thesis-impact assessment, existing Claim resolution, Gateway projection, and replay/idempotency are implemented and verified; broader cross-workflow maintenance remains open. |
-| First-class research UI | PARTIAL | Conversation, upload, graph, review and polling exist; direct research launch/report browsing is limited. |
+| First-class research UI | PARTIAL_DAILY_BRIEF_READER | Conversation, upload, graph, review, polling, and a read-only persisted Daily Brief reader exist; general Research Report indexing and direct launch forms remain limited. |
 | Review decision execution | DESIGN_ONLY | Review access is read-only; decision mutation remains intentionally absent. |
 | Legacy Web-Chat2Codex control plane | DEPRECATED | Phase 0 removed `.web-chat2codex/**` and `docs/governance/**`; product Codex/Pi integration remains. |
 
@@ -54,7 +54,7 @@ research reuse.
 | RHL-P1-TEST-HEALTH | 1 | ACCEPTED_RECONCILED | Five consecutive `VAL-HTTP-001` runs passed; no valuation semantic change was made and the prior timing failure was not reproduced. |
 | RHL-P2-DOCUMENT-STATUS | 2 | READY | Reconcile stale descriptive status documents with verified source/test reality without rewriting historical evidence. |
 | RHL-P2-CONTINUOUS-RESEARCH | 8 | ACCEPTED_BOUNDED_DAILY_SLICE | Implement and verify the bounded Daily maintenance path through existing Claim projection, Gateway/Writer, reload, and replay; broader unified maintenance remains open. |
-| RHL-P1-UI-EXPOSURE | 1 | NOT_STARTED | Expose stable core research/report/references through the existing UI only after research and Knowledge acceptance. |
+| RHL-P1-UI-EXPOSURE | 1 | ACCEPTED_DAILY_BRIEF_READER | Expose the existing bounded Daily Brief list/detail API as a read-only UI route; general report catalog and direct launch forms remain open. |
 | RHL-P2-REVIEW-DECISIONS | 5 | DEFERRED | Requires an explicit product decision for write-capable Review actions; keep current read-only boundary until then. |
 
 ## Acceptance gates

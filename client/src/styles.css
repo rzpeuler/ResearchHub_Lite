@@ -80,6 +80,24 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .daily-brief-card h2 { margin: 2px 0; color: #d8efeb; font-size: 15px; }
 .daily-brief-card p, .daily-brief-card small { margin: 0; color: #91adaf; font-size: 10px; }
 .daily-brief-card small { grid-column: 1 / -1; }
+.briefs-page > p { max-width: 680px; }
+.briefs-layout { display: grid; grid-template-columns: minmax(220px, 310px) minmax(360px, 1fr); gap: 24px; max-width: 1100px; margin-top: 28px; }
+.result-item.selected { border-color: #72d2c4; background: #173633; }
+.brief-detail { min-width: 0; padding: 18px; border: 1px solid #385b59; border-radius: 8px; background: #121f25; }
+.brief-detail h2 { margin: 5px 0 0; color: #dce9ed; font-size: 20px; }
+.brief-methodology { color: #91a9b0 !important; font-size: 11px !important; line-height: 1.55 !important; }
+.brief-metrics { display: flex; gap: 18px; padding: 12px 0; border-top: 1px solid #273a45; border-bottom: 1px solid #273a45; color: #8199a2; font-size: 10px; }
+.brief-metrics b { color: #c6e0da; font-size: 14px; }
+.brief-section { padding: 16px 0 4px; border-bottom: 1px solid #273a45; }
+.brief-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.brief-section-heading h3 { margin: 0 0 9px; color: #cbdde1; font-size: 13px; }
+.brief-section-heading span { color: #8d786d; font-size: 9px; text-transform: uppercase; }
+.brief-section.unavailable { opacity: .7; }
+.brief-item { margin: 0 0 13px; padding-left: 10px; border-left: 2px solid #315b58; }
+.brief-item strong { color: #bed2d5; font-size: 11px; }
+.brief-item p { margin: 5px 0; color: #98adb3; font-size: 10px; line-height: 1.55; white-space: pre-wrap; }
+.brief-item small { color: #66828a; font-family: ui-monospace, monospace; font-size: 8px; overflow-wrap: anywhere; }
+@media (max-width: 860px) { .briefs-layout { grid-template-columns: 1fr; } }
 .panel-tabs button { position: relative; padding: 8px 3px; border: 0; border-radius: 5px; color: #718591; background: transparent; font-size: 10px; }
 .panel-tabs button.selected { color: #d3eee9; background: #1c3836; }
 .panel-tabs b { position: absolute; top: 3px; right: 3px; min-width: 13px; padding: 1px 3px; border-radius: 7px; color: #0f201e; background: #72d2c4; font-size: 8px; }
