@@ -42,7 +42,7 @@ research reuse.
 | Runtime HTTP/SSE/security/attachments | IMPLEMENTED_AND_VERIFIED | Bootstrap, loopback/origin/token controls, SSE, upload, cancellation and product route tests pass. |
 | Managed Docling parser | IMPLEMENTED_AND_VERIFIED | Preflight is `READY`; MIIT PDF fetch/normalization smoke was accepted. |
 | Unified Continuous Research maintenance | PARTIAL_BOUNDED_DAILY_SLICE | Daily materiality/thesis-impact assessment, existing Claim resolution, Gateway projection, and replay/idempotency are implemented and verified; broader cross-workflow maintenance remains open. |
-| First-class research UI | PARTIAL_REPORT_CATALOG | Conversation, upload, graph, review, polling, dedicated Daily Briefs, and a read-only general Research Report catalog exist; direct launch forms remain limited. |
+| First-class research UI | PARTIAL_RUN_LAUNCHER | Conversation, upload, graph, review, polling, dedicated Daily Briefs, report catalog, and governed launch forms for six research workflows exist; Review decisions remain read-only. |
 | Review decision execution | DESIGN_ONLY | Review access is read-only; decision mutation remains intentionally absent. |
 | Legacy Web-Chat2Codex control plane | DEPRECATED | Phase 0 removed `.web-chat2codex/**` and `docs/governance/**`; product Codex/Pi integration remains. |
 
@@ -60,12 +60,13 @@ research reuse.
 | RHL-P2-CONTINUOUS-RESEARCH | 8 | ACCEPTED_BOUNDED_DAILY_SLICE | Implement and verify the bounded Daily maintenance path through existing Claim projection, Gateway/Writer, reload, and replay; broader unified maintenance remains open. |
 | RHL-P1-UI-EXPOSURE | 1 | ACCEPTED_DAILY_BRIEF_READER | Expose the existing bounded Daily Brief list/detail API as a read-only UI route; general report catalog and direct launch forms remain open. |
 | RHL-P1-UI-REPORT-CATALOG | 1 | ACCEPTED_IMPLEMENTED | Add a read-only general report list/detail route over existing persisted Research Reports without adding workflow launch forms or mutation paths. |
+| RHL-P1-UI-RESEARCH-RUN-LAUNCHER | 1 | ACCEPTED_IMPLEMENTED | Add a governed `/run` surface for the six existing research Workflow endpoints; preserve Runtime token, server validation, and asynchronous polling boundaries. |
 | RHL-P2-REVIEW-DECISIONS | 5 | DEFERRED | Requires an explicit product decision for write-capable Review actions; keep current read-only boundary until then. |
 
 ## Acceptance gates
 
 - [x] Phase 0 cleanup accepted and synchronized.
-- [x] Typecheck, client typecheck, client build, parser preflight, and full product test suite pass after continuous maintenance (`977/977`, client `23/23`).
+- [x] Typecheck, client typecheck, client build, parser preflight, and full product test suite pass after continuous maintenance and UI slices (`979/979`, client `27/27`).
 - [ ] Industry real public-data E2E completes with eight-module evidence coverage, report, canonical Knowledge, reload, and replay. Current TEST-054 completed the persistence/report path but is evidence-limited.
 - [x] Industry flow is rerun against a second distinct research target for bounded generality.
 - [x] Remaining deterministic test health is explicitly reconciled; five consecutive VAL-HTTP-001 runs passed.

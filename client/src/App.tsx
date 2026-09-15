@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
-import { RuntimeClient, RuntimeClientError, type AttachmentRef, type ClientEvent, type ConversationMessage, type ConversationSummary, type DailyBriefReport, type DailyBriefSummary, type KnowledgeBaseStatus, type ResearchReport, type ResearchReportSummary, type ReviewDetail, type ReviewListResponse, type SessionState, type WorkflowRun } from './api/runtime-client'
+import { RuntimeClient, RuntimeClientError, type AttachmentRef, type ClientEvent, type ConversationMessage, type ConversationSummary, type DailyBriefReport, type DailyBriefSummary, type KnowledgeBaseStatus, type ResearchReport, type ResearchReportSummary, type ResearchStartResponse, type ReviewDetail, type ReviewListResponse, type SessionState, type WorkflowRun } from './api/runtime-client'
 import { startWorkflowPolling, terminalWorkflowStatuses } from './app/workflow-polling'
 import { KnowledgeGraphPage } from './app/graph/KnowledgeGraphPage'
+import { ResearchRunPage } from './app/run/ResearchRunPage'
 import './styles.css'
 
-type Route = 'research' | 'briefs' | 'reports' | 'graph' | 'reviews'
+type Route = 'research' | 'briefs' | 'reports' | 'run' | 'graph' | 'reviews'
 type ResearchContextPanel = 'attachments' | 'workflow' | 'review'
 type LoadState = 'loading' | 'ready' | 'error'
 const knownTools: Record<string, string> = { researchhub_status: 'ResearchHub status', search_knowledge: 'Knowledge search', get_knowledge_object: 'Knowledge object lookup', ingest_document: 'Document ingestion', get_workflow_status: 'Workflow status', cancel_workflow: 'Workflow cancellation', list_review_cases: 'Review case list', get_review_case: 'Review case detail' }
 
-function routeForPath(pathname: string): Route { return pathname === '/briefs' ? 'briefs' : pathname === '/reports' ? 'reports' : pathname === '/graph' ? 'graph' : pathname === '/reviews' ? 'reviews' : 'research' }
+function routeForPath(pathname: string): Route { return pathname === '/briefs' ? 'briefs' : pathname === '/reports' ? 'reports' : pathname === '/run' ? 'run' : pathname === '/graph' ? 'graph' : pathname === '/reviews' ? 'reviews' : 'research' }
 function routePath(route: Route): string { return route === 'research' ? '/research' : `/${route}` }
 function errorText(error: unknown): string { return error instanceof RuntimeClientError ? error.message : 'ResearchHub runtime operation failed' }
 function toolLabel(name: string | undefined): string { return name === undefined ? 'Tool execution' : knownTools[name] ?? 'Tool execution' }
@@ -27,7 +28,7 @@ function safeStructured(value: unknown, depth = 0): string {
 
 interface TopBarProps { readonly route: Route; readonly knowledgeBase?: KnowledgeBaseStatus; readonly onNavigate: (route: Route) => void }
 function TopBar({ route, knowledgeBase, onNavigate }: TopBarProps): ReactElement {
-  const links: readonly [Route, string][] = [['research', 'Research'], ['briefs', 'Daily Briefs'], ['reports', 'Reports'], ['graph', 'Knowledge Graph'], ['reviews', 'Reviews']]
+  const links: readonly [Route, string][] = [['research', 'Research'], ['briefs', 'Daily Briefs'], ['reports', 'Reports'], ['run', 'Run Research'], ['graph', 'Knowledge Graph'], ['reviews', 'Reviews']]
   return <header className="topbar"><div className="topbar-left"><div className="brand"><span className="brand-mark">RH</span><span className="brand-name">ResearchHub</span></div><nav className="primary-nav" aria-label="Primary"><ul>{links.map(([item, label]) => <li key={item}><a className={route === item ? 'nav-link active' : 'nav-link'} href={routePath(item)} aria-current={route === item ? 'page' : undefined} onClick={(event) => { event.preventDefault(); onNavigate(item) }}>{label}</a></li>)}</ul></nav></div><div className="runtime-status"><span className="status-dot" /> <span>Local Runtime</span><span className="status-sub">{knowledgeBase ? 'KB mounted' : 'No KB mounted'}</span></div></header>
 }
 
@@ -133,6 +134,7 @@ export default function App(): ReactElement {
   }, [client])
 
   const navigate = useCallback((nextRoute: Route): void => { const path = routePath(nextRoute); if (window.location.pathname !== path) window.history.pushState({}, '', path); setRoute(nextRoute) }, [])
+  const onResearchLaunched = useCallback((result: ResearchStartResponse): void => { setWorkflowRunId(result.runId); setWorkflow(result.workflow); navigate('research') }, [navigate])
 
   useEffect(() => { const onPopState = (): void => setRoute(routeForPath(window.location.pathname)); window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState) }, [])
 
@@ -200,5 +202,5 @@ export default function App(): ReactElement {
 
   if (loadState === 'loading') return <main className="state-screen"><div className="state-card"><span className="eyebrow">RESEARCHHUB RUNTIME</span><h1>Loading workspace</h1><p>Connecting to the local application runtime…</p><div className="loader" /></div></main>
   if (loadState === 'error') return <main className="state-screen"><div className="state-card"><span className="eyebrow">RUNTIME UNAVAILABLE</span><h1>ResearchHub could not start</h1><p>{loadError}</p><button onClick={() => window.location.reload()}>Reload page</button></div></main>
-  return <div className="app-shell"><TopBar route={route} knowledgeBase={knowledgeBase} onNavigate={navigate} />{route === 'research' ? <ResearchPage session={session} conversations={conversations} messages={messages} streaming={streaming} thinking={thinking} streamText={streamText} toolEvents={toolEvents} queue={queue} composer={composer} busy={busy} error={error} attachment={attachment} attachmentBusy={attachmentBusy} workflowRunId={workflowRunId} workflow={workflow} knowledgeBase={knowledgeBase} openReviewCases={openReviewCases} contextPanel={contextPanel} setComposer={setComposer} setContextPanel={setContextPanel} newConversation={() => void newConversation()} switchConversation={(id) => void switchConversation(id)} runCommand={(operation) => void runCommand(operation)} abort={() => void abort()} upload={(file) => void upload(file)} addToKnowledge={() => void addToKnowledge()} cancelWorkflow={() => void cancelWorkflow()} dismissError={() => setError('')} onNavigate={navigate} /> : route === 'briefs' ? <BriefsPage briefs={briefs} selected={selectedBrief} busy={briefsBusy} error={error} onSelect={(id) => void selectBrief(id)} /> : route === 'reports' ? <ReportsPage reports={reports} selected={selectedReport} busy={reportsBusy} error={error} onSelect={(id) => void selectReport(id)} /> : route === 'graph' ? <KnowledgeGraphPage knowledgeBase={knowledgeBase} client={client} /> : <ReviewsPage knowledgeBase={knowledgeBase} reviews={reviews} reviewDetail={reviewDetail} reviewsBusy={reviewsBusy} onSelect={(id) => void selectReview(id)} onCloseDetail={() => setReviewDetail(undefined)} />}</div>
+  return <div className="app-shell"><TopBar route={route} knowledgeBase={knowledgeBase} onNavigate={navigate} />{route === 'research' ? <ResearchPage session={session} conversations={conversations} messages={messages} streaming={streaming} thinking={thinking} streamText={streamText} toolEvents={toolEvents} queue={queue} composer={composer} busy={busy} error={error} attachment={attachment} attachmentBusy={attachmentBusy} workflowRunId={workflowRunId} workflow={workflow} knowledgeBase={knowledgeBase} openReviewCases={openReviewCases} contextPanel={contextPanel} setComposer={setComposer} setContextPanel={setContextPanel} newConversation={() => void newConversation()} switchConversation={(id) => void switchConversation(id)} runCommand={(operation) => void runCommand(operation)} abort={() => void abort()} upload={(file) => void upload(file)} addToKnowledge={() => void addToKnowledge()} cancelWorkflow={() => void cancelWorkflow()} dismissError={() => setError('')} onNavigate={navigate} /> : route === 'briefs' ? <BriefsPage briefs={briefs} selected={selectedBrief} busy={briefsBusy} error={error} onSelect={(id) => void selectBrief(id)} /> : route === 'reports' ? <ReportsPage reports={reports} selected={selectedReport} busy={reportsBusy} error={error} onSelect={(id) => void selectReport(id)} /> : route === 'run' ? <ResearchRunPage client={client} onLaunched={onResearchLaunched} /> : route === 'graph' ? <KnowledgeGraphPage knowledgeBase={knowledgeBase} client={client} /> : <ReviewsPage knowledgeBase={knowledgeBase} reviews={reviews} reviewDetail={reviewDetail} reviewsBusy={reviewsBusy} onSelect={(id) => void selectReview(id)} onCloseDetail={() => setReviewDetail(undefined)} />}</div>
 }

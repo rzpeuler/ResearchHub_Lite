@@ -73,4 +73,18 @@ describe('RuntimeClient', () => {
     expect(paths).toEqual(['/api/research-reports?limit=20', '/api/research-reports/company-600519'])
     expect(headers.every((value) => value.has('X-ResearchHub-Runtime-Token') === false)).toBe(true)
   })
+
+  it('maps every Research launcher operation to its governed mutation endpoint', async () => {
+    const paths: string[] = []; const headers: Headers[] = []
+    const client = new RuntimeClient(async (input, init) => { paths.push(String(input)); headers.push(new Headers(init?.headers)); return paths.length === 1 ? json(bootstrap) : json({ accepted: true, runId: `run-${paths.length}` }) })
+    await client.bootstrap()
+    await client.startResearchCompany({ symbol: '600519' })
+    await client.startResearchIndustry({ name: 'PCB' })
+    await client.startEarningsReview({ symbol: '600519', fiscalYear: 2026, period: 'FY' })
+    await client.startValuation({ symbol: '600519', methods: ['PE'] })
+    await client.startEventResearch({ symbol: '600519', anchor: { kind: 'user_event', title: 'Fixture', description: 'Fixture event' } })
+    await client.startThesisRedTeam({ symbol: '600519', thesisRef: 'claim:thesis' })
+    expect(paths).toEqual(['/api/bootstrap', '/api/production/research-company', '/api/production/research-industry', '/api/production/review-earnings', '/api/production/analyze-valuation', '/api/production/research-event', '/api/production/red-team-thesis'])
+    expect(headers.slice(1).every((value) => value.get('X-ResearchHub-Runtime-Token') === 'a'.repeat(64))).toBe(true)
+  })
 })

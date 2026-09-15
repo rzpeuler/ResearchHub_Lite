@@ -40,18 +40,28 @@ describe('Homepage shell', () => {
     expect(screen.queryByText('Reject')).toBeNull()
   })
 
-  it('exposes the five product destinations and keeps Knowledge Graph safe in no-KB mode', async () => {
+  it('exposes the six product destinations and keeps Knowledge Graph safe in no-KB mode', async () => {
     render(<App />)
     await waitFor(() => expect(screen.getByRole('link', { name: 'Research' }).getAttribute('aria-current')).toBe('page'))
     expect(screen.getByRole('link', { name: 'Knowledge Graph' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Daily Briefs' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Reports' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Run Research' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Reviews' })).toBeTruthy()
     fireEvent.click(screen.getByRole('link', { name: 'Knowledge Graph' }))
     expect(await screen.findByRole('heading', { name: 'Knowledge Graph' })).toBeTruthy()
     expect(screen.getByText('Mount a canonical Knowledge Base to browse the Directory and explore a rooted graph.')).toBeTruthy()
     expect(screen.queryByRole('canvas')).toBeNull()
     expect(screen.queryByText('Search Knowledge')).toBeNull()
+  })
+
+  it('renders the governed Research launcher route', async () => {
+    render(<App />)
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Run Research' })).toBeTruthy())
+    fireEvent.click(screen.getByRole('link', { name: 'Run Research' }))
+    expect(await screen.findByRole('heading', { name: 'Run Research' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Start Company' })).toBeTruthy()
+    expect(screen.getByText('The runtime creates the Workflow ID and tracks completion in Research.')).toBeTruthy()
   })
 
   it('renders the Research Report catalog as a read-only route', async () => {
