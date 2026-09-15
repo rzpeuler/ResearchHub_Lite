@@ -17,10 +17,12 @@ provider composition, and the Gateway/Writer boundary are unchanged.
 - The alias regression uses a `PCB` alias with a bounded non-official source
   whose primary name does not match, and confirms all eight module calls receive
   the routed evidence.
-- Fresh TEST-054 was rerun after the change. It remained a truthful completed
-  workflow with two waves, MIIT definition evidence, one Gateway/Writer path,
-  canonical reload, and a sixteen-section report; the live public portfolio
-  still lacked qualified evidence for seven modules.
+- Fresh TEST-054 was rerun after the change. The CPCA candidate was routed into
+  the other seven modules, moving them from `unavailable` to `partial`; the
+  run had four total qualified evidence items, two for definition and one for
+  each other module. The workflow, two waves, one Gateway/Writer path,
+  canonical reload, and sixteen-section report remained valid, but evidence
+  depth was still insufficient for the live product-quality gate.
 
 ## Boundary
 
