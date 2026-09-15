@@ -1,27 +1,23 @@
-# ResearchHub Lite — Agent Entry Guide
+# ResearchHub Lite — Direct Codex Guide
 
-> Governance notice: this file is repository guidance, not active governance. The only authoritative governance entry point is docs/governance, and docs/governance/governance-manifest.yaml is the only active-source registry.
+Codex is the repository engineering owner: interpret the requested change,
+inspect the current checkout, implement within scope, run validation, and
+report the factual result. Preserve unrelated working-tree changes and stop
+for unresolved product, architecture, security, or data-loss decisions.
 
-ResearchHub_Lite is the active clean foundation of the ResearchHub Agent-first investment research application.
+ResearchHub_Lite is the clean foundation for the ResearchHub Agent-first
+investment research application. It is focused on Free Research, Knowledge
+Query, Knowledge Production, provenance, validation, and canonical persistence.
 
-It is focused on:
-
-1. Agent-first Free Research, Knowledge Query, and Knowledge Production.
-2. Knowledge architecture, validation, provenance, and canonical persistence.
-
-Before making any engineering change:
-
-1. Read docs/governance/README.md.
-2. Read docs/governance/governance-manifest.yaml.
-3. Read every document registered by that manifest with status: active that applies to the current role and scope.
-4. Follow the approved task and its architecture revision set.
-5. Consult the relevant documents under docs/architecture/, docs/engineering/, and other repository documentation only as technical or historical context. Those files do not become active governance merely because they contain status words such as FROZEN, NORMATIVE, PASS, or CLOSED.
-
-If non-governance documentation conflicts with active governance, active governance wins. If the conflict cannot be resolved safely within the approved scope, report the governance gap or block the dependent work rather than inventing a rule.
+Before changing code, inspect the current Git state, the approved task, and the
+relevant documents under docs/architecture/ and docs/engineering/. Use source,
+tests, package scripts, and current runtime behavior as the evidence for
+implementation decisions.
 
 ## Current architecture context
 
-The following points describe the current repository architecture. They do not independently create governance authority.
+The following points describe the current repository architecture and product
+boundaries.
 
 - Do not build a custom Agent Runtime.
 - Do not introduce DeepSeek Harness / DSH dependencies.
@@ -41,4 +37,5 @@ The following points describe the current repository architecture. They do not i
 - Do not revive fixed chunk → batch → extraction as the current ingestion architecture.
 - Do not port the original monolithic ingestion workflow.ts wholesale.
 
-Engineering completion is not architecture acceptance. Every completed engineering task must be independently reviewed against the repository state, active governance, and the architecture revision set approved for that task.
+Engineering completion must be reviewed against the repository state, the
+approved task, and the applicable architecture documents.

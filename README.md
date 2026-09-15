@@ -1,10 +1,9 @@
 # ResearchHub_Lite
 
-ResearchHub_Lite is the active clean foundation for the ResearchHub Agent-first investment research application. It is built on the Pi Coding Agent and preserves the deterministic Knowledge architecture needed for safe durable research.
-
-> Governance notice: this README is descriptive project documentation, not active governance. The only authoritative governance entry point is docs/governance
-, and docs/governance/governance-manifest.yaml
- is the only active-source registry.
+ResearchHub_Lite is the clean foundation for the ResearchHub Agent-first
+investment research application. It is built on the Pi Coding Agent and
+preserves the deterministic Knowledge architecture needed for safe durable
+research. Codex owns repository engineering work directly.
 
 ## Product model
 
@@ -94,14 +93,10 @@ Reload & Verify
 
 LLM reasoning owns semantic decomposition; Workflow owns execution control; deterministic code owns plan admissibility and Knowledge integrity.
 
-## Governance and architecture references
+## Documentation references
 
-For active governance, start only with Project Governance
- and the active-source registry in governance-manifest.yaml
-. AGENTS.md
- is repository guidance and does not replace that governance entry point.
-
-The following are architecture references, not independent governance entry points:
+The following documents describe the product architecture and engineering
+context:
 
 - ResearchHub Application Interaction Architecture v0.1
 
@@ -109,7 +104,5 @@ The following are architecture references, not independent governance entry poin
 
 - Review Governance v0.1
 
-
-Status words such as FROZEN, NORMATIVE, PASS, or CLOSED in files outside docs/governance do not by themselves promote those files to active governance. Binding governance comes from the active manifest; task-specific architecture applicability comes from the approved task and architecture-freeze process.
-
-Migration material remains available as historical, selective reuse guidance; ResearchHub_Lite is not a clone of the original ResearchHub.
+Task reports and engineering notes record repository history and validation
+evidence. ResearchHub_Lite is not a clone of the original ResearchHub.
