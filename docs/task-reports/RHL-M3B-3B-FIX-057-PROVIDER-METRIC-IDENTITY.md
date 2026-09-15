@@ -4,9 +4,9 @@ task_id: RHL-M3B-3B-FIX-057-PROVIDER-METRIC-IDENTITY
 status: READY_FOR_SOL_REVIEW
 baseline: 291b3523d2d191b1045a248fb0baa1128e93e973
 branch: codex/m3b-3b-evidence-routing
-implementation_commit: pending
-verified_remote_tip: pending
-sync_status: READY_TO_SYNC
+implementation_commit: be110d853990e6a924186bdafdd4c838d8a63fb8
+verified_remote_tip: be110d853990e6a924186bdafdd4c838d8a63fb8
+sync_status: SYNCED
 summary: Restore provider contribution attribution in the TEST-054 evidence harness by mapping candidate provider IDs to the stable seven-adapter metric names.
 tests: Focused TEST-054 harness tests 8/8 passed; full npm test passed with client 21/21 and Node 972/972; repository typecheck and diff check passed; real TEST-054 completed the full Workflow/Gateway/ChangeSet/Writer path and preserved the fail-closed product-quality classification.
 acceptance_criteria: Candidate IDs from existing adapters map to the exact seven-provider metric labels; MIIT evidence is attributed to industry_definition when accepted by the Workflow; unknown provider IDs remain visible instead of being silently coerced; no adapter, acceptance rule, or architecture boundary changes.
