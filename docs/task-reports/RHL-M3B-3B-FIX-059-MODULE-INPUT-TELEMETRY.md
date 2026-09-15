@@ -4,9 +4,9 @@ task_id: RHL-M3B-3B-FIX-059-MODULE-INPUT-TELEMETRY
 status: READY_FOR_SOL_REVIEW
 baseline: f2b3b511e747223e3a16e5196adf175f73e3e557
 branch: codex/m3b-3b-evidence-routing
-implementation_commit: pending
-verified_remote_tip: pending
-sync_status: READY_TO_SYNC
+implementation_commit: 460d9f617e6fd222a6be9dab32538877e138c85c
+verified_remote_tip: 460d9f617e6fd222a6be9dab32538877e138c85c
+sync_status: SYNCED
 summary: Add privacy-safe module input telemetry to TEST-054 so accepted provider evidence can be distinguished from evidence that was never routed to a module.
 tests: Focused TEST-054 harness tests 9/9 passed; repository typecheck and diff check passed; latest real TEST-054 completed the full Workflow/Gateway/ChangeSet/Writer path and proved CPCA evidence was routed to risk_analysis.
 acceptance_criteria: Each industry module analysis call records only its module identity and bounded evidence IDs; no source bodies, prompts, or model responses are persisted; the existing product-quality gate and seven-provider portfolio remain unchanged.
