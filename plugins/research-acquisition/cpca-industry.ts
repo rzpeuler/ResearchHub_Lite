@@ -106,7 +106,10 @@ export class CpcaIndustryResearchPlugin implements ResearchAcquisitionPlugin {
     const result = await this.request(canonical(candidate.url), this.documentMax, 'text/html,application/xhtml+xml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     const contentType = (result.response.headers.get('content-type') ?? '').split(';')[0].toLocaleLowerCase(); const isPdf = contentType === 'application/pdf' || result.finalUrl.toLocaleLowerCase().includes('.pdf'); const allowed = isPdf || ['text/html', 'application/xhtml+xml', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ''].includes(contentType); if (!allowed) throw new CpcaAcquisitionError('UNSUPPORTED_MEDIA', `CPCA unsupported content type: ${contentType}`)
     const content = new TextDecoder().decode(result.bytes); if (hasCpcaAccessGate(content)) throw new CpcaAcquisitionError('RESTRICTED_ACCESS_GATE', 'CPCA content is restricted or teaser-only')
-    if (!isPdf && ['text/html', 'application/xhtml+xml', ''].includes(contentType)) {
+    // Some CPCA article pages contain a rich HTML article plus an unrelated
+    // legacy PDF link in the footer. Follow one attachment only when the
+    // article itself is too thin to be usable.
+    if (!isPdf && ['text/html', 'application/xhtml+xml', ''].includes(contentType) && substantiveText(content).length < 1200) {
       const attachmentUrl = linkedAttachment(content, result.finalUrl)
       if (attachmentUrl && attachmentUrl !== result.finalUrl) {
         const attached = await this.request(attachmentUrl, this.documentMax, 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document')

@@ -54,26 +54,40 @@
       "Duplicate evidence skipped: miit-6684405f12e71c69eac209a2cfd69df63aee1f2e3f7e7c5985d89cc8c678549c",
       "Duplicate evidence skipped: miit-f16c01b1e1411a06f3f9480b78c812cc66cce77b65375d1842b9cd01ab2e9ecf",
       "Duplicate evidence skipped: miit-bcccedca925291ce3f6f6a9c35c4ba2c5042c920ed05912e3ab79b48fded1e1e",
+      "Duplicate evidence skipped: cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6",
       "Duplicate evidence skipped: cpca-60585997c47e263006aa65e9c14b8db2101180b485108016b38c1efd56c05076",
       "Duplicate evidence skipped: cpca-79feb9f8e995575af09e5862e89662e3b1d5e6507224cb4d19a77a2dd23ab36a",
       "Compatible redundant root proposal dropped: pcb-manufacturing",
-      "Claim rejected: claim-ai-driven-upgrade",
-      "Claim rejected: claim-investment-projects",
-      "Claim rejected: claim-material-equipment",
-      "Claim rejected: fact-disclosed-investment-amount",
-      "Claim rejected: fact-investment-projects-total",
-      "Claim rejected: fact-new-investment-projects",
-      "Claim rejected: pcb-mainland-scope",
-      "Claim rejected: pcb-sector-requirements",
-      "Claim rejected: risk-capacity-expansion",
-      "Claim rejected: risk-capex-concentration",
-      "Claim rejected: risk-supply-chain-coordination",
-      "Claim rejected: risk-technology-execution",
-      "Claim rejected: synth-capex-execution-risk",
-      "Claim rejected: synth-high-end-structural-upgrade",
-      "Claim rejected: synth-investment-demand-signal",
-      "Claim rejected: synth-regulatory-continuity",
-      "Claim rejected: trend-ai-capacity-focus"
+      "Claim rejected: ai_pcb_market_2021",
+      "Claim rejected: ai_pcb_market_2025",
+      "Claim rejected: ai_pcb_market_2030",
+      "Claim rejected: ai-pcb-2021",
+      "Claim rejected: ai-pcb-2025",
+      "Claim rejected: ai-pcb-2030",
+      "Claim rejected: claim.tech-upgrade",
+      "Claim rejected: competitive-specialization-trend",
+      "Claim rejected: cover_board_demand_2025",
+      "Claim rejected: cover_board_demand_2030",
+      "Claim rejected: cover_board_value_2025",
+      "Claim rejected: cover_board_value_2030",
+      "Claim rejected: drilling-pad-2025",
+      "Claim rejected: drilling-pad-2030",
+      "Claim rejected: global_pcb_output_2025",
+      "Claim rejected: global_pcb_output_2030",
+      "Claim rejected: high_end_capacity_tight",
+      "Claim rejected: pcb-industry-requirements",
+      "Claim rejected: pcb-market-2021",
+      "Claim rejected: pcb-market-2025",
+      "Claim rejected: pcb-market-2030",
+      "Claim rejected: pcb-regulatory-scope",
+      "Claim rejected: risk.capacity_upgrade",
+      "Claim rejected: risk.environmental_compliance",
+      "Claim rejected: risk.high_end_process",
+      "Claim rejected: risk.specialist_competition",
+      "Claim rejected: synth.capex-transmission",
+      "Claim rejected: synth.demand-upgrade",
+      "Claim rejected: synth.growth-not-gap",
+      "Claim rejected: synth.materials-bottleneck"
     ],
     "acquisitionWaveCount": 2,
     "wave2Reason": "actionable_gap_fill",
@@ -112,7 +126,7 @@
       "normalizedCount": 0,
       "usableSourceCount": 0,
       "qualifiedEvidenceCount": 0,
-      "boundedFailureCategory": "GDELT request failed with HTTP 429",
+      "boundedFailureCategory": "Unexpected token 'Y', \"Your query\"... is not valid JSON",
       "contributedModules": []
     },
     {
@@ -156,11 +170,12 @@
       "searchResultCount": 16,
       "fetchedCount": 16,
       "normalizedCount": 16,
-      "usableSourceCount": 12,
-      "qualifiedEvidenceCount": 10,
+      "usableSourceCount": 16,
+      "qualifiedEvidenceCount": 13,
       "boundedFailureCategory": null,
       "contributedModules": [
         "market_size_growth",
+        "supply_demand_analysis",
         "industry_chain_analysis",
         "competitive_landscape",
         "technology_evolution",
@@ -234,40 +249,42 @@
       "status": "supported",
       "qualifiedEvidenceCount": 2,
       "sourceTierCounts": {},
-      "gapCount": 1,
-      "gapIds": [
-        "pcb-definition-current-status"
-      ],
+      "gapCount": 0,
+      "gapIds": [],
       "evidenceIds": [
-        "evidence-miit-6684405f12e71c69eac209a2cfd69df63aee1f2e3f7e7c5985d89cc8c678549c",
-        "evidence-miit-f16c01b1e1411a06f3f9480b78c812cc66cce77b65375d1842b9cd01ab2e9ecf"
+        "evidence-miit-bcccedca925291ce3f6f6a9c35c4ba2c5042c920ed05912e3ab79b48fded1e1e",
+        "evidence-miit-6684405f12e71c69eac209a2cfd69df63aee1f2e3f7e7c5985d89cc8c678549c"
       ]
     },
     {
       "module": "market_size_growth",
+      "status": "supported",
+      "qualifiedEvidenceCount": 2,
+      "sourceTierCounts": {},
+      "gapCount": 2,
+      "gapIds": [
+        "market-scope-validation",
+        "current-market-update"
+      ],
+      "evidenceIds": [
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6",
+        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424"
+      ]
+    },
+    {
+      "module": "supply_demand_analysis",
       "status": "partial",
       "qualifiedEvidenceCount": 2,
       "sourceTierCounts": {},
       "gapCount": 2,
       "gapIds": [
-        "gap-market-size",
-        "gap-growth-rate"
+        "supply_balance_detail",
+        "pricing_inventory"
       ],
       "evidenceIds": [
         "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6"
       ]
-    },
-    {
-      "module": "supply_demand_analysis",
-      "status": "unavailable",
-      "qualifiedEvidenceCount": 0,
-      "sourceTierCounts": {},
-      "gapCount": 1,
-      "gapIds": [
-        "supply_demand_analysis-failure"
-      ],
-      "evidenceIds": []
     },
     {
       "module": "industry_chain_analysis",
@@ -276,13 +293,13 @@
       "sourceTierCounts": {},
       "gapCount": 3,
       "gapIds": [
-        "chain-structure",
-        "supplier-evidence",
-        "demand-linkage"
+        "chain_entities",
+        "direct_edges",
+        "capacity_detail"
       ],
       "evidenceIds": [
         "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
+        "evidence-cpca-60585997c47e263006aa65e9c14b8db2101180b485108016b38c1efd56c05076"
       ]
     },
     {
@@ -290,30 +307,29 @@
       "status": "partial",
       "qualifiedEvidenceCount": 2,
       "sourceTierCounts": {},
-      "gapCount": 3,
+      "gapCount": 1,
       "gapIds": [
-        "competitive_ranking",
-        "segment_positioning",
-        "competitive_relationships"
+        "named-competitors-and-share"
       ],
       "evidenceIds": [
-        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6",
+        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424"
       ]
     },
     {
       "module": "technology_evolution",
-      "status": "partial",
+      "status": "supported",
       "qualifiedEvidenceCount": 2,
       "sourceTierCounts": {},
-      "gapCount": 2,
+      "gapCount": 3,
       "gapIds": [
-        "gap-tech-roadmap",
-        "gap-adoption"
+        "gap.tech.timeline",
+        "gap.tech.materials",
+        "gap.tech.equipment"
       ],
       "evidenceIds": [
         "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6"
       ]
     },
     {
@@ -323,11 +339,11 @@
       "sourceTierCounts": {},
       "gapCount": 2,
       "gapIds": [
-        "company_profiles",
-        "direct_relationships"
+        "company.scope",
+        "company.relationships"
       ],
       "evidenceIds": [
-        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6",
         "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
       ]
     },
@@ -336,46 +352,47 @@
       "status": "supported",
       "qualifiedEvidenceCount": 2,
       "sourceTierCounts": {},
-      "gapCount": 3,
+      "gapCount": 4,
       "gapIds": [
-        "gap-demand-validation",
-        "gap-project-execution",
-        "gap-environmental-compliance"
+        "gap.raw_materials",
+        "gap.customer_geopolitics",
+        "gap.capex_returns",
+        "gap.cyber_operational"
       ],
       "evidenceIds": [
-        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6",
+        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424"
       ]
     }
   ],
   "gapIdValidation": {
     "valid": true,
     "gapIds": [
-      "pcb-definition-current-status",
-      "gap-market-size",
-      "gap-growth-rate",
-      "supply_demand_analysis-failure",
-      "chain-structure",
-      "supplier-evidence",
-      "demand-linkage",
-      "competitive_ranking",
-      "segment_positioning",
-      "competitive_relationships",
-      "gap-tech-roadmap",
-      "gap-adoption",
-      "company_profiles",
-      "direct_relationships",
-      "gap-demand-validation",
-      "gap-project-execution",
-      "gap-environmental-compliance"
+      "market-scope-validation",
+      "current-market-update",
+      "supply_balance_detail",
+      "pricing_inventory",
+      "chain_entities",
+      "direct_edges",
+      "capacity_detail",
+      "named-competitors-and-share",
+      "gap.tech.timeline",
+      "gap.tech.materials",
+      "gap.tech.equipment",
+      "company.scope",
+      "company.relationships",
+      "gap.raw_materials",
+      "gap.customer_geopolitics",
+      "gap.capex_returns",
+      "gap.cyber_operational"
     ]
   },
   "evidenceSummary": {
-    "totalQualified": 13,
+    "totalQualified": 16,
     "byModule": {
       "industry_definition": 2,
       "market_size_growth": 2,
-      "supply_demand_analysis": 0,
+      "supply_demand_analysis": 2,
       "industry_chain_analysis": 2,
       "competitive_landscape": 2,
       "technology_evolution": 2,
@@ -384,12 +401,12 @@
     },
     "byTier": {
       "1": 3,
-      "4": 10
+      "4": 13
     }
   },
   "proposalProvenance": {
-    "durableProposalCount": 20,
-    "proposalsWithSourceRawProvenance": 20,
+    "durableProposalCount": 37,
+    "proposalsWithSourceRawProvenance": 37,
     "allDurableProposalsHaveSourceRaw": true
   },
   "canonical": {
@@ -400,10 +417,10 @@
       "source": 0
     },
     "countsAfter": {
-      "entity": 5,
-      "relation": 3,
-      "claim": 0,
-      "source": 13
+      "entity": 10,
+      "relation": 6,
+      "claim": 1,
+      "source": 16
     },
     "validationStatus": "passed",
     "diagnosticCodes": [],
@@ -445,16 +462,24 @@
       "operation": "industry_module_analysis",
       "module": "industry_definition",
       "evidenceIds": [
-        "evidence-miit-6684405f12e71c69eac209a2cfd69df63aee1f2e3f7e7c5985d89cc8c678549c",
-        "evidence-miit-f16c01b1e1411a06f3f9480b78c812cc66cce77b65375d1842b9cd01ab2e9ecf"
+        "evidence-miit-bcccedca925291ce3f6f6a9c35c4ba2c5042c920ed05912e3ab79b48fded1e1e",
+        "evidence-miit-6684405f12e71c69eac209a2cfd69df63aee1f2e3f7e7c5985d89cc8c678549c"
       ]
     },
     {
       "operation": "industry_module_analysis",
       "module": "market_size_growth",
       "evidenceIds": [
-        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6",
+        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424"
+      ]
+    },
+    {
+      "operation": "industry_module_analysis",
+      "module": "market_size_growth",
+      "evidenceIds": [
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6",
+        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424"
       ]
     },
     {
@@ -462,15 +487,7 @@
       "module": "supply_demand_analysis",
       "evidenceIds": [
         "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
-      ]
-    },
-    {
-      "operation": "industry_module_analysis",
-      "module": "supply_demand_analysis",
-      "evidenceIds": [
-        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6"
       ]
     },
     {
@@ -478,15 +495,15 @@
       "module": "industry_chain_analysis",
       "evidenceIds": [
         "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
+        "evidence-cpca-60585997c47e263006aa65e9c14b8db2101180b485108016b38c1efd56c05076"
       ]
     },
     {
       "operation": "industry_module_analysis",
       "module": "competitive_landscape",
       "evidenceIds": [
-        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6",
+        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424"
       ]
     },
     {
@@ -494,14 +511,14 @@
       "module": "technology_evolution",
       "evidenceIds": [
         "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6"
       ]
     },
     {
       "operation": "industry_module_analysis",
       "module": "company_mapping",
       "evidenceIds": [
-        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6",
         "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
       ]
     },
@@ -509,8 +526,8 @@
       "operation": "industry_module_analysis",
       "module": "risk_analysis",
       "evidenceIds": [
-        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424",
-        "evidence-cpca-4f0f40cd8fa66a59b3ccde4545853947a4e70da95ce0b60c767b92533f23c4fc"
+        "evidence-cpca-e76eb1daa4bd43f618a3f6fa2ad2e2fe25a9ec01c3e7a8f74b429c2fd0c52cc6",
+        "evidence-cpca-1783d85d05c970a6b43b82501b3396e72779332642070b9e5cf037c1ed9bc424"
       ]
     },
     {
