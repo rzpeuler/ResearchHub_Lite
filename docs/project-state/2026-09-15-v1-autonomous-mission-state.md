@@ -12,9 +12,9 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- HEAD: `7228bdd` (alias routing changes pending commit)
-- Remote: `origin/main` at `7228bdd`
-- Working tree: alias evidence routing changes and report are pending commit
+- HEAD: `09b9c7d` (alias evidence routing committed; final test-state reconciliation pending)
+- Remote: `origin/main` at `09b9c7d`
+- Working tree: final test-state reconciliation is pending commit
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
 - Phase 3 critical path: `PARTIAL`
@@ -64,7 +64,7 @@ research reuse.
 ## Acceptance gates
 
 - [x] Phase 0 cleanup accepted and synchronized.
-- [x] Typecheck, client typecheck, client build, parser preflight, and full product test suite pass after continuous maintenance (`976/976`, client `21/21`).
+- [x] Typecheck, client typecheck, client build, parser preflight, and full product test suite pass after continuous maintenance (`977/977`, client `23/23`).
 - [ ] Industry real public-data E2E completes with eight-module evidence coverage, report, canonical Knowledge, reload, and replay. Current TEST-054 completed the persistence/report path but is evidence-limited.
 - [x] Industry flow is rerun against a second distinct research target for bounded generality.
 - [x] Remaining deterministic test health is explicitly reconciled; five consecutive VAL-HTTP-001 runs passed.
