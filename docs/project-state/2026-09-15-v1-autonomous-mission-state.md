@@ -35,7 +35,7 @@ research reuse.
 | Industry eight-module deterministic loop | IMPLEMENTED_AND_VERIFIED | Eight modules, bounded Wave 2, one Gateway/Writer, sixteen sections, graph and replay tests pass. |
 | Industry bounded second-target generality | IMPLEMENTED_AND_VERIFIED | Deterministic `AI Server Hardware` validation completed eight modules, one Gateway/Writer submission, canonical reload, and stable no-new-semantic replay. |
 | Industry alias evidence routing | IMPLEMENTED_AND_VERIFIED | Bounded aliases and design search terms now participate in fallback routing; focused 44-test workflow suite and a fresh TEST-054 rerun passed without changing evidence qualification or persistence boundaries. |
-| Industry real product-quality E2E | PARTIAL | Fresh TEST-054 completed two waves, routed MIIT definition evidence, executed all eight modules, submitted Gateway/Writer, reloaded canonical Knowledge, and generated the 16-section report; it remains blocked because the live public portfolio supplied no qualified evidence for the other seven modules. |
+| Industry real product-quality E2E | BLOCKED_EXTERNAL | Fresh TEST-054 completed two waves, routed MIIT definition evidence, executed all eight modules, submitted Gateway/Writer, reloaded canonical Knowledge, and generated the 16-section report; seven modules lacked qualified live evidence. The user explicitly deferred this live-data gate for now; fixtures remain test-only. |
 | Industry graph projection | IMPLEMENTED_AND_VERIFIED | Existing directory/rooted graph APIs and Industry replay tests pass; full product-quality evidence remains incomplete. |
 | Morning/Evening Brief engine | IMPLEMENTED_AND_VERIFIED | Fresh FIX-003 real-Pi run completed both morning/evening briefs with enrichment, change assessment, synthesis, and Knowledge seed/Gateway context; no secrets or raw bodies were included. |
 | Daily live-provider coverage | BLOCKED_EXTERNAL | Public providers have recorded empty, HTTP 429, and bounded bridge failure outcomes; no fabricated fallback is allowed. |
@@ -74,9 +74,10 @@ research reuse.
 ## Current decision
 
 The Industry routing implementation and bounded second-target generality are
-accepted, but the live Industry product-quality gate remains open. Continue
-with the smallest reproducible evidence-coverage work while preserving the
-bounded Continuous Research and UI boundaries already accepted.
+accepted. The live Industry product-quality gate is explicitly deferred by
+the user for now because no additional stable source is available. Continue
+using fixtures only for deterministic tests; never present placeholders as
+real evidence or persist them as production research output.
 Do not add providers without a demonstrated source gap, relax evidence
 qualification, create a generic research framework, or treat historical
 reports as current acceptance.
