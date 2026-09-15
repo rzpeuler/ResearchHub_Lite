@@ -8,8 +8,8 @@ Date: 2026-09-16
 - status: `READY_FOR_SOL_REVIEW`
 - baseline: `8e202a0dac1045f25906d9ef4493dd0bed660c9d`
 - branch: `main`
-- implementation_commit: `26bdaa3` (`fix: widen bounded industry candidate intake`)
-- verified_remote_tip: `26bdaa3` after push verification
+- implementation_commit: `5a78583` (`fix: improve Chinese industry evidence routing`)
+- verified_remote_tip: `5a78583` before this report finalization commit; final docs push is verified separately
 - sync_status: `SYNCED`
 - task_input_quality: `SUFFICIENT`
 - information_resolved_by_luna: `NO`
@@ -81,10 +81,11 @@ Workflow's bounded design search terms during Wave 1:
   explicit gaps remain visible and no unsupported conclusion is promoted to
   durable Knowledge.
 
-The latest completed run was executed against `66459f6`. A follow-up run after
-the bounded candidate-intake increase (`26bdaa3`) did not reach a terminal
-result within the external wait window and is not counted as acceptance; the
-retained JSON therefore remains the latest completed real artifact.
+The latest completed run was executed against `66459f6`. Follow-up runs after
+the bounded candidate-intake increase (`26bdaa3`) and the Chinese routing
+terms (`5a78583`) did not reach a terminal result within the external wait
+windows and are not counted as acceptance; the retained JSON therefore remains
+the latest completed real artifact.
 
 The evidence artifact is
 `tests/validation/evidence/RHL_M3B_INDUSTRY_SEVEN_PROVIDER_PRODUCT_QUALITY_AFTER_DOCLING_READY.json`.
@@ -95,9 +96,9 @@ The evidence artifact is
 - Industry report-only proposal isolation regression added.
 - Existing invalid durable Relation/Claim, quantitative, canonical, and
   unresolved-link tests remain fail-closed.
-- Focused Industry Skill and CPCA tests: 35 passed.
-- Final full repository/client/typecheck/build results are recorded with the
-  commit that contains this report.
+- Focused Industry Skill and CPCA tests: 36 passed.
+- Final full repository/client/typecheck/build results were rerun after
+  `5a78583`; the report finalization is a separate documentation commit.
 
 No fixture or placeholder was used as production evidence, and no raw model
 response, credential, or private reasoning was added to the evidence file.
@@ -143,6 +144,7 @@ response, credential, or private reasoning was added to the evidence file.
   Workflow design terms. It still required Wave 2 and retained 17 explicit
   gaps, so the strict classifier remains blocked. This is the authoritative
   fresh artifact; older runs are historical context only.
-- The subsequent candidate-intake expansion passed focused tests but its live
-  rerun was externally non-terminating and was safely interrupted without
-  replacing the completed artifact.
+- The subsequent candidate-intake expansion and Chinese routing improvement
+  passed focused and full tests, but their live reruns were externally
+  non-terminating and were safely interrupted without replacing the completed
+  artifact.
