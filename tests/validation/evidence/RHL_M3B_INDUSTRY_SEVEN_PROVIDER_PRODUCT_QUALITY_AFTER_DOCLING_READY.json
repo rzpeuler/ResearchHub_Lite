@@ -55,13 +55,12 @@
       "Duplicate evidence skipped: miit-f16c01b1e1411a06f3f9480b78c812cc66cce77b65375d1842b9cd01ab2e9ecf",
       "Duplicate evidence skipped: miit-bcccedca925291ce3f6f6a9c35c4ba2c5042c920ed05912e3ab79b48fded1e1e",
       "Duplicate evidence skipped: cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5",
-      "Compatible redundant root proposal dropped: industry-pcb-manufacturing",
-      "Claim rejected: claim-pcb-enterprise-capability",
-      "Claim rejected: claim-pcb-rd-threshold",
-      "Claim rejected: claim-pcb-scope-exclusion",
-      "Claim rejected: risk.destination-concentration",
-      "Claim rejected: risk.import-sourcing-volatility",
-      "Claim rejected: risk.trade-exposure"
+      "Compatible redundant root proposal dropped: pcb-manufacturing",
+      "Claim rejected: pcb-core-process-claim",
+      "Claim rejected: pcb-export-growth-2025h1",
+      "Claim rejected: pcb-regulatory-framework-current",
+      "Claim rejected: pcb-scope-claim",
+      "Claim rejected: pcb-trade-performance-2025h1"
     ],
     "acquisitionWaveCount": 2,
     "wave2Reason": "actionable_gap_fill",
@@ -98,7 +97,7 @@
       "fetchedCount": 0,
       "normalizedCount": 0,
       "qualifiedEvidenceCount": 0,
-      "boundedFailureCategory": "Unexpected token 'Q', \"Queries co\"... is not valid JSON",
+      "boundedFailureCategory": "GDELT request failed with HTTP 429",
       "contributedModules": []
     },
     {
@@ -109,7 +108,9 @@
       "normalizedCount": 6,
       "qualifiedEvidenceCount": 6,
       "boundedFailureCategory": null,
-      "contributedModules": []
+      "contributedModules": [
+        "industry_definition"
+      ]
     },
     {
       "provider": "govcn-industry-research-acquisition",
@@ -206,10 +207,9 @@
       "status": "supported",
       "qualifiedEvidenceCount": 2,
       "sourceTierCounts": {},
-      "gapCount": 2,
+      "gapCount": 1,
       "gapIds": [
-        "gap-current-definition",
-        "gap-boundary-upstream"
+        "current-regulatory-definition"
       ],
       "evidenceIds": [
         "evidence-miit-6684405f12e71c69eac209a2cfd69df63aee1f2e3f7e7c5985d89cc8c678549c",
@@ -221,10 +221,12 @@
       "status": "unavailable",
       "qualifiedEvidenceCount": 0,
       "sourceTierCounts": {},
-      "gapCount": 2,
+      "gapCount": 4,
       "gapIds": [
         "marketSizeEvidence",
-        "growthEvidence"
+        "growthEvidence",
+        "segmentEvidence",
+        "capacityEvidence"
       ],
       "evidenceIds": []
     },
@@ -246,8 +248,8 @@
       "sourceTierCounts": {},
       "gapCount": 2,
       "gapIds": [
-        "missing_chain_evidence",
-        "missing_capacity_evidence"
+        "industry-chain-evidence",
+        "capacity-evidence"
       ],
       "evidenceIds": []
     },
@@ -256,12 +258,11 @@
       "status": "unavailable",
       "qualifiedEvidenceCount": 0,
       "sourceTierCounts": {},
-      "gapCount": 4,
+      "gapCount": 3,
       "gapIds": [
-        "gap-competitors",
-        "gap-positioning",
-        "gap-capacity",
-        "gap-dynamics"
+        "competitiveLandscapeEvidence",
+        "competitiveLandscapePositioning",
+        "competitiveLandscapeMarketShare"
       ],
       "evidenceIds": []
     },
@@ -270,10 +271,11 @@
       "status": "unavailable",
       "qualifiedEvidenceCount": 0,
       "sourceTierCounts": {},
-      "gapCount": 2,
+      "gapCount": 3,
       "gapIds": [
-        "technology-evolution-evidence",
-        "technology-evolution-capacity"
+        "technologyEvidence",
+        "industryApplications",
+        "capacityTechnology"
       ],
       "evidenceIds": []
     },
@@ -282,50 +284,47 @@
       "status": "unavailable",
       "qualifiedEvidenceCount": 0,
       "sourceTierCounts": {},
-      "gapCount": 1,
+      "gapCount": 3,
       "gapIds": [
-        "company-evidence"
+        "missing_company_evidence",
+        "missing_chain_mapping",
+        "missing_capacity_evidence"
       ],
       "evidenceIds": []
     },
     {
       "module": "risk_analysis",
-      "status": "partial",
-      "qualifiedEvidenceCount": 1,
+      "status": "unavailable",
+      "qualifiedEvidenceCount": 0,
       "sourceTierCounts": {},
-      "gapCount": 4,
+      "gapCount": 1,
       "gapIds": [
-        "gap.capacity-cycle",
-        "gap.input-risk",
-        "gap.regulatory",
-        "gap.company-resilience"
+        "risk-evidence-required"
       ],
-      "evidenceIds": [
-        "evidence-cpca-f64c657df50a78eacfb0d825ad2503326ed4703b7721fb58d48723ea2e5d6ca5"
-      ]
+      "evidenceIds": []
     }
   ],
   "gapIdValidation": {
     "valid": true,
     "gapIds": [
-      "gap-current-definition",
-      "gap-boundary-upstream",
+      "current-regulatory-definition",
       "marketSizeEvidence",
       "growthEvidence",
+      "segmentEvidence",
+      "capacityEvidence",
       "supplyDemandEvidence",
-      "missing_chain_evidence",
+      "industry-chain-evidence",
+      "capacity-evidence",
+      "competitiveLandscapeEvidence",
+      "competitiveLandscapePositioning",
+      "competitiveLandscapeMarketShare",
+      "technologyEvidence",
+      "industryApplications",
+      "capacityTechnology",
+      "missing_company_evidence",
+      "missing_chain_mapping",
       "missing_capacity_evidence",
-      "gap-competitors",
-      "gap-positioning",
-      "gap-capacity",
-      "gap-dynamics",
-      "technology-evolution-evidence",
-      "technology-evolution-capacity",
-      "company-evidence",
-      "gap.capacity-cycle",
-      "gap.input-risk",
-      "gap.regulatory",
-      "gap.company-resilience"
+      "risk-evidence-required"
     ]
   },
   "evidenceSummary": {
@@ -338,7 +337,7 @@
       "competitive_landscape": 0,
       "technology_evolution": 0,
       "company_mapping": 0,
-      "risk_analysis": 1
+      "risk_analysis": 0
     },
     "byTier": {
       "1": 3,
@@ -346,8 +345,8 @@
     }
   },
   "proposalProvenance": {
-    "durableProposalCount": 12,
-    "proposalsWithSourceRawProvenance": 12,
+    "durableProposalCount": 11,
+    "proposalsWithSourceRawProvenance": 11,
     "allDurableProposalsHaveSourceRaw": true
   },
   "canonical": {
@@ -410,10 +409,6 @@
     {
       "operation": "industry_module_analysis",
       "module": "supply_demand_analysis"
-    },
-    {
-      "operation": "industry_module_analysis",
-      "module": "industry_chain_analysis"
     },
     {
       "operation": "industry_module_analysis",
