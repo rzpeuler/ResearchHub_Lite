@@ -8,13 +8,13 @@ Date: 2026-09-16
 - status: `READY_FOR_SOL_REVIEW`
 - baseline: `8e202a0dac1045f25906d9ef4493dd0bed660c9d`
 - branch: `main`
-- implementation_commit: `8c5e52b69c700f86c0e5c166587b0ac6ba9c1483`
-- verified_remote_tip: `8c5e52b69c700f86c0e5c166587b0ac6ba9c1483`
+- implementation_commit: `66459f6` (`fix: route industry evidence by module coverage`)
+- verified_remote_tip: `66459f6` after push verification
 - sync_status: `SYNCED`
 - task_input_quality: `SUFFICIENT`
 - information_resolved_by_luna: `NO`
 - governance_status: `COMPATIBLE; protected canonical-write and no-fabrication boundaries preserved`
-- blockers: `Strict Industry product-quality evidence depth remains open: the latest fresh real run completed two bounded waves with 17 report gaps and one unavailable supply-demand module; provider results include rate limits or bounded bridge failures. No safe code-only change can invent the missing public evidence.`
+- blockers: `Strict Industry product-quality evidence depth remains open: the latest fresh real run completed two bounded waves with 17 report gaps; all eight modules returned supported or partial results, but provider results include rate limits or bounded bridge failures. No safe code-only change can invent the missing public evidence.`
 - scope_deviations: `The requested full mission is not claimed complete while the external Industry evidence gate remains open; ReviewDecision writes remain design-only and credential-dependent providers remain deferred.`
 
 ## Task contract
@@ -41,7 +41,9 @@ Date: 2026-09-16
 The CPCA Industry acquisition path now tokenizes compound target terms while
 retaining the original phrases. This lets public PCB articles match
 independently on terms such as `PCB`, `AI`, and `HDI` instead of requiring one
-article title to contain an entire compound query.
+article title to contain an entire compound query. Rich article pages are kept
+as HTML; a linked PDF is followed only when the article itself is too thin to
+be useful, preventing unrelated footer attachments from replacing evidence.
 
 Industry module reasoning now supports an explicit, bounded report-only mode
 for evidence-sensitive chain and company analysis. When a model response
@@ -56,21 +58,25 @@ Canonical mutation remains exclusively through Gateway, ChangeSet, and Writer.
 ## Fresh real validation
 
 `TEST-054` was rerun with the configured Pi reasoning host, managed Docling,
-and the seven-provider production portfolio:
+and the seven-provider production portfolio after the module-ranking and
+CPCA attachment fixes. The validation entrypoint also now forwards the
+Workflow's bounded design search terms during Wave 1:
 
 - parser preflight: `READY`;
 - workflow: `completed`, two bounded acquisition waves;
-- providers: all seven attempted; MIIT supplied 3 and CPCA supplied 10
-  qualified evidence items (13 total);
-- modules: all eight calls were attempted; seven returned a result and
-  `supply_demand_analysis` remained `unavailable` after its one repair attempt;
+- providers: all seven attempted; MIIT supplied 3 and CPCA supplied 13
+  qualified evidence items (16 total);
+- modules: all eight returned a result (supported or partial); no module was
+  `unavailable`;
 - persistence: one Gateway/Writer ChangeSet, canonical reload and validation
   passed;
 - report: validated 16-section Industry report generated;
 - final classification: `INDUSTRY_PRODUCT_QUALITY_BLOCKED_BY_EVIDENCE` because
-  the run used Wave 2, the supply-demand module remained unavailable, and 17
-  report gaps remained. This is recorded as an open evidence-depth/model-output
-  gate, not converted into a success claim.
+  the run used Wave 2 and 17 report gaps remained. This is recorded as an open
+  evidence-depth gate, not converted into a success claim. The completed
+  workflow, canonical reload, and validated report are genuine E2E evidence;
+  explicit gaps remain visible and no unsupported conclusion is promoted to
+  durable Knowledge.
 
 The evidence artifact is
 `tests/validation/evidence/RHL_M3B_INDUSTRY_SEVEN_PROVIDER_PRODUCT_QUALITY_AFTER_DOCLING_READY.json`.
@@ -103,13 +109,18 @@ response, credential, or private reasoning was added to the evidence file.
 
 ## Validation
 
-- `npm test`: client 27/27 and Node 983/983 passed (1010 total).
+- `npm test`: client 27/27 and Node 985/985 passed (1012 total); one prior
+  Windows `EBUSY` temp-directory cleanup race passed on immediate rerun.
 - `npm run typecheck`: passed.
 - `npm run client:typecheck`: passed.
 - `npm run client:build`: passed; Vite emitted `dist/client`.
 - `node scripts/document-parser-runtime.mjs --preflight`: `READY`.
 - `npx tsx --test tests/plugins/research-acquisition/cpca-industry.test.ts tests/skills/industry-research/industry-research-skill.test.ts`:
-  35 passed.
+  focused tests passed, including rich-article attachment routing.
+- `npx tsx --test tests/workflows/industry-deep-research/industry-deep-research-workflow.test.ts`:
+  45 passed, including module-specific ranking for unhinted evidence.
+- `npx tsx --test tests/validation/industry-seven-provider-product-quality-after-docling-ready.test.ts`:
+  8 passed.
 - `git diff --check`: passed.
 
 ## Debugging and risks
@@ -120,6 +131,7 @@ response, credential, or private reasoning was added to the evidence file.
 - The live run proves workflow, persistence, canonical reload, and report
   generation, but not strict product-quality completeness. The remaining
   evidence-depth gaps are an external data-coverage risk and must stay visible.
-- A second real rerun was manually interrupted after roughly 15 minutes with no
-  result; it is not counted as acceptance evidence. The immediately preceding
-  completed run remains the authoritative fresh artifact.
+- The latest real run completed after the validation entrypoint forwarded the
+  Workflow design terms. It still required Wave 2 and retained 17 explicit
+  gaps, so the strict classifier remains blocked. This is the authoritative
+  fresh artifact; older runs are historical context only.
