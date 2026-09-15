@@ -8,9 +8,9 @@ Date: 2026-09-16
 - status: `READY_FOR_SOL_REVIEW`
 - baseline: `8e202a0dac1045f25906d9ef4493dd0bed660c9d`
 - branch: `main`
-- implementation_commit: `pending`
-- verified_remote_tip: `pending`
-- sync_status: `READY_TO_SYNC`
+- implementation_commit: `c1a39bd` (`feat: restore official industry evidence path`)
+- verified_remote_tip: `c1a39bd` after fetch/push verification
+- sync_status: `SYNCED`
 - task_input_quality: `SUFFICIENT`
 - information_resolved_by_luna: `NO`
 - governance_status: `COMPATIBLE; protected canonical-write and no-fabrication boundaries preserved`
@@ -83,7 +83,7 @@ Workflow's bounded design search terms during Wave 1:
   explicit gaps remain visible and no unsupported conclusion is promoted to
   durable Knowledge.
 
-The latest completed run used the current working tree's bounded CNINFO
+The latest completed run used implementation `c1a39bd`'s bounded CNINFO
 Industry full-text search, four-way candidate acquisition concurrency, Chinese
 module terms, and the existing MIIT/CPCA paths. It reached one bounded wave
 with 24 qualified public evidence items and the strict `READY` classification.

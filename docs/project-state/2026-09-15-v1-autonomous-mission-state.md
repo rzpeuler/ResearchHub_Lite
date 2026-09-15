@@ -12,8 +12,8 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- Latest implementation commit: `pending` (CNINFO Industry discovery and bounded acquisition concurrency)
-- Remote: implementation is ready to sync; final documentation push will record the verified implementation commit
+- Latest implementation commit: `c1a39bd` (`feat: restore official industry evidence path`)
+- Remote: `origin/main` synchronized after fetch/push verification
 - Working tree: clean
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
