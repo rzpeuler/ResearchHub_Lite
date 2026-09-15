@@ -12,7 +12,7 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- Latest implementation commit: `eb049e13db85854b8193107cad412a320020f683` (`feat: add governed research run launcher`)
+- Latest implementation commit: `44e86b660bfc203f8b650261985b7f2dd5427bd2` (`fix: harden industry evidence routing and convergence`)
 - Remote: `origin/main` synchronized; latest implementation commit is recorded above
 - Working tree: clean
 - Phase 0: `ACCEPTED`
