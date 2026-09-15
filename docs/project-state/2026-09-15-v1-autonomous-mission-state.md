@@ -13,8 +13,8 @@ research reuse.
 
 - Branch: `main`
 - Latest implementation commit: `ebe6a051c34d62763144c3616d1b0aa306e6fe00` (`feat: add read-only research report catalog`)
-- Remote: `origin/main` synchronized through the implementation commit; this ledger reconciliation is also being committed
-- Working tree: clean after the ledger reconciliation commit
+- Remote: `origin/main` synchronized through the latest ledger reconciliation
+- Working tree: clean
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
 - Phase 3 critical path: `PARTIAL`
