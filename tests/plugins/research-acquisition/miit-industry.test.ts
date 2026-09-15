@@ -62,6 +62,7 @@ test('discovers bounded authoritative PCB anchors for all supported target forms
     assert.equal(new Set(items.map((x) => x.url)).size, items.length)
     assert.ok(anchors.every((x) => x.tier === 1 && x.provider === 'miit' && new URL(x.url!).hostname.endsWith('miit.gov.cn')))
     assert.deepEqual(anchors.map((x) => x.candidateId), MIIT_PCB_DEFINITION_ANCHORS.map((x) => `miit-${sha256(x.url)}`))
+    assert.ok(anchors.every((x) => (x.metadata as any)?.moduleHints?.length === 1 && (x.metadata as any).moduleHints[0] === 'industry_definition'))
   }
 })
 
