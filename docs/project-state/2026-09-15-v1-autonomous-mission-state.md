@@ -12,9 +12,9 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- HEAD: `8f7c143` (second-target generality validation committed; state checkpoint reconciliation pending)
-- Remote: `origin/main` at `8b2723f501424598909377aa35412fbb82a5adc2`
-- Working tree: state checkpoint reconciliation is pending commit
+- HEAD: `0132072` (second-target generality validation and mission checkpoint reconciliation committed)
+- Remote: `origin/main` at `0132072`
+- Working tree: clean
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
 - Phase 3 critical path: `PARTIAL`
