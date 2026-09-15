@@ -8,8 +8,8 @@ Date: 2026-09-16
 - status: `READY_FOR_SOL_REVIEW`
 - baseline: `8e202a0dac1045f25906d9ef4493dd0bed660c9d`
 - branch: `main`
-- implementation_commit: `66459f6` (`fix: route industry evidence by module coverage`)
-- verified_remote_tip: `66459f6` after push verification
+- implementation_commit: `26bdaa3` (`fix: widen bounded industry candidate intake`)
+- verified_remote_tip: `26bdaa3` after push verification
 - sync_status: `SYNCED`
 - task_input_quality: `SUFFICIENT`
 - information_resolved_by_luna: `NO`
@@ -44,6 +44,9 @@ independently on terms such as `PCB`, `AI`, and `HDI` instead of requiring one
 article title to contain an entire compound query. Rich article pages are kept
 as HTML; a linked PDF is followed only when the article itself is too thin to
 be useful, preventing unrelated footer attachments from replacing evidence.
+The bounded per-provider candidate intake is now 12, while the total source
+budget remains 24, so demonstrated CPCA coverage gaps are not truncated at the
+previous eight-candidate boundary.
 
 Industry module reasoning now supports an explicit, bounded report-only mode
 for evidence-sensitive chain and company analysis. When a model response
@@ -77,6 +80,11 @@ Workflow's bounded design search terms during Wave 1:
   workflow, canonical reload, and validated report are genuine E2E evidence;
   explicit gaps remain visible and no unsupported conclusion is promoted to
   durable Knowledge.
+
+The latest completed run was executed against `66459f6`. A follow-up run after
+the bounded candidate-intake increase (`26bdaa3`) did not reach a terminal
+result within the external wait window and is not counted as acceptance; the
+retained JSON therefore remains the latest completed real artifact.
 
 The evidence artifact is
 `tests/validation/evidence/RHL_M3B_INDUSTRY_SEVEN_PROVIDER_PRODUCT_QUALITY_AFTER_DOCLING_READY.json`.
@@ -135,3 +143,6 @@ response, credential, or private reasoning was added to the evidence file.
   Workflow design terms. It still required Wave 2 and retained 17 explicit
   gaps, so the strict classifier remains blocked. This is the authoritative
   fresh artifact; older runs are historical context only.
+- The subsequent candidate-intake expansion passed focused tests but its live
+  rerun was externally non-terminating and was safely interrupted without
+  replacing the completed artifact.

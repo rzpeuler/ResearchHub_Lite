@@ -12,7 +12,7 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- Latest implementation commit: `66459f6` (`fix: route industry evidence by module coverage`)
+- Latest implementation commit: `26bdaa3` (`fix: widen bounded industry candidate intake`)
 - Remote: `origin/main` synchronized after push verification; latest implementation commit is recorded above
 - Working tree: clean
 - Phase 0: `ACCEPTED`
@@ -34,7 +34,7 @@ research reuse.
 | Thesis Red Team | IMPLEMENTED_AND_VERIFIED | Stage A/B, invalidation, evidence binding, report, and real-Pi evidence exist. |
 | Industry eight-module deterministic loop | IMPLEMENTED_AND_VERIFIED | Eight modules, bounded Wave 2, one Gateway/Writer, sixteen sections, graph and replay tests pass. |
 | Industry bounded second-target generality | IMPLEMENTED_AND_VERIFIED | Deterministic `AI Server Hardware` validation completed eight modules, one Gateway/Writer submission, canonical reload, and stable no-new-semantic replay. |
-| Industry alias and bounded evidence-context routing | IMPLEMENTED_AND_VERIFIED | Bounded aliases, compound design terms, module-specific evidence ranking, safe same-domain CPCA attachments, rich-article preservation, and module-relevant windows from long normalized documents participate in routing without changing evidence qualification or persistence boundaries; focused regressions, full suite, and fresh real TEST-054 pass through the completed-but-evidence-blocked path. |
+| Industry alias and bounded evidence-context routing | IMPLEMENTED_AND_VERIFIED | Bounded aliases, compound design terms, module-specific evidence ranking, safe same-domain CPCA attachments, rich-article preservation, bounded provider intake of 12 within the total source cap of 24, and module-relevant windows from long normalized documents participate in routing without changing evidence qualification or persistence boundaries; focused regressions and full suite pass. The latest completed real TEST-054 remains evidence-blocked; the follow-up after the intake expansion did not reach a terminal result. |
 | Industry real product-quality E2E | BLOCKED_EXTERNAL_EVIDENCE_DEPTH | Latest TEST-054 completed two bounded waves, attempted all seven providers and all eight modules, submitted one Gateway/Writer ChangeSet, reloaded canonical Knowledge, and generated the validated 16-section report. It produced 16 qualified MIIT/CPCA evidence items (3 MIIT, 13 CPCA); all modules returned supported or partial results, but 17 report gaps remain and the strict classifier is still blocked. Fixtures remain test-only. |
 | Industry graph projection | IMPLEMENTED_AND_VERIFIED | Existing directory/rooted graph APIs and Industry replay tests pass; full product-quality evidence remains incomplete. |
 | Morning/Evening Brief engine | IMPLEMENTED_AND_VERIFIED | Fresh FIX-003 real-Pi run completed both morning/evening briefs with enrichment, change assessment, synthesis, and Knowledge seed/Gateway context; no secrets or raw bodies were included. |
