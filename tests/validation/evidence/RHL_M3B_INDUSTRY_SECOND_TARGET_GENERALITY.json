@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2026-09-15T12:59:53.969Z",
+  "taskId": "RHL-PERSONAL-RESEARCH-V1-INDUSTRY-SECOND-TARGET-GENERALITY",
+  "classification": "SECOND_TARGET_GENERALITY_PASS",
+  "realPiReasoningExecutor": false,
+  "target": {
+    "name": "AI Server Hardware",
+    "aliases": [
+      "AI Server"
+    ],
+    "searchTerms": [
+      "AI Server Hardware",
+      "AI server",
+      "data center server"
+    ]
+  },
+  "firstRun": {
+    "status": "completed",
+    "targetKind": "industry",
+    "moduleCount": 8,
+    "acquisitionWaves": 1,
+    "gatewaySubmitCount": 1,
+    "knowledgeBaseRevision": 1,
+    "reportPersisted": true,
+    "canonicalEntityRefs": {
+      "industry": "entity:industry-ai-server-hardware",
+      "ai-server-company": "entity:company-aurora-compute-systems",
+      "ai-server-product": "entity:product-aurora-ai-server-platform"
+    },
+    "canonicalRelationRefs": {
+      "ai-server-offers": "relation:8b847a501b61272c"
+    },
+    "canonicalClaimRefs": {
+      "ai-server-claim": "claim:research-2a6ed555d84a9149"
+    },
+    "canonicalSourceRefs": {
+      "evidence-fixture-ai-server-evidence": "source:research-f3ce28c65812134a"
+    }
+  },
+  "replay": {
+    "status": "completed",
+    "knowledgeBaseRevision": 1,
+    "gatewaySubmitCount": 1,
+    "canonicalObjectCountStable": true,
+    "industryRootStable": true,
+    "sourceRefsStable": true,
+    "noNewSemanticProposals": true
+  },
+  "secretsIncluded": false,
+  "rawBodiesIncluded": false
+}
