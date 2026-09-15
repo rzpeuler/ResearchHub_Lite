@@ -14,6 +14,15 @@ const TEST054_CANDIDATE_PROVIDER_TO_METRIC = {
 export function metricProviderName(candidateProvider: unknown) {
   return TEST054_CANDIDATE_PROVIDER_TO_METRIC[String(candidateProvider ?? '') as keyof typeof TEST054_CANDIDATE_PROVIDER_TO_METRIC] ?? String(candidateProvider ?? '')
 }
+export function acceptedEvidenceCounts(evidence: readonly any[]) {
+  const counts = new Map<string, number>()
+  for (const item of evidence) {
+    const provider = metricProviderName(item?.source?.candidate?.provider)
+    if (!provider) continue
+    counts.set(provider, (counts.get(provider) ?? 0) + 1)
+  }
+  return counts
+}
 export function classifyTest054(i: any) {
   if (!i.parserReady || i.parserContradiction || i.waveCount > 2 || !i.gapIdsValid || i.provenance?.allDurableProposalsHaveSourceRaw === false || i.proposalBundleCount > 1 || i.gatewayCallCount > 1 || i.changeSetCount > 1 || i.writerInvocationCount > 1 || !['valid', 'passed'].includes(i.canonicalValidation)) return 'INDUSTRY_PRODUCT_QUALITY_WORKFLOW_DEFECT'
   if (i.modelRuntimeUnavailable) return 'INDUSTRY_PRODUCT_QUALITY_BLOCKED_BY_MODEL_RUNTIME'
