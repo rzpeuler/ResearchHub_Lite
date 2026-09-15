@@ -4,9 +4,9 @@ task_id: RHL-M3B-3B-FIX-055-INDUSTRY-EVIDENCE-MODULE-ROUTING
 status: READY_FOR_SOL_REVIEW
 baseline: 8c0b9ee3557525481d9957f7ac1d0a9adaafca97
 branch: codex/m3b-3b-evidence-routing
-implementation_commit: pending
-verified_remote_tip: pending
-sync_status: READY_TO_SYNC
+implementation_commit: 90c034f6ecd6c1c53d74f95bedb1b7410145d551
+verified_remote_tip: 90c034f6ecd6c1c53d74f95bedb1b7410145d551
+sync_status: SYNCED
 summary: Make authoritative MIIT PCB definition anchors route explicitly to industry_definition and correct TEST-054 evidence validation/provenance accounting.
 tests: Focused acquisition/workflow/quality tests 61/61 passed; full npm test passed; typecheck passed; Docling preflight READY; latest live TEST-054 run was externally blocked during model execution.
 acceptance_criteria: Explicit module routing is covered by production and workflow tests; canonical validation receives KnowledgeAssetV04 values; durable provenance counts only Claim/Relation proposals; no frozen architecture boundary changed.
