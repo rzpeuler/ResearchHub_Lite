@@ -16,6 +16,19 @@ export interface ResearchReport {
   readonly sections: readonly ResearchReportSection[]
   readonly outputPath: string
 }
+export interface ResearchReportSummary {
+  readonly reportId: string
+  readonly reportType: ResearchReport['reportType']
+  readonly subjectRefs: readonly string[]
+  readonly generatedAt: string
+  readonly asOf: string
+  readonly workflowRunId: string
+  readonly knowledgeBaseRevision: number
+  readonly sourceCount: number
+  readonly claimCount: number
+  readonly sectionCount: number
+  readonly methodology: string
+}
 
 const safeId = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 const inside = (root: string, candidate: string): boolean => { const rel = relative(resolve(root), resolve(candidate)); return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`)) }
@@ -37,6 +50,23 @@ export function validateResearchReport(report: ResearchReport): ResearchReport {
   if (report.sections.some((section: ResearchReportSection) => (section.signalRefs ?? []).some((item: string) => !safeId.test(item)))) throw new TypeError('signalRefs must contain safe ResearchSignal references')
   if (typeof report.outputPath !== 'string' || report.outputPath.trim() === '' || isAbsolute(report.outputPath) || report.outputPath.split(/[\\/]+/).includes('..')) throw new TypeError('outputPath must be a safe relative file path')
   return report
+}
+
+export function summarizeResearchReport(report: ResearchReport): ResearchReportSummary {
+  validateResearchReport(report)
+  return {
+    reportId: report.reportId,
+    reportType: report.reportType,
+    subjectRefs: report.subjectRefs,
+    generatedAt: report.generatedAt,
+    asOf: report.asOf,
+    workflowRunId: report.workflowRunId,
+    knowledgeBaseRevision: report.knowledgeBaseRevision,
+    sourceCount: report.sourceRefs.length,
+    claimCount: report.claimRefs.length,
+    sectionCount: report.sections.length,
+    methodology: report.methodology,
+  }
 }
 
 export function renderResearchReport(report: ResearchReport): string {

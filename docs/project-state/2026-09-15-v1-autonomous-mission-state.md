@@ -12,9 +12,9 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- HEAD: `09b9c7d` (alias evidence routing committed; final test-state reconciliation pending)
-- Remote: `origin/main` at `09b9c7d`
-- Working tree: final test-state reconciliation is pending commit
+- HEAD: `pending` (Research Report Catalog implementation validated; commit/sync pending)
+- Remote: `origin/main` at the prior synchronized checkpoint
+- Working tree: Research Report Catalog implementation and evidence are pending commit
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
 - Phase 3 critical path: `PARTIAL`
@@ -42,7 +42,7 @@ research reuse.
 | Runtime HTTP/SSE/security/attachments | IMPLEMENTED_AND_VERIFIED | Bootstrap, loopback/origin/token controls, SSE, upload, cancellation and product route tests pass. |
 | Managed Docling parser | IMPLEMENTED_AND_VERIFIED | Preflight is `READY`; MIIT PDF fetch/normalization smoke was accepted. |
 | Unified Continuous Research maintenance | PARTIAL_BOUNDED_DAILY_SLICE | Daily materiality/thesis-impact assessment, existing Claim resolution, Gateway projection, and replay/idempotency are implemented and verified; broader cross-workflow maintenance remains open. |
-| First-class research UI | PARTIAL_DAILY_BRIEF_READER | Conversation, upload, graph, review, polling, and a read-only persisted Daily Brief reader exist; general Research Report indexing and direct launch forms remain limited. |
+| First-class research UI | PARTIAL_REPORT_CATALOG | Conversation, upload, graph, review, polling, dedicated Daily Briefs, and a read-only general Research Report catalog exist; direct launch forms remain limited. |
 | Review decision execution | DESIGN_ONLY | Review access is read-only; decision mutation remains intentionally absent. |
 | Legacy Web-Chat2Codex control plane | DEPRECATED | Phase 0 removed `.web-chat2codex/**` and `docs/governance/**`; product Codex/Pi integration remains. |
 
@@ -59,6 +59,7 @@ research reuse.
 | RHL-P2-DOCUMENT-STATUS | 2 | ACCEPTED | Reconcile current entry documents with verified source/test reality while preserving historical architecture and task-report evidence. |
 | RHL-P2-CONTINUOUS-RESEARCH | 8 | ACCEPTED_BOUNDED_DAILY_SLICE | Implement and verify the bounded Daily maintenance path through existing Claim projection, Gateway/Writer, reload, and replay; broader unified maintenance remains open. |
 | RHL-P1-UI-EXPOSURE | 1 | ACCEPTED_DAILY_BRIEF_READER | Expose the existing bounded Daily Brief list/detail API as a read-only UI route; general report catalog and direct launch forms remain open. |
+| RHL-P1-UI-REPORT-CATALOG | 1 | ACCEPTED_IMPLEMENTED | Add a read-only general report list/detail route over existing persisted Research Reports without adding workflow launch forms or mutation paths. |
 | RHL-P2-REVIEW-DECISIONS | 5 | DEFERRED | Requires an explicit product decision for write-capable Review actions; keep current read-only boundary until then. |
 
 ## Acceptance gates
@@ -69,6 +70,7 @@ research reuse.
 - [x] Industry flow is rerun against a second distinct research target for bounded generality.
 - [x] Remaining deterministic test health is explicitly reconciled; five consecutive VAL-HTTP-001 runs passed.
 - [x] The bounded Daily Continuous Research maintenance slice is implemented and verified; unified cross-workflow maintenance remains open.
+- [x] The read-only general Research Report catalog is implemented and validated; commit and synchronization are pending at this ledger update.
 - [x] Final external validation requirements are listed with completed, external-blocked, and explicitly deferred boundaries in `docs/task-reports/2026-09-15-final-external-validation-inventory.md`.
 
 ## Current decision

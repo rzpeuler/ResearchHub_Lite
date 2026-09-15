@@ -65,4 +65,12 @@ describe('RuntimeClient', () => {
     expect(paths).toEqual(['/api/daily-briefs?limit=20', '/api/daily-briefs/daily-morning-2026-09-08'])
     expect(headers.every((value) => value.has('X-ResearchHub-Runtime-Token') === false)).toBe(true)
   })
+
+  it('reads the bounded Research Report catalog and one report without a mutation token', async () => {
+    const paths: string[] = []; const headers: Headers[] = []
+    const client = new RuntimeClient(async (input, init) => { paths.push(String(input)); headers.push(new Headers(init?.headers)); return json(paths.length === 1 ? { reports: [] } : { reportId: 'company-600519', reportType: 'company_research', subjectRefs: ['entity:company-600519'], generatedAt: '2026-09-15T08:00:00.000Z', asOf: '2026-09-15T07:00:00.000Z', workflowRunId: 'company-run', knowledgeBaseRevision: 2, sourceRefs: [], claimRefs: [], methodology: 'bounded fixture', sections: [{ id: 'summary', title: 'Summary', markdown: 'Fixture.' }] }) })
+    await client.listResearchReports(20); await client.getResearchReport('company-600519')
+    expect(paths).toEqual(['/api/research-reports?limit=20', '/api/research-reports/company-600519'])
+    expect(headers.every((value) => value.has('X-ResearchHub-Runtime-Token') === false)).toBe(true)
+  })
 })

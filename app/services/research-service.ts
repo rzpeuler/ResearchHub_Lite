@@ -1,3 +1,4 @@
+import { readdir } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { runCompanyDeepResearch } from '../../workflows/company-deep-research/workflow.ts'
@@ -13,7 +14,7 @@ import { AkshareIndustryResearchPlugin } from '../../plugins/research-acquisitio
 import { IndustryAcquisitionComposition } from '../../plugins/research-acquisition/industry-composition.ts'
 import { ApplicationServiceError, type ApplicationEarningsReviewResult, type ApplicationEventResearchResult, type ApplicationResearchResult, type ApplicationValuationResult, type ApplicationThesisRedTeamResult, type ApplicationIndustryResearchResult, type EarningsReviewInput, type EventResearchInput, type IndustryResearchInput, type ResearchCompanyInput, type ThesisRedTeamInput, type ValuationInput } from './contracts.ts'
 import { WorkflowService } from './workflow-service.ts'
-import { readResearchReport } from './research-report.ts'
+import { readResearchReport, summarizeResearchReport, type ResearchReportSummary } from './research-report.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 
 export interface ResearchServiceOptions {
@@ -183,5 +184,27 @@ export class ResearchService {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw new ApplicationServiceError('not_found', 'Research report not found', { cause: error })
       throw error
     }
+  }
+
+  async listResearchReports(limit = 50): Promise<readonly ResearchReportSummary[]> {
+    if (!Number.isSafeInteger(limit) || limit < 1) throw new ApplicationServiceError('invalid_input', 'limit must be a positive integer')
+    const reportRoot = resolve(this.options.reportRoot ?? join(this.options.cwd ?? process.cwd(), 'runtime-data', 'reports'))
+    let names: string[]
+    try { names = await readdir(reportRoot) } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+      throw error
+    }
+    const summaries: ResearchReportSummary[] = []
+    for (const name of names.filter((item) => item.endsWith('.md.json'))) {
+      const reportId = name.slice(0, -'.md.json'.length)
+      if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(reportId)) continue
+      try {
+        const report = await readResearchReport(join(reportRoot, name))
+        if (report.reportType !== 'daily_brief') summaries.push(summarizeResearchReport(report))
+      } catch {
+        // A malformed or partially-written report must not make the read-only catalog unavailable.
+      }
+    }
+    return summaries.sort((left, right) => right.generatedAt.localeCompare(left.generatedAt) || left.reportId.localeCompare(right.reportId)).slice(0, Math.min(limit, 200))
   }
 }
