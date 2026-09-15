@@ -7,7 +7,6 @@ import type { SemanticProductionProposal } from "../../knowledge/production/cont
 import {
   INDUSTRY_MODULES,
   INDUSTRY_CLAIM_TYPES,
-  INDUSTRY_RELATION_TYPES,
   INDUSTRY_RESEARCH_DESIGN_CONTRACT,
   createIndustryModuleResultContract,
   createIndustrySynthesisContract,
@@ -322,6 +321,87 @@ export function validateIndustryModuleResult(
     reportMaterial: material(v.reportMaterial, ev, ids, rs),
   };
 }
+
+function validateIndustryModuleResultWithProposalIsolation(
+  v: unknown,
+  module: IndustryResearchModule,
+  supplied: readonly string[],
+): IndustryModuleResult {
+  if (
+    !obj(v) ||
+    v.module !== module ||
+    !["supported", "partial", "unavailable"].includes(String(v.status)) ||
+    !boundedText(v.analysis, 6000) ||
+    !uniq(v.evidenceIds) ||
+    v.evidenceIds.some((x) => !supplied.includes(x)) ||
+    !arr(v.proposals) ||
+    v.proposals.length > 24
+  )
+    fail(
+      "module_shape_invalid",
+      "Invalid bounded module result or evidence escape",
+    );
+
+  const ev = new Set(supplied);
+  const ps: SemanticProductionProposal[] = [];
+  const seen = new Set<string>();
+  for (const candidate of v.proposals) {
+    try {
+      ps.push(proposal(candidate, ev, seen));
+    } catch (error) {
+      if (
+        !(
+          error instanceof IndustryValidationError &&
+          error.code === "proposal_invalid" &&
+          !/canonical|quantitative|resolution/i.test(error.message)
+        )
+      )
+        throw error;
+      // Quarantine only the malformed candidate. Evidence and narrative remain
+      // subject to the same strict validation as the normal path.
+    }
+  }
+  const ids = new Set(ps.map((item) => item.proposalId));
+  const relationIds = new Set(
+    ps
+      .filter((item) => item.kind === "relation")
+      .map((item) => item.proposalId),
+  );
+  const linkKeys = [
+    "supportsProposalIds",
+    "dependsOnProposalIds",
+    "contradictsProposalIds",
+  ] as const;
+  const normalized = ps.map((item) => ({
+    ...item,
+    ...Object.fromEntries(
+      linkKeys.map((key) => [
+        key,
+        (item[key] ?? []).filter(
+          (id) => id !== item.proposalId && ids.has(id),
+        ),
+      ]),
+    ),
+  }));
+  const report = obj(v.reportMaterial)
+    ? {
+        ...v.reportMaterial,
+        proposalIds: arr(v.reportMaterial.proposalIds)
+          ? v.reportMaterial.proposalIds.filter((id) => ids.has(id))
+          : v.reportMaterial.proposalIds,
+        relationProposalIds: arr(v.reportMaterial.relationProposalIds)
+          ? v.reportMaterial.relationProposalIds.filter((id) =>
+              relationIds.has(id),
+            )
+          : v.reportMaterial.relationProposalIds,
+      }
+    : v.reportMaterial;
+  return validateIndustryModuleResult(
+    { ...v, proposals: normalized, reportMaterial: report },
+    module,
+    supplied,
+  );
+}
 export function validateCrossModuleSynthesis(
   v: unknown,
   supplied: readonly string[],
@@ -431,7 +511,7 @@ const instruction = {
   design:
     "Return exactly the bounded IndustryResearchDesign object. Ontology: independently researchable economic/industrial-chain activity=industry; broad cross-industry concept=theme; commercial category/component=product; technical route/process/architecture=technology; insufficiently resolvable=uncertain. Use all eight exact module keys and the explicit property schemas. This is a plan only: no canonical IDs, Knowledge writes, unsupported numbers, or durable proposals.",
   module:
-    "Return exactly the bounded IndustryModuleResult for the requested module. The contract fixes module to the requested module and exposes the exact evidence allowlist. Copy evidence IDs exactly; if empty, keep evidenceIds/proposals empty and use partial/unavailable plus explicit gaps. Use local IDs only; industry is the reserved root key. Relations use only frozen names. Claim/Relation candidates require evidence; quantitative claims require metric, finite value, unit, comparator and period or fiscalPeriod. Never invent unsupported numbers. supplier_of requires direct authoritative evidence. No canonical writes.",
+    "Return exactly the bounded IndustryModuleResult for the requested module. The contract fixes module to the requested module and exposes the exact evidence allowlist. Copy evidence IDs exactly; if empty, keep evidenceIds/proposals empty and use partial/unavailable plus explicit gaps. Use local IDs only; industry is the reserved root key. Relations use only frozen names. Claim/Relation candidates require direct evidence; quantitative claims require metric, finite value, unit, comparator and period or fiscalPeriod. Never invent unsupported numbers. If a conclusion is useful for the report but not directly supported enough for a durable candidate, return no candidate for it and set reportMaterial.reportOnly=true. In industry_chain_analysis and company_mapping, prefer report-only material over inferred entities, relations, companies, or quantitative claims when the supplied evidence does not name and support them directly. supplier_of requires direct authoritative evidence. No canonical writes.",
   synthesis:
     "Return exactly the bounded CrossModuleSynthesis using only validated modules and supplied evidence. Copy evidence and existing proposal/Relation IDs only from the explicit allowlists; new IDs are local. Keep concrete gap and alternative-view item schemas bounded. No new facts, unsupported numbers, canonical IDs, resolution ownership, or Knowledge writes.",
 };
@@ -452,7 +532,7 @@ export class IndustryResearchSkill {
       op === "industry_research_design"
         ? instruction.design
         : op === "industry_module_analysis"
-          ? instruction.module
+          ? `${instruction.module}${obj(input) && (input.module === "industry_chain_analysis" || input.module === "company_mapping") ? " This request is especially evidence-sensitive and must use report-only mode unless every proposed endpoint is explicitly named and the direct relationship is stated in the supplied excerpt: return status partial, copy the supplied evidence IDs, return proposals as an empty array, put the bounded explanation in reportMaterial.markdown, set reportMaterial.reportOnly=true, and add actionable gaps. Do not emit inferred Entity, Relation, Claim, company, chain-edge, or quantitative proposals; do not fill missing facts by inference." : ""}`
           : instruction.synthesis;
     return unwrap(
       (
@@ -526,42 +606,59 @@ export class IndustryResearchSkill {
         ev.map((x) => x.evidenceId),
       );
     } catch (e) {
+      let repaired: unknown;
       try {
+        repaired = await this.call(
+          "industry_module_analysis",
+          bound,
+          contract,
+          true,
+          prior,
+          [e instanceof IndustryValidationError ? e.code : "parser_failure"],
+        );
         return validateIndustryModuleResult(
-          await this.call(
-            "industry_module_analysis",
-            bound,
-            contract,
-            true,
-            prior,
-            [e instanceof IndustryValidationError ? e.code : "parser_failure"],
-          ),
+          repaired,
           module,
           ev.map((x) => x.evidenceId),
         );
       } catch (second) {
-        return {
-          module,
-          status: "unavailable",
-          analysis: "Module reasoning failed after one bounded repair attempt.",
-          evidenceIds: [],
-          proposals: [],
-          gaps: [
-            {
-              gapId: `${module}-failure`,
-              module,
-              question: "What evidence is required?",
-              reason:
-                second instanceof Error ? second.message : "validation failed",
-              actionable: true,
-            },
-          ],
-          reportMaterial: {
-            markdown: "Module unavailable.",
+        try {
+          const candidate = repaired ?? prior;
+          if (
+            !obj(candidate) ||
+            !obj(candidate.reportMaterial) ||
+            candidate.reportMaterial.reportOnly !== true
+          )
+            throw second;
+          return validateIndustryModuleResultWithProposalIsolation(
+            candidate,
+            module,
+            ev.map((x) => x.evidenceId),
+          );
+        } catch {
+          return {
+            module,
+            status: "unavailable",
+            analysis: "Module reasoning failed after one bounded repair attempt.",
             evidenceIds: [],
-            proposalIds: [],
-          },
-        };
+            proposals: [],
+            gaps: [
+              {
+                gapId: `${module}-failure`,
+                module,
+                question: "What evidence is required?",
+                reason:
+                  second instanceof Error ? second.message : "validation failed",
+                actionable: true,
+              },
+            ],
+            reportMaterial: {
+              markdown: "Module unavailable.",
+              evidenceIds: [],
+              proposalIds: [],
+            },
+          };
+        }
       }
     }
   }

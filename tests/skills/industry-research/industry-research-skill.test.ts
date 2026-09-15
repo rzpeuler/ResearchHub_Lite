@@ -878,6 +878,28 @@ test("Industry module fails closed after one repeated invalid gap ID repair", as
   assert.equal(result.status, "unavailable");
 });
 
+test("Industry module isolates malformed semantic proposals after one repair", async () => {
+  let calls = 0;
+  const fake: ReasoningExecutor = {
+    capabilities: () => ({ maxContextTokens: 1000, maxOutputTokens: 1000, structuredOutputSupport: true, maxConcurrency: 1 }),
+    execute: async (r) => {
+      calls++;
+      const proposals = [
+        { proposalId: "product", kind: "entity", subjectKey: "product", entityType: "product", entityName: "Fixture Product" },
+        { proposalId: "broken-relation", kind: "relation", subjectKey: "product", relationType: "offers_product", sourceCandidateIds: ["e1"] },
+      ];
+      return { operation: r.operation, output: { module: "company_mapping", status: "partial", analysis: "Evidence-backed company mapping narrative.", evidenceIds: ["e1"], proposals, gaps: [], reportMaterial: { markdown: "Evidence-backed company mapping narrative.", evidenceIds: ["e1"], proposalIds: ["product", "broken-relation"], relationProposalIds: ["broken-relation"], reportOnly: true } } };
+    },
+  };
+  const result = await new IndustryResearchSkill(fake).analyze("company_mapping", { target: { name: "Fixture" }, evidence: [{ evidenceId: "e1", source }], existingKnowledge: [], localReferences: [] });
+  assert.equal(calls, 2);
+  assert.equal(result.status, "partial");
+  assert.equal(result.evidenceIds[0], "e1");
+  assert.deepEqual(result.proposals.map((item) => item.proposalId), ["product"]);
+  assert.deepEqual(result.reportMaterial.proposalIds, ["product"]);
+  assert.deepEqual(result.reportMaterial.relationProposalIds, []);
+});
+
 test("Industry synthesis fails closed after exactly one repair attempt", async () => {
   let calls = 0;
   const fake = executor({ executiveView: "bad", analysis: "bad", evidenceIds: ["e1"], proposals: [], gaps: [], alternativeViews: [], reportMaterial: { markdown: "bad", evidenceIds: ["e1"], proposalIds: ["unknown"] } });

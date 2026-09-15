@@ -28,7 +28,11 @@ export class CpcaAcquisitionError extends Error {
 }
 
 const clean = (value: string, max = 1200) => value.normalize('NFKC').replace(/\s+/g, ' ').trim().slice(0, max)
-export const cpcaTargetTerms = (request: Extract<ResearchAcquisitionRequest, { industry: unknown }>) => [...new Set([request.industry.name, ...(request.industry.aliases ?? []), ...request.industry.searchTerms].map((x) => clean(x)).filter(Boolean))].filter((x) => !GENERIC.has(x.toLocaleLowerCase()))
+const targetTokens = (value: string) => value.toLocaleLowerCase().match(/[a-z0-9]+|[\u3400-\u9fff]+/g) ?? []
+export const cpcaTargetTerms = (request: Extract<ResearchAcquisitionRequest, { industry: unknown }>) => {
+  const phrases = [request.industry.name, ...(request.industry.aliases ?? []), ...request.industry.searchTerms].map((x) => clean(x)).filter(Boolean)
+  return [...new Set(phrases.flatMap((phrase) => [phrase, ...targetTokens(phrase)]).filter((x) => !GENERIC.has(x.toLocaleLowerCase())))]
+}
 const canonical = (value: string) => { const url = new URL(value); url.hash = ''; for (const key of [...url.searchParams.keys()]) if (TRACKING.has(key.toLocaleLowerCase())) url.searchParams.delete(key); return url.toString() }
 export const validCpcaUrl = (value: unknown): value is string => { try { const url = new URL(String(value)); return url.protocol === 'https:' && (url.hostname === 'cpca.org.cn' || url.hostname === 'www.cpca.org.cn') } catch { return false } }
 const dateValue = (value: string) => { const match = value.match(/20\d{2}(?:年|[-/.])\d{1,2}(?:月|[-/.])\d{1,2}日?/); if (!match) return undefined; const parsed = new Date(match[0].replace(/年|月|日/g, '-').replace(/[/.]/g, '-').replace(/-+$/, '')); return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString() }
