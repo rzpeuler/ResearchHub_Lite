@@ -8,13 +8,13 @@ Date: 2026-09-16
 - status: `READY_FOR_SOL_REVIEW`
 - baseline: `8e202a0dac1045f25906d9ef4493dd0bed660c9d`
 - branch: `main`
-- implementation_commit: `44e86b660bfc203f8b650261985b7f2dd5427bd2`
-- verified_remote_tip: `44e86b660bfc203f8b650261985b7f2dd5427bd2`
+- implementation_commit: `8c5e52b69c700f86c0e5c166587b0ac6ba9c1483`
+- verified_remote_tip: `8c5e52b69c700f86c0e5c166587b0ac6ba9c1483`
 - sync_status: `SYNCED`
 - task_input_quality: `SUFFICIENT`
 - information_resolved_by_luna: `NO`
 - governance_status: `COMPATIBLE; protected canonical-write and no-fabrication boundaries preserved`
-- blockers: `Strict Industry product-quality evidence depth remains open: the fresh real run has 19 explicit gaps and provider results include rate limits or bounded bridge failures. No safe code-only change can invent the missing public evidence.`
+- blockers: `Strict Industry product-quality evidence depth remains open: the latest fresh real run completed two bounded waves with 17 report gaps and one unavailable supply-demand module; provider results include rate limits or bounded bridge failures. No safe code-only change can invent the missing public evidence.`
 - scope_deviations: `The requested full mission is not claimed complete while the external Industry evidence gate remains open; ReviewDecision writes remain design-only and credential-dependent providers remain deferred.`
 
 ## Task contract
@@ -47,10 +47,11 @@ Industry module reasoning now supports an explicit, bounded report-only mode
 for evidence-sensitive chain and company analysis. When a model response
 declares `reportMaterial.reportOnly=true`, malformed semantic candidates are
 quarantined while evidence IDs, bounded analysis, gaps, and report material
-remain subject to strict validation. Evidence escapes, malformed quantitative
-values, canonical/resolution fields, and direct durable-gate inputs still fail
-closed. Canonical mutation remains exclusively through Gateway, ChangeSet,
-and Writer.
+remain subject to strict validation. Long normalized documents now retain a
+bounded head, module-relevant context windows, and tail rather than exposing
+only the document head. Evidence escapes, malformed quantitative values,
+canonical/resolution fields, and direct durable-gate inputs still fail closed.
+Canonical mutation remains exclusively through Gateway, ChangeSet, and Writer.
 
 ## Fresh real validation
 
@@ -59,14 +60,17 @@ and the seven-provider production portfolio:
 
 - parser preflight: `READY`;
 - workflow: `completed`, two bounded acquisition waves;
-- providers: all seven attempted; MIIT and CPCA supplied qualified evidence;
-- modules: all eight returned, with no `unavailable` module;
+- providers: all seven attempted; MIIT supplied 3 and CPCA supplied 10
+  qualified evidence items (13 total);
+- modules: all eight calls were attempted; seven returned a result and
+  `supply_demand_analysis` remained `unavailable` after its one repair attempt;
 - persistence: one Gateway/Writer ChangeSet, canonical reload and validation
   passed;
 - report: validated 16-section Industry report generated;
 - final classification: `INDUSTRY_PRODUCT_QUALITY_BLOCKED_BY_EVIDENCE` because
-  19 explicit evidence gaps remain. This is recorded as an open evidence
-  depth gate, not converted into a success claim.
+  the run used Wave 2, the supply-demand module remained unavailable, and 17
+  report gaps remained. This is recorded as an open evidence-depth/model-output
+  gate, not converted into a success claim.
 
 The evidence artifact is
 `tests/validation/evidence/RHL_M3B_INDUSTRY_SEVEN_PROVIDER_PRODUCT_QUALITY_AFTER_DOCLING_READY.json`.
@@ -77,7 +81,7 @@ The evidence artifact is
 - Industry report-only proposal isolation regression added.
 - Existing invalid durable Relation/Claim, quantitative, canonical, and
   unresolved-link tests remain fail-closed.
-- Focused Industry Skill tests: 25 passed.
+- Focused Industry Skill and CPCA tests: 35 passed.
 - Final full repository/client/typecheck/build results are recorded with the
   commit that contains this report.
 
@@ -94,18 +98,18 @@ response, credential, or private reasoning was added to the evidence file.
   resolution validation.
 - Added focused tests for both behaviors and retained the existing fail-closed
   durable proposal contract.
+- Added bounded module-relevant context sampling for long normalized evidence
+  documents, with a regression that proves the source body remains bounded.
 
 ## Validation
 
-- `npm test`: 981 passed, 0 failed.
+- `npm test`: client 27/27 and Node 983/983 passed (1010 total).
 - `npm run typecheck`: passed.
 - `npm run client:typecheck`: passed.
 - `npm run client:build`: passed; Vite emitted `dist/client`.
 - `node scripts/document-parser-runtime.mjs --preflight`: `READY`.
-- `npx tsx --test tests/plugins/research-acquisition/cpca-industry.test.ts`:
-  8 passed.
-- `npx tsx --test tests/skills/industry-research/industry-research-skill.test.ts`:
-  25 passed.
+- `npx tsx --test tests/plugins/research-acquisition/cpca-industry.test.ts tests/skills/industry-research/industry-research-skill.test.ts`:
+  35 passed.
 - `git diff --check`: passed.
 
 ## Debugging and risks
@@ -116,3 +120,6 @@ response, credential, or private reasoning was added to the evidence file.
 - The live run proves workflow, persistence, canonical reload, and report
   generation, but not strict product-quality completeness. The remaining
   evidence-depth gaps are an external data-coverage risk and must stay visible.
+- A second real rerun was manually interrupted after roughly 15 minutes with no
+  result; it is not counted as acceptance evidence. The immediately preceding
+  completed run remains the authoritative fresh artifact.

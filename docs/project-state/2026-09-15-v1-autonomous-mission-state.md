@@ -1,6 +1,6 @@
 # ResearchHub_Lite V1 Autonomous Mission State
 
-Updated: 2026-09-15
+Updated: 2026-09-16
 
 ## Mission
 
@@ -12,7 +12,7 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- Latest implementation commit: `44e86b660bfc203f8b650261985b7f2dd5427bd2` (`fix: harden industry evidence routing and convergence`)
+- Latest implementation commit: `8c5e52b69c700f86c0e5c166587b0ac6ba9c1483` (`fix: preserve bounded industry evidence context`)
 - Remote: `origin/main` synchronized; latest implementation commit is recorded above
 - Working tree: clean
 - Phase 0: `ACCEPTED`
@@ -34,8 +34,8 @@ research reuse.
 | Thesis Red Team | IMPLEMENTED_AND_VERIFIED | Stage A/B, invalidation, evidence binding, report, and real-Pi evidence exist. |
 | Industry eight-module deterministic loop | IMPLEMENTED_AND_VERIFIED | Eight modules, bounded Wave 2, one Gateway/Writer, sixteen sections, graph and replay tests pass. |
 | Industry bounded second-target generality | IMPLEMENTED_AND_VERIFIED | Deterministic `AI Server Hardware` validation completed eight modules, one Gateway/Writer submission, canonical reload, and stable no-new-semantic replay. |
-| Industry alias evidence routing | IMPLEMENTED_AND_VERIFIED | Bounded aliases and compound design search terms now participate in independent fallback routing; focused CPCA tests and fresh TEST-054 runs show CPCA evidence reaching all seven non-definition modules without changing evidence qualification or persistence boundaries. |
-| Industry real product-quality E2E | BLOCKED_EXTERNAL_EVIDENCE_DEPTH | Fresh TEST-054 completed two bounded waves, routed MIIT and CPCA evidence into all eight modules, returned all eight modules without `unavailable`, submitted one Gateway/Writer ChangeSet, reloaded canonical Knowledge, and generated the validated 16-section report. The strict product-quality classifier remains blocked by 19 explicit evidence gaps and the need for a second-wave evidence-depth gate; fixtures remain test-only. |
+| Industry alias and bounded evidence-context routing | IMPLEMENTED_AND_VERIFIED | Bounded aliases, compound design terms, same-domain CPCA attachments, and module-relevant windows from long normalized documents participate in routing without changing evidence qualification or persistence boundaries; focused regressions and full suite pass. |
+| Industry real product-quality E2E | BLOCKED_EXTERNAL_EVIDENCE_DEPTH | Latest TEST-054 completed two bounded waves, attempted all eight modules, submitted one Gateway/Writer ChangeSet, reloaded canonical Knowledge, and generated the validated 16-section report. It produced 13 qualified MIIT/CPCA evidence items, but `supply_demand_analysis` remained unavailable after one repair and 17 report gaps remain; the strict classifier is still blocked. Fixtures remain test-only. |
 | Industry graph projection | IMPLEMENTED_AND_VERIFIED | Existing directory/rooted graph APIs and Industry replay tests pass; full product-quality evidence remains incomplete. |
 | Morning/Evening Brief engine | IMPLEMENTED_AND_VERIFIED | Fresh FIX-003 real-Pi run completed both morning/evening briefs with enrichment, change assessment, synthesis, and Knowledge seed/Gateway context; no secrets or raw bodies were included. |
 | Daily live-provider coverage | BLOCKED_EXTERNAL | Public providers have recorded empty, HTTP 429, and bounded bridge failure outcomes; no fabricated fallback is allowed. |
@@ -66,7 +66,7 @@ research reuse.
 ## Acceptance gates
 
 - [x] Phase 0 cleanup accepted and synchronized.
-- [x] Typecheck, client typecheck, client build, parser preflight, and full product test suite pass after continuous maintenance and UI slices (`979/979`, client `27/27`).
+- [x] Typecheck, client typecheck, client build, parser preflight, and full product test suite pass after the latest Industry evidence changes (Node `983/983`, client `27/27`).
 - [ ] Industry strict product-quality evidence gate completes without material evidence gaps. Current TEST-054 completes the eight-module/report/canonical/reload path but remains evidence-depth limited.
 - [x] Industry flow is rerun against a second distinct research target for bounded generality.
 - [x] Remaining deterministic test health is explicitly reconciled; five consecutive VAL-HTTP-001 runs passed.
