@@ -4,9 +4,9 @@ task_id: RHL-M3B-3B-FIX-056-INDUSTRY-GAP-TERM-FORWARDING
 status: READY_FOR_SOL_REVIEW
 baseline: 7153c606da5510a80c0c11706d1656775ca0c58f
 branch: codex/m3b-3b-evidence-routing
-implementation_commit: pending
-verified_remote_tip: pending
-sync_status: READY_TO_SYNC
+implementation_commit: af88586543d6f363eac2af3181c47646c9a10f68
+verified_remote_tip: af88586543d6f363eac2af3181c47646c9a10f68
+sync_status: SYNCED
 summary: Preserve explicit user search terms in Wave 1 and merge bounded Workflow gap search terms into Wave 2 acquisition requests; align TEST-054 with the production keyword path and correct MIIT PDF/HTML telemetry.
 tests: Focused application/Workflow/TEST-054 tests 62/62 and follow-up 9/9 passed; full npm test passed with client 21/21 and Node 971/971; repository typecheck, client typecheck, client build, and diff check passed; live TEST-054 completed the production chain but remains blocked by evidence coverage.
 acceptance_criteria: Wave 1 uses explicit application search terms; Wave 2 prioritizes Workflow gap terms and retains explicit base terms within the eight-term bound; MIIT PDF telemetry isolates expected PDF anchors from the official HTML anchor; no retry loop, provider expansion, or frozen architecture change is introduced.
