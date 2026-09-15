@@ -4,9 +4,9 @@ task_id: RHL-M3B-3B-FIX-058-ACCEPTED-EVIDENCE-METRICS
 status: READY_FOR_SOL_REVIEW
 baseline: 914e19f3ee0c5de4451a8dc2c10af03194e7466a
 branch: codex/m3b-3b-evidence-routing
-implementation_commit: pending
-verified_remote_tip: pending
-sync_status: READY_TO_SYNC
+implementation_commit: d389cc315dc44e3ed85600018f3471918ce78577
+verified_remote_tip: d389cc315dc44e3ed85600018f3471918ce78577
+sync_status: SYNCED
 summary: Separate usable normalized-source counts from Workflow-accepted evidence counts in the TEST-054 provider telemetry.
 tests: Focused TEST-054 harness tests 9/9 passed; full npm test passed with client 21/21 and Node 973/973; repository typecheck and diff check passed; latest real TEST-054 completed the full Workflow/Gateway/ChangeSet/Writer path and preserved the fail-closed product-quality classification.
 acceptance_criteria: `usableSourceCount` reflects provider normalization output; `qualifiedEvidenceCount` reflects evidence accepted by the Workflow; accepted evidence resolves through candidate provider identity; no provider result is fabricated and no quality gate is relaxed.
