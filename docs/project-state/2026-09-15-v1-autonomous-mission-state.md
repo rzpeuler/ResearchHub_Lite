@@ -12,9 +12,9 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- HEAD: `pending` (Research Report Catalog implementation validated; commit/sync pending)
-- Remote: `origin/main` at the prior synchronized checkpoint
-- Working tree: Research Report Catalog implementation and evidence are pending commit
+- Latest implementation commit: `ebe6a051c34d62763144c3616d1b0aa306e6fe00` (`feat: add read-only research report catalog`)
+- Remote: `origin/main` synchronized through the implementation commit; this ledger reconciliation is also being committed
+- Working tree: clean after the ledger reconciliation commit
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
 - Phase 3 critical path: `PARTIAL`
@@ -70,7 +70,7 @@ research reuse.
 - [x] Industry flow is rerun against a second distinct research target for bounded generality.
 - [x] Remaining deterministic test health is explicitly reconciled; five consecutive VAL-HTTP-001 runs passed.
 - [x] The bounded Daily Continuous Research maintenance slice is implemented and verified; unified cross-workflow maintenance remains open.
-- [x] The read-only general Research Report catalog is implemented and validated; commit and synchronization are pending at this ledger update.
+- [x] The read-only general Research Report catalog is implemented, validated, committed, and synchronized.
 - [x] Final external validation requirements are listed with completed, external-blocked, and explicitly deferred boundaries in `docs/task-reports/2026-09-15-final-external-validation-inventory.md`.
 
 ## Current decision
