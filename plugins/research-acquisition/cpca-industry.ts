@@ -18,7 +18,7 @@ const PUBLISHER = 'China Printed Circuit Association'
 export const CPCA_INDUSTRY_ROUTES = ['https://www.cpca.org.cn/industry-287.html', 'https://www.cpca.org.cn/industry-279.html', 'https://www.cpca.org.cn/industry.html'] as const
 const MAX_ROUTES = 3
 const MAX_PAGES = 2
-const MAX_CANDIDATES = 8
+const MAX_CANDIDATES = 12
 const TRACKING = new Set(['spm', 'from', 'source', 'share', 'utm_source', 'utm_medium', 'utm_campaign'])
 const GENERIC = new Set(['industry', 'manufacturing', '行业', '产业', '制造业'])
 

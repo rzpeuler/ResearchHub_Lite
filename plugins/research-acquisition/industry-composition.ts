@@ -3,7 +3,7 @@ import type { NormalizedResearchSource, ResearchAcquisitionPlugin, ResearchProvi
 
 export interface IndustryAcquisitionRun { readonly sources: readonly NormalizedResearchSource[]; readonly outcomes: readonly ResearchProviderOutcome[]; readonly diagnostics: readonly string[] }
 export class IndustryAcquisitionComposition {
-  constructor(private readonly plugins: readonly ResearchAcquisitionPlugin[], private readonly maxCandidatesPerProvider = 8, private readonly maxSources = 24) {}
+  constructor(private readonly plugins: readonly ResearchAcquisitionPlugin[], private readonly maxCandidatesPerProvider = 12, private readonly maxSources = 24) {}
   async acquire(request: IndustryAcquisitionWaveRequest): Promise<IndustryAcquisitionRun> {
     const sources: NormalizedResearchSource[] = []; const outcomes: ResearchProviderOutcome[] = []; const diagnostics: string[] = []; const seen = new Set<string>()
     const terms = [...new Set(request.searchTerms.map((x) => x.trim()).filter(Boolean))].slice(0, 8).map((x) => x.slice(0, 120))
