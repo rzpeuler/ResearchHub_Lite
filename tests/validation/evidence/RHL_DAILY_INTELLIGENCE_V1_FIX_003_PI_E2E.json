@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-08T12:10:57.973Z",
+  "generatedAt": "2026-09-15T12:34:35.806Z",
   "taskId": "RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001-FIX-003",
   "classification": "EXECUTED",
   "realPiReasoningExecutor": true,
@@ -37,8 +37,8 @@
       "called": true,
       "validated": true,
       "applied": true,
-      "appliedCount": 4,
-      "fallbackCount": 2
+      "appliedCount": 3,
+      "fallbackCount": 3
     },
     "daily_brief_synthesis": {
       "called": true,
@@ -59,8 +59,8 @@
       "enrichmentAppliedCount": 3,
       "enrichmentFallbackCount": 0,
       "changeAssessmentReasoningUsed": true,
-      "changeAssessmentAppliedCount": 2,
-      "changeAssessmentFallbackCount": 1,
+      "changeAssessmentAppliedCount": 1,
+      "changeAssessmentFallbackCount": 2,
       "briefReasoningUsed": true,
       "modelDerivedItemCount": 3,
       "briefFallbackCount": 0,
@@ -71,7 +71,16 @@
           "rows_applied_3"
         ],
         "daily_change_assessment": [
-          "output_keys_clusterId,disposition,durableCandidate,rationale,relatedKnowledgeRefs",
+          "output_keys_clusterId,disposition,durableCandidate,materiality,rationale,relatedKnowledgeRefs,subjectKey,thesisImpact",
+          "cluster_id_match_true",
+          "disposition_valid_false",
+          "refs_array_true",
+          "refs_count_0",
+          "refs_allowed_true",
+          "rationale_valid_true",
+          "durable_flag_true",
+          "validation_shape_or_reference_rejected",
+          "output_keys_clusterId,disposition,durableCandidate,materiality,rationale,relatedKnowledgeRefs,thesisImpact",
           "cluster_id_match_true",
           "disposition_valid_false",
           "refs_array_true",
@@ -107,7 +116,7 @@
           "rows_applied_3"
         ],
         "daily_change_assessment": [
-          "output_keys_clusterId,disposition,durableCandidate,rationale,relatedKnowledgeRefs,subjectKey",
+          "output_keys_clusterId,disposition,durableCandidate,materiality,rationale,relatedKnowledgeRefs,subjectKey,thesisImpact",
           "cluster_id_match_true",
           "disposition_valid_false",
           "refs_array_true",

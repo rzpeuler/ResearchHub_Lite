@@ -47,7 +47,7 @@
       "sensitivityCellCount": 9,
       "deterministicRecomputeStatus": "matched"
     },
-    "modelDerivedInterpretiveSectionCount": 3,
+    "modelDerivedInterpretiveSectionCount": 2,
     "acceptedProposalCount": 1,
     "baselineEntityCount": 1,
     "finalEntityCount": 1,

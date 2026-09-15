@@ -13,6 +13,8 @@ export interface DailySynthesisProposal {
   readonly statement: string
   readonly sourceCandidateIds: readonly string[]
   readonly assessmentRefs: readonly string[]
+  readonly existingKnowledgeRefs?: readonly string[]
+  readonly resolution?: 'update' | 'supersede' | 'contradict' | 'review'
   readonly confidence: number
 }
 export interface DailySynthesisResult {
@@ -32,9 +34,9 @@ export class DailyBriefSynthesisSkill {
         const requiredSections = type === 'morning' ? MORNING : EVENING
         const result = await executor.execute({
           operation: 'daily_brief_synthesis',
-          instruction: `Return exactly one compact JSON object with every required section exactly once, in the supplied order. Empty sections are correct when there is no evidence; prefer empty arrays and emit no more than three items total. For an entity-matched observation, prefer the Watchlist section; do not use a Signal to fill an unrelated section. Every non-empty item must cite supplied signalRefs; interpretations must also cite assessmentRefs or signalRefs. Proposals are only semantic drafts and must copy assessmentRefs from supplied assessments; deterministic validation decides durability. Required sections: ${requiredSections.join(' | ')}.`,
+          instruction: `Return exactly one compact JSON object with every required section exactly once, in the supplied order. Empty sections are correct when there is no evidence; prefer empty arrays and emit no more than three items total. For an entity-matched observation, prefer the Watchlist section; do not use a Signal to fill an unrelated section. Every non-empty item must cite supplied signalRefs; interpretations must also cite assessmentRefs or signalRefs. Proposals are only semantic drafts and must copy assessmentRefs and, when present, existingKnowledgeRefs exactly from supplied assessments; resolution must be update for support, contradict for contradiction, or review when uncertain. Never invent canonical refs; deterministic validation decides durability. Required sections: ${requiredSections.join(' | ')}.`,
           input: { type, sections: requiredSections, signals: signals.slice(0, 40), clusters: clusters.slice(0, 20), assessments: assessments.slice(0, 20) },
-          outputContract: { sections: [{ id: 'string', title: 'one required section title', items: [{ itemId: 'string', headline: 'string', markdown: 'string', signalRefs: ['supplied signal-id'], assessmentRefs: ['supplied cluster-id'], kind: 'signal|interpretation', rank: 1 }] }], proposals: [{ proposalId: 'string', subjectKey: 'watchlist-symbol-only', claimType: 'viewpoint|risk|trend', statement: 'string', sourceCandidateIds: ['supplied candidate-id'], assessmentRefs: ['supplied assessment cluster-id'], confidence: 0.0 }] },
+          outputContract: { sections: [{ id: 'string', title: 'one required section title', items: [{ itemId: 'string', headline: 'string', markdown: 'string', signalRefs: ['supplied signal-id'], assessmentRefs: ['supplied cluster-id'], kind: 'signal|interpretation', rank: 1 }] }], proposals: [{ proposalId: 'string', subjectKey: 'watchlist-symbol-only', claimType: 'viewpoint|risk|trend', statement: 'string', sourceCandidateIds: ['supplied candidate-id'], assessmentRefs: ['supplied assessment cluster-id'], existingKnowledgeRefs: ['canonical ref copied exactly from supplied assessment'], resolution: 'update|contradict|review', confidence: 0.0 }] },
           metadata: { workflow: 'daily-intelligence' },
         })
         const normalized = normalizeReasoningStructuredOutput(result.output)
@@ -50,7 +52,9 @@ export class DailyBriefSynthesisSkill {
       const cluster = clusters.find((item) => item.clusterId === assessment.clusterId)
       const sourceCandidateIds = cluster?.signals.filter((signal) => signal.sourceTier <= 2).map((signal) => signal.source.candidateId) ?? []
       const subjectKey = cluster?.entities.find((entity) => /^\d{6}$/.test(entity))
-      return subjectKey && sourceCandidateIds.length ? [{ proposalId: `daily-proposal-${index + 1}`, kind: 'claim' as const, subjectKey, claimType: assessment.disposition === 'risk' ? 'risk' as const : assessment.disposition === 'catalyst' ? 'trend' as const : 'viewpoint' as const, statement: assessment.rationale, sourceCandidateIds, assessmentRefs: [assessment.clusterId], confidence: 0.65 }] : []
+      const existingKnowledgeRefs = [...assessment.relatedKnowledgeRefs]
+      const resolution = resolutionForAssessment(assessment)
+      return subjectKey && sourceCandidateIds.length && existingKnowledgeRefs.length && resolution ? [{ proposalId: `daily-proposal-${index + 1}`, kind: 'claim' as const, subjectKey, claimType: assessment.disposition === 'risk' ? 'risk' as const : assessment.disposition === 'catalyst' ? 'trend' as const : 'viewpoint' as const, statement: assessment.rationale, sourceCandidateIds, assessmentRefs: [assessment.clusterId], existingKnowledgeRefs, resolution, confidence: 0.65 }] : []
     })
     return { sections, proposals, reasoningUsed: false, fallbackUsed: true, modelDerivedItemCount: 0, reasoningDiagnostics: lastDiagnostics }
   }
@@ -101,13 +105,17 @@ function validateModelOutput(value: unknown, signals: readonly DailyResearchSign
     sections.push({ id: section.id, title: expectedTitle, items })
   }
   if (sections.length !== expected.length || seenTitles.size !== expected.length) return undefined
-  const proposals = object.proposals.flatMap((raw) => {
+    const proposals = object.proposals.flatMap((raw) => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return []
     const proposal = raw as Record<string, unknown>
     const sourceIds = Array.isArray(proposal.sourceCandidateIds) && proposal.sourceCandidateIds.length > 0 && proposal.sourceCandidateIds.every((id) => typeof id === 'string' && signals.some((signal) => signal.source.candidateId === id))
     const assessmentRefs = Array.isArray(proposal.assessmentRefs) && proposal.assessmentRefs.length > 0 && proposal.assessmentRefs.every((id) => typeof id === 'string' && assessmentIds.has(id)) ? proposal.assessmentRefs.filter((id): id is string => typeof id === 'string') : undefined
-    if (typeof proposal.proposalId !== 'string' || typeof proposal.subjectKey !== 'string' || typeof proposal.statement !== 'string' || !sourceIds || !assessmentRefs || !['viewpoint', 'risk', 'trend'].includes(String(proposal.claimType))) return []
-    return [{ proposalId: proposal.proposalId, kind: 'claim' as const, subjectKey: proposal.subjectKey, claimType: proposal.claimType as DailySynthesisProposal['claimType'], statement: proposal.statement, sourceCandidateIds: proposal.sourceCandidateIds as string[], assessmentRefs, confidence: typeof proposal.confidence === 'number' ? Math.max(0, Math.min(1, proposal.confidence)) : 0.5 }]
+    const referencedAssessments = assessmentRefs?.map((id) => assessments.find((assessment) => assessment.clusterId === id)).filter((item): item is ResearchChangeAssessment => item !== undefined) ?? []
+    const existingRefs = proposal.existingKnowledgeRefs === undefined ? undefined : Array.isArray(proposal.existingKnowledgeRefs) && proposal.existingKnowledgeRefs.every((id) => typeof id === 'string') ? proposal.existingKnowledgeRefs : undefined
+    const refsCopied = existingRefs === undefined || referencedAssessments.every((assessment) => existingRefs.every((ref) => assessment.relatedKnowledgeRefs.includes(ref)))
+    const resolution: DailySynthesisProposal['resolution'] = proposal.resolution === undefined || proposal.resolution === 'update' || proposal.resolution === 'supersede' || proposal.resolution === 'contradict' || proposal.resolution === 'review' ? proposal.resolution as DailySynthesisProposal['resolution'] : undefined
+    if (typeof proposal.proposalId !== 'string' || typeof proposal.subjectKey !== 'string' || typeof proposal.statement !== 'string' || !sourceIds || !assessmentRefs || !refsCopied || (proposal.existingKnowledgeRefs !== undefined && existingRefs === undefined) || (proposal.resolution !== undefined && resolution === undefined) || !['viewpoint', 'risk', 'trend'].includes(String(proposal.claimType))) return []
+    return [{ proposalId: proposal.proposalId, kind: 'claim' as const, subjectKey: proposal.subjectKey, claimType: proposal.claimType as DailySynthesisProposal['claimType'], statement: proposal.statement, sourceCandidateIds: proposal.sourceCandidateIds as string[], assessmentRefs, ...(existingRefs ? { existingKnowledgeRefs: existingRefs } : {}), ...(resolution ? { resolution } : {}), confidence: typeof proposal.confidence === 'number' ? Math.max(0, Math.min(1, proposal.confidence)) : 0.5 }]
   }).slice(0, 5)
   return { sections, proposals }
 }
@@ -141,5 +149,6 @@ function sectionMatches(section: string, signal: DailyResearchSignal, assessment
 
 function assessmentMatches(signal: DailyResearchSignal, assessments: readonly ResearchChangeAssessment[], clusters: readonly DailySignalCluster[], dispositions: readonly string[]): boolean { return assessments.some((assessment) => dispositions.includes(assessment.disposition) && clusters.some((cluster) => cluster.clusterId === assessment.clusterId && cluster.signalRefs.includes(signal.signalId))) }
 function assessmentRefsForSignal(section: string, signal: DailyResearchSignal, assessments: readonly ResearchChangeAssessment[], clusters: readonly DailySignalCluster[]): string[] { const s = section.toLowerCase(); const dispositions = /catalyst/.test(s) ? ['catalyst'] : /risk/.test(s) ? ['risk', 'contradicts', 'changes_assumption', 'affects_thesis'] : /thesis|assumption|knowledge changes/.test(s) ? ['supports', 'contradicts', 'changes_assumption', 'affects_thesis'] : []; return assessments.filter((assessment) => dispositions.includes(assessment.disposition) && clusters.some((cluster) => cluster.clusterId === assessment.clusterId && cluster.signalRefs.includes(signal.signalId))).map((assessment) => assessment.clusterId) }
+function resolutionForAssessment(assessment: ResearchChangeAssessment): DailySynthesisProposal['resolution'] | undefined { if (assessment.thesisImpact === 'contradicts' || assessment.disposition === 'contradicts') return 'contradict'; if (assessment.thesisImpact === 'affects' || assessment.disposition === 'affects_thesis') return 'review'; if (assessment.thesisImpact === 'supports' || ['supports', 'changes_assumption', 'catalyst', 'risk'].includes(assessment.disposition)) return 'update'; return undefined }
 function outputShapeDiagnostics(value: unknown): string[] { if (value === null) return ['output_type_null']; if (Array.isArray(value)) return ['output_type_array', `output_array_count_${value.length}`]; if (typeof value !== 'object') return [`output_type_${typeof value}`]; const object = value as Record<string, unknown>; const diagnostics = [`output_keys_${Object.keys(object).sort().join(',')}`]; if (Array.isArray(object.sections)) { diagnostics.push(`sections_count_${object.sections.length}`); const sections = object.sections.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item)); diagnostics.push(`section_object_count_${sections.length}`, `section_items_array_count_${sections.filter((item) => Array.isArray(item.items)).length}`, `section_item_total_${sections.reduce((total, item) => total + (Array.isArray(item.items) ? item.items.length : 0), 0)}`) } if (Array.isArray(object.proposals)) diagnostics.push(`proposals_count_${object.proposals.length}`); return diagnostics }
 function errorCode(error: unknown): string { return error && typeof error === 'object' && 'code' in error && typeof (error as { code?: unknown }).code === 'string' ? `executor_${String((error as { code: string }).code)}` : error instanceof Error && error.name ? `executor_${error.name}` : 'executor_failed' }

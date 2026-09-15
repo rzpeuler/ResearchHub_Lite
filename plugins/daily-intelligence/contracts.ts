@@ -102,6 +102,8 @@ export interface DailySignalCluster {
 }
 
 export type ResearchChangeDisposition = 'new' | 'supports' | 'contradicts' | 'changes_assumption' | 'affects_thesis' | 'catalyst' | 'risk' | 'noise'
+export type ResearchMateriality = 'low' | 'medium' | 'high'
+export type ResearchThesisImpact = 'none' | 'supports' | 'contradicts' | 'affects' | 'unknown'
 export interface ResearchChangeAssessment {
   readonly clusterId: string
   readonly subjectKey?: string
@@ -109,6 +111,10 @@ export interface ResearchChangeAssessment {
   readonly rationale: string
   readonly relatedKnowledgeRefs: readonly string[]
   readonly durableCandidate: boolean
+  /** Optional for backwards-compatible persisted/model payloads; runtime normalizes to low. */
+  readonly materiality?: ResearchMateriality
+  /** Optional for backwards-compatible persisted/model payloads; runtime normalizes to unknown. */
+  readonly thesisImpact?: ResearchThesisImpact
 }
 
 export interface DailyBriefItem {
