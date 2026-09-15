@@ -17,7 +17,7 @@ research reuse.
 - Working tree: clean
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
-- Phase 3 critical path: `PARTIAL`
+- Phase 3 critical path: `ACCEPTED_BOUNDED_V1`
 
 ## Current Capability Matrix
 
@@ -36,7 +36,7 @@ research reuse.
 | Industry bounded second-target generality | IMPLEMENTED_AND_VERIFIED | Deterministic `AI Server Hardware` validation completed eight modules, one Gateway/Writer submission, canonical reload, and stable no-new-semantic replay. |
 | Industry alias and bounded evidence-context routing | IMPLEMENTED_AND_VERIFIED | Bounded aliases, compound design terms, Chinese module terms, module-specific evidence ranking, safe same-domain CPCA attachments, rich-article preservation, bounded provider intake of 12 within the total source cap of 24, bounded four-way candidate acquisition concurrency, official CNINFO Industry full-text discovery, and module-relevant windows from long normalized documents participate in routing without changing evidence qualification or persistence boundaries; focused regressions and full suite pass. |
 | Industry real product-quality E2E | IMPLEMENTED_AND_VERIFIED | Latest TEST-054 completed one bounded wave, attempted all seven providers and all eight modules, submitted one Gateway/Writer ChangeSet, reloaded canonical Knowledge, and generated the validated 16-section report. It produced 24 qualified public evidence items (13 official CNINFO/MIIT tier-1 and 11 CPCA tier-4); all modules returned supported or partial results, the strict classifier is `INDUSTRY_PRODUCT_QUALITY_READY`, and 21 explicit research gaps remain visible. Fixtures remain test-only. |
-| Industry graph projection | IMPLEMENTED_AND_VERIFIED | Existing directory/rooted graph APIs and Industry replay tests pass; full product-quality evidence remains incomplete. |
+| Industry graph projection | IMPLEMENTED_AND_VERIFIED | Existing directory/rooted graph APIs and Industry replay tests pass; the latest real product-quality run persisted and reloaded the validated Industry evidence graph. |
 | Morning/Evening Brief engine | IMPLEMENTED_AND_VERIFIED | Fresh FIX-003 real-Pi run completed both morning/evening briefs with enrichment, change assessment, synthesis, and Knowledge seed/Gateway context; no secrets or raw bodies were included. |
 | Daily live-provider coverage | PARTIAL_EXTERNAL_PROVIDER_COVERAGE | Current live smoke has usable CNINFO company announcements; GDELT, RSS, institutional, community, and AKShare probes retain empty, HTTP 429/521, or bounded bridge-failure outcomes. No fabricated fallback is allowed. |
 | Runtime HTTP/SSE/security/attachments | IMPLEMENTED_AND_VERIFIED | Bootstrap, loopback/origin/token controls, SSE, upload, cancellation and product route tests pass. |
@@ -52,9 +52,9 @@ research reuse.
 | --- | --- | --- | --- |
 | RHL-P0-CLEANUP | 0 | ACCEPTED | Remove legacy control-plane assets, preserve product behavior, and pass post-cleanup checks. Commit `5bb59a4`. |
 | RHL-P1-REALITY | 1 | ACCEPTED | Establish this matrix and backlog from current source, tests, reports, and live evidence. |
-| RHL-P3-INDUSTRY-ROUTING | 3 | ACCEPTED_IMPLEMENTATION_PARTIAL_PRODUCT | Route authoritative MIIT PCB anchors to `industry_definition`, preserve Wave-2 search terms, make accepted-evidence telemetry truthful, and record fresh TEST-054. Commit `852162e`; the product-quality gate remains open for seven-module evidence coverage. |
+| RHL-P3-INDUSTRY-ROUTING | 3 | ACCEPTED_IMPLEMENTED_AND_VERIFIED | Route official CNINFO/MIIT PCB evidence to Industry modules, preserve bounded search terms, keep accepted-evidence telemetry truthful, and verify fresh real TEST-054. Implementation commit `c1a39bd`; strict product-quality gate is READY. |
 | RHL-P3-INDUSTRY-GENERALITY | 3 | ACCEPTED_BOUNDED | Rerun the Industry flow against `AI Server Hardware`; eight modules, one Gateway/Writer submission, canonical reload, and stable no-new-semantic replay passed. |
-| RHL-P3-INDUSTRY-ALIAS-ROUTING | 3 | ACCEPTED | Include bounded target aliases in Industry evidence routing; focused regression and fresh TEST-054 rerun passed, while the live seven-module evidence gap remains. |
+| RHL-P3-INDUSTRY-ALIAS-ROUTING | 3 | ACCEPTED_IMPLEMENTED_AND_VERIFIED | Include bounded target aliases and compound terms in Industry evidence routing; focused regressions and fresh real TEST-054 passed with all eight modules covered. |
 | RHL-P1-TEST-HEALTH | 1 | ACCEPTED_RECONCILED | Five consecutive `VAL-HTTP-001` runs passed; no valuation semantic change was made and the prior timing failure was not reproduced. |
 | RHL-P2-DOCUMENT-STATUS | 2 | ACCEPTED | Reconcile current entry documents with verified source/test reality while preserving historical architecture and task-report evidence. |
 | RHL-P2-CONTINUOUS-RESEARCH | 8 | ACCEPTED_BOUNDED_DAILY_SLICE | Implement and verify the bounded Daily maintenance path through existing Claim projection, Gateway/Writer, reload, and replay; broader unified maintenance remains open. |

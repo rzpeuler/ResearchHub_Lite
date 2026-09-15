@@ -4,17 +4,21 @@ Date: 2026-09-16
 
 ## Task closure
 
-- task_id: `RHL-M3B-INDUSTRY-REAL-EVIDENCE-CONVERGENCE-20260916`
-- status: `READY_FOR_SOL_REVIEW`
-- baseline: `8e202a0dac1045f25906d9ef4493dd0bed660c9d`
-- branch: `main`
-- implementation_commit: `c1a39bd` (`feat: restore official industry evidence path`)
-- verified_remote_tip: `c1a39bd` after fetch/push verification
-- sync_status: `SYNCED`
+task_id: RHL-M3B-INDUSTRY-REAL-EVIDENCE-CONVERGENCE-20260916
+status: READY_FOR_SOL_REVIEW
+baseline: 8e202a0dac1045f25906d9ef4493dd0bed660c9d
+branch: main
+implementation_commit: c1a39bd3d716f1369e3c65211878e8a0d9c59d4e
+verified_remote_tip: c1a39bd3d716f1369e3c65211878e8a0d9c59d4e
+sync_status: SYNCED
+- implementation_commit_note: c1a39bd (`feat: restore official industry evidence path`); report finalization is the separate documentation commit `cdac781`.
 - task_input_quality: `SUFFICIENT`
 - information_resolved_by_luna: `NO`
-- governance_status: `COMPATIBLE; protected canonical-write and no-fabrication boundaries preserved`
-- blockers: `None for the scoped Industry acceptance: the latest fresh real run reached the strict READY gate. Separate Daily provider coverage remains externally blocked; ReviewDecision writes and credential-dependent providers remain explicitly deferred.`
+summary: Official CNINFO Industry discovery, bounded acquisition, and real seven-provider Industry validation now reach the strict READY gate with durable report and Knowledge output.
+tests: npm test, typechecks, client build, parser preflight, focused regressions, and git diff check passed.
+acceptance_criteria: Compound CPCA terms route independently; all eight Industry modules complete a real bounded run; malformed report-only candidates are quarantined; durable invalid inputs fail closed; repository validation passes.
+governance_status: COMPATIBLE; protected canonical-write and no-fabrication boundaries preserved
+blockers: None for scoped Industry acceptance; separate Daily provider coverage remains externally limited, while ReviewDecision writes and credential-dependent providers remain explicitly deferred.
 - scope_deviations: `No Industry scope deviation; provider failures remain explicit and no unsupported conclusion is promoted to durable Knowledge.`
 
 ## Task contract
@@ -63,32 +67,31 @@ Canonical mutation remains exclusively through Gateway, ChangeSet, and Writer.
 ## Fresh real validation
 
 `TEST-054` was rerun with the configured Pi reasoning host, managed Docling,
-and the seven-provider production portfolio after the module-ranking and
-CPCA attachment fixes. The validation entrypoint also now forwards the
-Workflow's bounded design search terms during Wave 1:
+and the seven-provider production portfolio after the module-ranking, CPCA
+attachment, and official CNINFO Industry discovery fixes. The validation
+entrypoint also forwards the Workflow's bounded design search terms during
+Wave 1:
 
 - parser preflight: `READY`;
-- workflow: `completed`, two bounded acquisition waves;
-- providers: all seven attempted; MIIT supplied 3 and CPCA supplied 13
-  qualified evidence items (16 total);
+- workflow: `completed`, one bounded acquisition wave;
+- providers: all seven attempted; official CNINFO supplied 10, MIIT supplied 3,
+  and CPCA supplied 11 qualified evidence items (24 total);
 - modules: all eight returned a result (supported or partial); no module was
   `unavailable`;
 - persistence: one Gateway/Writer ChangeSet, canonical reload and validation
   passed;
 - report: validated 16-section Industry report generated;
-- final classification: `INDUSTRY_PRODUCT_QUALITY_BLOCKED_BY_EVIDENCE` because
-  the run used Wave 2 and 17 report gaps remained. This is recorded as an open
-  evidence-depth gate, not converted into a success claim. The completed
-  workflow, canonical reload, and validated report are genuine E2E evidence;
-  explicit gaps remain visible and no unsupported conclusion is promoted to
-  durable Knowledge.
+- final classification: `INDUSTRY_PRODUCT_QUALITY_READY`. The report retains 21
+  explicit research gaps, and no unsupported conclusion is promoted to durable
+  Knowledge.
 
 The latest completed run used implementation `c1a39bd`'s bounded CNINFO
 Industry full-text search, four-way candidate acquisition concurrency, Chinese
 module terms, and the existing MIIT/CPCA paths. It reached one bounded wave
 with 24 qualified public evidence items and the strict `READY` classification.
-The prior non-terminating follow-ups after the candidate-intake and Chinese
-routing changes remain historical observations and are not used as acceptance.
+The prior two-wave blocked run and non-terminating follow-ups after the
+candidate-intake and Chinese-routing changes remain historical observations;
+they are not used as current acceptance.
 
 The evidence artifact is
 `tests/validation/evidence/RHL_M3B_INDUSTRY_SEVEN_PROVIDER_PRODUCT_QUALITY_AFTER_DOCLING_READY.json`.
@@ -127,14 +130,17 @@ response, credential, or private reasoning was added to the evidence file.
 
 ## Validation
 
-- `npm test`: client 27/27 and Node 985/985 passed (1012 total); one prior
-  Windows `EBUSY` temp-directory cleanup race passed on immediate rerun.
+- `npm test`: client 27/27 and Node 987/987 passed (1014 total).
 - `npm run typecheck`: passed.
 - `npm run client:typecheck`: passed.
 - `npm run client:build`: passed; Vite emitted `dist/client`.
 - `node scripts/document-parser-runtime.mjs --preflight`: `READY`.
-- `npx tsx --test tests/plugins/research-acquisition/cpca-industry.test.ts tests/skills/industry-research/industry-research-skill.test.ts`:
-  focused tests passed, including rich-article attachment routing.
+- `npx tsx --test tests/plugins/research-acquisition/official-fix.test.ts
+  tests/plugins/research-acquisition/industry.test.ts`: official Industry
+  discovery/fallback and bounded candidate acquisition regressions passed
+  (3/3 and 4/4).
+- CPCA/Industry Skill focused tests: 36 passed, including rich-article
+  attachment routing.
 - `npx tsx --test tests/workflows/industry-deep-research/industry-deep-research-workflow.test.ts`:
   45 passed, including module-specific ranking for unhinted evidence.
 - `npx tsx --test tests/validation/industry-seven-provider-product-quality-after-docling-ready.test.ts`:
@@ -151,9 +157,9 @@ response, credential, or private reasoning was added to the evidence file.
   research gaps remain visible in the report and are not converted into
   unsupported conclusions.
 - The latest real run completed after the validation entrypoint forwarded the
-  Workflow design terms. It still required Wave 2 and retained 17 explicit
-  gaps, so the strict classifier remains blocked. This is the authoritative
-  fresh artifact; older runs are historical context only.
+  Workflow design terms and the official CNINFO Industry route was restored.
+  It reached one bounded wave and the strict classifier is READY; older
+  blocked or non-terminating runs are historical context only.
 - The prior candidate-intake and Chinese-routing reruns were externally
   non-terminating. The later run with official CNINFO Industry discovery and
   bounded acquisition concurrency completed and replaced the retained
