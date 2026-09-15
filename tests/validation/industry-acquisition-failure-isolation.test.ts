@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { OfficialDisclosureResearchPlugin } from '../../plugins/research-acquisition/official.ts'
 import { INDUSTRY, REQUEST, classifyAggregate, rankRelevantBoardNames } from './industry-acquisition-failure-isolation.ts'
 
-test('Probe A proves CNINFO Industry capability absence without client invocation', async () => {
+test('legacy injected CNINFO clients without Industry search remain fail-closed', async () => {
   let calls = 0
   const plugin = new OfficialDisclosureResearchPlugin({ list: async () => { calls++; throw new Error('must not call') }, fetch: async () => '' })
   assert.deepEqual(await plugin.discover(REQUEST), [])

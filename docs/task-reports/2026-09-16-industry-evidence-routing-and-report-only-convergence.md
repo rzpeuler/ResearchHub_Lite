@@ -8,14 +8,14 @@ Date: 2026-09-16
 - status: `READY_FOR_SOL_REVIEW`
 - baseline: `8e202a0dac1045f25906d9ef4493dd0bed660c9d`
 - branch: `main`
-- implementation_commit: `5a78583` (`fix: improve Chinese industry evidence routing`)
-- verified_remote_tip: `5a78583` before this report finalization commit; final docs push is verified separately
-- sync_status: `SYNCED`
+- implementation_commit: `pending`
+- verified_remote_tip: `pending`
+- sync_status: `READY_TO_SYNC`
 - task_input_quality: `SUFFICIENT`
 - information_resolved_by_luna: `NO`
 - governance_status: `COMPATIBLE; protected canonical-write and no-fabrication boundaries preserved`
-- blockers: `Strict Industry product-quality evidence depth remains open: the latest fresh real run completed two bounded waves with 17 report gaps; all eight modules returned supported or partial results, but provider results include rate limits or bounded bridge failures. No safe code-only change can invent the missing public evidence.`
-- scope_deviations: `The requested full mission is not claimed complete while the external Industry evidence gate remains open; ReviewDecision writes remain design-only and credential-dependent providers remain deferred.`
+- blockers: `None for the scoped Industry acceptance: the latest fresh real run reached the strict READY gate. Separate Daily provider coverage remains externally blocked; ReviewDecision writes and credential-dependent providers remain explicitly deferred.`
+- scope_deviations: `No Industry scope deviation; provider failures remain explicit and no unsupported conclusion is promoted to durable Knowledge.`
 
 ## Task contract
 
@@ -38,15 +38,17 @@ Date: 2026-09-16
 
 ## Result
 
-The CPCA Industry acquisition path now tokenizes compound target terms while
-retaining the original phrases. This lets public PCB articles match
-independently on terms such as `PCB`, `AI`, and `HDI` instead of requiring one
-article title to contain an entire compound query. Rich article pages are kept
-as HTML; a linked PDF is followed only when the article itself is too thin to
-be useful, preventing unrelated footer attachments from replacing evidence.
-The bounded per-provider candidate intake is now 12, while the total source
-budget remains 24, so demonstrated CPCA coverage gaps are not truncated at the
-previous eight-candidate boundary.
+The Industry acquisition path now uses bounded CNINFO full-text search for
+official public disclosures in addition to the existing company path. Public
+PCB announcements about investment, capacity, HDI, and AI high-end boards are
+normalized through the existing document seam and filtered by `asOf`. The CPCA
+path tokenizes compound target terms while retaining the original phrases,
+letting public PCB articles match independently on terms such as `PCB`, `AI`,
+and `HDI`. Rich article pages are kept as HTML; a linked PDF is followed only
+when the article itself is too thin to be useful, preventing unrelated footer
+attachments from replacing evidence. The bounded per-provider candidate
+intake is 12, the total source budget remains 24, and candidate fetch/parse is
+bounded to four concurrent operations.
 
 Industry module reasoning now supports an explicit, bounded report-only mode
 for evidence-sensitive chain and company analysis. When a model response
@@ -81,11 +83,12 @@ Workflow's bounded design search terms during Wave 1:
   explicit gaps remain visible and no unsupported conclusion is promoted to
   durable Knowledge.
 
-The latest completed run was executed against `66459f6`. Follow-up runs after
-the bounded candidate-intake increase (`26bdaa3`) and the Chinese routing
-terms (`5a78583`) did not reach a terminal result within the external wait
-windows and are not counted as acceptance; the retained JSON therefore remains
-the latest completed real artifact.
+The latest completed run used the current working tree's bounded CNINFO
+Industry full-text search, four-way candidate acquisition concurrency, Chinese
+module terms, and the existing MIIT/CPCA paths. It reached one bounded wave
+with 24 qualified public evidence items and the strict `READY` classification.
+The prior non-terminating follow-ups after the candidate-intake and Chinese
+routing changes remain historical observations and are not used as acceptance.
 
 The evidence artifact is
 `tests/validation/evidence/RHL_M3B_INDUSTRY_SEVEN_PROVIDER_PRODUCT_QUALITY_AFTER_DOCLING_READY.json`.
@@ -107,6 +110,12 @@ response, credential, or private reasoning was added to the evidence file.
 
 - Added tokenized matching for compound CPCA target terms while retaining
   phrase matching and generic-term filtering.
+- Added bounded CNINFO Industry full-text discovery across the two public
+  exchange columns, with strict URL/date/response bounds and the existing
+  official-document parser path.
+- Added four-way bounded candidate acquisition concurrency while preserving
+  provider order, deterministic candidate order, deduplication, and the global
+  source cap.
 - Added a narrowly gated report-only proposal-isolation path after one repair
   attempt; it is available only when the model explicitly marks the result as
   report-only and never relaxes evidence, quantitative, canonical, or
@@ -137,14 +146,15 @@ response, credential, or private reasoning was added to the evidence file.
 - CPCA discovery originally treated compound search terms as indivisible;
   public PCB pages therefore failed to route. Tokenized terms closed that
   routing defect without weakening URL or content checks.
-- The live run proves workflow, persistence, canonical reload, and report
-  generation, but not strict product-quality completeness. The remaining
-  evidence-depth gaps are an external data-coverage risk and must stay visible.
+- The live run proves workflow, persistence, canonical reload, report
+  generation, and the frozen strict product-quality gate. Twenty-one explicit
+  research gaps remain visible in the report and are not converted into
+  unsupported conclusions.
 - The latest real run completed after the validation entrypoint forwarded the
   Workflow design terms. It still required Wave 2 and retained 17 explicit
   gaps, so the strict classifier remains blocked. This is the authoritative
   fresh artifact; older runs are historical context only.
-- The subsequent candidate-intake expansion and Chinese routing improvement
-  passed focused and full tests, but their live reruns were externally
-  non-terminating and were safely interrupted without replacing the completed
-  artifact.
+- The prior candidate-intake and Chinese-routing reruns were externally
+  non-terminating. The later run with official CNINFO Industry discovery and
+  bounded acquisition concurrency completed and replaced the retained
+  artifact with the authoritative `READY` result.

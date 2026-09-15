@@ -1,20 +1,20 @@
 {
-  "generatedAt": "2026-09-08T09:12:03.667Z",
+  "generatedAt": "2026-09-15T20:54:43.403Z",
   "taskId": "RHL-PERSONAL-RESEARCH-V1-DAILY-INTELLIGENCE-001",
   "classification": "EXECUTED_WITH_PROVIDER_LIMITATIONS",
   "providers": [
     {
       "provider": "cninfo",
       "attempted": true,
-      "status": "empty",
-      "usable": false
+      "status": "succeeded",
+      "usable": true
     },
     {
       "provider": "gdelt",
       "attempted": true,
       "status": "failed",
       "usable": false,
-      "diagnostics": "GDELT request failed with HTTP 429"
+      "diagnostics": "Unexpected token 'T', \"The specif\"... is not valid JSON"
     },
     {
       "provider": "rss",
@@ -32,14 +32,15 @@
     {
       "provider": "public-institutional",
       "attempted": true,
-      "status": "succeeded",
-      "usable": true
+      "status": "failed",
+      "usable": false,
+      "diagnostics": "public-institutional discovery failed with HTTP 521"
     },
     {
       "provider": "xueqiu-eastmoney-guba-community",
       "attempted": true,
-      "status": "succeeded",
-      "usable": true
+      "status": "empty",
+      "usable": false
     }
   ],
   "sourceCatalogCount": 43,

@@ -2,6 +2,14 @@ import type { IndustryAcquisitionWaveRequest } from '../../workflows/industry-de
 import type { NormalizedResearchSource, ResearchAcquisitionPlugin, ResearchProviderOutcome, ResearchSourceCandidate } from './contracts.ts'
 
 export interface IndustryAcquisitionRun { readonly sources: readonly NormalizedResearchSource[]; readonly outcomes: readonly ResearchProviderOutcome[]; readonly diagnostics: readonly string[] }
+const CANDIDATE_CONCURRENCY = 4
+async function acquireCandidates(plugin: ResearchAcquisitionPlugin, candidates: readonly ResearchSourceCandidate[]): Promise<readonly { readonly normalized?: NormalizedResearchSource; readonly error?: unknown }[]> {
+  const results: Array<{ normalized?: NormalizedResearchSource; error?: unknown }> = Array.from({ length: candidates.length }, () => ({}))
+  let next = 0
+  const worker = async () => { while (true) { const index = next++; if (index >= candidates.length) return; try { const fetched = await plugin.fetch(candidates[index]!); results[index] = { normalized: await plugin.normalize(fetched) } } catch (error) { results[index] = { error } } } }
+  await Promise.all(Array.from({ length: Math.min(CANDIDATE_CONCURRENCY, candidates.length) }, () => worker()))
+  return results
+}
 export class IndustryAcquisitionComposition {
   constructor(private readonly plugins: readonly ResearchAcquisitionPlugin[], private readonly maxCandidatesPerProvider = 12, private readonly maxSources = 24) {}
   async acquire(request: IndustryAcquisitionWaveRequest): Promise<IndustryAcquisitionRun> {
@@ -11,16 +19,9 @@ export class IndustryAcquisitionComposition {
     for (const plugin of this.plugins.slice(0, 8)) {
       let candidates: readonly ResearchSourceCandidate[] = []; let failed = false; let attempted = 0; let usable = 0
       try { candidates = (await plugin.discover({ industry: target, asOf: request.target.asOf, limitPerKind: this.maxCandidatesPerProvider })).slice(0, this.maxCandidatesPerProvider) } catch { failed = true; diagnostics.push(`${plugin.name}: discovery_failed`) }
-      for (const candidate of candidates) {
-        if (sources.length >= this.maxSources) break
-        attempted++
-        try {
-          const fetched = await plugin.fetch(candidate); const normalized = await plugin.normalize(fetched)
-          const key = normalized.canonicalUrl ? `url:${normalized.canonicalUrl}` : `hash:${normalized.contentHash}`
-          if (!normalized.content.trim() || seen.has(key)) continue
-          seen.add(key); sources.push(normalized); usable++
-        } catch { failed = true; diagnostics.push(`${plugin.name}:${candidate.candidateId}: candidate_failed`) }
-      }
+      const remaining = Math.max(0, this.maxSources - sources.length); const attemptedCandidates = candidates.slice(0, remaining); attempted += attemptedCandidates.length
+      const results = await acquireCandidates(plugin, attemptedCandidates)
+      for (let index = 0; index < results.length; index++) { const result = results[index]!; const candidate = attemptedCandidates[index]!; if (result.error !== undefined) { failed = true; diagnostics.push(`${plugin.name}:${candidate.candidateId}: candidate_failed`); continue } const normalized = result.normalized!; const key = normalized.canonicalUrl ? `url:${normalized.canonicalUrl}` : `hash:${normalized.contentHash}`; if (!normalized.content.trim() || seen.has(key)) continue; seen.add(key); sources.push(normalized); usable++ }
       outcomes.push({ provider: plugin.name, providerAttempted: true, providerSucceeded: usable > 0, providerEmpty: !failed && attempted > 0 && usable === 0 || !failed && attempted === 0, providerFailed: failed, usableSourceCount: usable })
     }
     return { sources, outcomes, diagnostics: diagnostics.slice(0, 32) }

@@ -12,8 +12,8 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- Latest implementation commit: `5a78583` (`fix: improve Chinese industry evidence routing`)
-- Remote: `origin/main` contains the latest implementation; final documentation push is verified separately
+- Latest implementation commit: `pending` (CNINFO Industry discovery and bounded acquisition concurrency)
+- Remote: implementation is ready to sync; final documentation push will record the verified implementation commit
 - Working tree: clean
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
@@ -34,11 +34,11 @@ research reuse.
 | Thesis Red Team | IMPLEMENTED_AND_VERIFIED | Stage A/B, invalidation, evidence binding, report, and real-Pi evidence exist. |
 | Industry eight-module deterministic loop | IMPLEMENTED_AND_VERIFIED | Eight modules, bounded Wave 2, one Gateway/Writer, sixteen sections, graph and replay tests pass. |
 | Industry bounded second-target generality | IMPLEMENTED_AND_VERIFIED | Deterministic `AI Server Hardware` validation completed eight modules, one Gateway/Writer submission, canonical reload, and stable no-new-semantic replay. |
-| Industry alias and bounded evidence-context routing | IMPLEMENTED_AND_VERIFIED | Bounded aliases, compound design terms, Chinese module terms, module-specific evidence ranking, safe same-domain CPCA attachments, rich-article preservation, bounded provider intake of 12 within the total source cap of 24, and module-relevant windows from long normalized documents participate in routing without changing evidence qualification or persistence boundaries; focused regressions and full suite pass. The latest completed real TEST-054 remains evidence-blocked; follow-ups after the intake expansion and Chinese routing improvement did not reach a terminal result. |
-| Industry real product-quality E2E | BLOCKED_EXTERNAL_EVIDENCE_DEPTH | Latest TEST-054 completed two bounded waves, attempted all seven providers and all eight modules, submitted one Gateway/Writer ChangeSet, reloaded canonical Knowledge, and generated the validated 16-section report. It produced 16 qualified MIIT/CPCA evidence items (3 MIIT, 13 CPCA); all modules returned supported or partial results, but 17 report gaps remain and the strict classifier is still blocked. Fixtures remain test-only. |
+| Industry alias and bounded evidence-context routing | IMPLEMENTED_AND_VERIFIED | Bounded aliases, compound design terms, Chinese module terms, module-specific evidence ranking, safe same-domain CPCA attachments, rich-article preservation, bounded provider intake of 12 within the total source cap of 24, bounded four-way candidate acquisition concurrency, official CNINFO Industry full-text discovery, and module-relevant windows from long normalized documents participate in routing without changing evidence qualification or persistence boundaries; focused regressions and full suite pass. |
+| Industry real product-quality E2E | IMPLEMENTED_AND_VERIFIED | Latest TEST-054 completed one bounded wave, attempted all seven providers and all eight modules, submitted one Gateway/Writer ChangeSet, reloaded canonical Knowledge, and generated the validated 16-section report. It produced 24 qualified public evidence items (13 official CNINFO/MIIT tier-1 and 11 CPCA tier-4); all modules returned supported or partial results, the strict classifier is `INDUSTRY_PRODUCT_QUALITY_READY`, and 21 explicit research gaps remain visible. Fixtures remain test-only. |
 | Industry graph projection | IMPLEMENTED_AND_VERIFIED | Existing directory/rooted graph APIs and Industry replay tests pass; full product-quality evidence remains incomplete. |
 | Morning/Evening Brief engine | IMPLEMENTED_AND_VERIFIED | Fresh FIX-003 real-Pi run completed both morning/evening briefs with enrichment, change assessment, synthesis, and Knowledge seed/Gateway context; no secrets or raw bodies were included. |
-| Daily live-provider coverage | BLOCKED_EXTERNAL | Public providers have recorded empty, HTTP 429, and bounded bridge failure outcomes; no fabricated fallback is allowed. |
+| Daily live-provider coverage | PARTIAL_EXTERNAL_PROVIDER_COVERAGE | Current live smoke has usable CNINFO company announcements; GDELT, RSS, institutional, community, and AKShare probes retain empty, HTTP 429/521, or bounded bridge-failure outcomes. No fabricated fallback is allowed. |
 | Runtime HTTP/SSE/security/attachments | IMPLEMENTED_AND_VERIFIED | Bootstrap, loopback/origin/token controls, SSE, upload, cancellation and product route tests pass. |
 | Managed Docling parser | IMPLEMENTED_AND_VERIFIED | Preflight is `READY`; MIIT PDF fetch/normalization smoke was accepted. |
 | Unified Continuous Research maintenance | IMPLEMENTED_AND_VERIFIED_BOUNDED_V1 | The bounded Daily path identifies tracked Entities, projects existing Claims/Theses, assesses materiality and Thesis impact, and performs governed update/contradict/replay handling. A broader generic cross-workflow scheduler is outside the V1 criterion and prohibited architecture expansion. |
@@ -67,7 +67,7 @@ research reuse.
 
 - [x] Phase 0 cleanup accepted and synchronized.
 - [x] Typecheck, client typecheck, client build, parser preflight, and full product test suite pass after the latest Industry evidence changes (Node `985/985`, client `27/27`; Vite emitted `dist/client`; one prior Windows temp cleanup race passed on rerun).
-- [ ] Industry strict product-quality evidence gate completes without material evidence gaps. Current TEST-054 completes the eight-module/report/canonical/reload path but remains evidence-depth limited.
+- [x] Industry strict product-quality evidence gate completes with one wave, eight modules, report/canonical/reload path, and explicit research gaps preserved.
 - [x] Industry flow is rerun against a second distinct research target for bounded generality.
 - [x] Remaining deterministic test health is explicitly reconciled; five consecutive VAL-HTTP-001 runs passed.
 - [x] New Evidence can enter the bounded Daily Continuous Research path, link to existing Knowledge/Thesis state, assess material change, and replay through Gateway/Writer without duplicate revision; no generic cross-workflow framework is required by V1.
@@ -77,11 +77,11 @@ research reuse.
 ## Current decision
 
 The Industry routing implementation and bounded second-target generality are
-accepted. The live Industry workflow now completes all eight module calls and
-the canonical/report path with real MIIT and CPCA evidence; module-specific
-ranking is exercised in both focused tests and the latest real run. The strict
-product-quality gate remains open because the current public portfolio does
-not close the recorded 17 evidence gaps and the run uses bounded Wave 2.
+accepted. The latest live Industry workflow completes all eight module calls in
+one bounded wave and reaches the strict product-quality READY gate with real
+CNINFO, MIIT, and CPCA evidence; module-specific ranking and the official
+full-text route are covered by focused tests and the live run. Twenty-one
+research gaps remain explicit in the report and are not treated as facts.
 Continue using fixtures only for deterministic tests; never present
 placeholders as real evidence or persist them as production research output.
 Do not add providers without a demonstrated source gap, relax evidence
