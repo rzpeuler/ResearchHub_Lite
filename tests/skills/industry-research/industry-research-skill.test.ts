@@ -197,6 +197,34 @@ test("Industry Skill exposes exact operations and all eight modules", async () =
       module,
     );
 });
+test("Industry Skill keeps bounded module-relevant context from long evidence bodies", async () => {
+  const requests: any[] = [];
+  const longSource = {
+    ...source,
+    content: `${"front matter ".repeat(120)} capacity utilization is 72 percent and demand remains firm. ${"unrelated body ".repeat(260)} conclusion`,
+  };
+  const fake: ReasoningExecutor = {
+    capabilities: () => ({
+      maxContextTokens: 1000,
+      maxOutputTokens: 1000,
+      structuredOutputSupport: true,
+      maxConcurrency: 1,
+    }),
+    execute: async (r) => {
+      requests.push(r);
+      return { operation: r.operation, output: moduleOutput("supply_demand_analysis") };
+    },
+  };
+  await new IndustryResearchSkill(fake).analyze("supply_demand_analysis", {
+    target: { name: "Fixture" },
+    evidence: [{ evidenceId: "e1", source: longSource }],
+    existingKnowledge: [],
+    localReferences: [],
+  });
+  const excerpt = requests[0].input.evidence[0].excerpt;
+  assert.ok(excerpt.length <= 2400);
+  assert.match(excerpt, /capacity utilization is 72 percent/);
+});
 test("Industry Skill rejects canonical IDs, unknown evidence, and bounded evidence escape", () => {
   assert.throws(
     () =>

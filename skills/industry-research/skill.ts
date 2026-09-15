@@ -492,8 +492,50 @@ function boundedJson(value: unknown, depth = 0): unknown {
 function knowledge(k: readonly unknown[]) {
   return boundedJson(k.slice(0, 80));
 }
+const moduleExcerptTerms: Readonly<Record<string, readonly string[]>> = {
+  industry_definition: ["定义", "范围", "规范", "标准", "definition", "scope"],
+  market_size_growth: ["市场", "营收", "产值", "增长", "收入", "revenue", "growth", "market"],
+  supply_demand_analysis: ["产能", "利用率", "需求", "供需", "库存", "价格", "capacity", "utilization", "demand", "supply", "pricing"],
+  industry_chain_analysis: ["产业链", "上游", "下游", "材料", "设备", "制程", "供应链", "process", "upstream", "downstream", "supply chain"],
+  competitive_landscape: ["企业", "竞争", "排名", "份额", "营收", "客户", "competitor", "market share"],
+  technology_evolution: ["技术", "工艺", "制程", "AI", "HDI", "材料", "设备", "技术路线", "technology", "process"],
+  company_mapping: ["深南电路", "沪电股份", "鹏鼎科技", "生益科技", "企业", "公司", "主营", "company", "business"],
+  risk_analysis: ["风险", "政策", "贸易", "环保", "产能", "利润", "margin", "risk", "regulation"],
+  synthesis: ["市场", "产能", "需求", "产业链", "企业", "技术", "风险", "market", "capacity", "demand", "company", "technology", "risk"],
+};
+function excerptFor(value: string, module?: string): string {
+  const compact = value.replace(/\s+/g, " ").trim();
+  if (compact.length <= 2400) return compact;
+
+  const pieces = [compact.slice(0, 600)];
+  const lower = compact.toLocaleLowerCase();
+  const terms = moduleExcerptTerms[module ?? "synthesis"] ?? moduleExcerptTerms.synthesis;
+  let windows = 0;
+  for (const term of terms) {
+    if (windows >= 2) break;
+    const needle = term.toLocaleLowerCase();
+    let from = 600;
+    while (from < lower.length - 300) {
+      const index = lower.indexOf(needle, from);
+      if (index < 0) break;
+      const start = Math.max(600, index - 180);
+      const end = Math.min(compact.length - 300, index + 420);
+      const piece = compact.slice(start, end);
+      if (piece && !pieces.includes(piece)) {
+        pieces.push(piece);
+        windows++;
+        break;
+      }
+      from = index + needle.length;
+    }
+  }
+  pieces.push(compact.slice(-300));
+  const bounded = pieces.join("\n[… contextual excerpt …]\n");
+  return bounded.length <= 2400 ? bounded : bounded.slice(0, 2400);
+}
 function evidence(
   es: readonly IndustryResearchSkillInput["evidence"][number][],
+  module?: string,
 ): Array<{ evidenceId: string }> {
   return es.slice(0, 32).map((e) => ({
     evidenceId: e.evidenceId,
@@ -504,7 +546,7 @@ function evidence(
     tier: e.source.candidate.tier,
     publishedAt: e.source.candidate.publishedAt,
     metadata: boundedJson(e.source.candidate.metadata),
-    excerpt: (e.excerpt ?? e.source.content).slice(0, 2400),
+    excerpt: excerptFor(e.excerpt ?? e.source.content, module),
   }));
 }
 const instruction = {
@@ -584,7 +626,7 @@ export class IndustryResearchSkill {
     module: IndustryResearchModule,
     input: IndustryResearchSkillInput,
   ): Promise<IndustryModuleResult> {
-    const ev = evidence(input.evidence),
+    const ev = evidence(input.evidence, module),
       bound = {
         module,
         target: input.target,
@@ -669,7 +711,7 @@ export class IndustryResearchSkill {
   }) {
     const bound = {
       modules: input.modules,
-      evidence: evidence(input.evidence),
+      evidence: evidence(input.evidence, "synthesis"),
       existingKnowledge: knowledge(input.existingKnowledge ?? []),
     };
     const ev = input.evidence.map((x) => x.evidenceId),
