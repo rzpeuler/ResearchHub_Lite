@@ -12,9 +12,9 @@ research reuse.
 ## Repository checkpoint
 
 - Branch: `main`
-- HEAD: `d9f70a3b8fed59d87ceee5cf5f4e6a1faa6ad116` (UI exposure changes pending commit)
-- Remote: `origin/main` at `d9f70a3b8fed59d87ceee5cf5f4e6a1faa6ad116`
-- Working tree: bounded Daily Brief reader changes are pending commit
+- HEAD: `6119bd75e5b8e95eb70702805d459ed8dfdca336` (documentation reconciliation changes pending commit)
+- Remote: `origin/main` at `6119bd75e5b8e95eb70702805d459ed8dfdca336`
+- Working tree: current-entry documentation reconciliation is pending commit
 - Phase 0: `ACCEPTED`
 - Phase 1: `ACCEPTED`
 - Phase 3 critical path: `PARTIAL`
@@ -52,7 +52,7 @@ research reuse.
 | RHL-P1-REALITY | 1 | ACCEPTED | Establish this matrix and backlog from current source, tests, reports, and live evidence. |
 | RHL-P3-INDUSTRY-ROUTING | 3 | ACCEPTED_IMPLEMENTATION_PARTIAL_PRODUCT | Route authoritative MIIT PCB anchors to `industry_definition`, preserve Wave-2 search terms, make accepted-evidence telemetry truthful, and record fresh TEST-054. Commit `852162e`; the product-quality gate remains open for seven-module evidence coverage. |
 | RHL-P1-TEST-HEALTH | 1 | ACCEPTED_RECONCILED | Five consecutive `VAL-HTTP-001` runs passed; no valuation semantic change was made and the prior timing failure was not reproduced. |
-| RHL-P2-DOCUMENT-STATUS | 2 | READY | Reconcile stale descriptive status documents with verified source/test reality without rewriting historical evidence. |
+| RHL-P2-DOCUMENT-STATUS | 2 | ACCEPTED | Reconcile current entry documents with verified source/test reality while preserving historical architecture and task-report evidence. |
 | RHL-P2-CONTINUOUS-RESEARCH | 8 | ACCEPTED_BOUNDED_DAILY_SLICE | Implement and verify the bounded Daily maintenance path through existing Claim projection, Gateway/Writer, reload, and replay; broader unified maintenance remains open. |
 | RHL-P1-UI-EXPOSURE | 1 | ACCEPTED_DAILY_BRIEF_READER | Expose the existing bounded Daily Brief list/detail API as a read-only UI route; general report catalog and direct launch forms remain open. |
 | RHL-P2-REVIEW-DECISIONS | 5 | DEFERRED | Requires an explicit product decision for write-capable Review actions; keep current read-only boundary until then. |
