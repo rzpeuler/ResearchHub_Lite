@@ -14,8 +14,12 @@ items for the V1 mission. No item is silently omitted.
 | User login, OAuth, CAPTCHA/MFA, paid APIs, broker accounts | DEFERRED_OUT_OF_SCOPE | V1 adapters and validation do not require these credentials; login automation, CAPTCHA bypass, paid services, and trading execution remain outside the product scope. |
 | ReviewDecision write actions | DESIGN_ONLY_DEFERRED | This is a product/governance decision rather than an external credential check. The current UI and APIs remain read-only until an explicit product decision authorizes mutation. |
 
-The Industry row is not a real-data completion claim: the workflow and
-canonical/report path complete, but the strict product-quality evidence gate
-is still open. Fixtures may continue to support deterministic local tests, but
-placeholder data must not enter production research output, canonical
-Knowledge, or live-evidence acceptance.
+The Industry row is a real-data completion claim within the bounded V1
+acceptance scope: the latest artifact reached the strict
+`INDUSTRY_PRODUCT_QUALITY_READY` classification with 24 real qualified
+Evidence items, all eight modules, one Gateway/Writer ChangeSet, canonical
+reload/validation, and a validated 16-section report. The remaining provider
+failures and 21 research gaps are explicit limitations in the accepted report,
+not an open Industry product-quality gate. Fixtures may continue to support
+deterministic local tests, but placeholder data must not enter production
+research output, canonical Knowledge, or live-evidence acceptance.
