@@ -33,6 +33,6 @@ Date: 2026-09-17
 - The existing Windows `EBUSY` process-tree cleanup race was made retry-safe and no longer reproduces in the full run.
 - `npm run acceptance:unified-research` passes and writes the fixture-backed A–G runtime evidence to `docs/project-state/evidence/2026-09-17-unified-research-entry-a-g.json`. The artifact explicitly does not claim authenticated provider E2E; the GitHub case uses a mocked codeload response at a fixed commit.
 
-## Remaining mission work
+## Mission closure
 
-- Verify the commit is accepted by `origin/main`; the first push attempt after the latest commit encountered a transient Schannel SSL/TLS handshake failure.
+- No in-scope mission work remains. Commit `37010bf72c844d1bb1bfa946eef608c96a95c4cd` is verified equal to `origin/main`; the earlier Schannel SSL/TLS failure was transient and the retry succeeded.
