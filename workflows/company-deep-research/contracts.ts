@@ -19,6 +19,7 @@ export interface CompanyDeepResearchInput {
   readonly now?: () => string
   readonly reasoningExecutor?: ReasoningExecutor
   readonly writeKnowledge?: boolean
+  readonly useStructuredKnowledge?: boolean
 }
 export interface CompanyDeepResearchResult {
   readonly workflowRunId: string

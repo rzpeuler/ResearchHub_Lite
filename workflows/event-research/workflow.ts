@@ -179,6 +179,7 @@ function companyMatch(value: KnowledgeAssetV04, company: ResearchCompanyIdentity
 function normalizedExchange(value: unknown): string { return normalizeExchange(text(value)) }
 
 async function resolveExistingCoverage(input: EventResearchWorkflowInput, company: ResearchCompanyIdentity): Promise<{ readonly rootRef?: string; readonly claims: readonly Dict[]; readonly reason?: EventResearchWorkflowResult['blockedReason'] }> {
+  if (input.useStructuredKnowledge === false) return { claims: [], reason: 'COMPANY_COVERAGE_NOT_FOUND' }
   const assets = await readCanonicalV04Assets(input.handle.rootRef)
   const matches = assets.objects.map((item) => item.value).filter((value): value is KnowledgeAssetV04 => isRecord(value) && companyMatch(value, company))
   if (matches.length === 0) return { claims: [], reason: 'COMPANY_COVERAGE_NOT_FOUND' }

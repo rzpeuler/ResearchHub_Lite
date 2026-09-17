@@ -7,6 +7,8 @@ import { createResearchSkillRegistry, type ResearchSkillDefinition, type Researc
 import { createWorkflowDefinitionRegistry, type WorkflowDefinition, type WorkflowDefinitionRegistry } from './workflow-registry.ts'
 import { normalizeResearchRequest, validateResearchDispatchDecision, type ResearchDispatchDecision, type ResearchExecutionSummary, type ResearchRequest } from './research-dispatch-contracts.ts'
 import type { EventAnchor, EarningsReviewPeriod, ValuationMethod } from './contracts.ts'
+import type { ResearchBundle, ResearchBundleStore } from './research-bundle.ts'
+import { createResearchBundle } from './research-bundle.ts'
 
 export interface ExtractedResearchArguments {
   readonly arguments: Readonly<Record<string, unknown>>
@@ -31,6 +33,7 @@ export interface ResearchDispatchServiceOptions {
   readonly workflowRegistry?: WorkflowDefinitionRegistry
   readonly skillRegistry?: ResearchSkillRegistry
   readonly workflowService?: WorkflowService
+  readonly bundleStore?: ResearchBundleStore
 }
 
 const COMPANY_ALIASES: Readonly<Record<string, { readonly symbol: string; readonly name: string }>> = {
@@ -199,9 +202,14 @@ export class ResearchDispatchService {
     const definition = this.workflowRegistry.get(workflow.id)
     if (definition === undefined) throw new ApplicationServiceError('not_found', `Workflow definition not found: ${workflow.id}`)
     const runId = randomUUID()
-    const started = this.startWorkflow(definition.id, workflow.arguments, runId, callerSignal, resolved.request.persistencePolicy.writeKnowledge)
-    return { ...resolved, status: 'started', runId, ...(this.options.workflowService?.getWorkflowStatus(runId) === undefined ? {} : { workflow: this.options.workflowService.getWorkflowStatus(runId) }), completion: started }
+    const started = this.startWorkflow(definition.id, workflow.arguments, runId, callerSignal, resolved.request.persistencePolicy.writeKnowledge, resolved.request.contextPolicy.structuredKnowledge)
+    const completion = started.then(async (result) => { const bundle = createResearchBundle({ request: resolved.request, decision, summary: resolved.summary, workflowRunId: runId, result }); await this.options.bundleStore?.put(bundle); return result })
+    completion.catch(() => undefined)
+    return { ...resolved, status: 'started', runId, ...(this.options.workflowService?.getWorkflowStatus(runId) === undefined ? {} : { workflow: this.options.workflowService.getWorkflowStatus(runId) }), completion }
   }
+
+  async getBundle(bundleId: string): Promise<ResearchBundle | undefined> { return this.options.bundleStore?.get(bundleId) }
+  async listBundles(limit?: number): Promise<readonly ResearchBundle[]> { return this.options.bundleStore?.list(limit) ?? [] }
 
   private bestWorkflow(query: string): WorkflowDefinition | undefined {
     const candidates = this.workflowRegistry.list().map((definition) => ({ definition, score: scoreWorkflow(definition, query) }))
@@ -229,20 +237,20 @@ export class ResearchDispatchService {
     return { mode: request.mode.type === 'workflow' ? 'Explicit Workflow' : 'Free Research', ...(workflow === undefined ? {} : { workflowId: workflow.id, workflowLabel: definition?.label }), selectedSkillIds: decision.skills.map((skill) => skill.id), argumentsStatus: decision.missingRequiredInputs.length > 0 ? 'missing' : workflow === undefined ? 'not_required' : 'extracted', argumentKeys: workflow === undefined ? [] : Object.keys(workflow.arguments).sort(), contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy }
   }
 
-  private startWorkflow(workflowId: string, args: Readonly<Record<string, unknown>>, runId: string, callerSignal?: AbortSignal, writeKnowledge = false): Promise<unknown> {
+  private startWorkflow(workflowId: string, args: Readonly<Record<string, unknown>>, runId: string, callerSignal?: AbortSignal, writeKnowledge = false, useStructuredKnowledge = true): Promise<unknown> {
     const research = this.options.researchService
     if (workflowId === 'daily_intelligence') {
       const daily = this.options.dailyIntelligenceService
       if (daily === undefined) throw new ApplicationServiceError('failed', 'Daily Intelligence service is not configured')
-      return daily.startBrief({ workflowRunId: runId, briefType: args.briefType as 'morning' | 'evening', tradeDate: args.tradeDate as string, writeKnowledge }, callerSignal).completion
+      return daily.startBrief({ workflowRunId: runId, briefType: args.briefType as 'morning' | 'evening', tradeDate: args.tradeDate as string, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
     }
     if (research === undefined) throw new ApplicationServiceError('failed', 'Research service is not configured')
-    if (workflowId === 'company_research') return research.startResearchCompany({ workflowRunId: runId, symbol: args.symbol as string, ...(typeof args.name === 'string' ? { name: args.name } : {}), writeKnowledge }, callerSignal).completion
-    if (workflowId === 'industry_research') return research.startIndustryResearch({ workflowRunId: runId, name: args.name as string, writeKnowledge }, callerSignal).completion
-    if (workflowId === 'earnings_review') return research.startEarningsReview({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, fiscalYear: args.fiscalYear as number, period: args.period as EarningsReviewPeriod, writeKnowledge }, callerSignal).completion
-    if (workflowId === 'valuation') return research.startValuation({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, methods: args.methods as readonly ValuationMethod[] | undefined, targetFiscalYear: args.targetFiscalYear as number | undefined, writeKnowledge }, callerSignal).completion
-    if (workflowId === 'event_research') return research.startEventResearch({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, anchor: args.anchor as EventAnchor, writeKnowledge }, callerSignal).completion
-    if (workflowId === 'thesis_red_team') return research.startThesisRedTeam({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, thesisRef: args.thesisRef as string, writeKnowledge }, callerSignal).completion
+    if (workflowId === 'company_research') return research.startResearchCompany({ workflowRunId: runId, symbol: args.symbol as string, ...(typeof args.name === 'string' ? { name: args.name } : {}), writeKnowledge, useStructuredKnowledge }, callerSignal).completion
+    if (workflowId === 'industry_research') return research.startIndustryResearch({ workflowRunId: runId, name: args.name as string, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
+    if (workflowId === 'earnings_review') return research.startEarningsReview({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, fiscalYear: args.fiscalYear as number, period: args.period as EarningsReviewPeriod, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
+    if (workflowId === 'valuation') return research.startValuation({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, methods: args.methods as readonly ValuationMethod[] | undefined, targetFiscalYear: args.targetFiscalYear as number | undefined, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
+    if (workflowId === 'event_research') return research.startEventResearch({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, anchor: args.anchor as EventAnchor, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
+    if (workflowId === 'thesis_red_team') return research.startThesisRedTeam({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, thesisRef: args.thesisRef as string, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
     throw new ApplicationServiceError('not_found', `Workflow definition has no adapter: ${workflowId}`)
   }
 }

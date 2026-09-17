@@ -171,22 +171,22 @@ export interface ApplicationProductionResult {
   readonly summary: string
   readonly errorSummary?: string
 }
-export interface ResearchCompanyInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly asOf?: string; readonly writeKnowledge?: boolean }
+export interface ResearchCompanyInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly asOf?: string; readonly writeKnowledge?: boolean; readonly useStructuredKnowledge?: boolean }
 export interface ApplicationResearchResult { readonly runId: string; readonly status: WorkflowStatus; readonly knowledgeBaseId: string; readonly reportId?: string; readonly reportPath?: string; readonly committedIds: readonly string[]; readonly proposalCount: number; readonly summary: string; readonly errorSummary?: string }
-export interface IndustryResearchInput { readonly workflowRunId: string; readonly name: string; readonly aliases?: readonly string[]; readonly canonicalRef?: string; readonly searchTerms?: readonly string[]; readonly asOf?: string; readonly maxSources?: number; readonly maxEvidencePerModule?: number; readonly writeKnowledge?: boolean }
+export interface IndustryResearchInput { readonly workflowRunId: string; readonly name: string; readonly aliases?: readonly string[]; readonly canonicalRef?: string; readonly searchTerms?: readonly string[]; readonly asOf?: string; readonly maxSources?: number; readonly maxEvidencePerModule?: number; readonly writeKnowledge?: boolean; readonly useStructuredKnowledge?: boolean }
 export interface ApplicationIndustryResearchResult extends ApplicationResearchResult { readonly providerOutcomes: readonly unknown[]; readonly acquisitionDiagnostics: readonly string[] }
 export type EarningsReviewPeriod = 'Q1' | 'H1' | 'Q3' | 'FY'
-export interface EarningsReviewInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly fiscalYear: number; readonly period: EarningsReviewPeriod; readonly asOf?: string; readonly writeKnowledge?: boolean }
+export interface EarningsReviewInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly fiscalYear: number; readonly period: EarningsReviewPeriod; readonly asOf?: string; readonly writeKnowledge?: boolean; readonly useStructuredKnowledge?: boolean }
 export interface ApplicationEarningsReviewResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string }
 export type ValuationMethod = 'PE' | 'PB' | 'EV_EBITDA'
-export interface ValuationInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly asOf?: string; readonly methods?: readonly ValuationMethod[]; readonly targetFiscalYear?: number; readonly writeKnowledge?: boolean }
+export interface ValuationInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly asOf?: string; readonly methods?: readonly ValuationMethod[]; readonly targetFiscalYear?: number; readonly writeKnowledge?: boolean; readonly useStructuredKnowledge?: boolean }
 export interface ApplicationValuationResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string; readonly providerOutcome?: unknown }
 export type EventAnchor =
   | { readonly kind: 'daily_signal'; readonly signalId: string }
   | { readonly kind: 'article'; readonly url: string; readonly title?: string; readonly publishedAt?: string; readonly content?: string }
   | { readonly kind: 'url'; readonly url: string; readonly title?: string; readonly publishedAt?: string }
   | { readonly kind: 'user_event'; readonly title: string; readonly description: string; readonly eventDate?: string }
-export interface EventResearchInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly anchor: EventAnchor; readonly asOf?: string; readonly writeKnowledge?: boolean }
+export interface EventResearchInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly anchor: EventAnchor; readonly asOf?: string; readonly writeKnowledge?: boolean; readonly useStructuredKnowledge?: boolean }
 export interface ApplicationEventResearchResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string }
-export interface ThesisRedTeamInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly thesisRef: string; readonly lookbackDays?: number; readonly writeKnowledge?: boolean }
+export interface ThesisRedTeamInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly thesisRef: string; readonly lookbackDays?: number; readonly writeKnowledge?: boolean; readonly useStructuredKnowledge?: boolean }
 export interface ApplicationThesisRedTeamResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string }

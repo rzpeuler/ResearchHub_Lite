@@ -19,6 +19,7 @@ export interface EarningsReviewWorkflowInput {
   readonly now?: () => string
   readonly maxSources?: number
   readonly writeKnowledge?: boolean
+  readonly useStructuredKnowledge?: boolean
 }
 
 export interface EarningsReviewTelemetry {

@@ -17,6 +17,7 @@ export interface ValuationWorkflowInput {
   readonly signal?: AbortSignal
   readonly now?: () => string
   readonly writeKnowledge?: boolean
+  readonly useStructuredKnowledge?: boolean
 }
 
 export interface ValuationProviderOutcome {

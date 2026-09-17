@@ -10,6 +10,7 @@ import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { DailyIntelligenceService } from '../services/daily-intelligence-service.ts'
 import type { ResearchAcquisitionPlugin } from '../../plugins/research-acquisition/contracts.ts'
 import type { ResearchDispatchService } from '../services/research-dispatch-service.ts'
+import type { SourceLibraryService } from '../services/source-library.ts'
 
 export interface SafeConversationSummary {
   readonly conversationId: string
@@ -43,6 +44,7 @@ export interface ResearchHubApplicationServices {
   readonly reviewService: ReviewService
   readonly workflowService: WorkflowService
   readonly researchDispatchService?: ResearchDispatchService
+  readonly sourceLibraryService?: SourceLibraryService
   readonly productionService: ProductionService
   readonly researchService?: ResearchService
   readonly dailyIntelligenceService?: DailyIntelligenceService

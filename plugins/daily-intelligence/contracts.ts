@@ -215,6 +215,7 @@ export interface DailyIntelligenceInput {
   readonly calendar?: import('./calendar.ts').TradingCalendarService
   readonly maxDurableKnowledgeProposals?: number
   readonly writeKnowledge?: boolean
+  readonly useStructuredKnowledge?: boolean
 }
 
 export interface DailyIntelligenceResult {

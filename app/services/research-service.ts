@@ -67,7 +67,7 @@ export class ResearchService {
           reportRoot: resolve(this.options.reportRoot ?? join(this.options.cwd ?? process.cwd(), 'runtime-data', 'reports')),
           signal: combined.signal,
           signalStore: this.options.signalStore,
-          reasoningExecutor: this.options.reasoningExecutor, writeKnowledge: input.writeKnowledge,
+          reasoningExecutor: this.options.reasoningExecutor, writeKnowledge: input.writeKnowledge, useStructuredKnowledge: input.useStructuredKnowledge,
         })
         if (result.status === 'completed') {
           this.options.workflowService.markAuthoritativeTerminal(input.workflowRunId, 'completed', { summary: `Company research completed for ${input.symbol}` })
