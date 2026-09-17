@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { canonicalSerialize } from '../storage/canonical-hash.ts'
 
-export type KnowledgeIdNamespace = 'theme-group' | 'entity' | 'relation' | 'claim' | 'source' | 'module'
+export type KnowledgeIdNamespace = 'theme-group' | 'entity' | 'relation' | 'claim' | 'source' | 'module' | 'event' | 'observation' | 'thesis' | 'reasoning-edge'
 
 export function normalizeKnowledgeSlug(value: string): string {
   const ascii = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase()
@@ -41,7 +41,7 @@ export function allocateSourceId(input: { sourceUrl?: string | null; publishedAt
 }
 
 export function allocateKnowledgeId(type: string, value: unknown): string {
-  const namespace: KnowledgeIdNamespace = ['relation', 'module', 'claim', 'source', 'theme-group', 'entity'].includes(type) ? type as KnowledgeIdNamespace : 'claim'
+  const namespace: KnowledgeIdNamespace = ['relation', 'module', 'claim', 'source', 'theme-group', 'entity', 'event', 'observation', 'thesis', 'reasoning-edge'].includes(type) ? type as KnowledgeIdNamespace : 'claim'
   return hashId(namespace, value)
 }
 

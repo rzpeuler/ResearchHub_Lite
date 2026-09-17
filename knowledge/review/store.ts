@@ -14,7 +14,7 @@ export interface PersistReviewCasesInput {
   readonly producerType?: ReviewCaseProducerType
   readonly cases: readonly ReviewCase[]
   readonly createdAt: string
-  readonly schemaVersionAtCreation?: '0.3'
+  readonly schemaVersionAtCreation?: '0.3' | '0.4'
   readonly knowledgeBaseRevisionAtCreation: number
   readonly failpoint?: (phase: 'before_rename') => void | Promise<void>
 }

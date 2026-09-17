@@ -11,12 +11,12 @@ export class ApplicationServiceError extends Error {
   }
 }
 
-export type ApplicationKnowledgeKind = 'ThemeGroup' | 'Entity' | 'Relation' | 'Claim' | 'Source' | 'Module'
+export type ApplicationKnowledgeKind = 'ThemeGroup' | 'Entity' | 'Relation' | 'Claim' | 'Source' | 'Module' | 'Event' | 'Observation' | 'Thesis' | 'ReasoningEdge'
 export interface ApplicationLimit { readonly limit: number; readonly total: number; readonly truncated: boolean }
 
 export interface KnowledgeSearchInput {
   readonly query: string
-  readonly entityType?: EntityTypeV03
+  readonly entityType?: EntityTypeV03 | 'person' | 'institution' | 'security'
   readonly limit?: number
 }
 export interface ApplicationKnowledgeSearchResult {

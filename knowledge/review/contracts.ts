@@ -71,7 +71,7 @@ export interface ReviewCaseClassification {
 }
 export interface ReviewCaseResolutionContext {
   readonly existingKnowledgeProjections: readonly ExistingKnowledgeProjection[]
-  readonly schemaVersionAtCreation: '0.3'
+  readonly schemaVersionAtCreation: '0.3' | '0.4'
   readonly knowledgeBaseRevisionAtCreation: number
   readonly context?: Readonly<Record<string, string | number | boolean | null>>
 }
@@ -120,6 +120,6 @@ export interface ReviewRunManifest {
   readonly caseIds: readonly string[]
   readonly deterministicSetHash: string
   readonly createdAt: string
-  readonly schemaVersionAtCreation: '0.3'
+  readonly schemaVersionAtCreation: '0.3' | '0.4'
   readonly knowledgeBaseRevisionAtCreation: number
 }

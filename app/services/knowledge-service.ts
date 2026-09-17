@@ -1,9 +1,10 @@
-import { KnowledgeIndexV03 } from '../../knowledge/query/index.ts'
+import { KnowledgeIndexV03, KnowledgeIndexV04 } from '../../knowledge/query/index.ts'
 import type { KnowledgeClaimV03, KnowledgeEntityV03, KnowledgeModuleV03, KnowledgeRelationV03, KnowledgeSourceV03, KnowledgeThemeGroupV03 } from '../../knowledge/schema/domain.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { KnowledgeBaseLoaderV03 } from '../../knowledge/storage/loader.ts'
 import { readCanonicalV04Assets } from '../../knowledge/storage/canonical-v04-loader.ts'
 import type { KnowledgeAssetCollectionV03 } from '../../knowledge/storage/v03-types.ts'
+import type { KnowledgeAssetV04 } from '../../knowledge/schema/domain-v04.ts'
 import { ApplicationServiceError, type ApplicationKnowledgeKind, type ApplicationKnowledgeSearchResult, type KnowledgeBaseStatusView, type KnowledgeObjectView, type KnowledgeSearchInput, type KnowledgeSearchResult, type ApplicationLimit } from './contracts.ts'
 
 const DEFAULT_SEARCH_LIMIT = 20
@@ -11,6 +12,7 @@ const HARD_SEARCH_LIMIT = 50
 const DEFAULT_RELATED_LIMIT = 20
 const HARD_RELATED_LIMIT = 20
 type Asset = KnowledgeThemeGroupV03 | KnowledgeEntityV03 | KnowledgeRelationV03 | KnowledgeClaimV03 | KnowledgeSourceV03 | KnowledgeModuleV03
+type V04Index = { readonly handle: Awaited<ReturnType<KnowledgeBaseRegistry['mount']>>; readonly index: KnowledgeIndexV04 }
 
 function limitOf(value: number | undefined, fallback: number, hard: number): number {
   if (value === undefined) return fallback
@@ -69,7 +71,23 @@ export class KnowledgeService {
     }
   }
 
+  private async indexV04(): Promise<V04Index> {
+    if (!this.mountedKnowledgeBaseRoot) throw new ApplicationServiceError('no_kb_mounted', 'No canonical Knowledge Base is mounted')
+    try {
+      const handle = await this.registry.mount(this.mountedKnowledgeBaseRoot)
+      if (handle.schemaVersion !== '0.4') throw new ApplicationServiceError('failed', 'Mounted Knowledge Base is not Schema 0.4')
+      return { handle, index: KnowledgeIndexV04.fromAssets(await readCanonicalV04Assets(handle.rootRef)) }
+    } catch (error) {
+      if (error instanceof ApplicationServiceError) throw error
+      throw new ApplicationServiceError('failed', 'Unable to load the mounted Schema 0.4 Knowledge Base', { cause: error })
+    }
+  }
+
   async status(): Promise<KnowledgeBaseStatusView> {
+    if (await this.isV04()) {
+      const { handle, index } = await this.indexV04()
+      return { knowledgeBaseId: handle.knowledgeBaseId, rootRef: handle.rootRef, revision: handle.revision, status: handle.status, schemaVersion: handle.schemaVersion, storageFormatVersion: handle.storageFormatVersion, counts: Object.fromEntries([...index.byKind.entries()].map(([kind, values]) => [kind, values.length])) }
+    }
     const { handle, index } = await this.index()
     return {
       knowledgeBaseId: handle.knowledgeBaseId,
@@ -85,6 +103,14 @@ export class KnowledgeService {
   async searchKnowledge(input: KnowledgeSearchInput): Promise<KnowledgeSearchResult> {
     if (!input || typeof input.query !== 'string') throw new ApplicationServiceError('invalid_input', 'query is required')
     const limit = limitOf(input.limit, DEFAULT_SEARCH_LIMIT, HARD_SEARCH_LIMIT)
+    if (await this.isV04()) {
+      const { index } = await this.indexV04()
+      const query = input.query.trim().toLocaleLowerCase()
+      const values = [...index.objects.values()].filter((value) => input.entityType === undefined || !value.id.startsWith('entity:') || (value as { type?: string }).type === input.entityType).filter((value) => query === '' || JSON.stringify(value).toLocaleLowerCase().includes(query)).sort((left, right) => left.id.localeCompare(right.id))
+      const matches = values.map((value) => resultForV04(value))
+      const result = bounded(matches, limit)
+      return { results: result.items, total: result.metadata.total, limit, truncated: result.metadata.truncated }
+    }
     const { index } = await this.index()
     const query = input.query.trim()
     const exact = query === '' ? undefined : [index.themeGroups, index.entities, index.relations, index.claims, index.sources, index.modules].find((map) => map.has(query))
@@ -107,6 +133,12 @@ export class KnowledgeService {
   async getKnowledgeObject(ref: string, relatedLimit?: number): Promise<KnowledgeObjectView> {
     if (typeof ref !== 'string' || ref.trim() === '') throw new ApplicationServiceError('invalid_input', 'ref is required')
     const limit = limitOf(relatedLimit, DEFAULT_RELATED_LIMIT, HARD_RELATED_LIMIT)
+    if (await this.isV04()) {
+      const { index } = await this.indexV04()
+      const value = index.objects.get(ref)
+      if (!value) throw new ApplicationServiceError('not_found', `Knowledge object not found: ${ref}`)
+      return { ref, kind: kindForV04(value), object: value, truncation: { relations: { limit, total: 0, truncated: false }, claims: { limit, total: 0, truncated: false }, sources: { limit, total: 0, truncated: false }, entities: { limit, total: 0, truncated: false } } }
+    }
     const { index } = await this.index()
     const kind = kindFor(ref)
     if (!kind) throw new ApplicationServiceError('not_found', `Knowledge object not found: ${ref}`)
@@ -162,8 +194,17 @@ export class KnowledgeService {
     if (kind === 'Source') return index.sources.get(ref)
     return index.modules.get(ref)
   }
+
+  private async isV04(): Promise<boolean> {
+    if (!this.mountedKnowledgeBaseRoot) throw new ApplicationServiceError('no_kb_mounted', 'No canonical Knowledge Base is mounted')
+    try { return (await this.registry.mount(this.mountedKnowledgeBaseRoot)).schemaVersion === '0.4' } catch (error) { throw new ApplicationServiceError('failed', 'Unable to inspect the mounted Knowledge Base', { cause: error }) }
+  }
 }
 
 function uniqueById<T extends { readonly id: string }>(items: readonly T[]): T[] { return [...new Map(items.map((item) => [item.id, item])).values()].sort((left, right) => left.id.localeCompare(right.id)) }
+
+const V04_KIND_BY_PREFIX = { 'theme-group': 'ThemeGroup', entity: 'Entity', relation: 'Relation', claim: 'Claim', source: 'Source', module: 'Module', event: 'Event', observation: 'Observation', thesis: 'Thesis', 'reasoning-edge': 'ReasoningEdge' } as const
+function kindForV04(value: KnowledgeAssetV04): ApplicationKnowledgeKind { return V04_KIND_BY_PREFIX[value.id.split(':', 1)[0] as keyof typeof V04_KIND_BY_PREFIX] ?? 'Entity' }
+function resultForV04(value: KnowledgeAssetV04): ApplicationKnowledgeSearchResult { const kind = kindForV04(value); const raw = value as unknown as Record<string, unknown>; const displayName = typeof raw.name === 'string' ? raw.name : typeof raw.title === 'string' ? raw.title : undefined; const summary = typeof raw.statement === 'string' ? raw.statement : typeof raw.title === 'string' ? raw.title : `${kind} ${value.id}`; return { ref: value.id, kind, ...(typeof raw.type === 'string' ? { semanticType: raw.type } : typeof raw.observationType === 'string' ? { semanticType: raw.observationType } : {}), ...(displayName === undefined ? {} : { displayName }), summary: summary.slice(0, 240) } }
 
 export { DEFAULT_SEARCH_LIMIT, HARD_SEARCH_LIMIT, DEFAULT_RELATED_LIMIT, HARD_RELATED_LIMIT }

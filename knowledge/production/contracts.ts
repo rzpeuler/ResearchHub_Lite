@@ -1,19 +1,40 @@
 import type { KnowledgeBaseHandle } from '../storage/handle.ts'
 import type { NormalizedResearchSource } from '../../plugins/research-acquisition/contracts.ts'
+import type { EventTypeV04, ObservationTypeV04, ReasoningEdgeTypeV04, ThesisStatusV04 } from '../schema/domain-v04.ts'
 
 export type SemanticProductionClaimType = 'fact' | 'forecast' | 'viewpoint' | 'trend' | 'risk' | 'assumption' | 'thesis' | 'catalyst'
 
 /** Producer-facing semantic output. IDs in this contract are local proposal keys only. */
 export interface SemanticProductionProposal {
   readonly proposalId: string
-  readonly kind: 'entity' | 'claim' | 'relation' | 'source'
+  readonly kind: 'entity' | 'claim' | 'relation' | 'source' | 'event' | 'observation' | 'thesis' | 'reasoning_edge'
   readonly claimType?: SemanticProductionClaimType
   readonly subjectKey: string
   readonly statement?: string
-  readonly entityType?: 'company' | 'industry' | 'product' | 'technology'
+  readonly entityType?: 'company' | 'industry' | 'product' | 'technology' | 'person' | 'institution' | 'security'
   readonly entityName?: string
   readonly relationType?: string
   readonly targetKey?: string
+  readonly eventType?: EventTypeV04
+  readonly participantKeys?: readonly string[]
+  readonly observationType?: ObservationTypeV04
+  readonly metricRef?: string
+  readonly value?: string | number | boolean | null
+  readonly unit?: string | null
+  readonly period?: string | null
+  readonly fiscalPeriod?: string
+  readonly estimateValue?: string | number | boolean | null
+  readonly currency?: string | null
+  readonly institutionKey?: string
+  readonly analystKey?: string
+  readonly publishedAt?: string
+  readonly estimateHorizon?: string | null
+  readonly revisionOfProposalId?: string | null
+  readonly contributingProposalIds?: readonly string[]
+  readonly thesisTitle?: string
+  readonly thesisStatus?: ThesisStatusV04
+  readonly edgeType?: ReasoningEdgeTypeV04
+  readonly sourceProposalId?: string
   readonly attributes?: Readonly<Record<string, unknown>>
   readonly sourceCandidateIds?: readonly string[]
   /** Optional producer-owned binding to an existing canonical Claim. */
@@ -43,7 +64,7 @@ export type SemanticResolver = (input: {
 
 export interface ProductionEntityInput {
   readonly localKey: string
-  readonly entityType: 'company' | 'industry' | 'product' | 'technology'
+  readonly entityType: 'company' | 'industry' | 'product' | 'technology' | 'person' | 'institution' | 'security'
   readonly name: string
   readonly aliases?: readonly string[]
   readonly semanticFields?: Readonly<Record<string, unknown>>
@@ -96,6 +117,10 @@ export interface KnowledgeProductionOutcome {
   readonly entityRefsByLocalKey: Readonly<Record<string, string>>
   /** Every terminal Gateway outcome exposes the producer proposal to canonical Relation mapping. */
   readonly relationRefsByProposalId: Readonly<Record<string, string>>
+  readonly eventRefsByProposalId?: Readonly<Record<string, string>>
+  readonly observationRefsByProposalId?: Readonly<Record<string, string>>
+  readonly thesisRefsByProposalId?: Readonly<Record<string, string>>
+  readonly reasoningEdgeRefsByProposalId?: Readonly<Record<string, string>>
   readonly resolutionIntents: readonly ResolutionIntentSummary[]
   readonly errors: readonly string[]
 }

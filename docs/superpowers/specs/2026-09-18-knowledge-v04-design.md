@@ -1,7 +1,7 @@
 # Knowledge Schema 0.4 / Research State v1 Design
 
 Date: 2026-09-18
-Status: approved execution baseline; implementation and acceptance pending
+Status: approved execution baseline; implemented and acceptance-verified
 
 ## Context and boundaries
 
@@ -62,11 +62,12 @@ receive explicit namespaces and safe path allocation. The v0.3 loader remains
 available and is never interpreted as v0.4 without version validation.
 
 Migration is a separate deterministic capability with dry-run and apply modes.
-Apply writes to a temporary destination and atomically replaces only the
-specified migration output after validating the result; it never mutates a
-real user corpus implicitly and never deletes unknown fields. Migration tests
-use sanitized fixtures and verify key IDs, raw/source provenance, reload, and
-replay idempotency.
+Apply requires an explicit empty destination, validates the converted
+projection before writing, preserves unknown fields, copies raw state, and
+records source identity/revision so an identical re-run returns
+`already_applied`. It never mutates a real user corpus implicitly. Migration
+tests use sanitized fixtures and verify key IDs, raw/source provenance, reload,
+and replay idempotency.
 
 ## Query, bundle, and review integration
 
@@ -102,4 +103,3 @@ stored temporal fields and does not claim to be a database bitemporal engine.
 Provider-specific metadata is retained only in controlled fields; missing
 provider capabilities produce explicit unavailable evidence, never fabricated
 observations.
-

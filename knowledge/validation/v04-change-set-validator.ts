@@ -48,8 +48,11 @@ function validateRawRef(ref: unknown, known: ReadonlySet<string>, errors: V04Cha
 }
 
 function validateEvidence(objects: Iterable<KnowledgeAssetV04>, knownRawRefs: ReadonlySet<string>, errors: V04ChangeSetValidationDiagnostic[]): void {
-  const sources = new Set<string>([...objects].filter((object) => object.id.startsWith('source:')).map((object) => object.id))
-  for (const object of objects) {
+  const all = [...objects]
+  const sourceObjects = new Map<string, Dict>(all.filter((object) => object.id.startsWith('source:')).map((object) => [object.id, object as unknown as Dict]))
+  const sources = new Set<string>(sourceObjects.keys())
+  const denied = new Set([...sourceObjects.entries()].filter(([, source]) => { const rights = source.rights; return record(rights) && rights.derivativeKnowledgeAllowed === false }).map(([id]) => id))
+  for (const object of all) {
     const value = object as unknown as Dict
     if (object.id.startsWith('source:')) for (const ref of Array.isArray(value.rawRefs) ? value.rawRefs : []) validateRawRef(ref, knownRawRefs, errors, object.id)
     if (object.id.startsWith('claim:')) {
@@ -58,6 +61,10 @@ function validateEvidence(objects: Iterable<KnowledgeAssetV04>, knownRawRefs: Re
       if (!Array.isArray(value.provenance) || value.provenance.length === 0) add(errors, 'V04_RAW_PROVENANCE_REQUIRED', 'Claim must contain Raw-backed provenance', undefined, object.id)
       else for (const item of value.provenance as unknown[]) if (!record(item)) add(errors, 'V04_PROVENANCE_INVALID', 'Claim provenance entry must be an object', undefined, object.id); else { if (typeof item.sourceRef !== 'string' || !sources.has(item.sourceRef as string)) add(errors, 'V04_PROVENANCE_SOURCE_INVALID', 'Claim provenance sourceRef does not resolve', undefined, object.id); validateRawRef(item.rawRef, knownRawRefs, errors, object.id) }
     }
+    if (object.id.startsWith('event:')) { if (!Array.isArray(value.sourceRefs) || value.sourceRefs.length === 0) add(errors, 'V04_SOURCE_REFERENCE_REQUIRED', 'Event must resolve at least one Source reference', undefined, object.id); else for (const ref of value.sourceRefs as unknown[]) if (typeof ref !== 'string' || !sources.has(ref)) add(errors, 'V04_SOURCE_REFERENCE_INVALID', `Event sourceRef does not resolve: ${String(ref)}`, undefined, object.id) }
+    if (object.id.startsWith('observation:')) { const type = value.observationType; const sourceRef = value.sourceRef; if ((type === 'metric' || type === 'estimate') && (typeof sourceRef !== 'string' || !sources.has(sourceRef))) add(errors, 'V04_SOURCE_REFERENCE_INVALID', `Observation sourceRef does not resolve: ${String(sourceRef)}`, undefined, object.id); if (Array.isArray(value.provenance)) for (const item of value.provenance as unknown[]) if (record(item)) { if (typeof item.sourceRef !== 'string' || !sources.has(item.sourceRef)) add(errors, 'V04_PROVENANCE_SOURCE_INVALID', 'Observation provenance sourceRef does not resolve', undefined, object.id); validateRawRef(item.rawRef, knownRawRefs, errors, object.id) } }
+    if (object.id.startsWith('reasoning-edge:') && Array.isArray(value.sourceRefs)) for (const ref of value.sourceRefs as unknown[]) if (typeof ref !== 'string' || !sources.has(ref)) add(errors, 'V04_SOURCE_REFERENCE_INVALID', `ReasoningEdge sourceRef does not resolve: ${String(ref)}`, undefined, object.id)
+    if (object.id.startsWith('event:') || object.id.startsWith('observation:') || object.id.startsWith('claim:') || object.id.startsWith('thesis:') || object.id.startsWith('reasoning-edge:')) { const refs = [...(Array.isArray(value.sourceRefs) ? value.sourceRefs : []), ...(typeof value.sourceRef === 'string' ? [value.sourceRef] : [])]; if (refs.some((item) => denied.has(item))) add(errors, 'V04_DERIVATIVE_KNOWLEDGE_DENIED', 'Source rights prohibit derived canonical Knowledge', undefined, object.id) }
   }
 }
 

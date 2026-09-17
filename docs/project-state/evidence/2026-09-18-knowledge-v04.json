@@ -1,0 +1,74 @@
+{
+  "taskId": "RHL-KNOWLEDGE-SCHEMA-V04-001",
+  "generatedAt": "2026-09-18T00:00:00.000Z",
+  "implementationStatus": "PASS",
+  "schema": {
+    "schemaVersion": "0.4",
+    "storageFormatVersion": "1",
+    "canonicalObjectKinds": [
+      "ThemeGroup",
+      "Entity",
+      "Relation",
+      "Claim",
+      "Source",
+      "Module",
+      "RawRef",
+      "Event",
+      "Observation",
+      "Thesis",
+      "ReasoningEdge"
+    ]
+  },
+  "acceptance": {
+    "K1_schema_contract": true,
+    "K2_storage_and_reload": true,
+    "K3_validation": true,
+    "K4_gateway_atomic_path": true,
+    "K5_query_new_kinds": true,
+    "K6_rights_fail_closed": true,
+    "K7_earnings_vertical": true,
+    "K8_migration": true,
+    "K9_replay_idempotency": true,
+    "K10_review_persistence": true
+  },
+  "canonicalCounts": {
+    "claim": 2,
+    "entity": 4,
+    "event": 1,
+    "observation": 4,
+    "reasoning_edge": 3,
+    "source": 3,
+    "thesis": 1
+  },
+  "canonicalHash": "sha256:7a1abe54be8d45b22a8ce5e77c31ba25e7c331048ea2aeedf118dc80bd122a5d",
+  "diagnostics": [],
+  "reloadVerified": true,
+  "revisions": {
+    "firstCommit": 1,
+    "replay": 1,
+    "migrationSource": 4,
+    "migrationTarget": 0
+  },
+  "migration": {
+    "dryRunStatus": "planned",
+    "applyStatus": "applied",
+    "replayStatus": "already_applied",
+    "preservedProvenanceCount": 1,
+    "rawRefs": [
+      "raw-sha256-939d0cd7adadfd7a5ae95e2ad5c143b4d73a5b76281adc78e0eb63fabda309b4"
+    ]
+  },
+  "refs": {
+    "event": "event:0f8b83aa3fe5afb3",
+    "consensus": "observation:070bb2e05aaa8df4",
+    "claim": "claim:research-5f102ca911327d68",
+    "thesis": "thesis:2d4c86b6689069de",
+    "reasoningEdge": "reasoning-edge:364dff28bcd3e472"
+  },
+  "privacy": {
+    "rawBodiesIncluded": false,
+    "credentialsIncluded": false,
+    "privatePathsIncluded": false,
+    "reasoningTracesIncluded": false
+  }
+}
