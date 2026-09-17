@@ -195,8 +195,8 @@ export class ResearchDispatchService {
     const resolved = this.resolve(input)
     const { decision } = resolved
     if (decision.missingRequiredInputs.length > 0) return { ...resolved, status: 'missing_input' }
-    if (decision.mode === 'free_research') return { ...resolved, status: 'free_research' }
-    if (decision.mode === 'skill_plan') return { ...resolved, status: 'skill_plan' }
+    if (decision.mode === 'free_research') { void this.options.bundleStore?.put(createResearchBundle({ request: resolved.request, decision, summary: resolved.summary, workflowRunId: `free-${randomUUID()}`, result: { status: 'free_research_pending', executionBoundary: 'session' } })).catch(() => undefined); return { ...resolved, status: 'free_research' } }
+    if (decision.mode === 'skill_plan') { void this.options.bundleStore?.put(createResearchBundle({ request: resolved.request, decision, summary: resolved.summary, workflowRunId: `skill-${randomUUID()}`, result: { status: 'skill_plan_pending', executionBoundary: 'session' } })).catch(() => undefined); return { ...resolved, status: 'skill_plan' } }
     const workflow = decision.workflow
     if (workflow === undefined) throw new ApplicationServiceError('failed', 'Validated workflow decision did not include a workflow')
     const definition = this.workflowRegistry.get(workflow.id)

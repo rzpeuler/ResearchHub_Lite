@@ -43,3 +43,15 @@ test('English FY notation and explicit Daily Intelligence are dispatched with co
   assert.deepEqual(daily.decision.workflow?.arguments, { briefType: 'morning', tradeDate: '2026-09-17' })
   assert.deepEqual(daily.decision.missingRequiredInputs, [])
 })
+
+test('started dispatch persists one ResearchBundle from the workflow result and forwards policy', async () => {
+  const calls: unknown[] = []
+  const store = new (class { readonly values = new Map<string, unknown>(); async put(bundle: { bundleId: string }) { this.values.set(bundle.bundleId, bundle) }; async get(id: string) { return this.values.get(id) }; async list() { return [...this.values.values()] } })()
+  const research = ({ startEarningsReview: (input: unknown) => { calls.push(input); return { completion: Promise.resolve({ status: 'completed', report: { reportId: 'earnings-report', outputPath: 'earnings-report.md' }, research: { proposals: [{ proposalId: 'earnings-proposal', kind: 'claim' }] } }) } } } as never)
+  const service = new ResearchDispatchService({ researchService: research, bundleStore: store as never })
+  const started = service.start({ query: '贵州茅台 2026 年半年报', mode: { type: 'workflow', workflowId: 'earnings_review' }, contextPolicy: { structuredKnowledge: true, sourceLibrary: true }, persistencePolicy: { writeKnowledge: false } })
+  await started.completion
+  assert.equal((calls[0] as { writeKnowledge: boolean }).writeKnowledge, false)
+  const bundle = await service.getBundle(`research-bundle-${started.runId!}`) as { report?: { reportId: string }; proposals: readonly { proposalId: string }[] }
+  assert.equal(bundle.report?.reportId, 'earnings-report'); assert.deepEqual(bundle.proposals.map((item) => item.proposalId), ['earnings-proposal'])
+})

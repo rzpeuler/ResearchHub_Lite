@@ -61,3 +61,13 @@ export function registerOnboardedResearchSkill(registry: ResearchSkillRegistry, 
   const definition: ResearchSkillDefinition = { id: record.id, kind: 'research', ...(typeof record.manifest.researchCapability === 'string' ? { researchCapability: record.manifest.researchCapability } : {}), intentDescription: text(record.manifest.description) ?? `External Research Skill ${record.id}`, whenToUse: text(record.manifest.whenToUse) ?? `Use the approved external Research Skill ${record.id}.`, outputContract: text(record.manifest.outputContract) ?? 'ResearchBundle', enabled: true, scope: 'researchhub' }
   registry.register(definition); return definition
 }
+
+export async function loadOnboardedResearchSkillDefinitions(recordRoot: string): Promise<readonly ResearchSkillDefinition[]> {
+  let names: string[]
+  try { names = await readdir(resolve(recordRoot)) } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []; throw error }
+  const definitions: ResearchSkillDefinition[] = []
+  for (const name of names.filter((item) => item.endsWith('.json')).sort()) {
+    try { const value = JSON.parse(await readFile(join(resolve(recordRoot), name), 'utf8')) as SkillOnboardingRecord; const definition = value.kind === 'research' ? { id: value.id, kind: 'research' as const, ...(typeof value.manifest.researchCapability === 'string' ? { researchCapability: value.manifest.researchCapability } : {}), intentDescription: text(value.manifest.description) ?? `External Research Skill ${value.id}`, whenToUse: text(value.manifest.whenToUse) ?? `Use the approved external Research Skill ${value.id}.`, outputContract: text(value.manifest.outputContract) ?? 'ResearchBundle', enabled: true, scope: 'researchhub' as const } : undefined; if (definition) definitions.push(definition) } catch { /* malformed onboarding records remain excluded */ }
+  }
+  return definitions
+}

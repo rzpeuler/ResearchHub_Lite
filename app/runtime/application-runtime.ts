@@ -28,6 +28,8 @@ import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import { ResearchDispatchService } from '../services/research-dispatch-service.ts'
 import { FileResearchBundleStore } from '../services/research-bundle.ts'
 import { SourceLibraryService } from '../services/source-library.ts'
+import { createResearchSkillRegistry } from '../services/skill-registry.ts'
+import { loadOnboardedResearchSkillDefinitions } from '../services/skill-onboarding.ts'
 
 export class ResearchHubApplicationRuntime {
   readonly cwd: string
@@ -95,7 +97,8 @@ export class ResearchHubApplicationRuntime {
     if (researchService === undefined && mountedKnowledgeBaseRoot !== undefined) {
       try { const manifest = await loadKnowledgeBaseManifest(mountedKnowledgeBaseRoot); if (manifest.schemaVersion === '0.4' && manifest.storageFormatVersion === '1') { const dailySignalStore = new FileDailySignalStore(join(cwd, 'runtime-data', 'daily-signals.jsonl')); researchService = new ResearchService({ mountedKnowledgeBaseRoot, cwd, workflowService, reasoningExecutor, industryReasoningExecutorFactory, signalStore: new FileResearchSignalStore(join(cwd, 'runtime-data', 'research-signals.jsonl')), dailySignalStore, acquisitionPlugins: [new OfficialDisclosureResearchPlugin(new CninfoOfficialDisclosureClient()), new GdeltResearchPlugin()], industryAcquisitionPlugins: options.industryAcquisitionPlugins ?? [new MiitIndustryResearchPlugin(), new GovCnIndustryResearchPlugin(), new EastmoneyIndustryResearchPlugin(), new CpcaIndustryResearchPlugin()], akshare: new AkshareDataAdapter() }) } } catch { /* the normal v0.3 runtime remains available without Company Research */ }
     }
-    const researchDispatchService = new ResearchDispatchService({ researchService, dailyIntelligenceService, workflowService, bundleStore: new FileResearchBundleStore(join(cwd, 'runtime-data', 'research-bundles')) })
+    const skillRegistry = createResearchSkillRegistry(); for (const definition of await loadOnboardedResearchSkillDefinitions(join(cwd, 'runtime-data', 'skill-onboarding'))) { try { skillRegistry.register(definition) } catch { /* duplicate or invalid external records remain excluded */ } }
+    const researchDispatchService = new ResearchDispatchService({ researchService, dailyIntelligenceService, workflowService, skillRegistry, bundleStore: new FileResearchBundleStore(join(cwd, 'runtime-data', 'research-bundles')) })
     const sourceLibraryService = new SourceLibraryService(join(cwd, 'runtime-data', 'source-library'))
     const services = { knowledgeService, knowledgeGraphService, reviewService, workflowService, productionService, researchDispatchService, sourceLibraryService, ...(researchService === undefined ? {} : { researchService }), dailyIntelligenceService }
     const sessionManager = options.sessionManager ?? SessionManager.create(cwd, options.sessionDir)
