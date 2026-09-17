@@ -9,6 +9,9 @@ import type { ResearchService } from '../services/research-service.ts'
 import type { DailyIntelligenceService } from '../services/daily-intelligence-service.ts'
 import type { DailyBriefInput } from '../services/daily-intelligence-service.ts'
 
+export interface ResearchHubRequestPolicy { readonly structuredKnowledge: boolean; readonly sourceLibrary: boolean; readonly writeKnowledge: boolean }
+export interface ResearchHubPolicyContext { current?: ResearchHubRequestPolicy }
+
 export interface ResearchHubPiToolContext {
   readonly knowledgeService: KnowledgeService
   readonly productionService: ProductionService
@@ -16,6 +19,7 @@ export interface ResearchHubPiToolContext {
   readonly workflowService: WorkflowService
   readonly researchService?: ResearchService
   readonly dailyIntelligenceService?: DailyIntelligenceService
+  readonly policyContext?: ResearchHubPolicyContext
 }
 
 function textResult(value: unknown, isError = false) { return { content: [{ type: 'text' as const, text: JSON.stringify(value) }], details: undefined, isError } }
@@ -29,7 +33,29 @@ async function invoke<T>(operation: () => Promise<T>, signal?: AbortSignal) {
 }
 function integerParam(value: number | undefined, name: string): void { if (value !== undefined && (!Number.isInteger(value) || value < 1)) throw new ApplicationServiceError('invalid_input', `${name} must be a positive integer`) }
 
-export function createResearchHubTools(context: ResearchHubPiToolContext): ToolDefinition[] {
+function scopedReadService<T extends object>(service: T, policyContext: ResearchHubPolicyContext | undefined, blockedMethods: readonly string[], label: string): T {
+  if (policyContext === undefined) return service
+  return new Proxy(service, { get(target, property, receiver) { if (policyContext.current?.structuredKnowledge === false && typeof property === 'string' && blockedMethods.includes(property)) return (() => { throw new ApplicationServiceError('conflict', `${label} is disabled for this ResearchRequest`) }) as T[Extract<keyof T, string>]; return Reflect.get(target, property, receiver) } })
+}
+
+function scopedResearchService<T extends object>(service: T | undefined, policyContext: ResearchHubPolicyContext | undefined): T | undefined {
+  if (service === undefined || policyContext === undefined) return service
+  const methods = new Set(['startResearchCompany', 'startIndustryResearch', 'startEarningsReview', 'startValuation', 'startEventResearch', 'startThesisRedTeam'])
+  return new Proxy(service, { get(target, property, receiver) { const value = Reflect.get(target, property, receiver); if (typeof property !== 'string' || !methods.has(property) || typeof value !== 'function') return value; return (...args: unknown[]) => { const current = policyContext.current; if (current === undefined) return Reflect.apply(value, target, args); const input = args[0]; if (!input || typeof input !== 'object' || Array.isArray(input)) throw new ApplicationServiceError('invalid_input', 'Research tool input must be an object'); return Reflect.apply(value, target, [{ ...(input as Record<string, unknown>), writeKnowledge: current.writeKnowledge, useStructuredKnowledge: current.structuredKnowledge }, ...args.slice(1)]) } } })
+}
+
+function scopedDailyService<T extends object>(service: T | undefined, policyContext: ResearchHubPolicyContext | undefined): T | undefined {
+  if (service === undefined || policyContext === undefined) return service
+  return new Proxy(service, { get(target, property, receiver) { const value = Reflect.get(target, property, receiver); if (property !== 'startBrief' || typeof value !== 'function') return value; return (...args: unknown[]) => { const current = policyContext.current; if (current === undefined) return Reflect.apply(value, target, args); const input = args[0]; if (!input || typeof input !== 'object' || Array.isArray(input)) throw new ApplicationServiceError('invalid_input', 'Daily Brief input must be an object'); return Reflect.apply(value, target, [{ ...(input as Record<string, unknown>), writeKnowledge: current.writeKnowledge, useStructuredKnowledge: current.structuredKnowledge }, ...args.slice(1)]) } } })
+}
+
+function scopedProductionService<T extends object>(service: T, policyContext: ResearchHubPolicyContext | undefined): T {
+  if (policyContext === undefined) return service
+  return new Proxy(service, { get(target, property, receiver) { if (policyContext.current?.writeKnowledge === false && property === 'ingestDocument') return (() => { throw new ApplicationServiceError('conflict', 'Knowledge production is disabled for this ResearchRequest') }) as T[Extract<keyof T, string>]; return Reflect.get(target, property, receiver) } })
+}
+
+export function createResearchHubTools(inputContext: ResearchHubPiToolContext): ToolDefinition[] {
+  const context: ResearchHubPiToolContext = { ...inputContext, knowledgeService: scopedReadService(inputContext.knowledgeService, inputContext.policyContext, ['status', 'searchKnowledge', 'getKnowledgeObject'], 'Structured Knowledge'), reviewService: scopedReadService(inputContext.reviewService, inputContext.policyContext, ['listOpenReviewCases', 'getReviewCase', 'countOpenReviewCases'], 'Review Knowledge'), productionService: scopedProductionService(inputContext.productionService, inputContext.policyContext), researchService: scopedResearchService(inputContext.researchService, inputContext.policyContext), dailyIntelligenceService: scopedDailyService(inputContext.dailyIntelligenceService, inputContext.policyContext) }
   const status = defineTool({
     name: 'researchhub_status', label: 'ResearchHub status', description: 'Read bounded canonical ResearchHub status. This tool never mutates data.', promptSnippet: 'Inspect ResearchHub status', parameters: Type.Object({}),
     execute: async () => invoke(async () => ({ knowledgeBase: await context.knowledgeService.status(), openReviewCases: await context.reviewService.countOpenReviewCases() })),

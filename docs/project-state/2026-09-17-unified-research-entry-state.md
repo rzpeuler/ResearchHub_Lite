@@ -13,6 +13,9 @@ Date: 2026-09-17
 - Source Library is a rebuildable lexical index over Raw records with `rawRef` provenance. Search returns no hits when the policy is disabled.
 - External Skill onboarding requires safe inspection, pinned GitHub provenance, deterministic classification, and fail-closed unsafe installation. Fixed-commit GitHub archives are fetched into a temporary directory, path-checked, inspected, installed, and recorded; repeated installs of the same provenance are idempotent. Only an onboarded `research` Skill can be registered for research dispatch.
 - Free/Skill session dispatch returns a bundle run ID; the conversation command associates that ID and finalizes the bundle from the captured assistant message. Empty capture is recorded as a failure rather than a synthetic success.
+- Session-bound ResearchRequest policy is installed in the Pi tool context for the duration of the prompt: Knowledge reads and production writes are denied when disabled, and research adapters receive the request's persistence/context flags.
+- The read-only Research Bundles page lists bundle artifacts, proposals, attached Source Library hits, bounded structured-result previews, and direct Raw-backed Source Library search.
+- Source Library HTTP enabled/disabled behavior is covered by a runtime route test.
 
 ## Binding boundaries
 
@@ -31,7 +34,5 @@ Date: 2026-09-17
 
 ## Remaining mission work
 
-- Bind the typed context/persistence policy into the Pi tool-call boundary for session-based Free Research; the workflow dispatch path is policy-bound, but legacy/session tool calls remain a separate boundary.
-- Add `useStructuredKnowledge` enforcement inside the Industry Research workflow itself; its application input now carries the policy but the legacy workflow still reads its canonical projection during setup.
-- Add complete bundle/Source Library client views and dedicated route-level enabled/disabled policy coverage.
+- Add `useStructuredKnowledge` enforcement inside the low-level Industry Research workflow itself; the application entry now fails closed before mounting/reading Canonical Knowledge when the policy is disabled.
 - Run the realistic A–G acceptance matrix with saved runtime artifacts, parser preflight when applicable, and repository remote verification.

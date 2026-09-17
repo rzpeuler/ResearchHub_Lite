@@ -34,6 +34,15 @@ test('production reasoning model selection stays inside Pi ModelRuntime', async 
   } finally { await rm(agentDir, { recursive: true, force: true }) }
 })
 
+test('Pi session ResearchRequest policy gates Knowledge and forwards persistence flags', async () => {
+  const received: Record<string, unknown>[] = []; const policyContext = { current: { structuredKnowledge: false, sourceLibrary: false, writeKnowledge: false } }
+  const researchService = { startResearchCompany: (value: Record<string, unknown>) => { received.push(value); return { completion: Promise.resolve({ status: 'blocked' }) } } } as never
+  const tools = createResearchHubTools({ knowledgeService: { searchKnowledge: async () => ({ results: [] }) } as never, reviewService: { listOpenReviewCases: async () => ({ cases: [] }) } as never, workflowService: new WorkflowService(), productionService: { ingestDocument: async () => ({ status: 'completed' }) } as never, researchService, policyContext })
+  const search = await tools.find((tool) => tool.name === 'search_knowledge')!.execute('policy-search', { query: 'blocked' }, undefined, undefined, {} as never); assert.equal(search.content[0]?.type, 'text'); if (search.content[0]?.type === 'text') assert.equal(JSON.parse(search.content[0].text).code, 'conflict')
+  const ingest = await tools.find((tool) => tool.name === 'ingest_document')!.execute('policy-ingest', { workflowRunId: 'policy-ingest', text: 'blocked' }, undefined, undefined, {} as never); assert.equal(ingest.content[0]?.type, 'text'); if (ingest.content[0]?.type === 'text') assert.equal(JSON.parse(ingest.content[0].text).code, 'conflict')
+  await tools.find((tool) => tool.name === 'research_company')!.execute('policy-research', { workflowRunId: 'policy-research', symbol: '600519' }, undefined, undefined, {} as never); assert.equal(received[0]!.writeKnowledge, false); assert.equal(received[0]!.useStructuredKnowledge, false)
+})
+
 class FixtureExecutor implements ReasoningExecutor {
   readonly calls: ReasoningRequest[] = []
   capabilities(): ReasoningCapabilities { return capabilities }

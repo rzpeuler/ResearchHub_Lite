@@ -14,6 +14,8 @@ import type { CurrentSessionState, ResearchHubApplicationRuntimeOptions } from '
 import { safeIdentifier, safeSummary, type ClientEvent } from './client-events.ts'
 import type { ResearchDispatchService } from '../services/research-dispatch-service.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
+import { normalizeResearchRequest } from '../services/research-dispatch-contracts.ts'
+import type { ResearchHubRequestPolicy } from '../pi/tools.ts'
 
 const MAX_JSON_BYTES = 1_000_000
 const MAX_MESSAGE_LENGTH = 50_000
@@ -434,8 +436,15 @@ export class ResearchHubRuntimeServer {
     const runId = randomUUID()
     if (operation === 'prompt') {
       const bundleRunId = this.optionalString(body, 'researchBundleId', 160)
+      let policy: ResearchHubRequestPolicy | undefined
+      if (body.researchPolicy !== undefined) {
+        if (!body.researchPolicy || typeof body.researchPolicy !== 'object' || Array.isArray(body.researchPolicy)) throw new ApplicationServiceError('invalid_input', 'researchPolicy must be an object')
+        const researchPolicy = body.researchPolicy as Record<string, unknown>
+        const request = normalizeResearchRequest({ query: text, contextPolicy: researchPolicy.contextPolicy, persistencePolicy: researchPolicy.persistencePolicy })
+        policy = { ...request.contextPolicy, ...request.persistencePolicy }
+      }
       const beforeMessageCount = this.runtime!.sessionRuntime.getCurrentMessages().length
-      const started = this.runtime!.sessionRuntime.startPrompt(text)
+      const started = this.runtime!.sessionRuntime.startPrompt(text, policy)
       await started.accepted
       const completion = started.completion.then(async () => {
         if (bundleRunId === undefined) return

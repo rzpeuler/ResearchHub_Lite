@@ -3,6 +3,7 @@ import { ApplicationServiceError } from '../services/contracts.ts'
 import { createResearchHubPiSession } from '../pi/session.ts'
 import { ClientEventAdapter, safeSummary, type ClientEventListener } from './client-events.ts'
 import type { CurrentSessionState, ResearchHubSessionRuntimeOptions, SafeConversationMessage, SafeConversationSummary } from './contracts.ts'
+import type { ResearchHubPolicyContext, ResearchHubRequestPolicy } from '../pi/tools.ts'
 
 const MAX_MESSAGE_TEXT = 50_000
 const MAX_SESSION_NAME_LENGTH = 200
@@ -70,7 +71,7 @@ export class ResearchHubSessionRuntime {
   private replacementTail: Promise<void> = Promise.resolve()
   private readonly clientEventAdapters = new Set<ClientEventAdapter>()
 
-  private constructor(piRuntime: PiAgentSessionRuntime) {
+  private constructor(piRuntime: PiAgentSessionRuntime, private readonly policyContext: ResearchHubPolicyContext) {
     this.piRuntime = piRuntime
     this.piRuntime.setRebindSession(async (session) => {
       for (const adapter of this.clientEventAdapters) adapter.rebind(session)
@@ -78,6 +79,7 @@ export class ResearchHubSessionRuntime {
   }
 
   static async create(options: ResearchHubSessionRuntimeOptions): Promise<ResearchHubSessionRuntime> {
+    const policyContext: ResearchHubPolicyContext = {}
     const createRuntime: CreateAgentSessionRuntimeFactory = async ({ cwd, sessionManager, sessionStartEvent }) => {
       const created = await createResearchHubPiSession({
         cwd,
@@ -93,12 +95,13 @@ export class ResearchHubSessionRuntime {
         applicationServices: options.applicationServices,
         researchService: options.researchService,
         dailyIntelligenceService: options.dailyIntelligenceService,
+        policyContext,
         sessionStartEvent,
       })
       return { session: created.session, extensionsResult: created.extensionsResult, modelFallbackMessage: created.modelFallbackMessage, services: created.services, diagnostics: created.services.diagnostics }
     }
     const piRuntime = await createAgentSessionRuntime(createRuntime, { cwd: options.cwd, agentDir: options.agentDir, sessionManager: options.sessionManager })
-    return new ResearchHubSessionRuntime(piRuntime)
+    return new ResearchHubSessionRuntime(piRuntime, policyContext)
   }
 
   get isDisposed(): boolean { return this.disposed }
@@ -171,8 +174,10 @@ export class ResearchHubSessionRuntime {
   }
 
   async resumeConversation(conversationId: string): Promise<CurrentSessionState> { return this.switchConversation(conversationId) }
-  startPrompt(text: string): StartedPrompt {
+  startPrompt(text: string, policy?: ResearchHubRequestPolicy): StartedPrompt {
     this.ensureOpen()
+    const previousPolicy = this.policyContext.current
+    this.policyContext.current = policy
     let acceptedSettled = false
     let resolveAccepted!: () => void
     let rejectAccepted!: (error: unknown) => void
@@ -188,9 +193,10 @@ export class ResearchHubSessionRuntime {
     }
     let completion: Promise<void>
     try {
-      completion = Promise.resolve(this.currentSession.prompt(text, { preflightResult: settleAccepted }))
+      completion = Promise.resolve(this.currentSession.prompt(text, { preflightResult: settleAccepted })).finally(() => { if (this.policyContext.current === policy) this.policyContext.current = previousPolicy })
     } catch (error) {
       completion = Promise.reject(error)
+      this.policyContext.current = previousPolicy
     }
     void completion.catch((error) => {
       if (!acceptedSettled) {

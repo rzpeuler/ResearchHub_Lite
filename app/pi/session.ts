@@ -3,7 +3,7 @@ import { ModelRuntime, DefaultResourceLoader, SessionManager, SettingsManager, c
 import type { Model, Api } from '@earendil-works/pi-ai'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import { PiReasoningExecutor } from '../../plugins/reasoning/pi/executor.ts'
-import { createResearchHubTools } from './tools.ts'
+import { createResearchHubTools, type ResearchHubPolicyContext } from './tools.ts'
 import { KnowledgeService } from '../services/knowledge-service.ts'
 import { KnowledgeGraphService } from '../services/knowledge-graph-service.ts'
 import { ProductionService } from '../services/production-service.ts'
@@ -29,6 +29,7 @@ export interface ResearchHubPiSessionOptions {
   readonly applicationServices?: ResearchHubApplicationServices
   readonly researchService?: import('../services/research-service.ts').ResearchService
   readonly dailyIntelligenceService?: import('../services/daily-intelligence-service.ts').DailyIntelligenceService
+  readonly policyContext?: ResearchHubPolicyContext
   readonly sessionStartEvent?: import('@earendil-works/pi-coding-agent').SessionStartEvent
 }
 
@@ -79,7 +80,7 @@ export async function createResearchHubPiSession(options: ResearchHubPiSessionOp
     return { knowledgeService, knowledgeGraphService, productionService, reviewService, workflowService }
   })()
   const { knowledgeService, productionService, reviewService, workflowService } = applicationServices
-  const customTools = createResearchHubTools({ knowledgeService, productionService, reviewService, workflowService, researchService: options.researchService ?? applicationServices.researchService, dailyIntelligenceService: options.dailyIntelligenceService ?? applicationServices.dailyIntelligenceService })
+  const customTools = createResearchHubTools({ knowledgeService, productionService, reviewService, workflowService, researchService: options.researchService ?? applicationServices.researchService, dailyIntelligenceService: options.dailyIntelligenceService ?? applicationServices.dailyIntelligenceService, policyContext: options.policyContext })
   const settingsManager = options.settingsManager ?? SettingsManager.create(options.cwd, agentDir, { projectTrusted: true })
   const loader = options.resourceLoader ?? new DefaultResourceLoader({ cwd: options.cwd, agentDir, settingsManager, systemPrompt: RESEARCHHUB_PI_SYSTEM_PROMPT, extensionFactories: mountedKnowledgeBaseRoot ? [protectionExtension(mountedKnowledgeBaseRoot, options.cwd)] : [] })
   if (!options.resourceLoader) await loader.reload()

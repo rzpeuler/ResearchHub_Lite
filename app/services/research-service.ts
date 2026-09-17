@@ -107,6 +107,7 @@ export class ResearchService {
     if (input.searchTerms !== undefined && (!Array.isArray(input.searchTerms) || input.searchTerms.length > 8 || input.searchTerms.some((x) => typeof x !== 'string' || !x.trim() || x.length > 120))) throw new ApplicationServiceError('invalid_input', 'searchTerms are invalid')
     if (input.maxSources !== undefined && (!Number.isSafeInteger(input.maxSources) || input.maxSources < 1 || input.maxSources > 50)) throw new ApplicationServiceError('invalid_input', 'maxSources is invalid')
     if (input.maxEvidencePerModule !== undefined && (!Number.isSafeInteger(input.maxEvidencePerModule) || input.maxEvidencePerModule < 1 || input.maxEvidencePerModule > 12)) throw new ApplicationServiceError('invalid_input', 'maxEvidencePerModule is invalid')
+    if (input.useStructuredKnowledge === false) throw new ApplicationServiceError('conflict', 'Industry Research requires structured Knowledge context and cannot run with it disabled')
     const target = { name: input.name.trim(), ...(input.aliases === undefined ? {} : { aliases: input.aliases.map((x) => x.trim()) }), ...(input.canonicalRef === undefined ? {} : { canonicalRef: input.canonicalRef }), ...(input.asOf === undefined ? {} : { asOf: input.asOf }) }
     const industryReasoningExecutorFactory = this.options.industryReasoningExecutorFactory
       ?? (this.options.reasoningExecutor === undefined ? undefined : async () => this.options.reasoningExecutor!)
