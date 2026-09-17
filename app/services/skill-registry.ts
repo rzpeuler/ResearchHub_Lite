@@ -1,4 +1,13 @@
+import { readFile, stat } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
+import { join, resolve } from 'node:path'
+
 export type ResearchHubSkillKind = 'research' | 'knowledge' | 'utility'
+
+export interface ResearchSkillMethodologySource {
+  readonly type: 'researchhub_skill'
+  readonly path: string
+}
 
 export interface ResearchSkillDefinition {
   readonly id: string
@@ -8,23 +17,41 @@ export interface ResearchSkillDefinition {
   readonly whenToUse: string
   readonly inputSchema?: Readonly<Record<string, unknown>>
   readonly outputContract?: string
+  readonly methodologySource?: ResearchSkillMethodologySource
   readonly enabled: boolean
   readonly scope: 'researchhub'
 }
 
+const CORE_SKILL_ROOT = resolve(fileURLToPath(new URL('../../skills/', import.meta.url)))
+function coreMethodology(id: string): ResearchSkillMethodologySource { return { type: 'researchhub_skill', path: join(CORE_SKILL_ROOT, id, 'SKILL.md') } }
+
 const CORE_SKILLS: readonly ResearchSkillDefinition[] = [
-  { id: 'company-research', kind: 'research', researchCapability: 'company_research', intentDescription: 'Evidence-backed A-share company research.', whenToUse: 'Use for a bounded company research request.', outputContract: 'Company research sections and proposals', enabled: true, scope: 'researchhub' },
-  { id: 'industry-research', kind: 'research', researchCapability: 'industry_research', intentDescription: 'Eight-module industry research.', whenToUse: 'Use for a bounded industry research request.', outputContract: 'Industry module report and proposals', enabled: true, scope: 'researchhub' },
-  { id: 'earnings-review', kind: 'research', researchCapability: 'earnings_review', intentDescription: 'Exact-period earnings review.', whenToUse: 'Use for a fiscal-period earnings comparison.', outputContract: 'Earnings review report and proposals', enabled: true, scope: 'researchhub' },
-  { id: 'event-research', kind: 'research', researchCapability: 'event_research', intentDescription: 'Company-bound event research.', whenToUse: 'Use when a request names an event anchor.', outputContract: 'Event research report and proposals', enabled: true, scope: 'researchhub' },
-  { id: 'valuation', kind: 'research', researchCapability: 'valuation', intentDescription: 'Bounded valuation analysis.', whenToUse: 'Use when a request asks for valuation scenarios.', outputContract: 'Valuation report and proposals', enabled: true, scope: 'researchhub' },
-  { id: 'thesis-red-team', kind: 'research', researchCapability: 'thesis_red_team', intentDescription: 'Adversarial thesis testing.', whenToUse: 'Use when a request asks to challenge an active thesis.', outputContract: 'Thesis red-team report and proposals', enabled: true, scope: 'researchhub' },
-  { id: 'daily-intelligence', kind: 'research', researchCapability: 'daily_intelligence', intentDescription: 'Daily public-signal intelligence synthesis.', whenToUse: 'Use for a bounded morning or evening intelligence request.', outputContract: 'Daily Brief report', enabled: true, scope: 'researchhub' },
+  { id: 'company-research', kind: 'research', researchCapability: 'company_research', intentDescription: 'Evidence-backed A-share company research.', whenToUse: 'Use for a bounded company research request.', outputContract: 'Company research sections and proposals', methodologySource: coreMethodology('company-research'), enabled: true, scope: 'researchhub' },
+  { id: 'industry-research', kind: 'research', researchCapability: 'industry_research', intentDescription: 'Eight-module industry research.', whenToUse: 'Use for a bounded industry research request.', outputContract: 'Industry module report and proposals', methodologySource: coreMethodology('industry-research'), enabled: true, scope: 'researchhub' },
+  { id: 'earnings-review', kind: 'research', researchCapability: 'earnings_review', intentDescription: 'Exact-period earnings review.', whenToUse: 'Use for a fiscal-period earnings comparison.', outputContract: 'Earnings review report and proposals', methodologySource: coreMethodology('earnings-review'), enabled: true, scope: 'researchhub' },
+  { id: 'event-research', kind: 'research', researchCapability: 'event_research', intentDescription: 'Company-bound event research.', whenToUse: 'Use when a request names an event anchor.', outputContract: 'Event research report and proposals', methodologySource: coreMethodology('event-research'), enabled: true, scope: 'researchhub' },
+  { id: 'valuation', kind: 'research', researchCapability: 'valuation', intentDescription: 'Bounded valuation analysis.', whenToUse: 'Use when a request asks for valuation scenarios.', outputContract: 'Valuation report and proposals', methodologySource: coreMethodology('valuation'), enabled: true, scope: 'researchhub' },
+  { id: 'thesis-red-team', kind: 'research', researchCapability: 'thesis_red_team', intentDescription: 'Adversarial thesis testing.', whenToUse: 'Use when a request asks to challenge an active thesis.', outputContract: 'Thesis red-team report and proposals', methodologySource: coreMethodology('thesis-red-team'), enabled: true, scope: 'researchhub' },
+  { id: 'daily-intelligence', kind: 'research', researchCapability: 'daily_intelligence', intentDescription: 'Daily public-signal intelligence synthesis.', whenToUse: 'Use for a bounded morning or evening intelligence request.', outputContract: 'Daily Brief report', methodologySource: coreMethodology('daily-intelligence'), enabled: true, scope: 'researchhub' },
   { id: 'knowledge-curation', kind: 'knowledge', intentDescription: 'Knowledge extraction and semantic resolution.', whenToUse: 'Use only inside governed Knowledge Production.', outputContract: 'Validated Knowledge candidates', enabled: true, scope: 'researchhub' },
 ]
 
 function clone(definition: ResearchSkillDefinition): ResearchSkillDefinition {
   return { ...definition, ...(definition.inputSchema === undefined ? {} : { inputSchema: JSON.parse(JSON.stringify(definition.inputSchema)) as Readonly<Record<string, unknown>> }) }
+}
+
+export interface LoadedResearchSkill extends ResearchSkillDefinition {
+  readonly methodology: string
+}
+
+export async function loadResearchSkillMethodology(definition: ResearchSkillDefinition, maxBytes = 64_000): Promise<LoadedResearchSkill> {
+  if (definition.kind !== 'research' || definition.methodologySource?.type !== 'researchhub_skill') throw new Error(`Research Skill methodology source is unavailable: ${definition.id}`)
+  const sourcePath = resolve(definition.methodologySource.path)
+  const metadata = await stat(sourcePath)
+  if (!metadata.isFile() || metadata.size === 0 || metadata.size > maxBytes) throw new Error(`Research Skill methodology is missing or exceeds ${maxBytes} bytes: ${definition.id}`)
+  const methodology = (await readFile(sourcePath, 'utf8')).trim()
+  if (methodology === '') throw new Error(`Research Skill methodology is empty: ${definition.id}`)
+  return { ...clone(definition), methodology }
 }
 
 export class ResearchSkillRegistry {

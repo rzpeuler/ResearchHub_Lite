@@ -3,7 +3,7 @@ import type { DailyIntelligenceService } from './daily-intelligence-service.ts'
 import type { ResearchService } from './research-service.ts'
 import type { WorkflowService } from './workflow-service.ts'
 import { ApplicationServiceError } from './contracts.ts'
-import { createResearchSkillRegistry, type ResearchSkillDefinition, type ResearchSkillRegistry } from './skill-registry.ts'
+import { createResearchSkillRegistry, loadResearchSkillMethodology, type LoadedResearchSkill, type ResearchSkillDefinition, type ResearchSkillRegistry } from './skill-registry.ts'
 import { createWorkflowDefinitionRegistry, type WorkflowDefinition, type WorkflowDefinitionRegistry } from './workflow-registry.ts'
 import { normalizeResearchRequest, validateResearchDispatchDecision, type ResearchDispatchDecision, type ResearchExecutionSummary, type ResearchRequest } from './research-dispatch-contracts.ts'
 import type { EventAnchor, EarningsReviewPeriod, ValuationMethod } from './contracts.ts'
@@ -14,7 +14,7 @@ import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import type { ReasoningExecutor, ReasoningRequest } from '../../plugins/reasoning/contracts.ts'
 
 export interface ResearchSessionContext {
-  readonly selectedSkills: readonly ResearchSkillDefinition[]
+  readonly selectedSkills: readonly LoadedResearchSkill[]
   readonly sourceLibraryHits: readonly SourceLibraryHit[]
   readonly entities: readonly ResearchDispatchDecision['entities'][number][]
   readonly evidenceRefs: readonly string[]
@@ -221,9 +221,11 @@ export class ResearchDispatchService {
     if (explicit && definition === undefined) throw new ApplicationServiceError('not_found', `Workflow definition not found: ${request.mode.workflowId}`)
     if (this.options.reasoningExecutor !== undefined) {
       const semantic = await this.resolveWithReasoning(request, definition, sourceLibraryHits, callerSignal)
+      await this.validateSkillMethodologies(semantic.decision)
       return { request, decision: semantic.decision, summary: this.summary(request, semantic.decision, definition), sourceLibraryHits, resolution: semantic.resolution }
     }
     const resolved = this.resolve(request)
+    await this.validateSkillMethodologies(resolved.decision)
     return { ...resolved, sourceLibraryHits, resolution: { source: 'deterministic_fallback', attempts: 0, diagnostics: ['reasoning_executor_unconfigured'] } }
   }
 
@@ -279,11 +281,26 @@ export class ResearchDispatchService {
     await this.pendingBundleWrites.get(runId)
     const bundle = await this.getBundle(`research-bundle-${runId}`)
     if (bundle === undefined) return undefined
+    const selectedSkills: LoadedResearchSkill[] = []
+    for (const skill of bundle.decision.skills) {
+      const definition = this.skillRegistry.get(skill.id)
+      if (definition === undefined) throw new ApplicationServiceError('not_found', `Research Skill is no longer registered: ${skill.id}`)
+      selectedSkills.push(await loadResearchSkillMethodology(definition))
+    }
     return {
-      selectedSkills: bundle.decision.skills.map((skill) => this.skillRegistry.get(skill.id)).filter((skill): skill is ResearchSkillDefinition => skill !== undefined),
+      selectedSkills,
       sourceLibraryHits: bundle.sourceLibraryHits,
       entities: bundle.decision.entities,
       evidenceRefs: bundle.sourceLibraryHits.map((hit) => hit.sourceLibraryRef),
+    }
+  }
+
+  private async validateSkillMethodologies(decision: ResearchDispatchDecision): Promise<void> {
+    if (decision.mode !== 'skill_plan') return
+    for (const skill of decision.skills) {
+      const definition = this.skillRegistry.get(skill.id)
+      if (definition === undefined) throw new ApplicationServiceError('not_found', `Research Skill is unavailable: ${skill.id}`)
+      try { await loadResearchSkillMethodology(definition) } catch (error) { throw new ApplicationServiceError('conflict', `Research Skill methodology is unavailable: ${skill.id}`, { cause: error }) }
     }
   }
 

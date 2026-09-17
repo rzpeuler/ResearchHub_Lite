@@ -12,6 +12,7 @@ import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import type { SourceLibraryService } from '../services/source-library.ts'
 import { SkillOnboardingService, registerOnboardedResearchSkill, type SkillArchiveFetcher, type SkillOnboardingInspection, type SkillOnboardingRecord } from '../services/skill-onboarding.ts'
 import type { ResearchDispatchService } from '../services/research-dispatch-service.ts'
+import type { ResourceLoader } from '@earendil-works/pi-coding-agent'
 
 export interface ResearchHubRequestPolicy { readonly structuredKnowledge: boolean; readonly sourceLibrary: boolean; readonly writeKnowledge: boolean }
 export interface ResearchHubPolicyContext { current?: ResearchHubRequestPolicy }
@@ -28,6 +29,8 @@ export interface ResearchHubPiToolContext {
   readonly skillOnboardingService?: SkillOnboardingService
   readonly researchDispatchService?: ResearchDispatchService
   readonly skillArchiveFetcher?: SkillArchiveFetcher
+  readonly resourceLoader?: ResourceLoader
+  readonly piNativeSkillsRoot?: string
   readonly policyContext?: ResearchHubPolicyContext
 }
 
@@ -145,12 +148,23 @@ export function createResearchHubTools(inputContext: ResearchHubPiToolContext): 
     }))
     tools.push(defineTool({
       name: 'install_external_skill', label: 'Install external Skill',
-      description: 'Install and register an inspected GitHub Research Skill only at a pinned commit; unsafe content requires explicit approval.',
-      promptSnippet: 'Install a pinned, inspected external Research Skill with explicit unsafe approval when required',
-      parameters: Type.Object({ url: Type.String(), commit: Type.String(), approveUnsafe: Type.Optional(Type.Boolean()) }),
+      description: 'Install a safe inspected GitHub Research Skill or activate a safe Pi-native Skill only at a pinned commit; unsafe Skills are inspect-only in V1.',
+      promptSnippet: 'Install a safe pinned external Research Skill or activate a safe Pi-native Skill after inspection',
+      parameters: Type.Object({ url: Type.String(), commit: Type.String() }),
       execute: async (_toolCallId, params, signal) => invoke(async () => {
         if (signal?.aborted) throw new ApplicationServiceError('cancelled', 'External Skill installation was cancelled')
-        const record = await context.skillOnboardingService!.onboardGithub({ url: params.url, commit: params.commit }, { approveUnsafe: params.approveUnsafe === true }, context.skillArchiveFetcher)
+        const source = { url: params.url, commit: params.commit }
+        const inspection = await context.skillOnboardingService!.inspectGithubRemote(source, context.skillArchiveFetcher)
+        if (inspection.kind === 'unsafe') throw new ApplicationServiceError('conflict', `UNSAFE_SKILL_REQUIRES_MANUAL_TRUST_REVIEW: ${inspection.errors.join('; ') || inspection.warnings.join('; ') || 'unsafe Skill content'}`)
+        if (inspection.kind === 'unsupported' || inspection.kind === 'knowledge' || inspection.kind === 'utility') throw new ApplicationServiceError('conflict', `EXTERNAL_SKILL_UNSUPPORTED_ACTIVATION: ${inspection.id}`)
+        if (inspection.kind === 'pi_native' && (context.piNativeSkillsRoot === undefined || context.resourceLoader === undefined)) throw new ApplicationServiceError('conflict', 'PI_NATIVE_SKILL_ACTIVATION_UNAVAILABLE: Pi resource loader is not available')
+        const record = await context.skillOnboardingService!.onboardGithub(source, inspection.kind === 'pi_native' ? { destinationRoot: context.piNativeSkillsRoot } : {}, context.skillArchiveFetcher)
+        if (record.kind === 'pi_native') {
+          await context.resourceLoader!.reload()
+          const available = context.resourceLoader!.getSkills().skills.some((skill) => skill.name === record.id)
+          if (!available) throw new ApplicationServiceError('conflict', `PI_NATIVE_SKILL_NOT_DISCOVERABLE: ${record.id}`)
+          return { ...publicSkillInspection(record), activation: 'pi_native', reloaded: true, discoverable: true }
+        }
         const registeredResearchSkill = context.researchDispatchService === undefined ? undefined : registerOnboardedResearchSkill(context.researchDispatchService.skillRegistry, record)
         return { ...publicSkillInspection(record), ...(registeredResearchSkill === undefined ? {} : { registeredResearchSkill }) }
       }, signal),

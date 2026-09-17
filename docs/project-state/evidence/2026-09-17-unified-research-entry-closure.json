@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "mission": "Unified research entry closure C1-C7",
-  "generatedAt": "2026-09-17T12:34:25.477Z",
+  "generatedAt": "2026-09-17T13:14:41.653Z",
   "executionClass": "fixture-backed deterministic acceptance; no authenticated provider E2E claim",
   "lexicalRetrievalName": "Source Library uses lexical Source Retrieval, not vector RAG.",
   "cases": {
@@ -88,7 +88,8 @@
     "SkillOnboardingService reuse": true,
     "40-character commit pin": true,
     "research-only registry": true,
-    "unsafe approval gate": true,
+    "manual trust review required": true,
+    "no Agent unsafe approval bypass": true,
     "no silent fallback install": true,
     "ResearchBundle answer": true,
     "ResearchBundle selected skills": true,

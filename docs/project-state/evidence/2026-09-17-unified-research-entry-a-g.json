@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "mission": "Unified homepage research entry A-G acceptance",
-  "generatedAt": "2026-09-17T12:32:47.192Z",
+  "generatedAt": "2026-09-17T13:14:39.307Z",
   "executionClass": "fixture-backed deterministic acceptance; no authenticated provider E2E claim",
   "cases": {
     "A": {
@@ -13,8 +13,8 @@
         "fiscalYear": 2026,
         "period": "H1"
       },
-      "bundleId": "research-bundle-41554e5a-4dbe-4d3e-a948-6bcd4958c9fd",
-      "reportId": "report-41554e5a-4dbe-4d3e-a948-6bcd4958c9fd",
+      "bundleId": "research-bundle-c459b807-d437-49f5-8236-99685063d3e6",
+      "reportId": "report-c459b807-d437-49f5-8236-99685063d3e6",
       "proposalCount": 1,
       "writeKnowledge": false
     },
@@ -23,7 +23,7 @@
       "boundary": "free query auto-routing",
       "workflow": "earnings_review",
       "summaryMode": "Free Research",
-      "bundleId": "research-bundle-0ceb87b2-2ae8-4886-8bfa-77c6b97f9a6d"
+      "bundleId": "research-bundle-78137f5a-6da5-4da3-ad9d-daf783ba9bd3"
     },
     "C": {
       "status": "passed",

@@ -50,10 +50,10 @@ export class SkillOnboardingService {
     return { id, sourcePath: root, kind, ...(license === undefined ? {} : { license }), dependencies, warnings, errors, provenance: { source: provenance.source ?? root, ...(provenance.pinnedCommit === undefined ? {} : { pinnedCommit: provenance.pinnedCommit }) }, manifest }
   }
 
-  async onboardDirectory(sourcePath: string, options: { readonly source?: string; readonly pinnedCommit?: string; readonly approveUnsafe?: boolean } = {}): Promise<SkillOnboardingRecord> {
-    const inspection = await this.inspectDirectory(sourcePath, options); if (inspection.kind === 'unsafe' && options.approveUnsafe !== true) throw new Error(`Unsafe Skill ${inspection.id} requires explicit approval`); if (inspection.kind === 'unsupported') throw new Error(`Unsupported Skill kind: ${inspection.id}`)
-    const installedPath = resolve(this.installRoot, inspection.id); const recordPath = join(resolve(this.recordRoot), `${inspection.id}.json`); try { const existing = JSON.parse(await readFile(recordPath, 'utf8')) as SkillOnboardingRecord; if (existing.provenance.source === inspection.provenance.source && existing.provenance.pinnedCommit === inspection.provenance.pinnedCommit && existing.installedPath === installedPath) return existing; throw new Error(`Skill ${inspection.id} is already installed from a different provenance`) } catch (error) { const code = (error as NodeJS.ErrnoException).code; if (code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error }
-    await mkdir(this.installRoot, { recursive: true }); await cp(inspection.sourcePath, installedPath, { recursive: true, force: false }); const saved: SkillOnboardingRecord = { ...inspection, installedPath, installedAt: new Date().toISOString() }; await mkdir(this.recordRoot, { recursive: true }); await writeFile(recordPath, `${JSON.stringify(saved, null, 2)}\n`, 'utf8'); return saved
+  async onboardDirectory(sourcePath: string, options: { readonly source?: string; readonly pinnedCommit?: string; readonly approveUnsafe?: boolean; readonly destinationRoot?: string } = {}): Promise<SkillOnboardingRecord> {
+    const inspection = await this.inspectDirectory(sourcePath, options); if (inspection.kind === 'unsafe' && options.approveUnsafe !== true) throw new Error(`UNSAFE_SKILL_REQUIRES_MANUAL_TRUST_REVIEW: Unsafe Skill ${inspection.id} requires explicit approval`); if (inspection.kind === 'unsupported') throw new Error(`Unsupported Skill kind: ${inspection.id}`)
+    const destinationRoot = resolve(options.destinationRoot ?? this.installRoot); const installedPath = resolve(destinationRoot, inspection.id); const recordPath = join(resolve(this.recordRoot), `${inspection.id}.json`); try { const existing = JSON.parse(await readFile(recordPath, 'utf8')) as SkillOnboardingRecord; if (existing.provenance.source === inspection.provenance.source && existing.provenance.pinnedCommit === inspection.provenance.pinnedCommit && existing.installedPath === installedPath) return existing; throw new Error(`Skill ${inspection.id} is already installed from a different provenance`) } catch (error) { const code = (error as NodeJS.ErrnoException).code; if (code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error }
+    await mkdir(destinationRoot, { recursive: true }); await cp(inspection.sourcePath, installedPath, { recursive: true, force: false }); const saved: SkillOnboardingRecord = { ...inspection, installedPath, installedAt: new Date().toISOString() }; await mkdir(this.recordRoot, { recursive: true }); await writeFile(recordPath, `${JSON.stringify(saved, null, 2)}\n`, 'utf8'); return saved
   }
 
   inspectGithub(source: GithubSkillSource): SkillOnboardingInspection {
@@ -67,9 +67,9 @@ export class SkillOnboardingService {
     try { const root = await this.fetchGithubArchive(source, temporaryRoot, fetcher); return await this.inspectDirectory(root, { source: source.url, pinnedCommit: source.commit }) } finally { await rm(temporaryRoot, { recursive: true, force: true }) }
   }
 
-  async onboardGithub(source: GithubSkillSource, options: { readonly approveUnsafe?: boolean } = {}, fetcher: SkillArchiveFetcher = globalThis.fetch): Promise<SkillOnboardingRecord> {
+  async onboardGithub(source: GithubSkillSource, options: { readonly approveUnsafe?: boolean; readonly destinationRoot?: string } = {}, fetcher: SkillArchiveFetcher = globalThis.fetch): Promise<SkillOnboardingRecord> {
     const temporaryRoot = await mkdtemp(join(tmpdir(), 'rhl-github-skill-'))
-    try { const root = await this.fetchGithubArchive(source, temporaryRoot, fetcher); return await this.onboardDirectory(root, { source: source.url, pinnedCommit: source.commit, approveUnsafe: options.approveUnsafe }) } finally { await rm(temporaryRoot, { recursive: true, force: true }) }
+    try { const root = await this.fetchGithubArchive(source, temporaryRoot, fetcher); return await this.onboardDirectory(root, { source: source.url, pinnedCommit: source.commit, approveUnsafe: options.approveUnsafe, destinationRoot: options.destinationRoot }) } finally { await rm(temporaryRoot, { recursive: true, force: true }) }
   }
 
   private async fetchGithubArchive(source: GithubSkillSource, temporaryRoot: string, fetcher: SkillArchiveFetcher): Promise<string> {
@@ -91,7 +91,7 @@ export class SkillOnboardingService {
 
 export function registerOnboardedResearchSkill(registry: ResearchSkillRegistry, record: SkillOnboardingRecord): ResearchSkillDefinition | undefined {
   if (record.kind !== 'research') return undefined
-  const definition: ResearchSkillDefinition = { id: record.id, kind: 'research', ...(typeof record.manifest.researchCapability === 'string' ? { researchCapability: record.manifest.researchCapability } : {}), intentDescription: text(record.manifest.description) ?? `External Research Skill ${record.id}`, whenToUse: text(record.manifest.whenToUse) ?? `Use the approved external Research Skill ${record.id}.`, outputContract: text(record.manifest.outputContract) ?? 'ResearchBundle', enabled: true, scope: 'researchhub' }
+  const definition: ResearchSkillDefinition = { id: record.id, kind: 'research', ...(typeof record.manifest.researchCapability === 'string' ? { researchCapability: record.manifest.researchCapability } : {}), intentDescription: text(record.manifest.description) ?? `External Research Skill ${record.id}`, whenToUse: text(record.manifest.whenToUse) ?? `Use the approved external Research Skill ${record.id}.`, outputContract: text(record.manifest.outputContract) ?? 'ResearchBundle', ...(record.installedPath === undefined ? {} : { methodologySource: { type: 'researchhub_skill' as const, path: join(record.installedPath, 'SKILL.md') } }), enabled: true, scope: 'researchhub' }
   registry.register(definition); return definition
 }
 
@@ -100,7 +100,7 @@ export async function loadOnboardedResearchSkillDefinitions(recordRoot: string):
   try { names = await readdir(resolve(recordRoot)) } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []; throw error }
   const definitions: ResearchSkillDefinition[] = []
   for (const name of names.filter((item) => item.endsWith('.json')).sort()) {
-    try { const value = JSON.parse(await readFile(join(resolve(recordRoot), name), 'utf8')) as SkillOnboardingRecord; const definition = value.kind === 'research' ? { id: value.id, kind: 'research' as const, ...(typeof value.manifest.researchCapability === 'string' ? { researchCapability: value.manifest.researchCapability } : {}), intentDescription: text(value.manifest.description) ?? `External Research Skill ${value.id}`, whenToUse: text(value.manifest.whenToUse) ?? `Use the approved external Research Skill ${value.id}.`, outputContract: text(value.manifest.outputContract) ?? 'ResearchBundle', enabled: true, scope: 'researchhub' as const } : undefined; if (definition) definitions.push(definition) } catch { /* malformed onboarding records remain excluded */ }
+    try { const value = JSON.parse(await readFile(join(resolve(recordRoot), name), 'utf8')) as SkillOnboardingRecord; const definition = value.kind === 'research' ? { id: value.id, kind: 'research' as const, ...(typeof value.manifest.researchCapability === 'string' ? { researchCapability: value.manifest.researchCapability } : {}), intentDescription: text(value.manifest.description) ?? `External Research Skill ${value.id}`, whenToUse: text(value.manifest.whenToUse) ?? `Use the approved external Research Skill ${value.id}.`, outputContract: text(value.manifest.outputContract) ?? 'ResearchBundle', ...(value.installedPath === undefined ? {} : { methodologySource: { type: 'researchhub_skill' as const, path: join(value.installedPath, 'SKILL.md') } }), enabled: true, scope: 'researchhub' as const } : undefined; if (definition) definitions.push(definition) } catch { /* malformed onboarding records remain excluded */ }
   }
   return definitions
 }

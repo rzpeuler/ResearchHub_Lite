@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "mission": "Unified research entry final fix A-C",
+  "generatedAt": "2026-09-17T13:14:41.689Z",
+  "executionClass": "fixture-backed deterministic acceptance; no authenticated GitHub/provider production E2E claim",
+  "cases": {
+    "F1": {
+      "status": "passed",
+      "skillId": "industry-research",
+      "sourceType": "researchhub_skill",
+      "methodologyLoaded": true,
+      "marker": "eight methodology modules",
+      "piContextContainsMethodology": true
+    },
+    "F2": {
+      "status": "passed",
+      "skillId": "external-methodology",
+      "pinnedCommit": "cccccccccccccccccccccccccccccccccccccccc",
+      "installedMethodologyMarker": "MANDATORY_EXTERNAL_METHOD_STEP_ABC",
+      "researchRegistryEntry": true,
+      "piContextContainsMethodology": true
+    },
+    "F3": {
+      "status": "passed",
+      "skillId": "missing-methodology",
+      "safeFailure": true,
+      "genericExecution": false
+    },
+    "F4": {
+      "status": "passed",
+      "installToolSchemaHasAgentApprovalBypass": false
+    },
+    "F5": {
+      "status": "passed",
+      "inspection": "passed",
+      "install": "denied",
+      "errorCode": "UNSAFE_SKILL_REQUIRES_MANUAL_TRUST_REVIEW",
+      "registryEntry": false,
+      "activatedPath": false
+    },
+    "F6": {
+      "status": "passed",
+      "skillId": "pi-native-methodology",
+      "classification": "pi_native",
+      "installationScope": "project .pi/skills",
+      "marker": "MANDATORY_PI_NATIVE_STEP_DEF",
+      "loaderDiscoverable": true,
+      "researchRegistryEntry": false
+    },
+    "F7": {
+      "status": "passed",
+      "reloadDiscoverable": true,
+      "restartDiscoverable": true
+    }
+  },
+  "boundaries": {
+    "research": "installed SKILL.md -> ResearchSkillRegistry methodologySource -> bounded Pi context",
+    "pi_native": "installed SKILL.md -> project .pi/skills -> DefaultResourceLoader.reload/getSkills",
+    "unsafe": "inspect only; Chat install prohibited",
+    "unsupported": "no silent activation; explicit unsupported activation error"
+  },
+  "criteria": {
+    "F1 built-in methodology load": true,
+    "F2 external research methodology": true,
+    "F3 missing methodology safe failure": true,
+    "F4 no Agent unsafe approval bypass": true,
+    "F5 unsafe fail-closed": true,
+    "F6 Pi-native installation": true,
+    "F7 reload/restart discoverability": true,
+    "ResearchHub/Pi namespace separation": true,
+    "no authenticated production claim": true,
+    "bounded methodology size": true,
+    "no repository dump": true
+  }
+}
