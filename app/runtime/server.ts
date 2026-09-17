@@ -433,9 +433,16 @@ export class ResearchHubRuntimeServer {
     const conversationId = this.runtime!.sessionRuntime.getCurrentState().conversationId
     const runId = randomUUID()
     if (operation === 'prompt') {
+      const bundleRunId = this.optionalString(body, 'researchBundleId', 160)
+      const beforeMessageCount = this.runtime!.sessionRuntime.getCurrentMessages().length
       const started = this.runtime!.sessionRuntime.startPrompt(text)
       await started.accepted
-      this.trackBackground(started.completion, () => this.runtime!.sessionRuntime.abort())
+      const completion = started.completion.then(async () => {
+        if (bundleRunId === undefined) return
+        const assistantText = this.runtime!.sessionRuntime.getCurrentMessages().slice(beforeMessageCount).filter((message) => message.role === 'assistant').map((message) => message.content).at(-1) ?? ''
+        await this.runtime!.services.researchDispatchService?.completeSessionResearch(bundleRunId, assistantText)
+      })
+      this.trackBackground(completion, () => this.runtime!.sessionRuntime.abort())
     } else {
       const command = operation === 'steer' ? this.runtime!.sessionRuntime.steer(text) : this.runtime!.sessionRuntime.followUp(text)
       await command

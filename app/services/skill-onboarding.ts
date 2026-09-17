@@ -1,5 +1,7 @@
-import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
-import { basename, join, resolve } from 'node:path'
+import { cp, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { gunzipSync } from 'node:zlib'
+import { tmpdir } from 'node:os'
 import type { ResearchSkillDefinition, ResearchSkillRegistry } from './skill-registry.ts'
 
 export type OnboardedSkillKind = 'pi_native' | 'research' | 'knowledge' | 'utility' | 'unsupported' | 'unsafe'
@@ -16,6 +18,7 @@ export interface SkillOnboardingInspection {
 }
 export interface SkillOnboardingRecord extends SkillOnboardingInspection { readonly installedPath?: string; readonly installedAt?: string }
 export interface GithubSkillSource { readonly url: string; readonly commit: string }
+export interface SkillArchiveFetcher { (input: string, init?: RequestInit): Promise<Response> }
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 const COMMIT = /^[0-9a-f]{40}$/i
@@ -36,7 +39,10 @@ export class SkillOnboardingService {
     const id = idOf(manifest.id ?? basename(root)); const dependencies = Object.keys(record(packageJson.dependencies) ? packageJson.dependencies : {}).sort(); const scripts = record(packageJson.scripts) ? Object.keys(packageJson.scripts) : []
     const warnings: string[] = []; const errors: string[] = []; if (!files.some((file) => basename(file).toLowerCase() === 'skill.md')) warnings.push('SKILL.md is missing')
     if (scripts.some((name) => ['preinstall', 'install', 'postinstall', 'prepare'].includes(name))) errors.push('package lifecycle scripts require review')
+    const scriptText = Object.values(record(packageJson.scripts) ? packageJson.scripts : {}).filter((value): value is string => typeof value === 'string').join('\n')
+    if (/child_process|spawn\(|exec\(|powershell|curl\s|wget\s|Invoke-WebRequest|https?:\/\//i.test(scriptText)) errors.push('package scripts request shell, network, or dynamic execution')
     if (files.some((file) => /(^|[\\/])(?:\.env|id_rsa|credentials\.json)$/i.test(file))) errors.push('secret-like file is present')
+    if (files.some((file) => /\.(?:sh|bash|ps1|bat|cmd|exe|dll|so|dylib)$/i.test(file))) errors.push('executable or shell file is present')
     if (files.some((file) => /(^|[\\/])\.pi([\\/]|$)/i.test(file))) warnings.push('Pi-native content is present')
     const declaredKind = text(manifest.kind); const kind = errors.length ? 'unsafe' : declaredKind !== undefined && KIND_SET.has(declaredKind as OnboardedSkillKind) ? declaredKind as OnboardedSkillKind : files.some((file) => /(^|[\\/])\.pi([\\/]|$)/i.test(file)) ? 'pi_native' : text(manifest.researchCapability) !== undefined ? 'research' : 'unsupported'
     const license = text(manifest.license) ?? text(packageJson.license) ?? (files.some((file) => /^license(?:\.|$)/i.test(basename(file))) ? 'detected-license-file' : undefined)
@@ -46,13 +52,40 @@ export class SkillOnboardingService {
 
   async onboardDirectory(sourcePath: string, options: { readonly source?: string; readonly pinnedCommit?: string; readonly approveUnsafe?: boolean } = {}): Promise<SkillOnboardingRecord> {
     const inspection = await this.inspectDirectory(sourcePath, options); if (inspection.kind === 'unsafe' && options.approveUnsafe !== true) throw new Error(`Unsafe Skill ${inspection.id} requires explicit approval`); if (inspection.kind === 'unsupported') throw new Error(`Unsupported Skill kind: ${inspection.id}`)
-    const installedPath = resolve(this.installRoot, inspection.id); await mkdir(this.installRoot, { recursive: true }); await cp(inspection.sourcePath, installedPath, { recursive: true, force: false }); const record: SkillOnboardingRecord = { ...inspection, installedPath, installedAt: new Date().toISOString() }; await mkdir(this.recordRoot, { recursive: true }); await writeFile(join(resolve(this.recordRoot), `${inspection.id}.json`), `${JSON.stringify(record, null, 2)}\n`, 'utf8'); return record
+    const installedPath = resolve(this.installRoot, inspection.id); const recordPath = join(resolve(this.recordRoot), `${inspection.id}.json`); try { const existing = JSON.parse(await readFile(recordPath, 'utf8')) as SkillOnboardingRecord; if (existing.provenance.source === inspection.provenance.source && existing.provenance.pinnedCommit === inspection.provenance.pinnedCommit && existing.installedPath === installedPath) return existing; throw new Error(`Skill ${inspection.id} is already installed from a different provenance`) } catch (error) { const code = (error as NodeJS.ErrnoException).code; if (code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error }
+    await mkdir(this.installRoot, { recursive: true }); await cp(inspection.sourcePath, installedPath, { recursive: true, force: false }); const saved: SkillOnboardingRecord = { ...inspection, installedPath, installedAt: new Date().toISOString() }; await mkdir(this.recordRoot, { recursive: true }); await writeFile(recordPath, `${JSON.stringify(saved, null, 2)}\n`, 'utf8'); return saved
   }
 
   inspectGithub(source: GithubSkillSource): SkillOnboardingInspection {
     const parsed = new URL(source.url); if (parsed.protocol !== 'https:' || parsed.hostname.toLowerCase() !== 'github.com') throw new TypeError('GitHub Skill source must be an https://github.com URL'); if (!COMMIT.test(source.commit)) throw new TypeError('GitHub Skill onboarding requires a 40-character pinned commit')
     const parts = parsed.pathname.split('/').filter(Boolean); if (parts.length < 2) throw new TypeError('GitHub Skill URL must identify an owner and repository')
     return { id: idOf(`${parts[0]}-${parts[1].replace(/\.git$/, '')}`), sourcePath: source.url, kind: 'unsupported', dependencies: [], warnings: ['Remote source requires local inspection before installation'], errors: [], provenance: { source: source.url, pinnedCommit: source.commit }, manifest: { owner: parts[0], repository: parts[1].replace(/\.git$/, '') } }
+  }
+
+  async inspectGithubRemote(source: GithubSkillSource, fetcher: SkillArchiveFetcher = globalThis.fetch): Promise<SkillOnboardingInspection> {
+    const temporaryRoot = await mkdtemp(join(tmpdir(), 'rhl-github-skill-'))
+    try { const root = await this.fetchGithubArchive(source, temporaryRoot, fetcher); return await this.inspectDirectory(root, { source: source.url, pinnedCommit: source.commit }) } finally { await rm(temporaryRoot, { recursive: true, force: true }) }
+  }
+
+  async onboardGithub(source: GithubSkillSource, options: { readonly approveUnsafe?: boolean } = {}, fetcher: SkillArchiveFetcher = globalThis.fetch): Promise<SkillOnboardingRecord> {
+    const temporaryRoot = await mkdtemp(join(tmpdir(), 'rhl-github-skill-'))
+    try { const root = await this.fetchGithubArchive(source, temporaryRoot, fetcher); return await this.onboardDirectory(root, { source: source.url, pinnedCommit: source.commit, approveUnsafe: options.approveUnsafe }) } finally { await rm(temporaryRoot, { recursive: true, force: true }) }
+  }
+
+  private async fetchGithubArchive(source: GithubSkillSource, temporaryRoot: string, fetcher: SkillArchiveFetcher): Promise<string> {
+    const parsed = new URL(source.url); if (parsed.protocol !== 'https:' || parsed.hostname.toLowerCase() !== 'github.com') throw new TypeError('GitHub Skill source must be an https://github.com URL'); if (!COMMIT.test(source.commit)) throw new TypeError('GitHub Skill onboarding requires a 40-character pinned commit')
+    const parts = parsed.pathname.split('/').filter(Boolean); if (parts.length < 2) throw new TypeError('GitHub Skill URL must identify an owner and repository')
+    const owner = parts[0]; const repository = parts[1].replace(/\.git$/, ''); const response = await fetcher(`https://codeload.github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/tar.gz/${source.commit}`); if (!response.ok) throw new Error(`GitHub archive fetch failed with HTTP ${response.status}`)
+    const archive = Buffer.from(await response.arrayBuffer()); const bytes = gunzipSync(archive); let offset = 0; let rootDirectory: string | undefined
+    while (offset + 512 <= bytes.length) {
+      const header = bytes.subarray(offset, offset + 512); offset += 512; const name = header.toString('utf8', 0, 100).replace(/\0.*$/, ''); if (!name) break
+      const sizeText = header.toString('utf8', 124, 136).replace(/\0.*$/, '').trim(); const size = sizeText === '' ? 0 : Number.parseInt(sizeText, 8); if (!Number.isSafeInteger(size) || size < 0 || offset + size > bytes.length) throw new Error('GitHub archive contains an invalid entry')
+      const type = header[156]; const safeName = name.replace(/\\/g, '/'); const target = resolve(temporaryRoot, safeName); const withinRoot = relative(resolve(temporaryRoot), target); if (withinRoot.startsWith('..') || isAbsolute(withinRoot)) throw new Error('GitHub archive contains a path traversal entry')
+      const firstSlash = safeName.indexOf('/'); if (firstSlash > 0 && rootDirectory === undefined) rootDirectory = safeName.slice(0, firstSlash)
+      if (type === 0 || type === 48) { await mkdir(dirname(target), { recursive: true }); await writeFile(target, bytes.subarray(offset, offset + size)) } else if (type !== 5) throw new Error('GitHub archive contains an unsupported link or special entry')
+      offset += Math.ceil(size / 512) * 512
+    }
+    if (!rootDirectory) throw new Error('GitHub archive is empty'); const root = resolve(temporaryRoot, rootDirectory); await mkdir(root, { recursive: true }); return root
   }
 }
 

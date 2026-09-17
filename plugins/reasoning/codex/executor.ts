@@ -18,6 +18,7 @@ const PROCESS_GROUP_POLL_INTERVAL_MS = 25
 const DEFAULT_MODEL = 'gpt-5.6-luna'
 const CODEX_REASONING_EFFORTS = ['none', 'low', 'medium', 'high', 'xhigh', 'max'] as const
 const execFile = promisify(execFileCallback)
+async function removeInvocationDirectory(path: string): Promise<void> { for (let attempt = 0; attempt < 8; attempt += 1) { try { await rm(path, { recursive: true, force: true }); return } catch (error) { const code = (error as NodeJS.ErrnoException).code; if (code !== 'EBUSY' && code !== 'EPERM') throw error; await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1))) } } await rm(path, { recursive: true, force: true }) }
 
 export type CodexReasoningEffort = (typeof CODEX_REASONING_EFFORTS)[number]
 
@@ -115,7 +116,7 @@ export class CodexReasoningExecutor implements ReasoningExecutor {
       if (error instanceof ReasoningExecutorError) throw error
       throw new ReasoningExecutorError('reasoning_execution_failed', error instanceof Error ? error.message : String(error), { operation: request.operation, operationId, cause: error })
     } finally {
-      if (invocationDirectory) await rm(invocationDirectory, { recursive: true, force: true })
+      if (invocationDirectory) await removeInvocationDirectory(invocationDirectory)
     }
   }
 

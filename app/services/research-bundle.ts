@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import type { ResearchDispatchDecision, ResearchExecutionSummary, ResearchRequest } from './research-dispatch-contracts.ts'
+import type { SourceLibraryHit } from './source-library.ts'
 
 export interface ResearchBundleProposal {
   readonly proposalId: string
@@ -20,6 +21,7 @@ export interface ResearchBundle {
   readonly structuredResult: unknown
   readonly report?: { readonly reportId: string; readonly reportPath?: string }
   readonly proposals: readonly ResearchBundleProposal[]
+  readonly sourceLibraryHits: readonly SourceLibraryHit[]
 }
 
 export interface ResearchBundleStore {
@@ -56,16 +58,16 @@ function findReport(value: unknown, seen = new Set<unknown>()): { readonly repor
   return undefined
 }
 
-export function createResearchBundle(input: { readonly request: ResearchRequest; readonly decision: ResearchDispatchDecision; readonly summary: ResearchExecutionSummary; readonly workflowRunId: string; readonly result: unknown; readonly createdAt?: string }): ResearchBundle {
+export function createResearchBundle(input: { readonly request: ResearchRequest; readonly decision: ResearchDispatchDecision; readonly summary: ResearchExecutionSummary; readonly workflowRunId: string; readonly result: unknown; readonly sourceLibraryHits?: readonly SourceLibraryHit[]; readonly createdAt?: string }): ResearchBundle {
   const workflowRunId = safeId(input.workflowRunId, 'workflowRunId')
   const report = findReport(input.result)
   const proposals = [...new Map(collectProposals(input.result).map((proposal) => [proposal.proposalId, proposal])).values()]
   const status = record(input.result) && typeof input.result.status === 'string' ? input.result.status : 'completed'
-  return { bundleId: `research-bundle-${workflowRunId}`, workflowRunId, createdAt: input.createdAt ?? new Date().toISOString(), request: input.request, decision: input.decision, summary: input.summary, status, structuredResult: input.result, ...(report === undefined ? {} : { report }), proposals }
+  return { bundleId: `research-bundle-${workflowRunId}`, workflowRunId, createdAt: input.createdAt ?? new Date().toISOString(), request: input.request, decision: input.decision, summary: input.summary, status, structuredResult: input.result, ...(report === undefined ? {} : { report }), proposals, sourceLibraryHits: input.sourceLibraryHits ?? [] }
 }
 
 function validateBundle(value: unknown): ResearchBundle {
-  if (!record(value) || typeof value.bundleId !== 'string' || !SAFE_ID.test(value.bundleId) || typeof value.workflowRunId !== 'string' || !SAFE_ID.test(value.workflowRunId) || typeof value.createdAt !== 'string' || Number.isNaN(Date.parse(value.createdAt)) || !record(value.request) || !record(value.decision) || !record(value.summary) || typeof value.status !== 'string' || !('structuredResult' in value) || !Array.isArray(value.proposals)) throw new TypeError('Invalid ResearchBundle')
+  if (!record(value) || typeof value.bundleId !== 'string' || !SAFE_ID.test(value.bundleId) || typeof value.workflowRunId !== 'string' || !SAFE_ID.test(value.workflowRunId) || typeof value.createdAt !== 'string' || Number.isNaN(Date.parse(value.createdAt)) || !record(value.request) || !record(value.decision) || !record(value.summary) || typeof value.status !== 'string' || !('structuredResult' in value) || !Array.isArray(value.proposals) || !Array.isArray(value.sourceLibraryHits)) throw new TypeError('Invalid ResearchBundle')
   return value as unknown as ResearchBundle
 }
 

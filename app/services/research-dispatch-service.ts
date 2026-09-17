@@ -9,6 +9,8 @@ import { normalizeResearchRequest, validateResearchDispatchDecision, type Resear
 import type { EventAnchor, EarningsReviewPeriod, ValuationMethod } from './contracts.ts'
 import type { ResearchBundle, ResearchBundleStore } from './research-bundle.ts'
 import { createResearchBundle } from './research-bundle.ts'
+import type { SourceLibraryService, SourceLibraryHit } from './source-library.ts'
+import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 
 export interface ExtractedResearchArguments {
   readonly arguments: Readonly<Record<string, unknown>>
@@ -34,6 +36,8 @@ export interface ResearchDispatchServiceOptions {
   readonly skillRegistry?: ResearchSkillRegistry
   readonly workflowService?: WorkflowService
   readonly bundleStore?: ResearchBundleStore
+  readonly sourceLibraryService?: SourceLibraryService
+  readonly mountedKnowledgeBaseRoot?: string
 }
 
 const COMPANY_ALIASES: Readonly<Record<string, { readonly symbol: string; readonly name: string }>> = {
@@ -165,6 +169,7 @@ function selectedSkillIds(registry: ResearchSkillRegistry, workflowId: string): 
 export class ResearchDispatchService {
   readonly workflowRegistry: WorkflowDefinitionRegistry
   readonly skillRegistry: ResearchSkillRegistry
+  private readonly pendingBundleWrites = new Map<string, Promise<void>>()
   constructor(private readonly options: ResearchDispatchServiceOptions = {}) {
     this.workflowRegistry = options.workflowRegistry ?? createWorkflowDefinitionRegistry()
     this.skillRegistry = options.skillRegistry ?? createResearchSkillRegistry()
@@ -195,21 +200,44 @@ export class ResearchDispatchService {
     const resolved = this.resolve(input)
     const { decision } = resolved
     if (decision.missingRequiredInputs.length > 0) return { ...resolved, status: 'missing_input' }
-    if (decision.mode === 'free_research') { void this.options.bundleStore?.put(createResearchBundle({ request: resolved.request, decision, summary: resolved.summary, workflowRunId: `free-${randomUUID()}`, result: { status: 'free_research_pending', executionBoundary: 'session' } })).catch(() => undefined); return { ...resolved, status: 'free_research' } }
-    if (decision.mode === 'skill_plan') { void this.options.bundleStore?.put(createResearchBundle({ request: resolved.request, decision, summary: resolved.summary, workflowRunId: `skill-${randomUUID()}`, result: { status: 'skill_plan_pending', executionBoundary: 'session' } })).catch(() => undefined); return { ...resolved, status: 'skill_plan' } }
+    if (decision.mode === 'free_research') { const runId = `free-${randomUUID()}`; this.schedulePendingBundle(resolved.request, decision, resolved.summary, runId, { status: 'free_research_pending', executionBoundary: 'session' }); return { ...resolved, status: 'free_research', runId } }
+    if (decision.mode === 'skill_plan') { const runId = `skill-${randomUUID()}`; this.schedulePendingBundle(resolved.request, decision, resolved.summary, runId, { status: 'skill_plan_pending', executionBoundary: 'session' }); return { ...resolved, status: 'skill_plan', runId } }
     const workflow = decision.workflow
     if (workflow === undefined) throw new ApplicationServiceError('failed', 'Validated workflow decision did not include a workflow')
     const definition = this.workflowRegistry.get(workflow.id)
     if (definition === undefined) throw new ApplicationServiceError('not_found', `Workflow definition not found: ${workflow.id}`)
     const runId = randomUUID()
     const started = this.startWorkflow(definition.id, workflow.arguments, runId, callerSignal, resolved.request.persistencePolicy.writeKnowledge, resolved.request.contextPolicy.structuredKnowledge)
-    const completion = started.then(async (result) => { const bundle = createResearchBundle({ request: resolved.request, decision, summary: resolved.summary, workflowRunId: runId, result }); await this.options.bundleStore?.put(bundle); return result })
+    const completion = started.then(async (result) => { await this.persistBundle(resolved.request, decision, resolved.summary, runId, result); return result })
     completion.catch(() => undefined)
     return { ...resolved, status: 'started', runId, ...(this.options.workflowService?.getWorkflowStatus(runId) === undefined ? {} : { workflow: this.options.workflowService.getWorkflowStatus(runId) }), completion }
   }
 
   async getBundle(bundleId: string): Promise<ResearchBundle | undefined> { return this.options.bundleStore?.get(bundleId) }
   async listBundles(limit?: number): Promise<readonly ResearchBundle[]> { return this.options.bundleStore?.list(limit) ?? [] }
+
+  async completeSessionResearch(runId: string, assistantText: string): Promise<void> {
+    if (!this.options.bundleStore) return
+    await this.pendingBundleWrites.get(runId)
+    const bundle = await this.options.bundleStore.get(`research-bundle-${runId}`)
+    if (!bundle) return
+    const answer = assistantText.trim().slice(0, 50_000)
+    const result = answer === '' ? { status: 'failed', executionBoundary: 'session', error: 'No assistant output was captured for the Free Research session.' } : { status: 'completed', executionBoundary: 'session', answer }
+    await this.options.bundleStore.put({ ...bundle, status: result.status, structuredResult: result })
+  }
+
+  private async persistBundle(request: ResearchRequest, decision: ResearchDispatchDecision, summary: ResearchExecutionSummary, workflowRunId: string, result: unknown): Promise<void> {
+    if (!this.options.bundleStore) return
+    let sourceLibraryHits: readonly SourceLibraryHit[] = []
+    if (request.contextPolicy.sourceLibrary && this.options.sourceLibraryService && this.options.mountedKnowledgeBaseRoot) { try { const handle = await new KnowledgeBaseRegistry().mount(this.options.mountedKnowledgeBaseRoot); sourceLibraryHits = await this.options.sourceLibraryService.search(handle, { query: request.query, limit: 20 }) } catch { /* unavailable derived context never becomes a fabricated hit */ } }
+    await this.options.bundleStore.put(createResearchBundle({ request, decision, summary, workflowRunId, result, sourceLibraryHits }))
+  }
+
+  private schedulePendingBundle(request: ResearchRequest, decision: ResearchDispatchDecision, summary: ResearchExecutionSummary, workflowRunId: string, result: unknown): void {
+    const write = this.persistBundle(request, decision, summary, workflowRunId, result)
+    this.pendingBundleWrites.set(workflowRunId, write)
+    void write.finally(() => { if (this.pendingBundleWrites.get(workflowRunId) === write) this.pendingBundleWrites.delete(workflowRunId) }).catch(() => undefined)
+  }
 
   private bestWorkflow(query: string): WorkflowDefinition | undefined {
     const candidates = this.workflowRegistry.list().map((definition) => ({ definition, score: scoreWorkflow(definition, query) }))
