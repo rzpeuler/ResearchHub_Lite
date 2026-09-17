@@ -16,6 +16,7 @@
     "brief:morning": "tsx scripts/daily-brief-cli.ts morning",
     "brief:evening": "tsx scripts/daily-brief-cli.ts evening",
     "acceptance:unified-research": "tsx scripts/acceptance-unified-research.ts",
+    "acceptance:unified-research-closure": "tsx scripts/acceptance-unified-research-closure.ts",
     "test": "npm run client:test && npm run test:node",
     "test:node": "node tests/run-node-tests.mjs",
     "document-parser:check": "node scripts/document-parser-runtime.mjs --check",

@@ -29,7 +29,7 @@ import { ResearchDispatchService } from '../services/research-dispatch-service.t
 import { FileResearchBundleStore } from '../services/research-bundle.ts'
 import { SourceLibraryService } from '../services/source-library.ts'
 import { createResearchSkillRegistry } from '../services/skill-registry.ts'
-import { loadOnboardedResearchSkillDefinitions } from '../services/skill-onboarding.ts'
+import { loadOnboardedResearchSkillDefinitions, SkillOnboardingService } from '../services/skill-onboarding.ts'
 
 export class ResearchHubApplicationRuntime {
   readonly cwd: string
@@ -99,8 +99,9 @@ export class ResearchHubApplicationRuntime {
     }
     const skillRegistry = createResearchSkillRegistry(); for (const definition of await loadOnboardedResearchSkillDefinitions(join(cwd, 'runtime-data', 'skill-onboarding'))) { try { skillRegistry.register(definition) } catch { /* duplicate or invalid external records remain excluded */ } }
     const sourceLibraryService = new SourceLibraryService(join(cwd, 'runtime-data', 'source-library'))
-    const researchDispatchService = new ResearchDispatchService({ researchService, dailyIntelligenceService, workflowService, skillRegistry, bundleStore: new FileResearchBundleStore(join(cwd, 'runtime-data', 'research-bundles')), sourceLibraryService, mountedKnowledgeBaseRoot })
-    const services = { knowledgeService, knowledgeGraphService, reviewService, workflowService, productionService, researchDispatchService, sourceLibraryService, ...(researchService === undefined ? {} : { researchService }), dailyIntelligenceService }
+    const skillOnboardingService = new SkillOnboardingService(join(cwd, 'runtime-data', 'skill-onboarding', 'installed'), join(cwd, 'runtime-data', 'skill-onboarding'))
+    const researchDispatchService = new ResearchDispatchService({ researchService, dailyIntelligenceService, workflowService, skillRegistry, bundleStore: new FileResearchBundleStore(join(cwd, 'runtime-data', 'research-bundles')), sourceLibraryService, mountedKnowledgeBaseRoot, reasoningExecutor })
+    const services = { knowledgeService, knowledgeGraphService, reviewService, workflowService, productionService, researchDispatchService, sourceLibraryService, skillOnboardingService, ...(researchService === undefined ? {} : { researchService }), dailyIntelligenceService }
     const sessionManager = options.sessionManager ?? SessionManager.create(cwd, options.sessionDir)
     try {
       const sessionRuntime = await createResearchHubSessionRuntime({ cwd, agentDir, modelRuntime, sessionManager, applicationServices: services, mountedKnowledgeBaseRoot, workspaceRoot, model: selectedModel, reasoningExecutor, settingsManager: options.settingsManager, resourceLoader: options.resourceLoader, researchService, dailyIntelligenceService })

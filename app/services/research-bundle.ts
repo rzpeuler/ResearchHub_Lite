@@ -10,6 +10,18 @@ export interface ResearchBundleProposal {
   readonly payload: Readonly<Record<string, unknown>>
 }
 
+export interface ResearchSessionResult {
+  readonly status: 'completed' | 'failed'
+  readonly executionBoundary: 'session'
+  readonly answer?: string
+  readonly error?: string
+  readonly selectedSkills: readonly ResearchBundle['decision']['skills'][number][]
+  readonly sourceLibraryHits: readonly SourceLibraryHit[]
+  readonly entities: readonly ResearchBundle['decision']['entities'][number][]
+  readonly evidenceRefs: readonly string[]
+  readonly proposalCandidates: readonly ResearchBundleProposal[]
+}
+
 export interface ResearchBundle {
   readonly bundleId: string
   readonly workflowRunId: string

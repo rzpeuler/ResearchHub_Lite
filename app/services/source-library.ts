@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path'
 import { getRaw, readRaw } from '../../knowledge/raw/raw-archive.ts'
 import { parseYaml } from '../../knowledge/storage/yaml.ts'
 import type { KnowledgeBaseHandle } from '../../knowledge/storage/handle.ts'
+import { readCanonicalV04Assets } from '../../knowledge/storage/canonical-v04-loader.ts'
 
 export interface SourceLibraryHit {
   readonly sourceLibraryRef: string
@@ -12,6 +13,11 @@ export interface SourceLibraryHit {
   readonly contentHash: string
   readonly chunkIndex: number
   readonly provenance: { readonly rawRef: string }
+  readonly sourceRef?: string
+  readonly page?: number
+  readonly section?: string
+  readonly parserVersion?: string
+  readonly chunkerVersion?: string
 }
 
 interface SourceLibraryChunk extends SourceLibraryHit { readonly normalizedText: string }
@@ -33,10 +39,12 @@ export class SourceLibraryService {
     try { parsed = parseYaml(await readFile(rawRegistryPath, 'utf8'), rawRegistryPath) } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') parsed = {}; else throw error }
     const refs = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? Object.keys(parsed).sort() : []
     const chunks: SourceLibraryChunk[] = []
+    const sourceRefsByRaw = new Map<string, string>()
+    try { for (const item of (await readCanonicalV04Assets(handle.rootRef)).objects.filter((item) => item.kind === 'source')) { const value = item.value as { id?: unknown; rawRefs?: unknown }; if (typeof value.id === 'string' && Array.isArray(value.rawRefs)) for (const rawRef of value.rawRefs) if (typeof rawRef === 'string') sourceRefsByRaw.set(rawRef, value.id) } } catch { /* Source Library remains usable when canonical Source metadata is unavailable. */ }
     for (const rawRef of refs) {
       try {
         const raw = await getRaw(handle, rawRef); const content = (await readRaw(handle, rawRef)).toString('utf8'); const title = raw.manifest.suppliedMetadata.title ?? raw.manifest.originalFilename ?? rawRef
-        chunkText(content).forEach((chunk, chunkIndex) => { const normalizedText = chunk.toLocaleLowerCase().normalize('NFKC'); chunks.push({ sourceLibraryRef: `source-library:${rawRef}:${chunkIndex}`, rawRef, title, excerpt: chunk.slice(0, 500), contentHash: raw.manifest.contentHash, chunkIndex, provenance: { rawRef }, normalizedText }) })
+        chunkText(content).forEach((chunk, chunkIndex) => { const normalizedText = chunk.toLocaleLowerCase().normalize('NFKC'); const sourceRef = sourceRefsByRaw.get(rawRef); chunks.push({ sourceLibraryRef: `source-library:${rawRef}:${chunkIndex}`, rawRef, title, excerpt: chunk.slice(0, 500), contentHash: raw.manifest.contentHash, chunkIndex, provenance: { rawRef }, ...(sourceRef === undefined ? {} : { sourceRef }), chunkerVersion: 'source-library-lexical-v1', normalizedText }) })
       } catch { /* malformed raw entries do not become searchable evidence */ }
     }
     const builtAt = new Date().toISOString(); this.index = { version: 1, knowledgeBaseId: handle.knowledgeBaseId, builtAt, chunks }; await mkdir(this.indexRoot, { recursive: true }); await writeFile(join(this.indexRoot, `${handle.knowledgeBaseId}.json`), `${JSON.stringify(this.index, null, 2)}\n`, 'utf8'); return { sourceCount: new Set(chunks.map((chunk) => chunk.rawRef)).size, chunkCount: chunks.length, builtAt }

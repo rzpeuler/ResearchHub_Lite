@@ -444,7 +444,8 @@ export class ResearchHubRuntimeServer {
         policy = { ...request.contextPolicy, ...request.persistencePolicy }
       }
       const beforeMessageCount = this.runtime!.sessionRuntime.getCurrentMessages().length
-      const started = this.runtime!.sessionRuntime.startPrompt(text, policy)
+      const researchContext = bundleRunId === undefined ? undefined : await this.runtime!.services.researchDispatchService?.getSessionResearchContext(bundleRunId)
+      const started = this.runtime!.sessionRuntime.startPrompt(text, policy, researchContext)
       await started.accepted
       const completion = started.completion.then(async () => {
         if (bundleRunId === undefined) return
@@ -523,7 +524,7 @@ export class ResearchHubRuntimeServer {
     const body = await this.readJson(request)
     this.ensureRunning()
     const controller = new AbortController()
-    const started = service.start(body, controller.signal)
+    const started = await service.startAsync(body, controller.signal)
     if (started.completion !== undefined) {
       this.trackBackground(started.completion, () => {
         controller.abort()

@@ -13,6 +13,7 @@ export const REASONING_OPERATIONS = [
   'event_research_synthesis',
   'thesis_attack_design',
   'thesis_red_team_synthesis',
+  'research_dispatch_resolution',
   'industry_research_design',
   'industry_module_analysis',
   'industry_cross_module_synthesis',

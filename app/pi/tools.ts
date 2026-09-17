@@ -8,6 +8,10 @@ import type { WorkflowService } from '../services/workflow-service.ts'
 import type { ResearchService } from '../services/research-service.ts'
 import type { DailyIntelligenceService } from '../services/daily-intelligence-service.ts'
 import type { DailyBriefInput } from '../services/daily-intelligence-service.ts'
+import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
+import type { SourceLibraryService } from '../services/source-library.ts'
+import { SkillOnboardingService, registerOnboardedResearchSkill, type SkillArchiveFetcher, type SkillOnboardingInspection, type SkillOnboardingRecord } from '../services/skill-onboarding.ts'
+import type { ResearchDispatchService } from '../services/research-dispatch-service.ts'
 
 export interface ResearchHubRequestPolicy { readonly structuredKnowledge: boolean; readonly sourceLibrary: boolean; readonly writeKnowledge: boolean }
 export interface ResearchHubPolicyContext { current?: ResearchHubRequestPolicy }
@@ -19,6 +23,11 @@ export interface ResearchHubPiToolContext {
   readonly workflowService: WorkflowService
   readonly researchService?: ResearchService
   readonly dailyIntelligenceService?: DailyIntelligenceService
+  readonly sourceLibraryService?: SourceLibraryService
+  readonly mountedKnowledgeBaseRoot?: string
+  readonly skillOnboardingService?: SkillOnboardingService
+  readonly researchDispatchService?: ResearchDispatchService
+  readonly skillArchiveFetcher?: SkillArchiveFetcher
   readonly policyContext?: ResearchHubPolicyContext
 }
 
@@ -52,6 +61,20 @@ function scopedDailyService<T extends object>(service: T | undefined, policyCont
 function scopedProductionService<T extends object>(service: T, policyContext: ResearchHubPolicyContext | undefined): T {
   if (policyContext === undefined) return service
   return new Proxy(service, { get(target, property, receiver) { if (policyContext.current?.writeKnowledge === false && property === 'ingestDocument') return (() => { throw new ApplicationServiceError('conflict', 'Knowledge production is disabled for this ResearchRequest') }) as T[Extract<keyof T, string>]; return Reflect.get(target, property, receiver) } })
+}
+
+function publicSkillInspection(value: SkillOnboardingInspection | SkillOnboardingRecord): Record<string, unknown> {
+  return {
+    id: value.id,
+    kind: value.kind,
+    ...(value.license === undefined ? {} : { license: value.license }),
+    dependencies: value.dependencies,
+    warnings: value.warnings,
+    errors: value.errors,
+    provenance: value.provenance,
+    manifest: value.manifest,
+    ...(!('installedAt' in value) || value.installedAt === undefined ? {} : { installedAt: value.installedAt }),
+  }
 }
 
 export function createResearchHubTools(inputContext: ResearchHubPiToolContext): ToolDefinition[] {
@@ -91,6 +114,47 @@ export function createResearchHubTools(inputContext: ResearchHubPiToolContext): 
     tools.push(start('morning')); tools.push(start('evening'))
     tools.push(defineTool({ name: 'get_daily_brief', label: 'Get daily brief', description: 'Read one bounded persisted Daily Intelligence Brief.', promptSnippet: 'Read a Daily Intelligence Brief', parameters: Type.Object({ reportId: Type.String() }), execute: async (_toolCallId, params) => invoke(() => context.dailyIntelligenceService!.getBrief(params.reportId)) }))
     tools.push(defineTool({ name: 'list_daily_briefs', label: 'List daily briefs', description: 'List recent persisted Daily Intelligence Briefs.', promptSnippet: 'List Daily Intelligence Briefs', parameters: Type.Object({ limit: Type.Optional(Type.Number()) }), execute: async (_toolCallId, params) => invoke(async () => { integerParam(params.limit, 'limit'); return context.dailyIntelligenceService!.listBriefs(params.limit) }) }))
+  }
+  if (context.sourceLibraryService && context.mountedKnowledgeBaseRoot) {
+    tools.push(defineTool({
+      name: 'search_source_library', label: 'Search Source Library',
+      description: 'Search the lexical Source Library before reasoning and return bounded hits with raw-source provenance.',
+      promptSnippet: 'Search the lexical Source Library when the ResearchRequest policy permits it',
+      parameters: Type.Object({ query: Type.String(), limit: Type.Optional(Type.Number()) }),
+      execute: async (_toolCallId, params, signal) => invoke(async () => {
+        if (context.policyContext?.current?.sourceLibrary === false) throw new ApplicationServiceError('conflict', 'Source Library is disabled for this ResearchRequest')
+        integerParam(params.limit, 'limit')
+        if (signal?.aborted) throw new ApplicationServiceError('cancelled', 'Source Library search was cancelled')
+        const handle = await new KnowledgeBaseRegistry().mount(context.mountedKnowledgeBaseRoot!)
+        return context.sourceLibraryService!.search(handle, { query: params.query, limit: params.limit })
+      }, signal),
+    }))
+  }
+  if (context.skillOnboardingService) {
+    const sourceParameters = Type.Object({ url: Type.String(), commit: Type.String() })
+    tools.push(defineTool({
+      name: 'inspect_external_skill', label: 'Inspect external Skill',
+      description: 'Inspect an HTTPS GitHub Skill at an exact 40-character commit. Inspection never installs or registers it.',
+      promptSnippet: 'Inspect a pinned external GitHub Skill before any installation decision',
+      parameters: sourceParameters,
+      execute: async (_toolCallId, params, signal) => invoke(async () => {
+        if (signal?.aborted) throw new ApplicationServiceError('cancelled', 'External Skill inspection was cancelled')
+        const inspection = await context.skillOnboardingService!.inspectGithubRemote({ url: params.url, commit: params.commit }, context.skillArchiveFetcher)
+        return publicSkillInspection(inspection)
+      }, signal),
+    }))
+    tools.push(defineTool({
+      name: 'install_external_skill', label: 'Install external Skill',
+      description: 'Install and register an inspected GitHub Research Skill only at a pinned commit; unsafe content requires explicit approval.',
+      promptSnippet: 'Install a pinned, inspected external Research Skill with explicit unsafe approval when required',
+      parameters: Type.Object({ url: Type.String(), commit: Type.String(), approveUnsafe: Type.Optional(Type.Boolean()) }),
+      execute: async (_toolCallId, params, signal) => invoke(async () => {
+        if (signal?.aborted) throw new ApplicationServiceError('cancelled', 'External Skill installation was cancelled')
+        const record = await context.skillOnboardingService!.onboardGithub({ url: params.url, commit: params.commit }, { approveUnsafe: params.approveUnsafe === true }, context.skillArchiveFetcher)
+        const registeredResearchSkill = context.researchDispatchService === undefined ? undefined : registerOnboardedResearchSkill(context.researchDispatchService.skillRegistry, record)
+        return { ...publicSkillInspection(record), ...(registeredResearchSkill === undefined ? {} : { registeredResearchSkill }) }
+      }, signal),
+    }))
   }
   return tools
 }

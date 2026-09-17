@@ -6,20 +6,20 @@ import { ResearchSkillRegistry } from '../../../app/services/skill-registry.ts'
 
 test('explicit Earnings Review extracts company, fiscal year, and half-year period', () => {
   const registry = createWorkflowDefinitionRegistry()
-  const result = extractWorkflowArguments(registry.get('earnings_review')!, '帮我分析贵州茅台 2026 年半年报相比去年最重要的变化。')
-  assert.deepEqual(result.arguments, { symbol: '600519', name: '贵州茅台', fiscalYear: 2026, period: 'H1' })
+  const result = extractWorkflowArguments(registry.get('earnings_review')!, '帮我分析 600519 2026 年半年报相比去年最重要的变化。')
+  assert.deepEqual(result.arguments, { symbol: '600519', fiscalYear: 2026, period: 'H1' })
   assert.deepEqual(result.missingRequiredInputs, [])
 })
 
 test('Free Research prefers a matching existing Workflow over a Skill plan', () => {
-  const resolved = new ResearchDispatchService().resolve({ query: '研究贵州茅台 2026 年半年报', mode: { type: 'free_research' }, contextPolicy: { structuredKnowledge: true, sourceLibrary: true }, persistencePolicy: { writeKnowledge: false } })
+  const resolved = new ResearchDispatchService().resolve({ query: '研究 600519 2026 年半年报', mode: { type: 'free_research' }, contextPolicy: { structuredKnowledge: true, sourceLibrary: true }, persistencePolicy: { writeKnowledge: false } })
   assert.equal(resolved.decision.mode, 'workflow')
   assert.equal(resolved.decision.workflow?.id, 'earnings_review')
   assert.equal(resolved.summary.mode, 'Free Research')
 })
 
 test('explicit Workflow selection is never replaced by automatic routing', () => {
-  const resolved = new ResearchDispatchService().resolve({ query: '研究贵州茅台 2026 年半年报', mode: { type: 'workflow', workflowId: 'valuation' }, contextPolicy: { structuredKnowledge: false, sourceLibrary: false }, persistencePolicy: { writeKnowledge: true } })
+  const resolved = new ResearchDispatchService().resolve({ query: '研究 600519 2026 年半年报', mode: { type: 'workflow', workflowId: 'valuation' }, contextPolicy: { structuredKnowledge: false, sourceLibrary: false }, persistencePolicy: { writeKnowledge: true } })
   assert.equal(resolved.decision.workflow?.id, 'valuation')
   assert.equal(resolved.decision.missingRequiredInputs.includes('symbol'), false)
   assert.deepEqual(resolved.decision.contextPolicy, { structuredKnowledge: false, sourceLibrary: false })
@@ -38,7 +38,7 @@ test('English FY notation and explicit Daily Intelligence are dispatched with co
   const service = new ResearchDispatchService()
   const earnings = service.resolve({ query: 'Review FY2026 earnings for 600519', mode: { type: 'free_research' } })
   assert.equal(earnings.decision.workflow?.id, 'earnings_review')
-  assert.deepEqual(earnings.decision.workflow?.arguments, { symbol: '600519', name: '贵州茅台', fiscalYear: 2026, period: 'FY' })
+  assert.deepEqual(earnings.decision.workflow?.arguments, { symbol: '600519', fiscalYear: 2026, period: 'FY' })
   const daily = service.resolve({ query: '生成 morning brief 2026-09-17', mode: { type: 'workflow', workflowId: 'daily_intelligence' } })
   assert.deepEqual(daily.decision.workflow?.arguments, { briefType: 'morning', tradeDate: '2026-09-17' })
   assert.deepEqual(daily.decision.missingRequiredInputs, [])
@@ -49,7 +49,7 @@ test('started dispatch persists one ResearchBundle from the workflow result and 
   const store = new (class { readonly values = new Map<string, unknown>(); async put(bundle: { bundleId: string }) { this.values.set(bundle.bundleId, bundle) }; async get(id: string) { return this.values.get(id) }; async list() { return [...this.values.values()] } })()
   const research = ({ startEarningsReview: (input: unknown) => { calls.push(input); return { completion: Promise.resolve({ status: 'completed', report: { reportId: 'earnings-report', outputPath: 'earnings-report.md' }, research: { proposals: [{ proposalId: 'earnings-proposal', kind: 'claim' }] } }) } } } as never)
   const service = new ResearchDispatchService({ researchService: research, bundleStore: store as never })
-  const started = service.start({ query: '贵州茅台 2026 年半年报', mode: { type: 'workflow', workflowId: 'earnings_review' }, contextPolicy: { structuredKnowledge: true, sourceLibrary: true }, persistencePolicy: { writeKnowledge: false } })
+  const started = service.start({ query: '600519 2026 年半年报', mode: { type: 'workflow', workflowId: 'earnings_review' }, contextPolicy: { structuredKnowledge: true, sourceLibrary: true }, persistencePolicy: { writeKnowledge: false } })
   await started.completion
   assert.equal((calls[0] as { writeKnowledge: boolean }).writeKnowledge, false)
   const bundle = await service.getBundle(`research-bundle-${started.runId!}`) as { report?: { reportId: string }; proposals: readonly { proposalId: string }[] }
@@ -60,5 +60,24 @@ test('session-bound ResearchBundle is finalized from the captured assistant outp
   const values = new Map<string, any>(); const store = { async put(bundle: any) { values.set(bundle.bundleId, bundle) }, async get(id: string) { return values.get(id) }, async list() { return [...values.values()] } }
   const service = new ResearchDispatchService({ bundleStore: store as never }); const started = service.start({ query: '整理一个泛化研究问题' }); assert.equal(started.status, 'free_research'); assert.ok(started.runId)
   await service.completeSessionResearch(started.runId!, 'captured assistant answer')
-  const bundle = values.get(`research-bundle-${started.runId!}`); assert.equal(bundle.status, 'completed'); assert.deepEqual(bundle.structuredResult, { status: 'completed', executionBoundary: 'session', answer: 'captured assistant answer' })
+  const bundle = values.get(`research-bundle-${started.runId!}`); assert.equal(bundle.status, 'completed'); assert.deepEqual(bundle.structuredResult, { status: 'completed', executionBoundary: 'session', answer: 'captured assistant answer', selectedSkills: [], sourceLibraryHits: [], entities: [], evidenceRefs: [], proposalCandidates: [] })
+})
+
+test('Name-only company mentions are unresolved without Knowledge or semantic identity evidence', () => {
+  const resolved = new ResearchDispatchService().resolve({ query: '研究贵州茅台 2026 年半年报', mode: { type: 'workflow', workflowId: 'earnings_review' } })
+  assert.equal(resolved.decision.missingRequiredInputs.includes('symbol'), true)
+})
+
+test('semantic resolver uses the ReasoningExecutor boundary and repairs one invalid output', async () => {
+  const calls: string[] = []
+  const valid = { mode: 'workflow', workflow: { id: 'earnings_review', confidence: 0.93, arguments: { symbol: '600519', fiscalYear: 2026, period: 'H1', name: '贵州茅台' } }, skills: [], entities: [{ type: 'company', value: '贵州茅台', confidence: 0.99 }], missingRequiredInputs: [], contextPolicy: { structuredKnowledge: true, sourceLibrary: true }, persistencePolicy: { writeKnowledge: false }, rationale: 'Semantic earnings intent.' }
+  const service = new ResearchDispatchService({ reasoningExecutor: { capabilities: () => ({ maxContextTokens: 1000, maxOutputTokens: 1000, structuredOutputSupport: true, maxConcurrency: 1 }), execute: async (request) => { calls.push(request.operation); return { operation: request.operation, output: calls.length === 1 ? { mode: 'workflow' } : valid } } } })
+  const resolved = await service.resolveAsync({ query: '最近一次披露后贵州茅台经营变化最值得关注什么？' })
+  assert.equal(resolved.decision.workflow?.id, 'earnings_review'); assert.equal(resolved.decision.workflow?.arguments.symbol, '600519'); assert.deepEqual(calls, ['research_dispatch_resolution', 'research_dispatch_resolution']); assert.equal(resolved.resolution.source, 'bounded_repair')
+})
+
+test('semantic resolver cannot replace an explicit Workflow or policy', async () => {
+  const service = new ResearchDispatchService({ reasoningExecutor: { capabilities: () => ({ maxContextTokens: 1000, maxOutputTokens: 1000, structuredOutputSupport: true, maxConcurrency: 1 }), execute: async (request) => ({ operation: request.operation, output: { mode: 'workflow', workflow: { id: 'company_research', confidence: 1, arguments: { symbol: '600519' } }, skills: [], entities: [], missingRequiredInputs: [], contextPolicy: { structuredKnowledge: true, sourceLibrary: true }, persistencePolicy: { writeKnowledge: false }, rationale: 'attempted replacement' } }) } })
+  const resolved = await service.resolveAsync({ query: '请估值 600519', mode: { type: 'workflow', workflowId: 'valuation' }, contextPolicy: { structuredKnowledge: false, sourceLibrary: false }, persistencePolicy: { writeKnowledge: true } })
+  assert.equal(resolved.decision.workflow?.id, 'valuation'); assert.deepEqual(resolved.decision.contextPolicy, { structuredKnowledge: false, sourceLibrary: false }); assert.equal(resolved.resolution.source, 'deterministic_fallback')
 })

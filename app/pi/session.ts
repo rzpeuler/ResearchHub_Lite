@@ -80,7 +80,7 @@ export async function createResearchHubPiSession(options: ResearchHubPiSessionOp
     return { knowledgeService, knowledgeGraphService, productionService, reviewService, workflowService }
   })()
   const { knowledgeService, productionService, reviewService, workflowService } = applicationServices
-  const customTools = createResearchHubTools({ knowledgeService, productionService, reviewService, workflowService, researchService: options.researchService ?? applicationServices.researchService, dailyIntelligenceService: options.dailyIntelligenceService ?? applicationServices.dailyIntelligenceService, policyContext: options.policyContext })
+  const customTools = createResearchHubTools({ knowledgeService, productionService, reviewService, workflowService, researchService: options.researchService ?? applicationServices.researchService, dailyIntelligenceService: options.dailyIntelligenceService ?? applicationServices.dailyIntelligenceService, sourceLibraryService: applicationServices.sourceLibraryService, mountedKnowledgeBaseRoot, skillOnboardingService: applicationServices.skillOnboardingService, researchDispatchService: applicationServices.researchDispatchService, policyContext: options.policyContext })
   const settingsManager = options.settingsManager ?? SettingsManager.create(options.cwd, agentDir, { projectTrusted: true })
   const loader = options.resourceLoader ?? new DefaultResourceLoader({ cwd: options.cwd, agentDir, settingsManager, systemPrompt: RESEARCHHUB_PI_SYSTEM_PROMPT, extensionFactories: mountedKnowledgeBaseRoot ? [protectionExtension(mountedKnowledgeBaseRoot, options.cwd)] : [] })
   if (!options.resourceLoader) await loader.reload()

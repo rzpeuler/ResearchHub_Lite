@@ -11,6 +11,7 @@ import type { DailyIntelligenceService } from '../services/daily-intelligence-se
 import type { ResearchAcquisitionPlugin } from '../../plugins/research-acquisition/contracts.ts'
 import type { ResearchDispatchService } from '../services/research-dispatch-service.ts'
 import type { SourceLibraryService } from '../services/source-library.ts'
+import type { SkillOnboardingService } from '../services/skill-onboarding.ts'
 
 export interface SafeConversationSummary {
   readonly conversationId: string
@@ -45,6 +46,7 @@ export interface ResearchHubApplicationServices {
   readonly workflowService: WorkflowService
   readonly researchDispatchService?: ResearchDispatchService
   readonly sourceLibraryService?: SourceLibraryService
+  readonly skillOnboardingService?: SkillOnboardingService
   readonly productionService: ProductionService
   readonly researchService?: ResearchService
   readonly dailyIntelligenceService?: DailyIntelligenceService

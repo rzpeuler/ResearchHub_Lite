@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "mission": "Unified research entry closure C1-C7",
+  "generatedAt": "2026-09-17T12:34:25.477Z",
+  "executionClass": "fixture-backed deterministic acceptance; no authenticated provider E2E claim",
+  "lexicalRetrievalName": "Source Library uses lexical Source Retrieval, not vector RAG.",
+  "cases": {
+    "C1": {
+      "status": "passed",
+      "semanticBoundary": "ReasoningExecutor",
+      "operation": "research_dispatch_resolution",
+      "callCount": 1,
+      "selectedWorkflow": "earnings_review",
+      "nonKeywordQuery": true
+    },
+    "C2": {
+      "status": "passed",
+      "explicitWorkflow": "valuation",
+      "policyPreserved": true,
+      "semanticReplacementRejected": true,
+      "fallbackSource": "deterministic_fallback"
+    },
+    "C3": {
+      "status": "passed",
+      "selectedSkillIds": [
+        "closure-methodology"
+      ],
+      "methodologyInjectedInPiContext": true,
+      "outputContractInjected": true,
+      "bundleStatus": "completed",
+      "bundleHasStructuredSessionResult": true
+    },
+    "C4": {
+      "status": "passed",
+      "retrievalBeforeReasoning": true,
+      "workflowAfterReasoning": true,
+      "hitCount": 1,
+      "rawRef": "raw-sha256-f8eca69f60e4a30bfbd3f5c0a1aed39aa39b8893e0371a60848f0ceed005e258",
+      "sourceLibraryRef": "source-library:raw-sha256-f8eca69f60e4a30bfbd3f5c0a1aed39aa39b8893e0371a60848f0ceed005e258:0",
+      "provenanceFields": [
+        "sourceLibraryRef",
+        "rawRef",
+        "provenance.rawRef"
+      ]
+    },
+    "C5": {
+      "status": "passed",
+      "policy": "sourceLibrary=false",
+      "preRetrievalCalls": 0,
+      "preRetrievedHitCount": 0,
+      "toolRejected": true
+    },
+    "C6": {
+      "status": "passed",
+      "tool": "inspect_external_skill -> install_external_skill",
+      "sourceUrl": "https://github.com/owner/closure-safe",
+      "pinnedCommit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "inspectionOnlyBeforeInstall": true,
+      "registeredResearchSkill": "closure-safe"
+    },
+    "C7": {
+      "status": "passed",
+      "unsafeInstallRejected": true,
+      "silentInstall": false,
+      "unsafeSkillRegistered": false
+    }
+  },
+  "criteria": {
+    "C1 semantic Free routing": true,
+    "C2 explicit semantic args": true,
+    "C3 selected Skill execution": true,
+    "C4 Source Library pre-reasoning": true,
+    "C5 Source Library OFF": true,
+    "C6 GitHub onboarding through Pi tool": true,
+    "C7 unsafe install fail-closed": true,
+    "ReasoningExecutor boundary": true,
+    "bounded validation repair": true,
+    "policy preservation": true,
+    "explicit Workflow precedence": true,
+    "no alias catalog dependence": true,
+    "ResearchHub Skill methodology in Pi": true,
+    "Pi Skills separation": true,
+    "lexical Source Retrieval": true,
+    "pre-reasoning provenance": true,
+    "OFF no retrieval": true,
+    "inspect tool": true,
+    "install tool": true,
+    "SkillOnboardingService reuse": true,
+    "40-character commit pin": true,
+    "research-only registry": true,
+    "unsafe approval gate": true,
+    "no silent fallback install": true,
+    "ResearchBundle answer": true,
+    "ResearchBundle selected skills": true,
+    "ResearchBundle source hits": true,
+    "ResearchBundle entities": true,
+    "ResearchBundle evidence refs": true,
+    "fixture boundary declared": true,
+    "no authenticated claim": true,
+    "raw bodies excluded": true,
+    "secrets excluded": true,
+    "artifact emitted": true,
+    "all closure cases passed": true
+  },
+  "signals": {
+    "semanticOperations": [
+      "research_dispatch_resolution"
+    ],
+    "sourceLibraryOrder": [
+      "source-library",
+      "reasoning",
+      "workflow"
+    ],
+    "externalSkillRegistryId": "closure-safe"
+  }
+}

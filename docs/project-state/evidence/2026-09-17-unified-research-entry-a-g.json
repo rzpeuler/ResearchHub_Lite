@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "mission": "Unified homepage research entry A-G acceptance",
-  "generatedAt": "2026-09-17T11:49:14.804Z",
+  "generatedAt": "2026-09-17T12:32:47.192Z",
   "executionClass": "fixture-backed deterministic acceptance; no authenticated provider E2E claim",
   "cases": {
     "A": {
@@ -10,12 +10,11 @@
       "workflow": "earnings_review",
       "arguments": {
         "symbol": "600519",
-        "name": "贵州茅台",
         "fiscalYear": 2026,
         "period": "H1"
       },
-      "bundleId": "research-bundle-b3fd76ad-3957-4d74-94b6-2c74130f5aae",
-      "reportId": "report-b3fd76ad-3957-4d74-94b6-2c74130f5aae",
+      "bundleId": "research-bundle-41554e5a-4dbe-4d3e-a948-6bcd4958c9fd",
+      "reportId": "report-41554e5a-4dbe-4d3e-a948-6bcd4958c9fd",
       "proposalCount": 1,
       "writeKnowledge": false
     },
@@ -24,7 +23,7 @@
       "boundary": "free query auto-routing",
       "workflow": "earnings_review",
       "summaryMode": "Free Research",
-      "bundleId": "research-bundle-5d62f9ea-ab49-4037-8470-1891515ca665"
+      "bundleId": "research-bundle-0ceb87b2-2ae8-4886-8bfa-77c6b97f9a6d"
     },
     "C": {
       "status": "passed",
@@ -37,7 +36,17 @@
       "capturedAnswer": {
         "status": "completed",
         "executionBoundary": "session",
-        "answer": "Captured Skill-session answer"
+        "answer": "Captured Skill-session answer",
+        "selectedSkills": [
+          {
+            "id": "custom-methodology",
+            "purpose": "custom-methodology"
+          }
+        ],
+        "sourceLibraryHits": [],
+        "entities": [],
+        "evidenceRefs": [],
+        "proposalCandidates": []
       }
     },
     "D": {

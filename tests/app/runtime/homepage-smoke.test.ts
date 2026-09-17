@@ -11,7 +11,13 @@ import type { ReasoningCapabilities, ReasoningExecutor } from '../../../plugins/
 import { createKnowledgeBase, removeKnowledgeBase } from '../../knowledge/helpers.ts'
 
 const capabilities: ReasoningCapabilities = { maxContextTokens: 100_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 4 }
-class FixtureExecutor implements ReasoningExecutor { capabilities(): ReasoningCapabilities { return capabilities }; async execute() { return { operation: 'fixture', output: {} } as never } }
+class FixtureExecutor implements ReasoningExecutor {
+  capabilities(): ReasoningCapabilities { return capabilities }
+  async execute(request: Parameters<ReasoningExecutor['execute']>[0]) {
+    if (request.operation === 'research_dispatch_resolution') return { operation: request.operation, output: { mode: 'workflow', workflow: { id: 'earnings_review', confidence: 0.99, arguments: { symbol: '600519', name: '贵州茅台', fiscalYear: 2026, period: 'H1' } }, skills: [], entities: [{ type: 'company', value: '贵州茅台', confidence: 0.99 }], missingRequiredInputs: [], contextPolicy: { structuredKnowledge: true, sourceLibrary: true }, persistencePolicy: { writeKnowledge: false }, rationale: 'Fixture semantic dispatch.' } }
+    return { operation: 'fixture', output: {} } as never
+  }
+}
 
 async function readUntil(reader: ReadableStreamDefaultReader<Uint8Array>, needle: string): Promise<string> {
   const decoder = new TextDecoder(); let output = ''

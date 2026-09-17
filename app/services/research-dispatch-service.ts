@@ -7,10 +7,18 @@ import { createResearchSkillRegistry, type ResearchSkillDefinition, type Researc
 import { createWorkflowDefinitionRegistry, type WorkflowDefinition, type WorkflowDefinitionRegistry } from './workflow-registry.ts'
 import { normalizeResearchRequest, validateResearchDispatchDecision, type ResearchDispatchDecision, type ResearchExecutionSummary, type ResearchRequest } from './research-dispatch-contracts.ts'
 import type { EventAnchor, EarningsReviewPeriod, ValuationMethod } from './contracts.ts'
-import type { ResearchBundle, ResearchBundleStore } from './research-bundle.ts'
+import type { ResearchBundle, ResearchBundleStore, ResearchSessionResult } from './research-bundle.ts'
 import { createResearchBundle } from './research-bundle.ts'
 import type { SourceLibraryService, SourceLibraryHit } from './source-library.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
+import type { ReasoningExecutor, ReasoningRequest } from '../../plugins/reasoning/contracts.ts'
+
+export interface ResearchSessionContext {
+  readonly selectedSkills: readonly ResearchSkillDefinition[]
+  readonly sourceLibraryHits: readonly SourceLibraryHit[]
+  readonly entities: readonly ResearchDispatchDecision['entities'][number][]
+  readonly evidenceRefs: readonly string[]
+}
 
 export interface ExtractedResearchArguments {
   readonly arguments: Readonly<Record<string, unknown>>
@@ -27,6 +35,14 @@ export interface ResearchDispatchStart {
   readonly runId?: string
   readonly workflow?: unknown
   readonly completion?: Promise<unknown>
+  readonly sourceLibraryHits?: readonly SourceLibraryHit[]
+  readonly resolution?: ResearchDispatchResolution
+}
+
+export interface ResearchDispatchResolution {
+  readonly source: 'reasoning_executor' | 'bounded_repair' | 'deterministic_fallback'
+  readonly attempts: number
+  readonly diagnostics: readonly string[]
 }
 
 export interface ResearchDispatchServiceOptions {
@@ -38,14 +54,7 @@ export interface ResearchDispatchServiceOptions {
   readonly bundleStore?: ResearchBundleStore
   readonly sourceLibraryService?: SourceLibraryService
   readonly mountedKnowledgeBaseRoot?: string
-}
-
-const COMPANY_ALIASES: Readonly<Record<string, { readonly symbol: string; readonly name: string }>> = {
-  '贵州茅台': { symbol: '600519', name: '贵州茅台' },
-  '茅台': { symbol: '600519', name: '贵州茅台' },
-  '五粮液': { symbol: '000858', name: '五粮液' },
-  '宁德时代': { symbol: '300750', name: '宁德时代' },
-  '比亚迪': { symbol: '002594', name: '比亚迪' },
+  readonly reasoningExecutor?: ReasoningExecutor
 }
 
 const WORKFLOW_KEYWORDS: Readonly<Record<string, readonly string[]>> = {
@@ -67,9 +76,7 @@ function containsTerm(text: string, term: string): boolean {
 
 function extractSymbol(query: string): { readonly symbol?: string; readonly name?: string } {
   const symbol = query.match(/\b\d{6}\b/)?.[0]
-  if (symbol !== undefined) return { symbol, name: Object.values(COMPANY_ALIASES).find((item) => item.symbol === symbol)?.name }
-  for (const [alias, company] of Object.entries(COMPANY_ALIASES)) if (query.includes(alias)) return company
-  return {}
+  return symbol === undefined ? {} : { symbol }
 }
 
 function extractFiscalYear(query: string): number | undefined {
@@ -166,6 +173,35 @@ function selectedSkillIds(registry: ResearchSkillRegistry, workflowId: string): 
   return registry.researchCandidates().filter((skill) => skill.researchCapability === workflowId).map((skill) => skill.id)
 }
 
+const dispatchOutputContract = {
+  type: 'object',
+  required: ['mode', 'skills', 'entities', 'missingRequiredInputs', 'contextPolicy', 'persistencePolicy', 'rationale'],
+  properties: {
+    mode: { type: 'string', enum: ['workflow', 'skill_plan', 'free_research'] },
+    workflow: { type: 'object', description: 'Required only when mode is workflow.' },
+    skills: { type: 'array', description: 'Selected ResearchHub Research Skill IDs and purposes.' },
+    entities: { type: 'array', description: 'Resolved entities, without canonical IDs.' },
+    missingRequiredInputs: { type: 'array', items: { type: 'string' } },
+    contextPolicy: { type: 'object', required: ['structuredKnowledge', 'sourceLibrary'] },
+    persistencePolicy: { type: 'object', required: ['writeKnowledge'] },
+    rationale: { type: 'string' },
+  },
+} as const
+
+function samePolicy(left: ResearchRequest, right: ResearchDispatchDecision): boolean {
+  return left.contextPolicy.structuredKnowledge === right.contextPolicy.structuredKnowledge && left.contextPolicy.sourceLibrary === right.contextPolicy.sourceLibrary && left.persistencePolicy.writeKnowledge === right.persistencePolicy.writeKnowledge
+}
+
+function assertSemanticDecision(request: ResearchRequest, decision: ResearchDispatchDecision, workflowRegistry: WorkflowDefinitionRegistry, skillRegistry: ResearchSkillRegistry, explicitWorkflowId?: string): void {
+  if (!samePolicy(request, decision)) throw new ApplicationServiceError('invalid_input', 'Semantic dispatch output cannot change ResearchRequest policy')
+  if (explicitWorkflowId !== undefined && (decision.mode !== 'workflow' || decision.workflow?.id !== explicitWorkflowId)) throw new ApplicationServiceError('conflict', 'Semantic dispatch output cannot replace the explicit Workflow')
+  if (decision.mode === 'workflow') {
+    if (!decision.workflow || workflowRegistry.get(decision.workflow.id) === undefined) throw new ApplicationServiceError('not_found', `Semantic dispatch selected an unknown Workflow: ${decision.workflow?.id ?? 'missing'}`)
+  }
+  if (decision.mode === 'skill_plan' && (decision.skills.length === 0 || decision.skills.some((skill) => skillRegistry.get(skill.id)?.kind !== 'research' || skillRegistry.get(skill.id)?.enabled !== true))) throw new ApplicationServiceError('invalid_input', 'Semantic dispatch selected an unavailable Research Skill')
+  if (decision.mode === 'free_research' && decision.skills.length > 0) throw new ApplicationServiceError('invalid_input', 'Free Research cannot include selected Research Skills')
+}
+
 export class ResearchDispatchService {
   readonly workflowRegistry: WorkflowDefinitionRegistry
   readonly skillRegistry: ResearchSkillRegistry
@@ -176,6 +212,20 @@ export class ResearchDispatchService {
   }
 
   listWorkflowDefinitions(): readonly WorkflowDefinition[] { return this.workflowRegistry.list() }
+
+  async resolveAsync(input: unknown, callerSignal?: AbortSignal): Promise<{ readonly request: ResearchRequest; readonly decision: ResearchDispatchDecision; readonly summary: ResearchExecutionSummary; readonly sourceLibraryHits: readonly SourceLibraryHit[]; readonly resolution: ResearchDispatchResolution }> {
+    const request = normalizeResearchRequest(input)
+    const sourceLibraryHits = await this.retrieveSourceLibrary(request, callerSignal)
+    const explicit = request.mode.type === 'workflow'
+    const definition = explicit ? this.workflowRegistry.get(request.mode.workflowId) : undefined
+    if (explicit && definition === undefined) throw new ApplicationServiceError('not_found', `Workflow definition not found: ${request.mode.workflowId}`)
+    if (this.options.reasoningExecutor !== undefined) {
+      const semantic = await this.resolveWithReasoning(request, definition, sourceLibraryHits, callerSignal)
+      return { request, decision: semantic.decision, summary: this.summary(request, semantic.decision, definition), sourceLibraryHits, resolution: semantic.resolution }
+    }
+    const resolved = this.resolve(request)
+    return { ...resolved, sourceLibraryHits, resolution: { source: 'deterministic_fallback', attempts: 0, diagnostics: ['reasoning_executor_unconfigured'] } }
+  }
 
   resolve(input: unknown): { readonly request: ResearchRequest; readonly decision: ResearchDispatchDecision; readonly summary: ResearchExecutionSummary } {
     const request = normalizeResearchRequest(input)
@@ -198,23 +248,44 @@ export class ResearchDispatchService {
 
   start(input: unknown, callerSignal?: AbortSignal): ResearchDispatchStart {
     const resolved = this.resolve(input)
+    return this.startResolved(resolved, callerSignal, [], { source: 'deterministic_fallback', attempts: 0, diagnostics: ['synchronous_compatibility_path'] })
+  }
+
+  async startAsync(input: unknown, callerSignal?: AbortSignal): Promise<ResearchDispatchStart> {
+    const resolved = await this.resolveAsync(input, callerSignal)
+    return this.startResolved(resolved, callerSignal, resolved.sourceLibraryHits, resolved.resolution)
+  }
+
+  private startResolved(resolved: { readonly request: ResearchRequest; readonly decision: ResearchDispatchDecision; readonly summary: ResearchExecutionSummary }, callerSignal: AbortSignal | undefined, sourceLibraryHits: readonly SourceLibraryHit[], resolution: ResearchDispatchResolution): ResearchDispatchStart {
     const { decision } = resolved
-    if (decision.missingRequiredInputs.length > 0) return { ...resolved, status: 'missing_input' }
-    if (decision.mode === 'free_research') { const runId = `free-${randomUUID()}`; this.schedulePendingBundle(resolved.request, decision, resolved.summary, runId, { status: 'free_research_pending', executionBoundary: 'session' }); return { ...resolved, status: 'free_research', runId } }
-    if (decision.mode === 'skill_plan') { const runId = `skill-${randomUUID()}`; this.schedulePendingBundle(resolved.request, decision, resolved.summary, runId, { status: 'skill_plan_pending', executionBoundary: 'session' }); return { ...resolved, status: 'skill_plan', runId } }
+    if (decision.missingRequiredInputs.length > 0) return { ...resolved, status: 'missing_input', sourceLibraryHits, resolution }
+    if (decision.mode === 'free_research') { const runId = `free-${randomUUID()}`; this.schedulePendingBundle(resolved.request, decision, resolved.summary, runId, { status: 'free_research_pending', executionBoundary: 'session', selectedSkills: [] }, sourceLibraryHits); return { ...resolved, status: 'free_research', runId, sourceLibraryHits, resolution } }
+    if (decision.mode === 'skill_plan') { const runId = `skill-${randomUUID()}`; this.schedulePendingBundle(resolved.request, decision, resolved.summary, runId, { status: 'skill_plan_pending', executionBoundary: 'session', selectedSkills: decision.skills }, sourceLibraryHits); return { ...resolved, status: 'skill_plan', runId, sourceLibraryHits, resolution } }
     const workflow = decision.workflow
     if (workflow === undefined) throw new ApplicationServiceError('failed', 'Validated workflow decision did not include a workflow')
     const definition = this.workflowRegistry.get(workflow.id)
     if (definition === undefined) throw new ApplicationServiceError('not_found', `Workflow definition not found: ${workflow.id}`)
     const runId = randomUUID()
-    const started = this.startWorkflow(definition.id, workflow.arguments, runId, callerSignal, resolved.request.persistencePolicy.writeKnowledge, resolved.request.contextPolicy.structuredKnowledge)
-    const completion = started.then(async (result) => { await this.persistBundle(resolved.request, decision, resolved.summary, runId, result); return result })
+    const started = this.startWorkflow(definition.id, workflow.arguments, runId, callerSignal, resolved.request.persistencePolicy.writeKnowledge, resolved.request.contextPolicy.structuredKnowledge, sourceLibraryHits)
+    const completion = started.then(async (result) => { await this.persistBundle(resolved.request, decision, resolved.summary, runId, result, sourceLibraryHits); return result })
     completion.catch(() => undefined)
-    return { ...resolved, status: 'started', runId, ...(this.options.workflowService?.getWorkflowStatus(runId) === undefined ? {} : { workflow: this.options.workflowService.getWorkflowStatus(runId) }), completion }
+    return { ...resolved, status: 'started', runId, sourceLibraryHits, resolution, ...(this.options.workflowService?.getWorkflowStatus(runId) === undefined ? {} : { workflow: this.options.workflowService.getWorkflowStatus(runId) }), completion }
   }
 
   async getBundle(bundleId: string): Promise<ResearchBundle | undefined> { return this.options.bundleStore?.get(bundleId) }
   async listBundles(limit?: number): Promise<readonly ResearchBundle[]> { return this.options.bundleStore?.list(limit) ?? [] }
+
+  async getSessionResearchContext(runId: string): Promise<ResearchSessionContext | undefined> {
+    await this.pendingBundleWrites.get(runId)
+    const bundle = await this.getBundle(`research-bundle-${runId}`)
+    if (bundle === undefined) return undefined
+    return {
+      selectedSkills: bundle.decision.skills.map((skill) => this.skillRegistry.get(skill.id)).filter((skill): skill is ResearchSkillDefinition => skill !== undefined),
+      sourceLibraryHits: bundle.sourceLibraryHits,
+      entities: bundle.decision.entities,
+      evidenceRefs: bundle.sourceLibraryHits.map((hit) => hit.sourceLibraryRef),
+    }
+  }
 
   async completeSessionResearch(runId: string, assistantText: string): Promise<void> {
     if (!this.options.bundleStore) return
@@ -222,19 +293,64 @@ export class ResearchDispatchService {
     const bundle = await this.options.bundleStore.get(`research-bundle-${runId}`)
     if (!bundle) return
     const answer = assistantText.trim().slice(0, 50_000)
-    const result = answer === '' ? { status: 'failed', executionBoundary: 'session', error: 'No assistant output was captured for the Free Research session.' } : { status: 'completed', executionBoundary: 'session', answer }
+    const result: ResearchSessionResult = answer === '' ? { status: 'failed', executionBoundary: 'session', error: 'No assistant output was captured for the Free Research session.', selectedSkills: bundle.decision.skills, sourceLibraryHits: bundle.sourceLibraryHits, entities: bundle.decision.entities, evidenceRefs: bundle.sourceLibraryHits.map((hit) => hit.sourceLibraryRef), proposalCandidates: bundle.proposals } : { status: 'completed', executionBoundary: 'session', answer, selectedSkills: bundle.decision.skills, sourceLibraryHits: bundle.sourceLibraryHits, entities: bundle.decision.entities, evidenceRefs: bundle.sourceLibraryHits.map((hit) => hit.sourceLibraryRef), proposalCandidates: bundle.proposals }
     await this.options.bundleStore.put({ ...bundle, status: result.status, structuredResult: result })
   }
 
-  private async persistBundle(request: ResearchRequest, decision: ResearchDispatchDecision, summary: ResearchExecutionSummary, workflowRunId: string, result: unknown): Promise<void> {
+  private async retrieveSourceLibrary(request: ResearchRequest, callerSignal?: AbortSignal): Promise<readonly SourceLibraryHit[]> {
+    if (!request.contextPolicy.sourceLibrary || this.options.sourceLibraryService === undefined || this.options.mountedKnowledgeBaseRoot === undefined) return []
+    if (callerSignal?.aborted) throw new ApplicationServiceError('cancelled', 'Research dispatch was cancelled before Source Library retrieval')
+    try {
+      const handle = await new KnowledgeBaseRegistry().mount(this.options.mountedKnowledgeBaseRoot)
+      return await this.options.sourceLibraryService.search(handle, { query: request.query, limit: 20 })
+    } catch {
+      return []
+    }
+  }
+
+  private async resolveWithReasoning(request: ResearchRequest, explicitDefinition: WorkflowDefinition | undefined, sourceLibraryHits: readonly SourceLibraryHit[], callerSignal?: AbortSignal): Promise<{ readonly decision: ResearchDispatchDecision; readonly resolution: ResearchDispatchResolution }> {
+    const executor = this.options.reasoningExecutor
+    if (executor === undefined) throw new ApplicationServiceError('failed', 'Research dispatch semantic resolver is not configured')
+    const explicit = request.mode.type === 'workflow'
+    const diagnostics: string[] = []
+    let previousOutput: unknown
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      if (callerSignal?.aborted) throw new ApplicationServiceError('cancelled', 'Research dispatch was cancelled during semantic resolution')
+      const reasoningRequest: ReasoningRequest = {
+        operation: 'research_dispatch_resolution',
+        instruction: explicit
+          ? 'Extract arguments and entities for the user-selected Workflow. Never select or replace the Workflow; return mode workflow with the exact supplied workflow ID.'
+          : 'Resolve the user research intent. Prefer one registered Workflow when its intent is clear, otherwise select eligible Research Skills, otherwise use Free Research. Do not invent canonical IDs or change request policies.',
+        input: { query: request.query, requestedMode: request.mode, explicitWorkflow: explicitDefinition, workflows: this.workflowRegistry.list(), researchSkills: this.skillRegistry.researchCandidates(), sourceLibraryHits, ...(previousOutput === undefined ? {} : { previousOutput, repairDiagnostics: diagnostics.slice(-16) }) },
+        outputContract: dispatchOutputContract,
+        metadata: { operationFamily: 'research-dispatch', attempt: String(attempt) },
+      }
+      try {
+        const result = await executor.execute(reasoningRequest)
+        previousOutput = result.output
+        const decision = validateResearchDispatchDecision(result.output)
+        assertSemanticDecision(request, decision, this.workflowRegistry, this.skillRegistry, explicit ? request.mode.workflowId : undefined)
+        const definition = decision.workflow === undefined ? undefined : this.workflowRegistry.get(decision.workflow.id)
+        const required = definition?.requiredInputs ?? []
+        const missing = [...new Set([...decision.missingRequiredInputs, ...required.filter((key) => decision.workflow?.arguments[key] === undefined)])].sort()
+        const normalized = missing.length === decision.missingRequiredInputs.length ? decision : validateResearchDispatchDecision({ ...decision, missingRequiredInputs: missing })
+        return { decision: normalized, resolution: { source: attempt === 1 ? 'reasoning_executor' : 'bounded_repair', attempts: attempt, diagnostics } }
+      } catch (error) {
+        diagnostics.push(error instanceof Error ? error.message.slice(0, 240) : 'semantic_resolution_invalid')
+        if (attempt === 2) break
+      }
+    }
+    const fallback = this.resolve(request)
+    return { decision: fallback.decision, resolution: { source: 'deterministic_fallback', attempts: 2, diagnostics: [...diagnostics, 'semantic_resolution_fallback'] } }
+  }
+
+  private async persistBundle(request: ResearchRequest, decision: ResearchDispatchDecision, summary: ResearchExecutionSummary, workflowRunId: string, result: unknown, sourceLibraryHits: readonly SourceLibraryHit[] = []): Promise<void> {
     if (!this.options.bundleStore) return
-    let sourceLibraryHits: readonly SourceLibraryHit[] = []
-    if (request.contextPolicy.sourceLibrary && this.options.sourceLibraryService && this.options.mountedKnowledgeBaseRoot) { try { const handle = await new KnowledgeBaseRegistry().mount(this.options.mountedKnowledgeBaseRoot); sourceLibraryHits = await this.options.sourceLibraryService.search(handle, { query: request.query, limit: 20 }) } catch { /* unavailable derived context never becomes a fabricated hit */ } }
     await this.options.bundleStore.put(createResearchBundle({ request, decision, summary, workflowRunId, result, sourceLibraryHits }))
   }
 
-  private schedulePendingBundle(request: ResearchRequest, decision: ResearchDispatchDecision, summary: ResearchExecutionSummary, workflowRunId: string, result: unknown): void {
-    const write = this.persistBundle(request, decision, summary, workflowRunId, result)
+  private schedulePendingBundle(request: ResearchRequest, decision: ResearchDispatchDecision, summary: ResearchExecutionSummary, workflowRunId: string, result: unknown, sourceLibraryHits: readonly SourceLibraryHit[]): void {
+    const write = this.persistBundle(request, decision, summary, workflowRunId, result, sourceLibraryHits)
     this.pendingBundleWrites.set(workflowRunId, write)
     void write.finally(() => { if (this.pendingBundleWrites.get(workflowRunId) === write) this.pendingBundleWrites.delete(workflowRunId) }).catch(() => undefined)
   }
@@ -265,20 +381,20 @@ export class ResearchDispatchService {
     return { mode: request.mode.type === 'workflow' ? 'Explicit Workflow' : 'Free Research', ...(workflow === undefined ? {} : { workflowId: workflow.id, workflowLabel: definition?.label }), selectedSkillIds: decision.skills.map((skill) => skill.id), argumentsStatus: decision.missingRequiredInputs.length > 0 ? 'missing' : workflow === undefined ? 'not_required' : 'extracted', argumentKeys: workflow === undefined ? [] : Object.keys(workflow.arguments).sort(), contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy }
   }
 
-  private startWorkflow(workflowId: string, args: Readonly<Record<string, unknown>>, runId: string, callerSignal?: AbortSignal, writeKnowledge = false, useStructuredKnowledge = true): Promise<unknown> {
+  private startWorkflow(workflowId: string, args: Readonly<Record<string, unknown>>, runId: string, callerSignal?: AbortSignal, writeKnowledge = false, useStructuredKnowledge = true, sourceLibraryHits: readonly SourceLibraryHit[] = []): Promise<unknown> {
     const research = this.options.researchService
     if (workflowId === 'daily_intelligence') {
       const daily = this.options.dailyIntelligenceService
       if (daily === undefined) throw new ApplicationServiceError('failed', 'Daily Intelligence service is not configured')
-      return daily.startBrief({ workflowRunId: runId, briefType: args.briefType as 'morning' | 'evening', tradeDate: args.tradeDate as string, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
+      return daily.startBrief({ workflowRunId: runId, briefType: args.briefType as 'morning' | 'evening', tradeDate: args.tradeDate as string, writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
     }
     if (research === undefined) throw new ApplicationServiceError('failed', 'Research service is not configured')
-    if (workflowId === 'company_research') return research.startResearchCompany({ workflowRunId: runId, symbol: args.symbol as string, ...(typeof args.name === 'string' ? { name: args.name } : {}), writeKnowledge, useStructuredKnowledge }, callerSignal).completion
-    if (workflowId === 'industry_research') return research.startIndustryResearch({ workflowRunId: runId, name: args.name as string, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
-    if (workflowId === 'earnings_review') return research.startEarningsReview({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, fiscalYear: args.fiscalYear as number, period: args.period as EarningsReviewPeriod, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
-    if (workflowId === 'valuation') return research.startValuation({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, methods: args.methods as readonly ValuationMethod[] | undefined, targetFiscalYear: args.targetFiscalYear as number | undefined, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
-    if (workflowId === 'event_research') return research.startEventResearch({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, anchor: args.anchor as EventAnchor, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
-    if (workflowId === 'thesis_red_team') return research.startThesisRedTeam({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, thesisRef: args.thesisRef as string, writeKnowledge, useStructuredKnowledge }, callerSignal).completion
+    if (workflowId === 'company_research') return research.startResearchCompany({ workflowRunId: runId, symbol: args.symbol as string, ...(typeof args.name === 'string' ? { name: args.name } : {}), writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
+    if (workflowId === 'industry_research') return research.startIndustryResearch({ workflowRunId: runId, name: args.name as string, writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
+    if (workflowId === 'earnings_review') return research.startEarningsReview({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, fiscalYear: args.fiscalYear as number, period: args.period as EarningsReviewPeriod, writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
+    if (workflowId === 'valuation') return research.startValuation({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, methods: args.methods as readonly ValuationMethod[] | undefined, targetFiscalYear: args.targetFiscalYear as number | undefined, writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
+    if (workflowId === 'event_research') return research.startEventResearch({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, anchor: args.anchor as EventAnchor, writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
+    if (workflowId === 'thesis_red_team') return research.startThesisRedTeam({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, thesisRef: args.thesisRef as string, writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
     throw new ApplicationServiceError('not_found', `Workflow definition has no adapter: ${workflowId}`)
   }
 }
