@@ -270,3 +270,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .graph-raw-detail summary { cursor: pointer; }
 .graph-raw-detail pre { max-height: 160px; }
 .graph-empty-state { max-width: 520px; margin-top: 34px; }
+.research-controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--line, #d8dee8); border-radius: 10px; background: var(--surface-muted, #f7f9fc); }
+.research-controls > label:first-child { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 650; }
+.research-controls select { min-width: 170px; padding: 6px 8px; border: 1px solid var(--line, #d8dee8); border-radius: 6px; background: var(--surface, #fff); color: inherit; }
+.research-controls .check-field { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.execution-summary { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-bottom: 12px; padding: 9px 12px; border-left: 3px solid var(--accent, #5267d8); background: var(--surface-muted, #f7f9fc); color: var(--text-muted, #5d6675); font-size: 12px; }
+.execution-summary strong { color: var(--text, #202735); }

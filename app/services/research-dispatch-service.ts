@@ -48,6 +48,7 @@ const WORKFLOW_KEYWORDS: Readonly<Record<string, readonly string[]>> = {
   event_research: ['事件', '公告', '新闻', '消息', 'event', 'announcement', 'headline'],
   industry_research: ['行业', '产业', '产业链', 'industry', 'pcb', '半导体', '服务器'],
   company_research: ['公司', '个股', 'company', '股票'],
+  daily_intelligence: ['日报', '盘前', '盘后', 'morning brief', 'evening brief', 'daily intelligence'],
 }
 
 function safeQuery(query: string): string { return query.toLocaleLowerCase() }
@@ -65,7 +66,7 @@ function extractSymbol(query: string): { readonly symbol?: string; readonly name
 }
 
 function extractFiscalYear(query: string): number | undefined {
-  const match = query.match(/\b(20\d{2})\s*(?:年|fy|financial\s+year)?\b/i)
+  const match = query.match(/\b(?:fy\s*)?(20\d{2})\s*(?:年|fy|financial\s+year)?\b/i)
   return match === null ? undefined : Number(match[1])
 }
 
@@ -73,7 +74,7 @@ function extractPeriod(query: string): EarningsReviewPeriod | undefined {
   if (/半年|上半年|\bh1\b/i.test(query)) return 'H1'
   if (/一季度|第一季度|\bq1\b/i.test(query)) return 'Q1'
   if (/三季度|第三季度|\bq3\b/i.test(query)) return 'Q3'
-  if (/年报|全年|\bfy\b/i.test(query)) return 'FY'
+  if (/年报|全年|\bfy\b|\bfy\s*20\d{2}\b/i.test(query)) return 'FY'
   return undefined
 }
 
@@ -135,6 +136,12 @@ export function extractWorkflowArguments(definition: WorkflowDefinition, query: 
     const thesisRef = extractThesisRef(query)
     if (thesisRef !== undefined) args.thesisRef = thesisRef
   }
+  if (definition.id === 'daily_intelligence') {
+    const briefType = /晚间|盘后|evening/i.test(query) ? 'evening' : /早盘|盘前|morning/i.test(query) ? 'morning' : undefined
+    const tradeDate = query.match(/\b20\d{2}-\d{2}-\d{2}\b/)?.[0]
+    if (briefType !== undefined) args.briefType = briefType
+    if (tradeDate !== undefined) args.tradeDate = tradeDate
+  }
   const missingRequiredInputs = definition.requiredInputs.filter((key) => args[key] === undefined)
   if (missingRequiredInputs.length > 0) diagnostics.push(`missing_required_inputs:${missingRequiredInputs.join(',')}`)
   return { arguments: args, missingRequiredInputs, diagnostics, extractedKeys: Object.keys(args).sort() }
@@ -192,13 +199,13 @@ export class ResearchDispatchService {
     const definition = this.workflowRegistry.get(workflow.id)
     if (definition === undefined) throw new ApplicationServiceError('not_found', `Workflow definition not found: ${workflow.id}`)
     const runId = randomUUID()
-    const started = this.startWorkflow(definition.id, workflow.arguments, runId, callerSignal)
+    const started = this.startWorkflow(definition.id, workflow.arguments, runId, callerSignal, resolved.request.persistencePolicy.writeKnowledge)
     return { ...resolved, status: 'started', runId, ...(this.options.workflowService?.getWorkflowStatus(runId) === undefined ? {} : { workflow: this.options.workflowService.getWorkflowStatus(runId) }), completion: started }
   }
 
   private bestWorkflow(query: string): WorkflowDefinition | undefined {
-    const candidates = this.workflowRegistry.list().filter((definition) => definition.id !== 'daily_intelligence').map((definition) => ({ definition, score: scoreWorkflow(definition, query) }))
-    const specializedMatch = candidates.some((item) => item.definition.id !== 'company_research' && item.score > 0)
+    const candidates = this.workflowRegistry.list().map((definition) => ({ definition, score: scoreWorkflow(definition, query) }))
+    const specializedMatch = candidates.some((item) => item.definition.id !== 'company_research' && item.definition.id !== 'daily_intelligence' && item.score > 0)
     return candidates.map((item) => item.definition.id === 'company_research' && !specializedMatch && extractSymbol(query).symbol !== undefined ? { ...item, score: item.score + 2 } : item).sort((left, right) => right.score - left.score || left.definition.id.localeCompare(right.definition.id)).find((item) => item.score > 0)?.definition
   }
 
@@ -222,20 +229,20 @@ export class ResearchDispatchService {
     return { mode: request.mode.type === 'workflow' ? 'Explicit Workflow' : 'Free Research', ...(workflow === undefined ? {} : { workflowId: workflow.id, workflowLabel: definition?.label }), selectedSkillIds: decision.skills.map((skill) => skill.id), argumentsStatus: decision.missingRequiredInputs.length > 0 ? 'missing' : workflow === undefined ? 'not_required' : 'extracted', argumentKeys: workflow === undefined ? [] : Object.keys(workflow.arguments).sort(), contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy }
   }
 
-  private startWorkflow(workflowId: string, args: Readonly<Record<string, unknown>>, runId: string, callerSignal?: AbortSignal): Promise<unknown> {
+  private startWorkflow(workflowId: string, args: Readonly<Record<string, unknown>>, runId: string, callerSignal?: AbortSignal, writeKnowledge = false): Promise<unknown> {
     const research = this.options.researchService
     if (workflowId === 'daily_intelligence') {
       const daily = this.options.dailyIntelligenceService
       if (daily === undefined) throw new ApplicationServiceError('failed', 'Daily Intelligence service is not configured')
-      return daily.startBrief({ workflowRunId: runId, briefType: args.briefType as 'morning' | 'evening', tradeDate: args.tradeDate as string }, callerSignal).completion
+      return daily.startBrief({ workflowRunId: runId, briefType: args.briefType as 'morning' | 'evening', tradeDate: args.tradeDate as string, writeKnowledge }, callerSignal).completion
     }
     if (research === undefined) throw new ApplicationServiceError('failed', 'Research service is not configured')
-    if (workflowId === 'company_research') return research.startResearchCompany({ workflowRunId: runId, symbol: args.symbol as string, ...(typeof args.name === 'string' ? { name: args.name } : {}) }, callerSignal).completion
-    if (workflowId === 'industry_research') return research.startIndustryResearch({ workflowRunId: runId, name: args.name as string }, callerSignal).completion
-    if (workflowId === 'earnings_review') return research.startEarningsReview({ workflowRunId: runId, symbol: args.symbol as string, fiscalYear: args.fiscalYear as number, period: args.period as EarningsReviewPeriod }, callerSignal).completion
-    if (workflowId === 'valuation') return research.startValuation({ workflowRunId: runId, symbol: args.symbol as string, methods: args.methods as readonly ValuationMethod[] | undefined }, callerSignal).completion
-    if (workflowId === 'event_research') return research.startEventResearch({ workflowRunId: runId, symbol: args.symbol as string, anchor: args.anchor as EventAnchor }, callerSignal).completion
-    if (workflowId === 'thesis_red_team') return research.startThesisRedTeam({ workflowRunId: runId, symbol: args.symbol as string, thesisRef: args.thesisRef as string }, callerSignal).completion
+    if (workflowId === 'company_research') return research.startResearchCompany({ workflowRunId: runId, symbol: args.symbol as string, ...(typeof args.name === 'string' ? { name: args.name } : {}), writeKnowledge }, callerSignal).completion
+    if (workflowId === 'industry_research') return research.startIndustryResearch({ workflowRunId: runId, name: args.name as string, writeKnowledge }, callerSignal).completion
+    if (workflowId === 'earnings_review') return research.startEarningsReview({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, fiscalYear: args.fiscalYear as number, period: args.period as EarningsReviewPeriod, writeKnowledge }, callerSignal).completion
+    if (workflowId === 'valuation') return research.startValuation({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, methods: args.methods as readonly ValuationMethod[] | undefined, targetFiscalYear: args.targetFiscalYear as number | undefined, writeKnowledge }, callerSignal).completion
+    if (workflowId === 'event_research') return research.startEventResearch({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, anchor: args.anchor as EventAnchor, writeKnowledge }, callerSignal).completion
+    if (workflowId === 'thesis_red_team') return research.startThesisRedTeam({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, thesisRef: args.thesisRef as string, writeKnowledge }, callerSignal).completion
     throw new ApplicationServiceError('not_found', `Workflow definition has no adapter: ${workflowId}`)
   }
 }

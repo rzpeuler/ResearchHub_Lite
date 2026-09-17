@@ -38,6 +38,7 @@ export interface EventResearchWorkflowInput {
   readonly now?: () => string
   readonly asOf?: string
   readonly eventWindowDays?: number
+  readonly writeKnowledge?: boolean
 }
 
 export interface EventResearchTelemetry {

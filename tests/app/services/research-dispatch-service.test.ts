@@ -33,3 +33,13 @@ test('Free Research falls back to an eligible research Skill, then to free mode'
   const free = new ResearchDispatchService().resolve({ query: '请帮我整理一个完全泛化的想法' })
   assert.equal(free.decision.mode, 'free_research')
 })
+
+test('English FY notation and explicit Daily Intelligence are dispatched with complete arguments', () => {
+  const service = new ResearchDispatchService()
+  const earnings = service.resolve({ query: 'Review FY2026 earnings for 600519', mode: { type: 'free_research' } })
+  assert.equal(earnings.decision.workflow?.id, 'earnings_review')
+  assert.deepEqual(earnings.decision.workflow?.arguments, { symbol: '600519', name: '贵州茅台', fiscalYear: 2026, period: 'FY' })
+  const daily = service.resolve({ query: '生成 morning brief 2026-09-17', mode: { type: 'workflow', workflowId: 'daily_intelligence' } })
+  assert.deepEqual(daily.decision.workflow?.arguments, { briefType: 'morning', tradeDate: '2026-09-17' })
+  assert.deepEqual(daily.decision.missingRequiredInputs, [])
+})

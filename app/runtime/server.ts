@@ -12,6 +12,7 @@ import { ClientEventStream } from './event-stream.ts'
 import { RuntimeSecurity, RuntimeSecurityError, assertLoopbackBindAddress, type LoopbackBindAddress } from './security.ts'
 import type { CurrentSessionState, ResearchHubApplicationRuntimeOptions } from './contracts.ts'
 import { safeIdentifier, safeSummary, type ClientEvent } from './client-events.ts'
+import type { ResearchDispatchService } from '../services/research-dispatch-service.ts'
 
 const MAX_JSON_BYTES = 1_000_000
 const MAX_MESSAGE_LENGTH = 50_000
@@ -374,6 +375,8 @@ export class ResearchHubRuntimeServer {
     if (method === 'POST' && path === '/api/knowledge/object') { const input = await this.readJson(request); await this.sendJson(response, 200, await this.runtime!.knowledgeService.getKnowledgeObject(this.stringField(input, 'ref'), this.optionalPositive(input, 'relatedLimit'))); return }
     if (method === 'GET' && path.startsWith('/api/workflows/')) { const runId = decodeSegment(path.split('/')[3] ?? ''); const value = this.runtime!.workflowService.getWorkflowStatus(runId); if (!value) throw new ApplicationServiceError('not_found', 'Workflow run not found'); await this.sendJson(response, 200, value); return }
     if (method === 'GET' && path === '/api/research-reports') { const service = this.runtime!.researchService; if (!service) throw new ApplicationServiceError('not_found', 'Research Reports are not configured'); await this.sendJson(response, 200, { reports: await service.listResearchReports(positiveInteger(url.searchParams.get('limit'))) }); return }
+    if (method === 'GET' && path === '/api/research/workflows') { await this.sendJson(response, 200, { workflows: this.runtime!.services.researchDispatchService?.listWorkflowDefinitions() ?? [] }); return }
+    if (method === 'POST' && path === '/api/research/dispatch') { await this.dispatchResearch(request, response); return }
     if (method === 'GET' && path.startsWith('/api/research-reports/')) { const reportId = decodeSegment(path.split('/')[3] ?? ''); const service = this.runtime!.researchService; if (!service) throw new ApplicationServiceError('not_found', 'Research Reports are not configured'); await this.sendJson(response, 200, await service.getResearchReport(reportId)); return }
     if (method === 'GET' && path === '/api/daily-briefs') { const service = this.runtime!.services.dailyIntelligenceService; if (!service) throw new ApplicationServiceError('not_found', 'Daily Intelligence is not configured'); await this.sendJson(response, 200, { briefs: await service.listBriefs(positiveInteger(url.searchParams.get('limit'))) }); return }
     if (method === 'GET' && path.startsWith('/api/daily-briefs/')) { const service = this.runtime!.services.dailyIntelligenceService; if (!service) throw new ApplicationServiceError('not_found', 'Daily Intelligence is not configured'); await this.sendJson(response, 200, await service.getBrief(decodeSegment(path.split('/')[3] ?? ''))); return }
@@ -492,6 +495,24 @@ export class ResearchHubRuntimeServer {
   }
   private async startDailyBrief(request: IncomingMessage, response: ServerResponse, briefType: DailyBriefType): Promise<void> {
     const service = this.runtime!.services.dailyIntelligenceService; if (!service) throw new ApplicationServiceError('failed', 'Daily Intelligence is not configured for this runtime'); const body = await this.readJson(request); this.ensureRunning(); const tradeDate = this.stringField(body, 'tradeDate', 10); const asOf = this.optionalString(body, 'asOf', 100); const forceRefresh = body.forceRefresh === undefined ? undefined : body.forceRefresh === true; const controller = new AbortController(); const started = service.startBrief({ workflowRunId: randomUUID(), briefType, tradeDate, asOf, forceRefresh }, controller.signal); this.trackBackground(started.completion, () => controller.abort()); await this.sendJson(response, 202, { accepted: true, runId: started.runId, workflow: this.runtime!.workflowService.getWorkflowStatus(started.runId) })
+  }
+
+  private async dispatchResearch(request: IncomingMessage, response: ServerResponse): Promise<void> {
+    const service: ResearchDispatchService | undefined = this.runtime!.services.researchDispatchService
+    if (!service) throw new ApplicationServiceError('failed', 'Research dispatch is not configured for this runtime')
+    const body = await this.readJson(request)
+    this.ensureRunning()
+    const controller = new AbortController()
+    const started = service.start(body, controller.signal)
+    if (started.completion !== undefined) {
+      this.trackBackground(started.completion, () => {
+        controller.abort()
+        if (started.runId !== undefined) {
+          try { this.runtime!.workflowService.cancelWorkflow(started.runId) } catch { /* completion owns final state */ }
+        }
+      })
+    }
+    await this.sendJson(response, started.status === 'started' ? 202 : 200, { accepted: started.status === 'started', status: started.status, request: started.request, decision: started.decision, summary: started.summary, ...(started.runId === undefined ? {} : { runId: started.runId }), ...(started.workflow === undefined ? {} : { workflow: started.workflow }) })
   }
 
   private sourceMetadata(value: Record<string, unknown>): IngestDocumentInput['sourceMetadata'] | undefined { const raw = value.sourceMetadata; if (raw === undefined) return undefined; if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new ApplicationServiceError('invalid_input', 'sourceMetadata must be an object'); const input = raw as Record<string, unknown>; return { ...(this.optionalString(input, 'title', 500) === undefined ? {} : { title: this.optionalString(input, 'title', 500) }), ...(this.optionalString(input, 'institution', 500) === undefined ? {} : { institution: this.optionalString(input, 'institution', 500) }), ...(this.optionalString(input, 'author', 500) === undefined ? {} : { author: this.optionalString(input, 'author', 500) }), ...(this.optionalString(input, 'publishedAt', 100) === undefined ? {} : { publishedAt: this.optionalString(input, 'publishedAt', 100) }), ...(this.optionalString(input, 'sourceUrl', 2_000) === undefined ? {} : { sourceUrl: this.optionalString(input, 'sourceUrl', 2_000) }) } }

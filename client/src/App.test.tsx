@@ -15,6 +15,7 @@ describe('Homepage shell', () => {
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const path = String(input)
       if (path === '/api/bootstrap') return json({ runtime: { origin: 'http://127.0.0.1:1234', runtimeToken: 'b'.repeat(64) }, origin: 'http://127.0.0.1:1234', session: { conversationId: 'c1', isStreaming: false, isIdle: true, pendingMessageCount: 0, thinkingLevel: 'off' }, conversations: [], knowledgeError: { code: 'no_kb_mounted', error: 'not mounted' } })
+      if (path === '/api/research/workflows') return json({ workflows: [{ id: 'earnings_review', label: 'Earnings Review', intentDescription: 'Review earnings', inputSchema: {}, requiredInputs: ['symbol', 'fiscalYear', 'period'], outputContract: 'ResearchReport', knowledgeEffects: ['Claim'] }] })
       if (path === '/api/conversations/current') return json({ conversationId: 'c1', isStreaming: false, isIdle: true, pendingMessageCount: 0, thinkingLevel: 'off' })
       if (path === '/api/conversations/messages') return json({ conversationId: 'c1', messages: [] })
       if (path === '/api/conversations') return json({ conversations: [] })
@@ -30,6 +31,18 @@ describe('Homepage shell', () => {
     expect(await screen.findByText('Research conversation')).toBeTruthy()
     expect(screen.getByText('No Knowledge Base mounted')).toBeTruthy()
     expect(document.body.textContent).not.toContain('b'.repeat(64))
+  })
+
+  it('renders registry-backed Workflow and safe research policy defaults', async () => {
+    render(<App />)
+    expect(await screen.findByRole('combobox', { name: 'Workflow' })).toBeTruthy()
+    expect(screen.getByRole('option', { name: 'Free Research' })).toBeTruthy()
+    expect(screen.getByRole('option', { name: 'Earnings Review' })).toBeTruthy()
+    expect((screen.getByRole('checkbox', { name: 'Query Knowledge' }) as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByRole('checkbox', { name: 'Search Source Library' }) as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByRole('checkbox', { name: 'Write Knowledge' }) as HTMLInputElement).checked).toBe(false)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Write Knowledge' }))
+    expect((screen.getByRole('checkbox', { name: 'Write Knowledge' }) as HTMLInputElement).checked).toBe(true)
   })
 
   it('keeps Review read-only and does not render decision controls', async () => {

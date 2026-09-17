@@ -18,6 +18,7 @@ export interface EarningsReviewWorkflowInput {
   readonly signal?: AbortSignal
   readonly now?: () => string
   readonly maxSources?: number
+  readonly writeKnowledge?: boolean
 }
 
 export interface EarningsReviewTelemetry {

@@ -70,6 +70,8 @@ export interface KnowledgeProductionInput {
   readonly now?: () => string
   readonly semanticResolver?: SemanticResolver
   readonly reviewProducerType?: string
+  /** Resolve proposals without changing canonical Knowledge when false. */
+  readonly writeKnowledge?: boolean
 }
 
 export interface ResolutionIntentSummary {

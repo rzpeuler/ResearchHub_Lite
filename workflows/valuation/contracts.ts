@@ -16,6 +16,7 @@ export interface ValuationWorkflowInput {
   readonly reasoningExecutor?: ReasoningExecutor
   readonly signal?: AbortSignal
   readonly now?: () => string
+  readonly writeKnowledge?: boolean
 }
 
 export interface ValuationProviderOutcome {

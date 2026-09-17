@@ -10,6 +10,7 @@ import type { KnowledgeProductionInput, KnowledgeProductionOutcome } from '../..
 import type { NormalizedResearchSource } from '../../../plugins/research-acquisition/contracts.ts'
 import { validateUsableAcquisitionPayload } from '../../../plugins/research-acquisition/payload-validation.ts'
 import { listReviewCases } from '../../../knowledge/review/store.ts'
+import { loadKnowledgeBaseManifest } from '../../../knowledge/storage/manifest-loader.ts'
 
 const clock = () => '2026-09-08T00:00:00.000Z'
 function source(symbol: string, candidateId = `structured-${symbol}`, value = 'same bytes'): NormalizedResearchSource { return { candidate: { candidateId, kind: 'structured_data', tier: 2, title: 'Financial fixture', provider: 'akshare', metadata: { companySymbol: symbol, dataKind: 'financial', period: 'FY2027' } }, retrievedAt: clock(), title: 'Financial fixture', content: value, contentHash: 'a'.repeat(64), publisher: 'AKShare', rights: { accessScope: 'public', retentionAllowed: true, aiProcessingAllowed: true, derivativeKnowledgeAllowed: true, redistributionAllowed: false } } }
@@ -30,6 +31,22 @@ test('same Raw bytes can back distinct provenance-context Sources', async () => 
     assert.equal(first.status, 'committed'); assert.equal(second.status, 'committed')
     const assets = await readCanonicalV04Assets(root); const sources = assets.objects.filter((item) => item.kind === 'source'); const raws = new Set(sources.flatMap((item) => (item.value as { rawRefs?: string[] }).rawRefs ?? []))
     assert.equal(sources.length, 2); assert.equal(raws.size, 1)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('writeKnowledge false resolves proposals without changing canonical revision or review cases', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-dry-run-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-dry-run', now: clock() })
+    const gateway = new KnowledgeProductionGateway()
+    const before = await readCanonicalV04Assets(root); const beforeManifest = await loadKnowledgeBaseManifest(root)
+    const result = await gateway.submit({ ...(await input(root, 'dry-run')), proposals: [claim('dry-claim', 42)], writeKnowledge: false })
+    const after = await readCanonicalV04Assets(root)
+    assert.equal(result.status, 'no_changes')
+    assert.equal(result.knowledgeBaseRevision, beforeManifest.revision)
+    assert.equal((await loadKnowledgeBaseManifest(root)).revision, beforeManifest.revision)
+    assert.deepEqual(after.objects.map((item) => item.value.id), before.objects.map((item) => item.value.id))
+    assert.deepEqual(await listReviewCases(root), [])
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 

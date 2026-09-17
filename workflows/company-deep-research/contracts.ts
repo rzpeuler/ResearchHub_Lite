@@ -18,6 +18,7 @@ export interface CompanyDeepResearchInput {
   readonly signal?: AbortSignal
   readonly now?: () => string
   readonly reasoningExecutor?: ReasoningExecutor
+  readonly writeKnowledge?: boolean
 }
 export interface CompanyDeepResearchResult {
   readonly workflowRunId: string
