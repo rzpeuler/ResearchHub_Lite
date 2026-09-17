@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "mission": "Unified homepage research entry A-G acceptance",
+  "generatedAt": "2026-09-17T11:49:14.804Z",
+  "executionClass": "fixture-backed deterministic acceptance; no authenticated provider E2E claim",
+  "cases": {
+    "A": {
+      "status": "passed",
+      "boundary": "explicit workflow",
+      "workflow": "earnings_review",
+      "arguments": {
+        "symbol": "600519",
+        "name": "贵州茅台",
+        "fiscalYear": 2026,
+        "period": "H1"
+      },
+      "bundleId": "research-bundle-b3fd76ad-3957-4d74-94b6-2c74130f5aae",
+      "reportId": "report-b3fd76ad-3957-4d74-94b6-2c74130f5aae",
+      "proposalCount": 1,
+      "writeKnowledge": false
+    },
+    "B": {
+      "status": "passed",
+      "boundary": "free query auto-routing",
+      "workflow": "earnings_review",
+      "summaryMode": "Free Research",
+      "bundleId": "research-bundle-5d62f9ea-ab49-4037-8470-1891515ca665"
+    },
+    "C": {
+      "status": "passed",
+      "boundary": "Research Skill fallback",
+      "mode": "skill_plan",
+      "skillIds": [
+        "custom-methodology"
+      ],
+      "bundleStatus": "completed",
+      "capturedAnswer": {
+        "status": "completed",
+        "executionBoundary": "session",
+        "answer": "Captured Skill-session answer"
+      }
+    },
+    "D": {
+      "status": "passed",
+      "boundary": "Raw -> rebuildable Source Library",
+      "rawRef": "raw-sha256-f8eca69f60e4a30bfbd3f5c0a1aed39aa39b8893e0371a60848f0ceed005e258",
+      "hitCount": 1,
+      "hitRawRef": "raw-sha256-f8eca69f60e4a30bfbd3f5c0a1aed39aa39b8893e0371a60848f0ceed005e258",
+      "hitSourceLibraryRef": "source-library:raw-sha256-f8eca69f60e4a30bfbd3f5c0a1aed39aa39b8893e0371a60848f0ceed005e258:0",
+      "rebuiltSourceCount": 1,
+      "disabledPolicyHitCount": 0
+    },
+    "E": {
+      "status": "passed",
+      "boundary": "Write OFF",
+      "gatewayStatus": "no_changes",
+      "revisionBefore": 0,
+      "revisionAfter": 0,
+      "revisionDelta": 0
+    },
+    "F": {
+      "status": "passed",
+      "boundary": "Write ON through Gateway",
+      "gatewayStatus": "committed",
+      "revision": 1,
+      "committedIdCount": 3,
+      "canonicalObjectCount": 3
+    },
+    "G": {
+      "status": "passed",
+      "boundary": "fixed-commit GitHub onboarding",
+      "sourceUrl": "https://github.com/owner/research-skill",
+      "pinnedCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "remoteKind": "research",
+      "onboardedKind": "research",
+      "registeredResearchSkill": "github-research",
+      "loadedDefinitionCount": 1,
+      "network": "mocked codeload response; live GitHub availability not asserted"
+    }
+  },
+  "controls": {
+    "explicitWorkflowPrecedence": "User-selected Workflow has precedence over automatic routing.",
+    "freeRoutingPrecedence": "Matched existing Workflow definition earnings_review.",
+    "sameStructuredResultForReportAndProposal": true,
+    "secondLlmOverMarkdown": false,
+    "rawBodiesInArtifact": false,
+    "credentialsInArtifact": false,
+    "validationRefs": [
+      "tests/app/services/research-dispatch-service.test.ts",
+      "tests/app/services/source-library.test.ts",
+      "tests/knowledge/production/gateway-correctness.test.ts",
+      "tests/app/services/skill-onboarding.test.ts"
+    ]
+  },
+  "calls": {
+    "earningsAdapterCalls": 2
+  }
+}

@@ -28,11 +28,11 @@ Date: 2026-09-17
 ## Validation evidence
 
 - Focused dispatch, bundle, Source Library, onboarding, session-finalization, and Gateway policy tests pass.
-- Client tests pass (28 tests); root Node tests pass 1,007/1,007.
+- Client tests pass (28 tests); root Node tests pass 1,010/1,010.
 - `npm run typecheck`, `npm run client:typecheck`, and `npm run client:build` pass; the client build transforms 176 modules.
 - The existing Windows `EBUSY` process-tree cleanup race was made retry-safe and no longer reproduces in the full run.
+- `npm run acceptance:unified-research` passes and writes the fixture-backed A–G runtime evidence to `docs/project-state/evidence/2026-09-17-unified-research-entry-a-g.json`. The artifact explicitly does not claim authenticated provider E2E; the GitHub case uses a mocked codeload response at a fixed commit.
 
 ## Remaining mission work
 
-- Add `useStructuredKnowledge` enforcement inside the low-level Industry Research workflow itself; the application entry now fails closed before mounting/reading Canonical Knowledge when the policy is disabled.
-- Run the realistic A–G acceptance matrix with saved runtime artifacts, parser preflight when applicable, and repository remote verification.
+- Verify the commit is accepted by `origin/main`; the first push attempt after the latest commit encountered a transient Schannel SSL/TLS handshake failure.
