@@ -1,7 +1,4 @@
-/**
- * Schema-neutral contracts for future deterministic financial-quality
- * calculations. This Wave 1 slice defines no calculation implementation.
- */
+/** Schema-neutral contracts for deterministic, report-only financial-quality analysis. */
 
 export interface FinancialQualityPeriodFacts {
   readonly period: string
@@ -21,6 +18,19 @@ export interface FinancialQualityPeriodFacts {
   readonly totalAssets?: number
 }
 
+export interface NormalizedFinancialQualityData {
+  readonly current?: FinancialQualityPeriodFacts
+  readonly opening?: FinancialQualityPeriodFacts
+  readonly priorComparable?: FinancialQualityPeriodFacts
+  readonly sourceCandidateId: string
+  readonly diagnostics: readonly string[]
+}
+
+export interface WorkingCapitalAnalysisInput {
+  readonly current: FinancialQualityPeriodFacts
+  readonly opening: FinancialQualityPeriodFacts
+}
+
 export interface WorkingCapitalQualityResult {
   readonly period: string
   readonly dso?: number
@@ -31,11 +41,21 @@ export interface WorkingCapitalQualityResult {
   readonly diagnostics: readonly string[]
 }
 
+export interface AccrualQualityInput {
+  readonly current: FinancialQualityPeriodFacts
+  readonly opening: FinancialQualityPeriodFacts
+}
+
 export interface AccrualQualityResult {
   readonly period: string
   readonly accrualRatio?: number
+  readonly unavailableFields: readonly string[]
   readonly unavailableReason?: string
   readonly diagnostics: readonly string[]
+}
+
+export interface CashConversionAnalysisInput {
+  readonly current: FinancialQualityPeriodFacts
 }
 
 export interface CashConversionQualityResult {
@@ -45,6 +65,12 @@ export interface CashConversionQualityResult {
   readonly fcfToNetIncome?: number
   readonly unavailableFields: readonly string[]
   readonly diagnostics: readonly string[]
+}
+
+export interface RevenueRecognitionAnalysisInput {
+  readonly current: FinancialQualityPeriodFacts
+  readonly priorComparable: FinancialQualityPeriodFacts
+  readonly threshold: number
 }
 
 export type RevenueRecognitionFlagCode =
@@ -60,4 +86,22 @@ export interface RevenueRecognitionFlag {
   readonly currentPeriod: FinancialQualityPeriodFacts
   readonly priorPeriod?: FinancialQualityPeriodFacts
   readonly explanation: string
+}
+
+export interface RevenueRecognitionAnalysisResult {
+  readonly period: string
+  readonly thresholdUsed: number
+  readonly flags: readonly RevenueRecognitionFlag[]
+  readonly unavailableComparisons: readonly string[]
+  readonly diagnostics: readonly string[]
+}
+
+export interface EarningsFinancialQualitySummary {
+  readonly period: string
+  readonly sourceCandidateId: string
+  readonly workingCapital: WorkingCapitalQualityResult
+  readonly accrualQuality: AccrualQualityResult
+  readonly cashConversion: CashConversionQualityResult
+  readonly revenueRecognition: RevenueRecognitionAnalysisResult
+  readonly diagnostics: readonly string[]
 }

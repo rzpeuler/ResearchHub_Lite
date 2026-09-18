@@ -16,5 +16,10 @@ Financial-quality rules:
   conclusion of fraud or manipulation.
 - Consensus is never inferred when attributable point-in-time evidence is
   absent.
-- The financial-quality calculations described by future contracts are not
-  claimed as implemented by this Wave 1 foundation slice.
+- Deterministic financial-quality calculations now exist for explicit raw
+  revenue, COGS, balance-sheet, cash-flow, and asset inputs. They remain
+  report-only in W1-003; missing inputs remain unavailable and code owns all
+  arithmetic.
+- Revenue-recognition outputs are bounded follow-up diagnostics, not fraud or
+  earnings-manipulation conclusions. The current consensus rule and Knowledge
+  mutation authority remain unchanged.
