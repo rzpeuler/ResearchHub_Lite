@@ -3,6 +3,7 @@ import type { ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchProvid
 import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { EarningsPeriod, EarningsReviewReasoningTelemetry, EarningsReviewSection, EarningsImpactAssessment } from '../../skills/earnings-review/index.ts'
+import type { ExternalIdentifierV04 } from '../../knowledge/schema/domain-v04.ts'
 
 export interface EarningsReviewWorkflowInput {
   readonly workflowRunId: string
@@ -20,6 +21,7 @@ export interface EarningsReviewWorkflowInput {
   readonly maxSources?: number
   readonly writeKnowledge?: boolean
   readonly useStructuredKnowledge?: boolean
+  readonly externalIdentifiers?: readonly ExternalIdentifierV04[]
 }
 
 export interface EarningsReviewTelemetry {
@@ -46,6 +48,10 @@ export interface EarningsReviewWorkflowResult {
   readonly committedIds: readonly string[]
   readonly sourceIds: readonly string[]
   readonly claimIds: readonly string[]
+  readonly eventIds?: readonly string[]
+  readonly observationIds?: readonly string[]
+  readonly thesisIds?: readonly string[]
+  readonly reasoningEdgeIds?: readonly string[]
   readonly errors: readonly string[]
   readonly selectionDiagnostics: readonly string[]
   readonly acquisitionDiagnostics: readonly { readonly provider: string; readonly candidateId?: string; readonly kind?: string; readonly status: string; readonly reason: string }[]

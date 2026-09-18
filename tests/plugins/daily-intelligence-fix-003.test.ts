@@ -117,7 +117,7 @@ test('Phase 8 Gateway updates an existing Claim, contradicts a Thesis, and repla
   assert.equal(replay.status, 'no_changes')
   assert.equal(replay.knowledgeBaseRevision, revisionAfterSupport)
   const thesisSource = normalizedSource('600519', 'phase8-thesis', 'Moutai thesis', 'Moutai demand thesis.')
-  const thesis = await submitProduction(root, 'phase8-thesis', thesisSource, [{ proposalId: 'seed-thesis', kind: 'claim', subjectKey: '600519', claimType: 'thesis', statement: 'Moutai demand thesis.', sourceCandidateIds: [thesisSource.candidate.candidateId] }])
+  const thesis = await submitProduction(root, 'phase8-thesis', thesisSource, [{ proposalId: 'seed-thesis', kind: 'claim', subjectKey: '600519', claimType: 'viewpoint', statement: 'Moutai demand thesis.', sourceCandidateIds: [thesisSource.candidate.candidateId] }])
   assert.equal(thesis.status, 'committed', thesis.errors.join('; '))
   const thesisRef = thesis.claimRefsByProposalId['seed-thesis']!
   const contradictionSource = normalizedSource('600519', 'phase8-contradiction', 'Moutai demand deterioration', 'Moutai demand is deteriorating.')

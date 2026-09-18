@@ -1,6 +1,6 @@
 import type { KnowledgeBaseHandle } from '../storage/handle.ts'
 import type { NormalizedResearchSource } from '../../plugins/research-acquisition/contracts.ts'
-import type { EventTypeV04, ObservationTypeV04, ReasoningEdgeTypeV04, ThesisStatusV04 } from '../schema/domain-v04.ts'
+import type { EventTypeV04, ObservationTypeV04, ReasoningEdgeTypeV04, ThesisStatusV04, ExternalIdentifierV04 } from '../schema/domain-v04.ts'
 
 export type SemanticProductionClaimType = 'fact' | 'forecast' | 'viewpoint' | 'trend' | 'risk' | 'assumption' | 'thesis' | 'catalyst'
 
@@ -13,6 +13,7 @@ export interface SemanticProductionProposal {
   readonly statement?: string
   readonly entityType?: 'company' | 'industry' | 'product' | 'technology' | 'person' | 'institution' | 'security'
   readonly entityName?: string
+  readonly externalIdentifiers?: readonly ExternalIdentifierV04[]
   readonly relationType?: string
   readonly targetKey?: string
   readonly eventType?: EventTypeV04
@@ -68,6 +69,7 @@ export interface ProductionEntityInput {
   readonly name: string
   readonly aliases?: readonly string[]
   readonly semanticFields?: Readonly<Record<string, unknown>>
+  readonly externalIdentifiers?: readonly ExternalIdentifierV04[]
   /** Optional producer-supplied canonical root binding; it is always type-checked by the Gateway. */
   readonly existingEntityRef?: string
 }

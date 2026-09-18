@@ -77,6 +77,38 @@ test('Schema 0.4 Gateway fails closed on denied derivative rights', async () => 
   }
 })
 
+test('Schema 0.4 rejects new Thesis Claims while preserving legacy readability', async () => {
+  const f = await fresh('rhl-v04-thesis-boundary-')
+  try {
+    const handle = await f.registry.mount(f.root)
+    const rejected = await new KnowledgeProductionGateway(f.registry).submit({ ...knowledgeV04Input(handle, 'thesis-claim-rejected'), proposals: [{ proposalId: 'legacy-thesis-write', kind: 'claim', claimType: 'thesis', subjectKey: 'company', statement: 'Legacy Thesis Claim must not be newly written.', sourceCandidateIds: ['earnings-release'] }] })
+    assert.equal(rejected.status, 'blocked')
+    assert.match(rejected.errors.join('\n'), /legacy Thesis Claim/i)
+    const source = { id: 'source:legacy-readable', title: 'Legacy source', sourceType: 'official_disclosure', rights: { accessScope: 'public', providerTermsKnown: false, derivativeKnowledgeAllowed: true }, usagePolicy: { mode: 'personal_noncommercial_research', retainRaw: false, allowAiProcessing: true, allowDerivedKnowledge: true, redistributionAllowed: false }, lifecycle: { status: 'active' } }
+    const legacy = { id: 'claim:legacy-thesis', claimType: 'thesis', statement: 'Readable legacy Thesis Claim', subjectRefs: ['entity:company-test'], sourceRefs: ['source:legacy-readable'], provenance: [{ sourceRef: 'source:legacy-readable', rawRef: 'raw-sha256-' + 'a'.repeat(64), locator: null, chunkRef: null }], lifecycle: { status: 'active' } }
+    const readable = validateKnowledgeV04Objects([source as never, { id: 'entity:company-test', type: 'company', name: 'Test', lifecycle: { status: 'active' } } as never, legacy as never])
+    assert.equal(readable.status, 'passed', JSON.stringify(readable.errors))
+  } finally {
+    await rm(f.root, { recursive: true, force: true })
+  }
+})
+
+test('Schema 0.4 persists typed ExternalIdentifiers without changing Company hard identity', async () => {
+  const f = await fresh('rhl-v04-identifiers-')
+  try {
+    const handle = await f.registry.mount(f.root)
+    const result = await new KnowledgeProductionGateway(f.registry).submit({ handle, producerType: 'identifier-fixture', producerRunId: 'identifier-run', schemaProfile: { schemaVersion: '0.4', storageFormatVersion: '1', requiresRawProvenance: true }, entity: { localKey: 'company', entityType: 'company', name: '贵州茅台', aliases: ['600519'], semanticFields: { ticker: '600519', exchange: 'SSE' }, externalIdentifiers: [{ namespace: 'exchange_ticker', value: 'SSE:600519', confidence: 1 }, { namespace: 'cninfo', value: 'company-600519', confidence: 0.9 }] }, proposals: [], evidenceBindings: [], now: () => KNOWLEDGE_V04_NOW })
+    assert.equal(result.status, 'committed', JSON.stringify(result))
+    const assets = await readCanonicalV04Assets(f.root)
+    const company = assets.objects.find((item) => item.kind === 'entity')!.value as unknown as { ticker: string; exchange: string; externalIdentifiers: Array<{ namespace: string; value: string }> }
+    assert.equal(company.ticker, '600519')
+    assert.equal(company.exchange, 'SH')
+    assert.deepEqual(company.externalIdentifiers.map((item) => `${item.namespace}:${item.value}`).sort(), ['cninfo:company-600519', 'exchange_ticker:SSE:600519'])
+  } finally {
+    await rm(f.root, { recursive: true, force: true })
+  }
+})
+
 test('v0.3 to v0.4 migration is dry-run safe and apply is isolated, repeatable by source identity', async () => {
   const sourceRoot = await mkdtemp(join(tmpdir(), 'rhl-v03-source-'))
   const outputRoot = join(await mkdtemp(join(tmpdir(), 'rhl-v04-migrated-parent-')), 'output')

@@ -1,4 +1,4 @@
-import type { KnowledgeClaimV03, KnowledgeEntityV03, KnowledgeModuleV03, KnowledgeRelationV03, KnowledgeSourceV03, KnowledgeThemeGroupV03, KnowledgeMetadataV03, SourceTypeV03, SourceReliabilityV03, ClaimStructuredValueV03 } from './domain.ts'
+import type { KnowledgeClaimV03, KnowledgeEntityV03, KnowledgeModuleV03, KnowledgeRelationV03, KnowledgeSourceV03, KnowledgeThemeGroupV03, KnowledgeMetadataV03, SourceTypeV03, SourceReliabilityV03, ClaimStructuredValueV03, InvestmentThemeV03, IndustryV03, CompanyV03, ProductV03, TechnologyV03 } from './domain.ts'
 
 export type ClaimTypeV04 = 'fact' | 'forecast' | 'viewpoint' | 'trend' | 'risk' | 'assumption' | 'thesis' | 'catalyst'
 export type ClaimRefV04 = `claim:${string}`
@@ -91,6 +91,17 @@ export interface KnowledgeSourceV04 extends Omit<KnowledgeSourceV03, 'sourceType
   metadata?: KnowledgeMetadataV03
 }
 
+type EntityWithExternalIdentifiersV04<T extends KnowledgeEntityV03> = Omit<T, 'externalIds'> & {
+  externalIds?: KnowledgeMetadataV03
+  externalIdentifiers?: ExternalIdentifierV04[]
+}
+
+export type KnowledgeInvestmentThemeV04 = EntityWithExternalIdentifiersV04<InvestmentThemeV03>
+export type KnowledgeIndustryV04 = EntityWithExternalIdentifiersV04<IndustryV03>
+export type KnowledgeCompanyV04 = EntityWithExternalIdentifiersV04<CompanyV03>
+export type KnowledgeProductV04 = EntityWithExternalIdentifiersV04<ProductV03>
+export type KnowledgeTechnologyV04 = EntityWithExternalIdentifiersV04<TechnologyV03>
+
 export interface KnowledgePersonV04 extends Omit<KnowledgeEntityV03, 'type' | 'externalIds'> {
   type: 'person'
   externalIds?: KnowledgeMetadataV03
@@ -114,7 +125,7 @@ export interface KnowledgeSecurityV04 extends Omit<KnowledgeEntityV03, 'type' | 
   currency?: string | null
 }
 
-export type KnowledgeEntityV04 = KnowledgeEntityV03 | KnowledgePersonV04 | KnowledgeInstitutionV04 | KnowledgeSecurityV04
+export type KnowledgeEntityV04 = KnowledgeInvestmentThemeV04 | KnowledgeIndustryV04 | KnowledgeCompanyV04 | KnowledgeProductV04 | KnowledgeTechnologyV04 | KnowledgePersonV04 | KnowledgeInstitutionV04 | KnowledgeSecurityV04
 export type KnowledgeRelationV04 = KnowledgeRelationV03
 export type KnowledgeThemeGroupV04 = KnowledgeThemeGroupV03
 export type KnowledgeModuleV04 = KnowledgeModuleV03
@@ -210,7 +221,7 @@ export type ReasoningEdgeTypeV04 = 'supports' | 'contradicts' | 'depends_on' | '
 export interface KnowledgeReasoningEdgeV04 {
   id: ReasoningEdgeRefV04
   type: ReasoningEdgeTypeV04
-  sourceRef: ObservationRefV04 | ClaimRefV04 | ThesisRefV04
+  sourceRef: ObservationRefV04 | ClaimRefV04
   targetRef: ClaimRefV04 | ThesisRefV04
   sourceRefs?: SourceRefV04[]
   confidence?: number | null

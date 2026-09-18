@@ -14,6 +14,7 @@ export const KNOWLEDGE_SCHEMA_V04 = {
   entity: {
     ...KNOWLEDGE_SCHEMA_V03.entity,
     types: [...KNOWLEDGE_SCHEMA_V03.entity.types, 'person', 'institution', 'security'] as const,
+    commonFields: [...KNOWLEDGE_SCHEMA_V03.entity.commonFields, 'externalIdentifiers'] as const,
     person: { description: 'A financially relevant person such as an executive, analyst, expert, author, or fund manager.' },
     institution: { description: 'A broker, investment bank, fund, regulator, association, research institution, or media organization.' },
     security: { fields: ['ticker', 'exchange', 'securityType', 'currency', 'externalIdentifiers'] as const, requiredFields: ['ticker', 'exchange', 'securityType'] as const },
@@ -30,6 +31,8 @@ export const KNOWLEDGE_SCHEMA_V04 = {
   },
   claim: {
     ...KNOWLEDGE_SCHEMA_V03.claim,
+    // `thesis` remains a readable legacy ClaimType in the domain contract, but
+    // new writes must use the first-class Thesis object below.
     types: [...KNOWLEDGE_SCHEMA_V03.claim.types, 'assumption', 'thesis', 'catalyst'] as const,
     fields: [...KNOWLEDGE_SCHEMA_V03.claim.fields, 'probability', 'supportsClaimRefs', 'dependsOnClaimRefs', 'contradictsClaimRefs'] as const,
     structuredValueFields: ['metric', 'value', 'unit', 'comparator', 'period', 'fiscalPeriod', 'semanticKey'] as const,

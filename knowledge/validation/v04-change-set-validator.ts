@@ -68,6 +68,12 @@ function validateEvidence(objects: Iterable<KnowledgeAssetV04>, knownRawRefs: Re
   }
 }
 
+function validateNewThesisClaim(operation: KnowledgeOperationV04, errors: V04ChangeSetValidationDiagnostic[]): void {
+  const object = operation.type === 'create' ? operation.object : operation.object
+  if (!object || typeof object.id !== 'string') return
+  if (object.id.startsWith('claim:') && (object as unknown as Dict).claimType === 'thesis') add(errors, 'V04_LEGACY_THESIS_CLAIM_WRITE', 'New writes must use first-class Thesis objects; legacy Thesis Claims are read/migration compatibility only', operation.operationId, object.id)
+}
+
 function applyOperation(objects: Map<string, KnowledgeAssetV04>, operation: KnowledgeOperationV04, errors: V04ChangeSetValidationDiagnostic[], seenOperationIds: Set<string>, mutationTargets: Set<string>): void {
   if (typeof operation.operationId !== 'string' || !SAFE_ID.test(operation.operationId) || seenOperationIds.has(operation.operationId)) add(errors, 'V04_OPERATION_ID_INVALID', `Operation id must be unique and safe: ${String(operation.operationId)}`, operation.operationId)
   else seenOperationIds.add(operation.operationId)
@@ -109,7 +115,7 @@ export async function validateKnowledgeChangeSetV04(handle: KnowledgeBaseHandle,
   const objects = new Map<string, KnowledgeAssetV04>(assets.objects.map((item) => [item.value.id, structuredClone(item.value)]))
   const seenOperationIds = new Set<string>()
   const mutationTargets = new Set<string>()
-  for (const operation of Array.isArray(changeSet.operations) ? changeSet.operations : []) if (record(operation)) applyOperation(objects, operation as KnowledgeOperationV04, errors, seenOperationIds, mutationTargets); else add(errors, 'V04_OPERATION_INVALID', 'Operation must be an object')
+  for (const operation of Array.isArray(changeSet.operations) ? changeSet.operations : []) if (record(operation)) { validateNewThesisClaim(operation as KnowledgeOperationV04, errors); applyOperation(objects, operation as KnowledgeOperationV04, errors, seenOperationIds, mutationTargets) } else add(errors, 'V04_OPERATION_INVALID', 'Operation must be an object')
   try { assertKnowledgeV04Objects([...objects.values()]) } catch (error) { add(errors, 'V04_CANONICAL_INVALID', error instanceof Error ? error.message : String(error)) }
   validateEvidence(objects.values(), knownRawRefs, errors)
   const report = { status: errors.length === 0 ? 'passed' as const : 'failed' as const, errors }

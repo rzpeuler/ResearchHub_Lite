@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "0.4",
+  "workflowRunId": "knowledge-v04-final-earnings",
+  "knowledgeBaseId": "kb-knowledge-v04-final",
+  "firstRevision": 2,
+  "replayRevision": 2,
+  "canonicalIds": {
+    "event": "event:f229d32535c62464",
+    "observations": [
+      "observation:2b67cda681a31627",
+      "observation:4cb2888794f02cc6",
+      "observation:cab8bb0123d091ff",
+      "observation:f3e7f4db7f9a0eaa"
+    ],
+    "claims": [
+      "claim:research-443c474a72490782",
+      "claim:research-56a13ac0bd9b7f11"
+    ],
+    "theses": [
+      "thesis:007ea72ad6bb373d"
+    ],
+    "reasoningEdges": [
+      "reasoning-edge:4d9ce5eec03398d1",
+      "reasoning-edge:7d10163cb5ac7415",
+      "reasoning-edge:904bec7ee5e7cc2b",
+      "reasoning-edge:ab1feb03c0bb3752",
+      "reasoning-edge:f788678e8733abf7"
+    ]
+  },
+  "refs": {
+    "company": "entity:company-600519",
+    "officialSourceCount": 2
+  },
+  "assertions": {
+    "F1_realWorkflowCompletedAndOfficialEarningsEvent": true,
+    "F2_deterministicMetricObservations": true,
+    "F3_firstClassThesisAndNoNewThesisClaim": true,
+    "F4_reasoningEdgeEndpointContract": true,
+    "F5_typedExternalIdentifiersReloaded": true,
+    "F6_rawAndSourceProvenancePersisted": true,
+    "F7_replayPreservesCanonicalIdentityCounts": true
+  }
+}

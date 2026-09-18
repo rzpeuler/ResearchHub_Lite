@@ -1,7 +1,7 @@
 # Knowledge Schema v0.4 Final Closure Design
 
 Date: 2026-09-18
-Status: approved execution baseline; implementation pending
+Status: implemented and final acceptance verified
 
 ## Scope
 

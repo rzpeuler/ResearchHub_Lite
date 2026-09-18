@@ -102,7 +102,7 @@ export async function runKnowledgeV04Acceptance(): Promise<typeof evidence> {
         K4_gateway_atomic_path: first.status === 'committed' && first.changeSetId !== undefined,
         K5_query_new_kinds: index.byKind.get('event')?.length === 1 && index.byKind.get('observation')?.length === 4 && index.byKind.get('thesis')?.length === 1 && index.byKind.get('reasoning_edge')?.length === 3,
         K6_rights_fail_closed: denied.status === 'blocked',
-        K7_earnings_vertical: Boolean(first.eventRefsByProposalId?.['event-fy25'] && first.observationRefsByProposalId?.['eps-consensus'] && first.claimRefsByProposalId['earnings-claim'] && first.thesisRefsByProposalId?.['thesis'] && first.reasoningEdgeRefsByProposalId?.['edge-claim-thesis']),
+        K7_gateway_v04_semantics: Boolean(first.eventRefsByProposalId?.['event-fy25'] && first.observationRefsByProposalId?.['eps-consensus'] && first.claimRefsByProposalId['earnings-claim'] && first.thesisRefsByProposalId?.['thesis'] && first.reasoningEdgeRefsByProposalId?.['edge-claim-thesis']),
         K8_migration: dry.status === 'planned' && applied.status === 'applied' && migrationReplay.status === 'already_applied' && applied.preservedProvenanceCount === 1,
         K9_replay_idempotency: replay.status === 'no_changes',
         K10_review_persistence: reviews.length === 1 && reviews[0]!.resolutionContext.schemaVersionAtCreation === '0.4',
