@@ -1,5 +1,4 @@
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
-import { relativeValuation } from './valuation.ts'
 import type { CompanyResearchInput, CompanyResearchResult, SemanticKnowledgeProposal } from './contracts.ts'
 
 export const COMPANY_RESEARCH_SECTIONS = ['Company Overview', 'Business Model', 'Business Segments', 'Revenue / Profit Drivers', 'Products', 'Technologies', 'Industry Exposure', 'Supply Chain', 'Competition', 'Financial Quality', 'Growth Drivers', 'Management / Capital Allocation', 'Catalysts', 'Risks', 'Valuation', 'Bull / Base / Bear', 'Variant Perception', 'Investment Thesis', 'Monitoring Checklist'] as const
@@ -84,9 +83,14 @@ function validateSynthesis(value: Record<string, unknown>, input: CompanyResearc
 
 function finalizeResearch(input: CompanyResearchInput, partial: { sections: CompanyResearchResult['sections']; proposals: readonly SemanticKnowledgeProposal[] }, generatedAt: string): CompanyResearchResult {
   const metric = extractMetric(input.financialData)
-  const valuation = metric === undefined
-    ? { status: 'insufficient_data' as const, missingFields: ['verified earnings metric'], note: 'No verified structured earnings metric was supplied; implied value is unavailable.' }
-    : { status: 'available' as const, method: 'relative', result: relativeValuation({ metric, peerMultiples: [10, 12, 15] }) }
+  const missingFields = metric === undefined ? ['verified earnings metric', 'attributable peer valuation inputs'] : ['attributable peer valuation inputs']
+  const valuation = {
+    status: 'insufficient_data' as const,
+    missingFields,
+    note: metric === undefined
+      ? 'No verified structured earnings metric was supplied, and no implied relative valuation is produced without attributable peer data.'
+      : 'No implied relative valuation is produced without attributable peer data.',
+  }
   return { company: input.company, generatedAt, asOf: input.asOf, sections: partial.sections, proposals: partial.proposals, sourceCandidateIds: input.sources.map((source) => source.candidate.candidateId), valuation }
 }
 function sectionId(title: string): string { return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }
