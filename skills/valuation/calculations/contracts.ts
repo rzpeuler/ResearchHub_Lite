@@ -153,6 +153,43 @@ export interface ComparableSetResult {
   readonly rejections: readonly ComparableCompanyRejection[]
 }
 
+export interface ImpliedEquityFromEvMultipleInput {
+  readonly metric: number
+  readonly selectedMultiple: number
+  readonly grossDebt: number
+  readonly cash: number
+  readonly dilutedShares: number
+  readonly preferredStock?: number
+  readonly minorityInterest?: number
+}
+
+export interface ImpliedEquityFromEvMultipleResult {
+  readonly impliedEnterpriseValue: number
+  readonly equityValue: number
+  readonly valuePerShare: number
+}
+
+export interface DcfSensitivityCell {
+  readonly discountRate: number
+  readonly terminalGrowthRate: number
+  readonly status: 'available' | 'unavailable'
+  readonly enterpriseValue?: number
+  readonly errorCode?: string
+}
+
+export interface DcfSensitivityResult {
+  readonly discountRates: readonly number[]
+  readonly terminalGrowthRates: readonly number[]
+  readonly cells: readonly DcfSensitivityCell[]
+}
+
+export interface ValuationQcInput {
+  readonly discountRate: number
+  readonly terminalGrowthRate: number
+  readonly terminalValueShare?: number
+  readonly values?: readonly number[]
+}
+
 export type ValuationQcSeverity = 'critical' | 'warning' | 'info'
 
 export interface ValuationQcIssue {

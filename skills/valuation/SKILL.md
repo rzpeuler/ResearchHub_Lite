@@ -2,6 +2,11 @@
 
 Use deterministic market and financial inputs to construct the bounded valuation basis, eligibility checks, Bear/Base/Bull scenarios, and sensitivity output. Recompute arithmetic in code, keep consensus and deferred DCF explicit when unavailable, and allow semantic reasoning only for bounded assumptions and synthesis. Canonical IDs, numeric facts, proposals, and Knowledge mutation remain outside the Skill.
 
+Internal deterministic DCF primitives now exist under the Skill's calculation
+module, but DCF remains unavailable in the current Valuation v0.1 product
+path. Product use requires an explicit input-readiness gate and integration
+decision.
+
 Methodology rules:
 
 - The point-in-time basis, valuation date, reporting period, and publication
