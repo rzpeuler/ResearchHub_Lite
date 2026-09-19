@@ -18,6 +18,20 @@ function segment(overrides: Partial<SegmentKpiPoint> = {}): SegmentKpiPoint {
   return { segmentKey: 'segment-a', metric: 'shipments', fiscalPeriod: '2026-FY', value: 100, unit: 'units', sourceCandidateIds: [' source-b ', 'source-a', 'source-a'], ...overrides }
 }
 
+function assertAllNumbersFinite(value: unknown): void {
+  if (typeof value === 'number') {
+    assert.equal(Number.isFinite(value), true)
+    return
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) assertAllNumbersFinite(item)
+    return
+  }
+  if (value !== null && typeof value === 'object') {
+    for (const item of Object.values(value)) assertAllNumbersFinite(item)
+  }
+}
+
 test('T1 valid range normalization calculates midpoint and normalizes collections', () => {
   const normalized = normalizeGuidanceRange(guidance())
   assert.deepEqual(normalized?.sourceCandidateIds, ['source-a', 'source-b'])
@@ -227,5 +241,60 @@ test('T30 Guidance and Segment KPI result families contain no NaN or Infinity', 
     consensus: compareGuidanceVsConsensus(guidance(), consensus(), ANALYSIS_AS_OF),
     segment: compareSegmentKpi({ current: segment({ value: 120 }), priorComparable: segment({ fiscalPeriod: '2025-FY', value: 100 }), expectation: segment({ value: 110 }) }),
   }
-  assert.equal(/NaN|Infinity/.test(JSON.stringify(values)), false)
+  assertAllNumbersFinite(values)
+})
+
+test('T31 maximum finite equal range bounds retain a finite midpoint', () => {
+  const normalized = normalizeGuidanceRange(guidance({ low: Number.MAX_VALUE, high: Number.MAX_VALUE }))
+  assert.ok(normalized)
+  assert.equal(normalized?.midpoint, Number.MAX_VALUE)
+  assertAllNumbersFinite(normalized)
+})
+
+test('T32 large same-sign bounds use a finite midpoint without addition overflow', () => {
+  const low = Number.MAX_VALUE / 2
+  const high = Number.MAX_VALUE
+  const normalized = normalizeGuidanceRange(guidance({ low, high }))
+  assert.ok(normalized)
+  assert.equal(normalized?.midpoint, low + (high - low) / 2)
+  assert.ok(normalized!.midpoint! >= low && normalized!.midpoint! <= high)
+  assertAllNumbersFinite(normalized)
+})
+
+test('T33 large opposite-sign bounds produce a finite zero midpoint', () => {
+  const normalized = normalizeGuidanceRange(guidance({ low: -Number.MAX_VALUE, high: Number.MAX_VALUE }))
+  assert.ok(normalized)
+  assert.equal(normalized?.midpoint, 0)
+  assertAllNumbersFinite(normalized)
+})
+
+test('T34 extreme supplied midpoint is validated against the safe code-owned midpoint', () => {
+  const low = Number.MAX_VALUE / 2
+  const high = Number.MAX_VALUE
+  const midpoint = low + (high - low) / 2
+  assert.deepEqual(validateGuidanceRange(guidance({ low, high, midpoint }), ANALYSIS_AS_OF), [])
+  assert.equal(normalizeGuidanceRange(guidance({ low, high, midpoint }))?.midpoint, midpoint)
+  assert.ok(validateGuidanceRange(guidance({ low, high, midpoint: Number.MAX_VALUE }), ANALYSIS_AS_OF).includes('range_midpoint_mismatch'))
+})
+
+test('T35 Guidance versus Consensus returns only finite numbers or unavailable', () => {
+  const result = compareGuidanceVsConsensus(guidance({ low: Number.MAX_VALUE / 2, high: Number.MAX_VALUE }), consensus({ mean: -Number.MAX_VALUE / 2, median: -Number.MAX_VALUE / 2, low: -Number.MAX_VALUE / 2, high: -Number.MAX_VALUE / 2 }), ANALYSIS_AS_OF)
+  if (result !== undefined) assertAllNumbersFinite(result)
+})
+
+test('T36 overflowing range width is omitted rather than leaking Infinity', () => {
+  const result = buildGuidanceRevisionBridge({ oldGuidance: guidance({ low: -Number.MAX_VALUE, high: Number.MAX_VALUE, publishedAt: '2026-07-20T00:00:00.000Z' }), newGuidance: guidance({ low: -Number.MAX_VALUE / 2, high: Number.MAX_VALUE / 2, publishedAt: '2026-08-20T00:00:00.000Z' }) })
+  assert.ok(result)
+  assert.equal(result?.rangeWidthChange, undefined)
+  assertAllNumbersFinite(result)
+})
+
+test('T37 recursive finiteness assertion directly inspects every W2-003 result family', () => {
+  const values = [
+    normalizeGuidanceRange(guidance({ low: -Number.MAX_VALUE, high: Number.MAX_VALUE })),
+    buildGuidanceRevisionBridge({ oldGuidance: guidance({ low: -Number.MAX_VALUE, high: Number.MAX_VALUE, publishedAt: '2026-07-20T00:00:00.000Z' }), newGuidance: guidance({ low: -Number.MAX_VALUE / 2, high: Number.MAX_VALUE / 2, publishedAt: '2026-08-20T00:00:00.000Z' }) }),
+    compareGuidanceVsConsensus(guidance({ low: -Number.MAX_VALUE, high: Number.MAX_VALUE }), consensus({ mean: 0 }), ANALYSIS_AS_OF),
+    compareSegmentKpi({ current: segment({ value: Number.MAX_VALUE }), expectation: segment({ value: Number.MAX_VALUE / 2 }) }),
+  ]
+  assertAllNumbersFinite(values)
 })

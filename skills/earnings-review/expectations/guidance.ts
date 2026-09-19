@@ -7,6 +7,18 @@ const timestamp = (value: unknown): number | undefined => typeof value === 'stri
 const uniqueSorted = (values: readonly string[]): readonly string[] => [...new Set(values)].sort()
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 
+function finiteMidpoint(low: number, high: number): number | undefined {
+  const midpoint = (low >= 0 && high >= 0) || (low <= 0 && high <= 0)
+    ? low + (high - low) / 2
+    : low / 2 + high / 2
+  return finite(midpoint) ? midpoint : undefined
+}
+
+function finiteDifference(left: number, right: number): number | undefined {
+  const difference = left - right
+  return finite(difference) ? difference : undefined
+}
+
 function normalizedText(value: unknown): unknown { return typeof value === 'string' ? value.trim() : value }
 
 function normalizeGuidanceStrings(guidance: GuidanceRange): GuidanceRange {
@@ -53,9 +65,10 @@ function guidanceDiagnostics(guidance: GuidanceRange, analysisAsOf?: string): re
     if (!finite(normalized.high)) diagnostics.push('range_high_required')
     if (!text(normalized.unit)) diagnostics.push('numeric_unit_required')
     if (finite(normalized.low) && finite(normalized.high) && normalized.low > normalized.high) diagnostics.push('range_low_must_not_exceed_high')
-    if (finite(normalized.low) && finite(normalized.high) && normalized.midpoint !== undefined && finite(normalized.midpoint)) {
-      const midpoint = (normalized.low + normalized.high) / 2
-      if (Math.abs(normalized.midpoint - midpoint) > 1e-12 * Math.max(1, Math.abs(midpoint))) diagnostics.push('range_midpoint_mismatch')
+    if (finite(normalized.low) && finite(normalized.high)) {
+      const midpoint = finiteMidpoint(normalized.low, normalized.high)
+      if (midpoint === undefined) diagnostics.push('range_midpoint_not_finite')
+      else if (normalized.midpoint !== undefined && finite(normalized.midpoint) && Math.abs(normalized.midpoint - midpoint) > 1e-12 * Math.max(1, Math.abs(midpoint))) diagnostics.push('range_midpoint_mismatch')
     }
   } else if (normalized.guidanceType === 'minimum') {
     if (!finite(normalized.low)) diagnostics.push('minimum_low_required')
@@ -85,7 +98,10 @@ export function validateGuidanceRange(guidance: GuidanceRange, analysisAsOf: str
 export function normalizeGuidanceRange(guidance: GuidanceRange, analysisAsOf?: string): GuidanceRange | undefined {
   const normalized = normalizeGuidanceStrings(guidance)
   if (guidanceDiagnostics(normalized, analysisAsOf).length > 0) return undefined
-  if (normalized.guidanceType === 'range') return { ...normalized, midpoint: (normalized.low! + normalized.high!) / 2 }
+  if (normalized.guidanceType === 'range') {
+    const midpoint = finiteMidpoint(normalized.low!, normalized.high!)
+    return midpoint === undefined ? undefined : { ...normalized, midpoint }
+  }
   return normalized
 }
 
@@ -126,6 +142,7 @@ export function selectPriorGuidance(input: PriorGuidanceSelectionInput): PriorGu
 }
 
 function revision(oldValue: number, newValue: number): NumericRevision | undefined {
+  if (!finite(oldValue) || !finite(newValue)) return undefined
   const absoluteRevision = newValue - oldValue
   if (!Number.isFinite(absoluteRevision)) return undefined
   const relativeRevision = oldValue === 0 ? undefined : absoluteRevision / Math.abs(oldValue)
@@ -148,7 +165,9 @@ export function buildGuidanceRevisionBridge(input: GuidanceRevisionInput): Guida
   const lowEndRevision = oldGuidance.low !== undefined && newGuidance.low !== undefined ? revision(oldGuidance.low, newGuidance.low) : undefined
   const highEndRevision = oldGuidance.high !== undefined && newGuidance.high !== undefined ? revision(oldGuidance.high, newGuidance.high) : undefined
   const midpointRevision = midpointComparable(oldGuidance, newGuidance) && oldGuidance.midpoint !== undefined && newGuidance.midpoint !== undefined ? revision(oldGuidance.midpoint, newGuidance.midpoint) : undefined
-  const rangeWidthChange = oldGuidance.low !== undefined && oldGuidance.high !== undefined && newGuidance.low !== undefined && newGuidance.high !== undefined ? revision(oldGuidance.high - oldGuidance.low, newGuidance.high - newGuidance.low) : undefined
+  const oldWidth = oldGuidance.low !== undefined && oldGuidance.high !== undefined ? finiteDifference(oldGuidance.high, oldGuidance.low) : undefined
+  const newWidth = newGuidance.low !== undefined && newGuidance.high !== undefined ? finiteDifference(newGuidance.high, newGuidance.low) : undefined
+  const rangeWidthChange = oldWidth !== undefined && newWidth !== undefined ? revision(oldWidth, newWidth) : undefined
   if (lowEndRevision === undefined && highEndRevision === undefined && midpointRevision === undefined && rangeWidthChange === undefined) return undefined
   return { metric: newGuidance.metric, fiscalPeriod: newGuidance.fiscalPeriod, unit: newGuidance.unit!, oldGuidanceId: oldGuidance.guidanceId, newGuidanceId: newGuidance.guidanceId, oldGuidanceType: oldGuidance.guidanceType, newGuidanceType: newGuidance.guidanceType, oldPublishedAt: oldGuidance.publishedAt, newPublishedAt: newGuidance.publishedAt, ...(lowEndRevision === undefined ? {} : { lowEndRevision }), ...(highEndRevision === undefined ? {} : { highEndRevision }), ...(midpointRevision === undefined ? {} : { midpointRevision }), ...(rangeWidthChange === undefined ? {} : { rangeWidthChange }) }
 }
@@ -181,6 +200,7 @@ export function compareGuidanceVsConsensus(first: GuidanceConsensusComparisonInp
   if (relation === undefined) return undefined
   const midpoint = guidance.guidanceType === 'range' || guidance.guidanceType === 'point' ? guidance.midpoint : undefined
   const absoluteDelta = midpoint === undefined ? undefined : midpoint - input.consensus.mean
+  if (absoluteDelta !== undefined && !finite(absoluteDelta)) return undefined
   const relativeDelta = absoluteDelta === undefined || input.consensus.mean === 0 ? undefined : absoluteDelta / Math.abs(input.consensus.mean)
   if (relativeDelta !== undefined && !Number.isFinite(relativeDelta)) return undefined
   const direction = absoluteDelta === undefined ? undefined : absoluteDelta > 0 ? 'above' : absoluteDelta < 0 ? 'below' : 'in_line'

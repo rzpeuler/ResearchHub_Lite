@@ -110,3 +110,9 @@ good/bad interpretation.
 W2-003 does not change the live Earnings Review Workflow or Skill, add source
 acquisition, perform LLM extraction, persist Guidance or Segment KPI results,
 or modify Knowledge Schema, the metric registry, or W2-002 projection.
+
+W2-003 derived numeric outputs have a finite-value invariant. Range midpoint
+calculation uses one shared finite-safe implementation for validation and
+normalization; Guidance deltas, revisions, and range widths fail closed when
+their arithmetic cannot be represented finitely. Tests inspect JavaScript
+numbers recursively rather than relying on JSON serialization.
