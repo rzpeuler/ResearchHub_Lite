@@ -138,3 +138,22 @@ or revision persistence. Expectation-only sources remain report-only unless a
 separate independent Knowledge production path persists them. Invalid or
 incomplete expectations are non-blocking, and `Consensus unavailable` remains
 the fail-closed fallback when no valid actual-vs-consensus finding exists.
+
+## W2-004-FIX-001 — PIT cutoff and report integrity
+
+The effective result publication cutoff is usable only when its timestamp is
+valid and no later than `analysisAsOf`. A missing cutoff produces
+`result_publication_cutoff_unavailable`; malformed or future values produce a
+deterministic invalid-cutoff diagnostic and disable both actual-vs-consensus
+and actual-vs-prior comparisons. A selected official result publication time
+remains authoritative over the caller bundle fallback.
+
+Expectation report rendering is finite-safe and reads only already validated
+deterministic result fields. It does not recalculate range widths, surprise
+amounts, revisions, midpoints, or relationships. Relative deltas are formatted
+as percentages only for display, with non-finite values omitted. Guidance
+revision dimensions remain separate, and absent minimum/maximum/qualitative
+numeric fields are not fabricated. Revision-link ambiguity is evaluated only
+after each link is individually valid, so an invalid extra predecessor cannot
+suppress a unique valid revision while multiple valid predecessors still fail
+closed.
