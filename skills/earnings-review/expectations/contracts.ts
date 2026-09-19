@@ -13,10 +13,12 @@ export interface EstimatePoint {
   readonly publishedAt: string
   readonly estimateHorizon?: string
   readonly sourceCandidateIds: readonly string[]
+}
 
 export interface ConsensusSnapshot {
   readonly metric: ExpectationMetric
   readonly fiscalPeriod: string
+  readonly unit: string
   readonly asOf: string
   readonly mean: number
   readonly median: number

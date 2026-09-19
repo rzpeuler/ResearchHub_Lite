@@ -59,6 +59,7 @@ test('consensus uses one latest estimate per institution and deterministic popul
   assert.equal(result.snapshot?.median, 100)
   assert.equal(result.snapshot?.low, 90)
   assert.equal(result.snapshot?.high, 110)
+  assert.equal(result.snapshot?.unit, 'CNY')
   assert.equal(result.snapshot?.dispersion, 10)
   const insufficient = buildConsensusSnapshot({ estimates: [estimate()], metric: 'revenue', fiscalPeriod: '2026-FY', asOf: '2026-08-01T00:00:00.000Z', minimumCount: 2 })
   assert.equal(insufficient.snapshot, undefined)
@@ -84,8 +85,9 @@ test('actual metric adapter and actual-vs-expectation comparison are determinist
 })
 
 test('actual-vs-consensus and actual-vs-prior-estimate preserve metric and institution matching', () => {
-  const consensus: ConsensusSnapshot = { metric: 'revenue', fiscalPeriod: '2026-FY', asOf: '2026-08-01T00:00:00.000Z', mean: 100, median: 100, high: 110, low: 90, count: 2, dispersion: 10, contributingEstimateIds: ['a', 'b'] }
+  const consensus: ConsensusSnapshot = { metric: 'revenue', fiscalPeriod: '2026-FY', unit: 'CNY', asOf: '2026-08-01T00:00:00.000Z', mean: 100, median: 100, high: 110, low: 90, count: 2, dispersion: 10, contributingEstimateIds: ['a', 'b'] }
   assert.equal(compareActualVsConsensus(actual(), consensus)?.relativeDelta, 0.1)
+  assert.equal(compareActualVsConsensus(actual({ unit: 'CNY_million' }), consensus), undefined)
   const estimates = [
     estimate({ estimateId: 'a-old', value: 90, publishedAt: '2026-07-01T00:00:00.000Z' }),
     estimate({ estimateId: 'a-mid', value: 95, publishedAt: '2026-07-15T00:00:00.000Z' }),
@@ -99,11 +101,51 @@ test('actual-vs-consensus and actual-vs-prior-estimate preserve metric and insti
   assert.equal(compareActualVsPriorEstimate({ actual: actual(), estimates, institutionKey: 'house-a', comparisonCutoff: '2026-06-01T00:00:00.000Z' }), undefined)
 })
 
+test('future and malformed exclusions do not invalidate a valid historical consensus', () => {
+  const result = buildConsensusSnapshot({
+    estimates: [
+      estimate({ estimateId: 'house-a-valid', institutionKey: 'house-a', value: 100 }),
+      estimate({ estimateId: 'house-b-valid', institutionKey: 'house-b', value: 120 }),
+      estimate({ estimateId: 'future-house', institutionKey: 'house-c', value: 140, publishedAt: '2026-09-01T00:00:00.000Z' }),
+      estimate({ estimateId: 'malformed', institutionKey: 'house-d', value: 160, sourceCandidateIds: [] }),
+    ],
+    metric: 'revenue', fiscalPeriod: '2026-FY', asOf: '2026-08-01T00:00:00.000Z', minimumCount: 2,
+  })
+  assert.ok(result.snapshot)
+  assert.equal(result.snapshot?.count, 2)
+  assert.equal(result.snapshot?.unit, 'CNY')
+  assert.deepEqual(result.snapshot?.contributingEstimateIds, ['house-a-valid', 'house-b-valid'])
+  assert.ok(result.diagnostics.includes('future-house:published_after_asOf'))
+  assert.ok(result.diagnostics.includes('malformed:source_evidence_required'))
+})
+
+test('duplicate estimate IDs are excluded deterministically and may cause minimum-count failure', () => {
+  const duplicate = [
+    estimate({ estimateId: 'duplicate', institutionKey: 'house-a', value: 100 }),
+    estimate({ estimateId: 'duplicate', institutionKey: 'house-a', value: 120, publishedAt: '2026-07-15T00:00:00.000Z' }),
+    estimate({ estimateId: 'house-b-valid', institutionKey: 'house-b', value: 90 }),
+    estimate({ estimateId: 'house-c-valid', institutionKey: 'house-c', value: 110 }),
+  ]
+  const input = { estimates: duplicate, metric: 'revenue' as const, fiscalPeriod: '2026-FY', asOf: '2026-08-01T00:00:00.000Z', minimumCount: 2 }
+  const forward = buildConsensusSnapshot(input)
+  const reversed = buildConsensusSnapshot({ ...input, estimates: [...duplicate].reverse() })
+  assert.ok(forward.snapshot)
+  assert.deepEqual(forward.snapshot?.contributingEstimateIds, ['house-b-valid', 'house-c-valid'])
+  assert.deepEqual(reversed.snapshot?.contributingEstimateIds, forward.snapshot?.contributingEstimateIds)
+  assert.ok(forward.diagnostics.includes('duplicate:duplicate_estimateId'))
+  assert.ok(!forward.snapshot?.contributingEstimateIds.includes('duplicate'))
+
+  const insufficient = buildConsensusSnapshot({ ...input, estimates: duplicate.slice(0, 3) })
+  assert.equal(insufficient.snapshot, undefined)
+  assert.ok(insufficient.diagnostics.includes('consensus_minimum_count_not_met'))
+})
+
 test('estimate revision bridge enforces same identity and chronological publication', () => {
   const result = buildEstimateRevisionBridge({ oldEstimate: estimate({ estimateId: 'old', value: 90, publishedAt: '2026-07-01T00:00:00.000Z' }), newEstimate: estimate({ estimateId: 'new', value: 95, publishedAt: '2026-07-15T00:00:00.000Z' }) })
   assert.deepEqual(result, { metric: 'revenue', fiscalPeriod: '2026-FY', institutionKey: 'house-a', oldValue: 90, newValue: 95, absoluteRevision: 5, relativeRevision: 5 / 90, oldPublishedAt: '2026-07-01T00:00:00.000Z', newPublishedAt: '2026-07-15T00:00:00.000Z' })
   assert.equal(buildEstimateRevisionBridge({ oldEstimate: estimate({ publishedAt: '2026-07-15T00:00:00.000Z' }), newEstimate: estimate({ publishedAt: '2026-07-01T00:00:00.000Z' }) }), undefined)
   assert.equal(buildEstimateRevisionBridge({ oldEstimate: estimate({ institutionKey: 'house-a' }), newEstimate: estimate({ institutionKey: 'house-b', publishedAt: '2026-07-15T00:00:00.000Z' }) }), undefined)
+  assert.equal(buildEstimateRevisionBridge({ oldEstimate: estimate({ unit: 'CNY' }), newEstimate: estimate({ unit: 'CNY_million', publishedAt: '2026-07-15T00:00:00.000Z' }) }), undefined)
   const zero = buildEstimateRevisionBridge({ oldEstimate: estimate({ value: 0 }), newEstimate: estimate({ value: 5, publishedAt: '2026-07-15T00:00:00.000Z' }) })
   assert.equal(zero?.absoluteRevision, 5)
   assert.equal(zero?.relativeRevision, undefined)

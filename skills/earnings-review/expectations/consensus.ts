@@ -11,7 +11,8 @@ export function buildConsensusSnapshot(input: ConsensusCalculationInput): Consen
   if (selection.selected.length < input.minimumCount) diagnostics.push('consensus_minimum_count_not_met')
   const units = new Set(selection.selected.map((estimate) => estimate.unit))
   if (units.size > 1) diagnostics.push('consensus_units_must_match')
-  if (diagnostics.length > 0) return { selectedEstimates: selection.selected, diagnostics: [...new Set(diagnostics)] }
+  const blockingDiagnostics = diagnostics.filter((diagnostic) => diagnostic === 'asOf_must_be_valid' || diagnostic === 'minimumCount_must_be_at_least_2' || diagnostic === 'consensus_minimum_count_not_met' || diagnostic === 'consensus_units_must_match')
+  if (blockingDiagnostics.length > 0) return { selectedEstimates: selection.selected, diagnostics: [...new Set(diagnostics)] }
   const values = selection.selected.map((estimate) => estimate.value).sort((left, right) => left - right)
   const sum = values.reduce((total, value) => total + value, 0)
   const mean = sum / values.length
@@ -22,8 +23,8 @@ export function buildConsensusSnapshot(input: ConsensusCalculationInput): Consen
   const variance = values.reduce((total, value) => total + (value - mean) ** 2, 0) / values.length
   const dispersion = Math.sqrt(variance)
   if (![mean, median, low, high, dispersion].every(finite)) return { selectedEstimates: selection.selected, diagnostics: ['consensus_result_must_be_finite'] }
-  const snapshot: ConsensusSnapshot = { metric: input.metric, fiscalPeriod: input.fiscalPeriod, asOf: input.asOf, mean, median, high, low, count: selection.selected.length, dispersion, contributingEstimateIds: selection.selected.map((estimate) => estimate.estimateId) }
-  return { snapshot, selectedEstimates: selection.selected, diagnostics: [] }
+  const snapshot: ConsensusSnapshot = { metric: input.metric, fiscalPeriod: input.fiscalPeriod, unit: selection.selected[0]!.unit, asOf: input.asOf, mean, median, high, low, count: selection.selected.length, dispersion, contributingEstimateIds: selection.selected.map((estimate) => estimate.estimateId) }
+  return { snapshot, selectedEstimates: selection.selected, diagnostics: [...new Set(diagnostics)] }
 }
 
 export const calculateConsensus = buildConsensusSnapshot

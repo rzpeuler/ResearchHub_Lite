@@ -40,12 +40,15 @@ export function selectLatestEstimatesPerInstitution(input: EstimateSelectionInpu
   const cutoff = timestamp(input.asOf)
   if (cutoff === undefined) return { selected: [], excludedEstimateIds: input.estimates.map((estimate) => estimate.estimateId), diagnostics: ['asOf_must_be_valid'] }
   const candidates: EstimatePoint[] = []
-  const seenIds = new Set<string>()
+  const idCounts = new Map<string, number>()
+  for (const estimate of input.estimates) {
+    if (text(estimate.estimateId)) idCounts.set(estimate.estimateId, (idCounts.get(estimate.estimateId) ?? 0) + 1)
+  }
   for (const estimate of input.estimates) {
     const validation = validateEstimatePoint(estimate)
-    if (validation.length > 0) { diagnostics.push(...validation.map((item) => `${estimate.estimateId || 'unknown'}:${item}`)); if (text(estimate.estimateId)) excluded.push(estimate.estimateId); continue }
-    if (seenIds.has(estimate.estimateId)) { diagnostics.push(`${estimate.estimateId}:duplicate_estimateId`); excluded.push(estimate.estimateId); continue }
-    seenIds.add(estimate.estimateId)
+    if (validation.length > 0) diagnostics.push(...validation.map((item) => `${estimate.estimateId || 'unknown'}:${item}`))
+    if ((idCounts.get(estimate.estimateId) ?? 0) > 1) { diagnostics.push(`${estimate.estimateId}:duplicate_estimateId`); excluded.push(estimate.estimateId); continue }
+    if (validation.length > 0) { if (text(estimate.estimateId)) excluded.push(estimate.estimateId); continue }
     const published = timestamp(estimate.publishedAt)!
     if (published > cutoff) { diagnostics.push(`${estimate.estimateId}:published_after_asOf`); excluded.push(estimate.estimateId); continue }
     if (estimate.metric !== input.metric || estimate.fiscalPeriod !== input.fiscalPeriod) { excluded.push(estimate.estimateId); continue }

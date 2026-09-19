@@ -30,7 +30,7 @@ export function actualMetricPointFromVerifiedMetric(metric: VerifiedFinancialMet
 }
 
 export function compareActualVsConsensus(actual: ActualMetricPoint, consensus: ConsensusSnapshot): ActualVsExpectationResult | undefined {
-  return compareActualToExpectation({ actual, benchmark: { metric: consensus.metric, fiscalPeriod: consensus.fiscalPeriod, value: consensus.mean, unit: actual.unit, benchmarkType: 'consensus' } })
+  return compareActualToExpectation({ actual, benchmark: { metric: consensus.metric, fiscalPeriod: consensus.fiscalPeriod, value: consensus.mean, unit: consensus.unit, benchmarkType: 'consensus' } })
 }
 
 /** Compare actual results with the explicitly selected institution's prior estimate. */
@@ -50,7 +50,7 @@ export function buildEstimateRevisionBridge(input: EstimateRevisionInput): Estim
   if (validateEstimatePoint(oldEstimate).length > 0 || validateEstimatePoint(newEstimate).length > 0) return undefined
   const oldPublishedAt = timestamp(oldEstimate.publishedAt)
   const newPublishedAt = timestamp(newEstimate.publishedAt)
-  if (oldEstimate.institutionKey !== newEstimate.institutionKey || oldEstimate.metric !== newEstimate.metric || oldEstimate.fiscalPeriod !== newEstimate.fiscalPeriod || oldPublishedAt === undefined || newPublishedAt === undefined || newPublishedAt <= oldPublishedAt) return undefined
+  if (oldEstimate.institutionKey !== newEstimate.institutionKey || oldEstimate.metric !== newEstimate.metric || oldEstimate.fiscalPeriod !== newEstimate.fiscalPeriod || oldEstimate.unit !== newEstimate.unit || oldPublishedAt === undefined || newPublishedAt === undefined || newPublishedAt <= oldPublishedAt) return undefined
   const absoluteRevision = newEstimate.value - oldEstimate.value
   if (!Number.isFinite(absoluteRevision)) return undefined
   const relativeRevision = oldEstimate.value === 0 ? undefined : absoluteRevision / Math.abs(oldEstimate.value)
