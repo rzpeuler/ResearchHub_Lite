@@ -6,6 +6,7 @@ import type { EarningsPeriod, EarningsReviewReasoningTelemetry, EarningsReviewSe
 import type { ExternalIdentifierV04 } from '../../knowledge/schema/domain-v04.ts'
 import type { ConsensusSnapshot, EstimatePoint, GuidanceRange, SegmentKpiDeltaInput } from '../../skills/earnings-review/expectations/contracts.ts'
 import type { EarningsExpectationAnalysis } from './expectations-contracts.ts'
+import type { EarningsValuationImpactAnalysis, ThesisFilterReasoning } from './valuation-impact-thesis-filter-contracts.ts'
 
 export interface EstimateRevisionLink { readonly oldEstimateId: string; readonly newEstimateId: string }
 
@@ -62,6 +63,10 @@ export interface EarningsReviewTelemetry {
   readonly guidanceRevisionCount: number
   readonly guidanceConsensusComparisonCount: number
   readonly segmentKpiComparisonCount: number
+  readonly valuationImpactCount: number
+  readonly thesisImpactCount: number
+  readonly unmatchedExpectationFindingCount: number
+  readonly thesisFilter: ThesisFilterReasoning
 }
 
 export interface EarningsReviewWorkflowResult {
@@ -87,4 +92,5 @@ export interface EarningsReviewWorkflowResult {
   readonly telemetry: EarningsReviewTelemetry
   readonly providerOutcomes: readonly ResearchProviderOutcome[]
   readonly expectationAnalysis?: EarningsExpectationAnalysis
+  readonly valuationImpactAnalysis?: EarningsValuationImpactAnalysis
 }

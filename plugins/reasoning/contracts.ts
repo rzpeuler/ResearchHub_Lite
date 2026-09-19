@@ -7,6 +7,7 @@ export const REASONING_OPERATIONS = [
   'daily_change_assessment',
   'daily_brief_synthesis',
   'earnings_review_synthesis',
+  'earnings_expectation_thesis_filter',
   'valuation_assumption_design',
   'valuation_synthesis',
   'event_evidence_assessment',
