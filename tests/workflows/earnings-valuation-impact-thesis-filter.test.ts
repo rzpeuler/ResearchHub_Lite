@@ -1,53 +1,103 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import type { KnowledgeClaimV04, KnowledgeReasoningEdgeV04, KnowledgeThesisV04 } from '../../knowledge/schema/domain-v04.ts'
 import type { EarningsExpectationAnalysis } from '../../workflows/earnings-review/expectations-contracts.ts'
-import { applyBoundedSemanticThesisFilter, buildEarningsValuationImpactAndThesisFilter, enrichEarningsReviewSectionsWithValuationImpact } from '../../workflows/earnings-review/valuation-impact-thesis-filter.ts'
+import { applyBoundedSemanticThesisFilter, buildEarningsValuationImpactAndThesisFilter, enrichEarningsReviewSectionsWithValuationImpact, normalizeEarningsExpectationFindingsDetailed } from '../../workflows/earnings-review/valuation-impact-thesis-filter.ts'
+import { projectEarningsThesisContext } from '../../workflows/earnings-review/workflow.ts'
+import type { ThesisFilterContext } from '../../workflows/earnings-review/valuation-impact-thesis-filter-contracts.ts'
+import type { KnowledgeAssetV04 } from '../../knowledge/schema/domain-v04.ts'
 
 const analysis = (overrides: Partial<EarningsExpectationAnalysis> = {}): EarningsExpectationAnalysis => ({ consensusStatus: 'available', actualVsConsensus: [{ result: { metric: 'eps', fiscalPeriod: 'FY2026', actual: 9, benchmark: 10, absoluteDelta: -1, relativeDelta: -0.1, direction: 'below', benchmarkType: 'consensus' }, sourceCandidateIds: ['consensus-source'] }], actualVsPriorEstimate: [], estimateRevisions: [], guidanceRevisions: [], guidanceVsConsensus: [], segmentKpiDeltas: [], currentGuidance: [], diagnostics: [], ...overrides })
+const context: ThesisFilterContext = { status: 'available', diagnostics: [], theses: [{ thesisRef: 'thesis:compounding', title: 'Durable earnings compounding', statement: 'Earnings compound if execution remains stable.', status: 'active', truncated: false, dependencies: [{ edgeRef: 'reasoning-edge:eps', edgeType: 'depends_on', sourceRef: 'claim:eps', sourceKind: 'claim', statement: 'FY2026 EPS remains resilient.', claimType: 'assumption', metric: 'eps', fiscalPeriod: 'FY2026', unit: 'CNY' }, { edgeRef: 'reasoning-edge:revenue', edgeType: 'supports', sourceRef: 'claim:revenue', sourceKind: 'claim', metric: 'revenue', fiscalPeriod: 'FY2026' }] }] }
+const executor = (output: unknown, calls: { count: number } = { count: 0 }) => ({ capabilities: () => ({ maxContextTokens: 2_000, maxOutputTokens: 2_000, structuredOutputSupport: true, maxConcurrency: 1 }), execute: async () => { calls.count += 1; return { operation: 'earnings_expectation_thesis_filter' as const, output } } })
 
-const thesis = { id: 'thesis:compounding', subjectRefs: ['entity:company'], title: 'Durable earnings compounding', statement: 'The company can compound earnings if execution remains stable.', status: 'active', createdAt: '2026-09-01T00:00:00.000Z', lifecycle: { status: 'active' } } as KnowledgeThesisV04
-const claim = { id: 'claim:eps-dependency', subjectRefs: ['entity:company'], claimType: 'assumption', statement: 'FY2026 EPS remains resilient.', sourceRefs: ['source:expectation'], lifecycle: { status: 'active' } } as KnowledgeClaimV04
-const edge = { id: 'reasoning-edge:eps-dependency', type: 'depends_on', sourceRef: claim.id, targetRef: thesis.id, lifecycle: { status: 'active' } } as KnowledgeReasoningEdgeV04
-
-test('W2-005 normalizes expectation findings and maps EPS to earnings without valuation arithmetic', () => {
-  const result = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: analysis() })
-  assert.equal(result.findings.length, 1)
-  assert.deepEqual(result.valuationImpacts[0]?.affectedValuationInputs, ['earnings'])
-  assert.equal(result.valuationImpacts[0]?.requiresValuationRefresh, true)
-  assert.equal(result.valuationImpacts[0]?.surpriseOrRevision, -1)
-  assert.doesNotMatch(JSON.stringify(result), /target price|multiple =|DCF value/i)
+test('explicit valuation map is closed and zero delta does not require refresh', () => {
+  const a = analysis({ actualVsConsensus: [{ result: { metric: 'metric:revenue', fiscalPeriod: 'FY2026', actual: 100, benchmark: 100, absoluteDelta: 0, direction: 'in_line', benchmarkType: 'consensus' }, sourceCandidateIds: ['s'] }], actualVsPriorEstimate: [{ result: { metric: 'shipment', fiscalPeriod: 'FY2026', actual: 1, benchmark: 2, absoluteDelta: -1, direction: 'below', benchmarkType: 'prior_estimate' }, sourceCandidateIds: ['s'] }] })
+  const result = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: a })
+  assert.equal(result.findings.length, 2)
+  assert.deepEqual(result.valuationImpacts.map((item) => item.affectedValuationInputs), [['revenue'], []])
+  assert.equal(result.valuationImpacts[0]?.requiresValuationRefresh, false)
+  assert.equal(result.valuationImpacts[1]?.requiresValuationRefresh, false)
+  assert.doesNotMatch(JSON.stringify(result), /target price|DCF value|multiple =/i)
 })
 
-test('W2-005 filters only first-class Thesis dependencies through existing ReasoningEdges', () => {
-  const result = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: analysis(), thesisContext: { theses: [thesis], claims: [claim], observations: [], reasoningEdges: [edge] } })
+test('guidance boundary and bounded dimensions drive refresh without collapsing dimensions', () => {
+  const result = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: analysis({ guidanceRevisions: [{ result: { metric: 'revenue', fiscalPeriod: 'FY2026', unit: 'CNY', oldGuidanceId: 'old', newGuidanceId: 'new', oldGuidanceType: 'range', newGuidanceType: 'range', oldPublishedAt: '2026-01-01', newPublishedAt: '2026-02-01', lowEndRevision: { oldValue: 10, newValue: 11, absoluteRevision: 1 }, midpointRevision: { oldValue: 12, newValue: 12, absoluteRevision: 0 } }, sourceCandidateIds: ['g'] }], guidanceVsConsensus: [{ result: { metric: 'revenue', fiscalPeriod: 'FY2026', unit: 'CNY', guidanceId: 'new', guidanceType: 'range', guidancePublishedAt: '2026-02-01', consensusAsOf: '2026-02-01', consensusMean: 15, relationship: 'below_range' }, sourceCandidateIds: ['g'] }] }) })
+  const revisions = result.findings.find((item) => item.kind === 'guidance_revision')!
+  assert.deepEqual(revisions.deterministicDeltas.map((item) => item.dimension), ['low', 'midpoint'])
+  assert.equal(result.valuationImpacts.find((item) => item.findingId === revisions.findingId)?.requiresValuationRefresh, true)
+  assert.equal(result.valuationImpacts.find((item) => item.metric === 'revenue' && item.findingId !== revisions.findingId)?.requiresValuationRefresh, true)
+})
+
+test('segment findings use prior and expectation deltas, never currentValue as an economic delta', () => {
+  const result = normalizeEarningsExpectationFindingsDetailed(analysis({ actualVsConsensus: [], segmentKpiDeltas: [{ result: { segmentKey: 'cloud', metric: 'revenue', unit: 'CNY', currentPeriod: 'FY2026', currentValue: 999, priorPeriod: 'FY2025', priorComparison: { benchmark: 10, actual: 12, absoluteDelta: 2, direction: 'above' }, expectationPeriod: 'FY2026', expectationComparison: { benchmark: 20, actual: 18, absoluteDelta: -2, direction: 'below' } }, sourceCandidateIds: ['segment'] }] }))
+  assert.deepEqual(result.findings.map((item) => [item.kind, item.deterministicDeltas[0]?.absoluteDelta]), [['segment_kpi_expectation', -2], ['segment_kpi_prior', 2]])
+  assert.doesNotMatch(JSON.stringify(result.findings), /999/)
+})
+
+test('finding identities are order-independent and reject collisions without index fallback', () => {
+  const first = analysis(); const second = analysis({ actualVsConsensus: [...first.actualVsConsensus].reverse() })
+  assert.deepEqual(normalizeEarningsExpectationFindingsDetailed(first).findings.map((item) => item.findingId), normalizeEarningsExpectationFindingsDetailed(second).findings.map((item) => item.findingId))
+  const collision = normalizeEarningsExpectationFindingsDetailed(analysis({ actualVsConsensus: [{ result: { metric: 'eps', fiscalPeriod: 'FY2026', actual: 9, benchmark: 10, absoluteDelta: -1, direction: 'below', benchmarkType: 'consensus' }, sourceCandidateIds: ['a'] }, { result: { metric: 'eps', fiscalPeriod: 'FY2026', actual: 8, benchmark: 10, absoluteDelta: -2, direction: 'below', benchmarkType: 'consensus' }, sourceCandidateIds: ['b'] }] }))
+  assert.equal(collision.findings.length, 0)
+  assert.ok(collision.diagnostics.some((item) => item.startsWith('finding_identity_collision:')))
+})
+
+test('deterministic Thesis matching is exact, one-hop, and effect remains uncertain', () => {
+  const result = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: analysis(), thesisContext: context })
   assert.equal(result.thesisImpacts.length, 1)
-  assert.equal(result.thesisImpacts[0]?.thesisRef, thesis.id)
-  assert.equal(result.thesisImpacts[0]?.dependencyRef, claim.id)
-  assert.equal(result.thesisImpacts[0]?.relation, 'challenges_dependency')
-  assert.deepEqual(result.thesisImpacts[0]?.findingIds, [result.findings[0]?.findingId])
+  assert.equal(result.thesisImpacts[0]?.dependencyRef, 'claim:eps')
+  assert.equal(result.thesisImpacts[0]?.criticality, 'load_bearing')
+  assert.equal(result.thesisImpacts[0]?.effect, 'uncertain')
+  assert.equal(result.thesisImpacts[0]?.relation, 'implicates_dependency')
 })
 
-test('W2-005 enriches only report sections and never mutates Thesis or creates graph objects', () => {
-  const result = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: analysis(), thesisContext: { theses: [thesis], claims: [claim], observations: [], reasoningEdges: [edge] } })
+test('Thesis context projection is bounded, lifecycle-filtered, and schema-neutral', () => {
+  const objects = [
+    { id: 'thesis:eligible', subjectRefs: ['entity:company'], title: 'Eligible', statement: 'Statement', status: 'active', lifecycle: { status: 'active' }, createdAt: '2026-01-01' },
+    { id: 'thesis:archived', subjectRefs: ['entity:company'], title: 'Archived', statement: 'Do not use', status: 'archived', lifecycle: { status: 'active' }, createdAt: '2026-01-01' },
+    { id: 'claim:metric', subjectRefs: ['entity:company'], claimType: 'assumption', statement: 'EPS dependency', structuredValue: { metric: 'eps', fiscalPeriod: 'FY2026', unit: 'CNY' }, sourceRefs: [], lifecycle: { status: 'active' } },
+    { id: 'reasoning-edge:metric', type: 'depends_on', sourceRef: 'claim:metric', targetRef: 'thesis:eligible', lifecycle: { status: 'active' } },
+  ] as unknown as KnowledgeAssetV04[]
+  const projected = projectEarningsThesisContext('entity:company', objects)
+  assert.equal(projected.status, 'available')
+  assert.deepEqual(projected.theses.map((item) => item.thesisRef), ['thesis:eligible'])
+  assert.deepEqual(Object.keys(projected.theses[0] ?? {}).sort(), ['dependencies', 'statement', 'status', 'thesisRef', 'title', 'truncated'].sort())
+  assert.equal(projected.theses[0]?.dependencies[0]?.metric, 'eps')
+})
+
+test('all findings enter semantic filtering and valid output can add textual dependency matches', async () => {
+  const boundedContext: ThesisFilterContext = { ...context, theses: [{ ...context.theses[0]!, dependencies: [{ ...context.theses[0]!.dependencies[0]!, metric: undefined, fiscalPeriod: undefined }] }] }
+  const base = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: analysis({ actualVsConsensus: [], guidanceVsConsensus: [{ result: { metric: 'shipment', fiscalPeriod: 'FY2026', unit: 'state', guidanceId: 'g', guidanceType: 'point', guidancePublishedAt: '2026-01-01', consensusAsOf: '2026-01-01', consensusMean: 1, relationship: 'at_point' }, sourceCandidateIds: ['s'] }] }), thesisContext: boundedContext })
+  const findingId = base.findings[0]!.findingId
+  const filtered = await applyBoundedSemanticThesisFilter(base.findings, boundedContext, base.thesisImpacts, executor({ decisions: [{ findingId, matches: [{ thesisRef: 'thesis:compounding', dependencyRefs: ['claim:eps'], effect: 'challenges', rationale: 'The finding concerns the existing dependency.' }], unresolved: false }] }))
+  assert.equal(filtered.classifications[0]?.classification, 'thesis_critical')
+  assert.equal(filtered.impacts[0]?.effect, 'challenges')
+})
+
+test('invalid semantic output gets one repair and then fail-closed uncertainty', async () => {
+  const calls = { count: 0 }; const base = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: analysis(), thesisContext: context })
+  const filtered = await applyBoundedSemanticThesisFilter(base.findings, context, base.thesisImpacts, executor({ decisions: [{ findingId: 'invented', matches: [], unresolved: false }] }, calls))
+  assert.equal(calls.count, 2)
+  assert.equal(filtered.reasoning.repairAttempts, 1)
+  assert.equal(filtered.reasoning.fallbackUsed, true)
+  assert.equal(filtered.classifications[0]?.classification, 'thesis_critical')
+  assert.equal(filtered.classifications[0]?.unresolved, true)
+})
+
+test('successful semantic no-relation is the only route to irrelevant; unavailable executor is uncertain', async () => {
+  const noMatchContext: ThesisFilterContext = { ...context, theses: [{ ...context.theses[0]!, dependencies: [{ ...context.theses[0]!.dependencies[0]!, metric: undefined, fiscalPeriod: undefined }] }] }
+  const base = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: analysis(), thesisContext: noMatchContext })
+  const noRelation = await applyBoundedSemanticThesisFilter(base.findings, noMatchContext, base.thesisImpacts, executor({ decisions: [{ findingId: base.findings[0]!.findingId, matches: [], unresolved: false }] }))
+  assert.equal(noRelation.classifications[0]?.classification, 'thesis_irrelevant')
+  const fallback = await applyBoundedSemanticThesisFilter(base.findings, noMatchContext, base.thesisImpacts)
+  assert.equal(fallback.classifications[0]?.classification, 'uncertain')
+  assert.equal(fallback.classifications[0]?.unresolved, true)
+})
+
+test('report enrichment is report-only and contains no directional valuation conclusion', () => {
+  const result = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: analysis(), thesisContext: context })
   const sections = enrichEarningsReviewSectionsWithValuationImpact([{ id: 'valuation-implications', title: 'Valuation Implications', markdown: 'Consensus unavailable', sourceCandidateIds: [], assessmentRefs: [] }, { id: 'thesis-impact', title: 'Thesis Impact', markdown: 'No change.', sourceCandidateIds: [], assessmentRefs: [] }], result)
   assert.match(sections[0]!.markdown, /affected inputs=earnings/)
-  assert.match(sections[0]!.markdown, /No target price/)
-  assert.match(sections[1]!.markdown, /claim:eps-dependency/)
-  assert.equal(result.thesisImpacts[0]?.thesisStatus, 'active')
-  assert.equal(result.thesisImpacts[0]?.reasoningEdgeRef, edge.id)
-})
-
-test('W2-005 semantic Thesis filter is bounded to deterministic first-class candidates', async () => {
-  const base = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: analysis(), thesisContext: { theses: [thesis], claims: [claim], observations: [], reasoningEdges: [edge] } })
-  const candidate = base.thesisImpacts[0]!
-  const executor = {
-    capabilities: () => ({ maxContextTokens: 1_000, maxOutputTokens: 1_000, structuredOutputSupport: true, maxConcurrency: 1 }),
-    execute: async () => ({ operation: 'earnings_expectation_thesis_filter' as const, output: { impacts: [{ thesisRef: candidate.thesisRef, dependencyRef: candidate.dependencyRef, reasoningEdgeRef: candidate.reasoningEdgeRef, findingIds: candidate.findingIds, relation: 'challenges_dependency', rationale: 'The verified EPS miss implicates the existing EPS dependency.' }] } }),
-  }
-  const filtered = await applyBoundedSemanticThesisFilter(base.thesisImpacts, executor)
-  assert.equal(filtered.reasoning.operation, 'earnings_expectation_thesis_filter')
-  assert.equal(filtered.reasoning.applied, true)
-  assert.equal(filtered.reasoning.fallbackUsed, false)
-  assert.equal(filtered.impacts.length, 1)
+  assert.match(sections[1]!.markdown, /claim:eps/)
+  assert.doesNotMatch(JSON.stringify(sections), /target price|DCF value|multiple =|status =/i)
 })

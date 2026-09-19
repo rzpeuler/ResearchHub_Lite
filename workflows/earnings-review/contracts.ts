@@ -64,8 +64,17 @@ export interface EarningsReviewTelemetry {
   readonly guidanceConsensusComparisonCount: number
   readonly segmentKpiComparisonCount: number
   readonly valuationImpactCount: number
+  readonly valuationRefreshRequired: boolean
   readonly thesisImpactCount: number
   readonly unmatchedExpectationFindingCount: number
+  readonly thesisContextStatus: 'available' | 'unavailable' | 'truncated'
+  readonly thesisContextThesisCount: number
+  readonly thesisDependencyCount: number
+  readonly thesisFilterFindingCount: number
+  readonly thesisCriticalFindingCount: number
+  readonly thesisRelevantFindingCount: number
+  readonly thesisIrrelevantFindingCount: number
+  readonly thesisUncertainFindingCount: number
   readonly thesisFilter: ThesisFilterReasoning
 }
 

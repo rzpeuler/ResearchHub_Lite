@@ -24,10 +24,51 @@ identity for explanation, but it is report-only.
 W2-005 never submits a Knowledge proposal, creates a Thesis or Claim, creates
 or updates a ReasoningEdge, or changes Thesis lifecycle/status.
 
+## FIX-001 semantic integrity rules
+
+The valuation bridge uses only this explicit normalized metric map:
+
+| Finding metric | Affected valuation input |
+| --- | --- |
+| `revenue` | `revenue` |
+| `net_profit`, `eps` | `earnings` |
+| `gross_margin`, `net_profit_margin` | `margin` |
+| `operating_cash_flow`, `free_cash_flow`, `cash_flow` | `cash_flow` |
+| `revenue_growth`, `earnings_growth`, `eps_growth` | `growth` |
+
+Normalization is limited to trimming, lower-casing, and removing a leading
+`metric:` prefix. Unknown metrics, segment labels, multiple, price, volume,
+capacity, utilization, and synonyms do not map. A mapped nonzero finite
+deterministic delta requires refresh; zero does not. Guidance boundary
+relationships can require refresh without a numeric delta, while compatible
+relationships do not. Guidance revisions retain each available low, high,
+midpoint, and range-width dimension as a bounded list. Segment comparisons use
+their explicit prior or expectation comparison delta.
+
+The Thesis input is a bounded, schema-neutral projection: at most eight
+eligible Company Theses and twelve direct active ReasoningEdge dependencies per
+Thesis. Only active `active|strengthening|weakening|challenged` Theses are
+eligible; invalidated, archived, inactive, unresolved, and transitive objects
+are excluded. Deterministic relevance requires exact structured metric and,
+when present, exact fiscal period. Text-only dependencies are semantic-only.
+Criticality is code-owned: `depends_on` and `invalidates` are load-bearing;
+other direct edges are direct. Deterministic effect remains `uncertain`.
+
+The semantic operation receives every normalized finding, the complete bounded
+context, and deterministic matches. Its output is validated against existing
+finding, Thesis, and dependency identities, permits one repair, and preserves
+deterministic matches. A successful explicit no-relation decision may classify
+an item as `thesis_irrelevant`; unavailable or failed semantic resolution is
+`uncertain` and never silently becomes irrelevant. No numeric score,
+probability, magnitude, sign-derived effect, or valuation conclusion is
+accepted from the semantic output.
+
 ## Report and telemetry
 
 The existing `Valuation Implications` and `Thesis Impact` sections are enriched
 after W2-004 synthesis. Expectation sources remain report evidence and do not
-become canonical Sources solely because the bridge references them. Telemetry
-separates valuation impacts, implicated Thesis dependencies, and expectation
-findings that did not match a Thesis dependency.
+become canonical Sources solely because the bridge references them. Required
+telemetry includes the aggregate valuation-refresh flag, Thesis context status and bounded
+counts, filter finding count, and `thesis_critical`, `thesis_relevant`,
+`thesis_irrelevant`, and `uncertain` classification counts. Legacy telemetry
+fields remain for compatibility.

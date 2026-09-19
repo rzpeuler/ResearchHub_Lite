@@ -1,190 +1,241 @@
-import type { KnowledgeClaimV04, KnowledgeObservationV04, KnowledgeReasoningEdgeV04, KnowledgeThesisV04 } from '../../knowledge/schema/domain-v04.ts'
 import type { EarningsExpectationAnalysis } from './expectations-contracts.ts'
-import type { EarningsReviewSection } from '../../skills/earnings-review/contracts.ts'
-import type { ReasoningRequest } from '../../plugins/reasoning/contracts.ts'
-import type { EarningsFinding, EarningsFindingKind, EarningsValuationImpactAnalysis, EarningsValuationImpactInput, FindingDirection, ThesisFilterContext, ThesisFilterReasoning, ThesisImpact, ThesisImpactRelation, ValuationImpactBridge, ValuationInput } from './valuation-impact-thesis-filter-contracts.ts'
+import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
+import type {
+  EarningsFinding,
+  EarningsFindingKind,
+  EarningsThesisContext,
+  EarningsValuationImpactAnalysis,
+  EarningsValuationImpactInput,
+  FindingDelta,
+  SemanticFindingDecision,
+  ThesisFindingClassification,
+  ThesisFilterContext,
+  ThesisFilterReasoning,
+  ThesisImpact,
+  ThesisEffect,
+  ValuationImpactBridge,
+  ValuationInput,
+} from './valuation-impact-thesis-filter-contracts.ts'
 
-const text = (value: unknown): value is string => typeof value === 'string' && value.trim() !== ''
-const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
-const uniqueSorted = (values: readonly string[]): readonly string[] => [...new Set(values.filter(text).map((value) => value.trim()))].sort()
-const safePart = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'unknown'
+const OPERATION = 'earnings_expectation_thesis_filter' as const
+const OUTSIDE_GUIDANCE_RELATIONSHIPS = new Set(['below_range', 'above_range', 'below_minimum', 'above_maximum', 'below_point', 'above_point'])
+const VALUATION_METRIC_MAP: Readonly<Record<string, ValuationInput>> = {
+  revenue: 'revenue',
+  net_profit: 'earnings',
+  eps: 'earnings',
+  gross_margin: 'margin',
+  net_profit_margin: 'margin',
+  operating_cash_flow: 'cash_flow',
+  free_cash_flow: 'cash_flow',
+  cash_flow: 'cash_flow',
+  revenue_growth: 'growth',
+  earnings_growth: 'growth',
+  eps_growth: 'growth',
+}
+const LOAD_BEARING_EDGES = new Set(['depends_on', 'invalidates'])
+const ALLOWED_EFFECTS = new Set<ThesisEffect>(['supports', 'challenges', 'mixed', 'uncertain'])
 
-function metricKey(value: unknown): string {
-  return typeof value === 'string' ? value.trim().toLowerCase().replace(/^metric:/, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') : ''
+function text(value: unknown): string { return typeof value === 'string' ? value.normalize('NFKC').trim() : '' }
+function metricKey(value: unknown): string { const normalized = text(value).toLowerCase(); return normalized.startsWith('metric:') ? normalized.slice(7).trim() : normalized }
+function finite(value: unknown): value is number { return typeof value === 'number' && Number.isFinite(value) }
+function sortedUnique(values: readonly string[]): string[] { return [...new Set(values.filter((value) => value.length > 0))].sort((a, b) => a.localeCompare(b)) }
+function sourceIds(value: unknown): string[] { return Array.isArray(value) ? sortedUnique(value.filter((item): item is string => typeof item === 'string').map(text)) : [] }
+function resultOf(item: unknown): Record<string, unknown> { return item && typeof item === 'object' ? item as Record<string, unknown> : {} }
+function safePart(value: string): string { return value.toLowerCase().replace(/[^a-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || 'unknown' }
+function jsonIdentity(value: unknown): string { return JSON.stringify(value, (_key, item) => item === undefined ? null : item) }
+function delta(dimension: string, absoluteDelta: unknown, relativeDelta: unknown): FindingDelta | undefined {
+  if (!finite(absoluteDelta)) return undefined
+  return finite(relativeDelta) ? { dimension, absoluteDelta, relativeDelta } : { dimension, absoluteDelta }
+}
+function firstDelta(deltas: readonly FindingDelta[]): number | null { return deltas.length === 1 ? deltas[0]!.absoluteDelta : null }
+function mappedValuationInput(metric: string): ValuationInput | undefined { return VALUATION_METRIC_MAP[metricKey(metric)] }
+
+interface DraftFinding { finding: EarningsFinding; identity: string; payload: string }
+
+function makeFinding(kind: EarningsFindingKind, result: Record<string, unknown>, sourceCandidateIds: readonly string[], deterministicDeltas: readonly FindingDelta[], fields: { readonly identity: string; readonly direction?: EarningsFinding['direction']; readonly relationship?: string; readonly metric?: string; readonly fiscalPeriod?: string; readonly unit?: string; }): DraftFinding | undefined {
+  const metric = metricKey(fields.metric ?? result.metric)
+  const fiscalPeriod = text(fields.fiscalPeriod ?? result.fiscalPeriod)
+  if (!metric || !fiscalPeriod || fields.identity.split('|').some((part) => part.length === 0) || (deterministicDeltas.length === 0 && kind !== 'guidance_vs_consensus')) return undefined
+  const identity = `${kind}|${fields.identity}`
+  const payload = jsonIdentity({ kind, metric, fiscalPeriod, unit: fields.unit ?? text(result.unit), direction: fields.direction ?? result.direction ?? 'mixed', relationship: fields.relationship ?? result.relationship, deltas: deterministicDeltas })
+  const finding: EarningsFinding = {
+    findingId: `finding:${safePart(identity)}`,
+    kind,
+    metric,
+    fiscalPeriod,
+    ...(text(fields.unit ?? result.unit) ? { unit: text(fields.unit ?? result.unit) } : {}),
+    direction: fields.direction ?? ((text(result.direction) as EarningsFinding['direction']) || 'mixed'),
+    ...(text(fields.relationship ?? result.relationship) ? { relationship: text(fields.relationship ?? result.relationship) } : {}),
+    ...(deterministicDeltas.length === 1 ? { absoluteDelta: deterministicDeltas[0]!.absoluteDelta, ...(deterministicDeltas[0]!.relativeDelta === undefined ? {} : { relativeDelta: deterministicDeltas[0]!.relativeDelta }) } : {}),
+    deterministicDeltas,
+    sourceCandidateIds: sortedUnique(sourceCandidateIds),
+    summary: `${metric} ${fiscalPeriod} expectation finding`,
+  }
+  return { finding, identity, payload }
 }
 
-function canonicalMetric(value: unknown): string {
-  const key = metricKey(value)
-  if (/^(?:revenue|sales|turnover)$/.test(key)) return 'revenue'
-  if (/^(?:eps|net_profit|net_income|earnings|profit)$/.test(key)) return 'earnings'
-  if (/^(?:gross_margin|operating_margin|ebitda_margin|net_margin|margin)$/.test(key)) return 'margin'
-  if (/^(?:free_cash_flow|operating_cash_flow|cash_flow|fcf|ocf)$/.test(key)) return 'cash_flow'
-  if (/^(?:growth|revenue_growth|earnings_growth|volume_growth)$/.test(key)) return 'growth'
-  return key
+function normalizeDetailed(expectationAnalysis: EarningsExpectationAnalysis): { readonly findings: readonly EarningsFinding[]; readonly diagnostics: readonly string[] } {
+  const drafts: DraftFinding[] = []
+  const diagnostics: string[] = []
+  const add = (draft: DraftFinding | undefined, reason: string): void => { if (draft) drafts.push(draft); else diagnostics.push(reason) }
+
+  for (const item of expectationAnalysis.actualVsConsensus) {
+    const result = resultOf(item.result)
+    add(makeFinding('actual_vs_consensus', result, sourceIds(item.sourceCandidateIds), [delta('benchmark', result.absoluteDelta, result.relativeDelta)].filter((item): item is FindingDelta => item !== undefined), { identity: [metricKey(result.metric), text(result.fiscalPeriod), text(result.benchmarkType)].join('|'), direction: text(result.direction) as EarningsFinding['direction'] }), 'finding_missing_stable_identity:actual_vs_consensus')
+  }
+  for (const item of expectationAnalysis.actualVsPriorEstimate) {
+    const result = resultOf(item.result)
+    add(makeFinding('actual_vs_prior_estimate', result, sourceIds(item.sourceCandidateIds), [delta('benchmark', result.absoluteDelta, result.relativeDelta)].filter((item): item is FindingDelta => item !== undefined), { identity: [metricKey(result.metric), text(result.fiscalPeriod), text(result.benchmarkType)].join('|'), direction: text(result.direction) as EarningsFinding['direction'] }), 'finding_missing_stable_identity:actual_vs_prior_estimate')
+  }
+  for (const item of expectationAnalysis.estimateRevisions) {
+    const result = resultOf(item.result)
+    add(makeFinding('estimate_revision', result, sourceIds(item.sourceCandidateIds), [delta('revision', result.absoluteRevision, result.relativeRevision)].filter((item): item is FindingDelta => item !== undefined), { identity: [metricKey(result.metric), text(result.fiscalPeriod), text(result.institutionKey), text(result.oldPublishedAt), text(result.newPublishedAt)].join('|'), direction: finite(result.absoluteRevision) ? result.absoluteRevision > 0 ? 'raised' : result.absoluteRevision < 0 ? 'lowered' : 'mixed' : 'mixed' }), 'finding_missing_stable_identity:estimate_revision')
+  }
+  for (const item of expectationAnalysis.guidanceRevisions) {
+    const result = resultOf(item.result)
+    const dimensions = [['low', result.lowEndRevision], ['high', result.highEndRevision], ['midpoint', result.midpointRevision], ['range_width', result.rangeWidthChange]] as const
+    const deltas = dimensions.map(([name, raw]) => { const revision = resultOf(raw); return delta(name, revision.absoluteRevision, revision.relativeRevision) }).filter((item): item is FindingDelta => item !== undefined)
+    add(makeFinding('guidance_revision', result, sourceIds(item.sourceCandidateIds), deltas, { identity: [metricKey(result.metric), text(result.fiscalPeriod), text(result.unit), text(result.oldGuidanceId), text(result.newGuidanceId), text(result.oldPublishedAt), text(result.newPublishedAt)].join('|'), direction: 'mixed' }), 'finding_missing_stable_identity:guidance_revision')
+  }
+  for (const item of expectationAnalysis.guidanceVsConsensus) {
+    const result = resultOf(item.result)
+    const one = delta('consensus', result.absoluteDelta, result.relativeDelta)
+    add(makeFinding('guidance_vs_consensus', result, sourceIds(item.sourceCandidateIds), one ? [one] : [], { identity: [metricKey(result.metric), text(result.fiscalPeriod), text(result.unit), text(result.guidanceId), text(result.consensusAsOf)].join('|'), direction: text(result.direction) as EarningsFinding['direction'], relationship: text(result.relationship) }), 'finding_missing_stable_identity:guidance_vs_consensus')
+  }
+  for (const item of expectationAnalysis.segmentKpiDeltas) {
+    const result = resultOf(item.result)
+    const shared = [text(result.segmentKey), metricKey(result.metric), text(result.unit), text(result.currentPeriod)]
+    const prior = resultOf(result.priorComparison)
+    const priorDelta = delta('prior', prior.absoluteDelta, prior.relativeDelta)
+    if (priorDelta && text(result.priorPeriod)) add(makeFinding('segment_kpi_prior', result, sourceIds(item.sourceCandidateIds), [priorDelta], { identity: [...shared, text(result.priorPeriod), 'prior'].join('|'), fiscalPeriod: text(result.currentPeriod), direction: text(prior.direction) as EarningsFinding['direction'] }), 'finding_missing_stable_identity:segment_kpi_prior')
+    else if (result.priorComparison !== undefined) diagnostics.push('finding_missing_stable_identity:segment_kpi_prior')
+    const expectation = resultOf(result.expectationComparison)
+    const expectationDelta = delta('expectation', expectation.absoluteDelta, expectation.relativeDelta)
+    if (expectationDelta && text(result.expectationPeriod)) add(makeFinding('segment_kpi_expectation', result, sourceIds(item.sourceCandidateIds), [expectationDelta], { identity: [...shared, text(result.expectationPeriod), 'expectation'].join('|'), fiscalPeriod: text(result.currentPeriod), direction: text(expectation.direction) as EarningsFinding['direction'] }), 'finding_missing_stable_identity:segment_kpi_expectation')
+    else if (result.expectationComparison !== undefined) diagnostics.push('finding_missing_stable_identity:segment_kpi_expectation')
+  }
+
+  const byId = new Map<string, DraftFinding[]>(); for (const draft of drafts) byId.set(draft.finding.findingId, [...(byId.get(draft.finding.findingId) ?? []), draft])
+  const valid: EarningsFinding[] = []
+  for (const [findingId, sameId] of byId) {
+    const payloads = new Set(sameId.map((item) => item.payload))
+    if (payloads.size > 1) { diagnostics.push(`finding_identity_collision:${findingId}`); continue }
+    valid.push(sameId[0]!.finding)
+  }
+  valid.sort((a, b) => a.findingId.localeCompare(b.findingId))
+  return { findings: valid, diagnostics: sortedUnique(diagnostics) }
 }
 
-function valueOf(object: unknown, keys: readonly string[]): unknown {
-  if (!object || typeof object !== 'object') return undefined
-  const record = object as Record<string, unknown>
-  return keys.map((key) => record[key]).find((value) => value !== undefined)
-}
-
-function resultField(item: unknown, keys: readonly string[]): unknown { return valueOf((item as { result?: unknown } | undefined)?.result, keys) }
-function nestedResultField(item: unknown, paths: readonly string[]): unknown { const result = (item as { result?: unknown } | undefined)?.result; return paths.map((path) => path.split('.').reduce<unknown>((current, key) => valueOf(current, [key]), result)).find((value) => value !== undefined) }
-function sourceIds(item: unknown): readonly string[] { const raw = valueOf(item, ['sourceCandidateIds']); return uniqueSorted(Array.isArray(raw) ? raw : []) }
-function periodOf(item: unknown): string { return String(resultField(item, ['fiscalPeriod', 'currentPeriod', 'period', 'expectationPeriod']) ?? valueOf(item, ['fiscalPeriod', 'currentPeriod', 'period']) ?? '') }
-function metricOf(item: unknown): string { return String(resultField(item, ['metric']) ?? valueOf(item, ['metric']) ?? '') }
-function directionOf(item: unknown, fallback: FindingDirection = 'mixed'): FindingDirection { return String(resultField(item, ['direction']) ?? nestedResultField(item, ['expectationComparison.direction', 'priorComparison.direction']) ?? fallback) as FindingDirection }
-function numeric(item: unknown, keys: readonly string[]): number | undefined { const value = nestedResultField(item, keys); return finite(value) ? value : undefined }
-
-function findingId(kind: EarningsFindingKind, item: unknown, index: number): string {
-  const result = item as { result?: Record<string, unknown> }
-  const value = result.result ?? item as Record<string, unknown>
-  const identity = [value.metric, value.fiscalPeriod ?? value.currentPeriod, value.institutionKey, value.oldPublishedAt, value.newPublishedAt, value.guidanceId, value.oldGuidanceId, value.newGuidanceId, value.segmentKey].filter((part) => part !== undefined).map(String).map(safePart).join('-')
-  return `expectation-finding-${kind}-${identity || index + 1}`
-}
-
-function summary(kind: EarningsFindingKind, metric: string, period: string, direction: FindingDirection): string {
-  const labels: Record<EarningsFindingKind, string> = { actual_vs_consensus: 'Actual vs PIT consensus', actual_vs_prior_estimate: 'Actual vs selected prior estimate', estimate_revision: 'Estimate revision', guidance_revision: 'Guidance revision', guidance_vs_consensus: 'Guidance vs PIT consensus', segment_kpi_delta: 'Segment KPI delta' }
-  return `${labels[kind]}: ${metric || 'unspecified metric'} ${period || 'unspecified period'} (${direction}).`
-}
-
-function addFinding(output: EarningsFinding[], kind: EarningsFindingKind, item: unknown, index: number, deltaKeys: readonly string[], direction: FindingDirection): void {
-  const metric = metricOf(item); const fiscalPeriod = periodOf(item); const absoluteDelta = numeric(item, deltaKeys); const relativeDelta = numeric(item, ['relativeDelta', 'relativeRevision']); const unit = resultField(item, ['unit']) ?? valueOf(item, ['unit']);
-  output.push({ findingId: findingId(kind, item, index), kind, metric, fiscalPeriod, ...(text(unit) ? { unit: String(unit) } : {}), direction, ...(absoluteDelta === undefined ? {} : { absoluteDelta }), ...(relativeDelta === undefined ? {} : { relativeDelta }), sourceCandidateIds: sourceIds(item), summary: summary(kind, metric, fiscalPeriod, direction) })
-}
-
-export function normalizeEarningsExpectationFindings(analysis: EarningsExpectationAnalysis): readonly EarningsFinding[] {
-  const findings: EarningsFinding[] = []
-  analysis.actualVsConsensus.forEach((item, index) => addFinding(findings, 'actual_vs_consensus', item, index, ['absoluteDelta'], directionOf(item)))
-  analysis.actualVsPriorEstimate.forEach((item, index) => addFinding(findings, 'actual_vs_prior_estimate', item, index, ['absoluteDelta'], directionOf(item)))
-  analysis.estimateRevisions.forEach((item, index) => addFinding(findings, 'estimate_revision', item, index, ['absoluteRevision'], directionOf(item, 'mixed')))
-  analysis.guidanceRevisions.forEach((item, index) => {
-    const low = numeric(item, ['lowEndRevision.absoluteRevision']); const high = numeric(item, ['highEndRevision.absoluteRevision']); const midpoint = numeric(item, ['midpointRevision.absoluteRevision']);
-    const direction = midpoint !== undefined ? midpoint > 0 ? 'raised' : midpoint < 0 ? 'lowered' : 'in_line' : low !== undefined && high !== undefined && low >= 0 && high >= 0 ? 'raised' : 'mixed'
-    addFinding(findings, 'guidance_revision', item, index, ['midpointRevision', 'absoluteRevision'], direction)
-    void low; void high
-  })
-  analysis.guidanceVsConsensus.forEach((item, index) => addFinding(findings, 'guidance_vs_consensus', item, index, ['absoluteDelta'], directionOf(item)))
-  analysis.segmentKpiDeltas.forEach((item, index) => addFinding(findings, 'segment_kpi_delta', item, index, ['currentValue', 'priorComparison.absoluteDelta', 'expectationComparison.absoluteDelta'], directionOf(item, 'mixed')))
-  const deduped = new Map(findings.map((item) => [item.findingId, item]))
-  return [...deduped.values()].sort((left, right) => left.findingId.localeCompare(right.findingId))
-}
-
-function affectedInputs(finding: EarningsFinding): readonly ValuationInput[] {
-  const metric = canonicalMetric(finding.metric); const inputs = new Set<ValuationInput>()
-  if (metric === 'revenue') inputs.add('revenue')
-  else if (metric === 'earnings') inputs.add('earnings')
-  else if (metric === 'margin') inputs.add('margin')
-  else if (metric === 'cash_flow') inputs.add('cash_flow')
-  else if (metric === 'growth') inputs.add('growth')
-  else if (finding.kind === 'segment_kpi_delta' && /(asp|price)/i.test(finding.metric)) inputs.add('revenue')
-  else if (finding.kind === 'segment_kpi_delta' && /(shipment|volume|capacity|utili[sz]ation)/i.test(finding.metric)) inputs.add('growth')
-  return [...inputs].sort()
-}
+export function normalizeEarningsExpectationFindingsDetailed(expectationAnalysis: EarningsExpectationAnalysis): { readonly findings: readonly EarningsFinding[]; readonly diagnostics: readonly string[] } { return normalizeDetailed(expectationAnalysis) }
+export function normalizeEarningsExpectationFindings(expectationAnalysis: EarningsExpectationAnalysis): readonly EarningsFinding[] { return normalizeDetailed(expectationAnalysis).findings }
+export const buildEarningsExpectationFindings = normalizeEarningsExpectationFindings
 
 export function buildValuationImpactBridges(findings: readonly EarningsFinding[]): readonly ValuationImpactBridge[] {
   return findings.map((finding) => {
-    const affected = affectedInputs(finding); const numericDelta = finding.absoluteDelta ?? finding.relativeDelta ?? null
-    return { findingId: finding.findingId, metric: finding.metric, fiscalPeriod: finding.fiscalPeriod, surpriseOrRevision: numericDelta, affectedValuationInputs: affected, requiresValuationRefresh: affected.length > 0, rationale: affected.length > 0 ? `${finding.summary} affects ${affected.join(', ')} inputs; refresh is required before any valuation conclusion is reused.` : `${finding.summary} has no deterministic valuation-input mapping in W2-005; valuation arithmetic remains deferred to Valuation Workflow.`, rationaleRefs: uniqueSorted([...finding.sourceCandidateIds, finding.findingId]) }
+    const input = mappedValuationInput(finding.metric)
+    const hasNonZeroDelta = finding.deterministicDeltas.some((item) => item.absoluteDelta !== 0)
+    const outsideBoundary = finding.kind === 'guidance_vs_consensus' && finding.relationship !== undefined && OUTSIDE_GUIDANCE_RELATIONSHIPS.has(finding.relationship)
+    const requires = input !== undefined && (hasNonZeroDelta || outsideBoundary)
+    return { findingId: finding.findingId, metric: finding.metric, fiscalPeriod: finding.fiscalPeriod, surpriseOrRevision: firstDelta(finding.deterministicDeltas), deterministicDeltas: finding.deterministicDeltas, affectedValuationInputs: input === undefined ? [] : [input], requiresValuationRefresh: requires, rationale: input === undefined ? 'No explicit valuation-input mapping exists for this metric.' : requires ? 'A verified expectation change affects a mapped valuation input; the dedicated Valuation Workflow must refresh arithmetic.' : 'The verified expectation finding does not require a valuation refresh under the bounded bridge rules.', rationaleRefs: finding.sourceCandidateIds }
   })
 }
+export const buildValuationImpactBridge = buildValuationImpactBridges
 
-function structuredValue(object: Record<string, unknown>): Record<string, unknown> { return object.structuredValue && typeof object.structuredValue === 'object' ? object.structuredValue as Record<string, unknown> : {} }
-function structuredMetric(object: Record<string, unknown>): string { const value = structuredValue(object); return String(object.metricRef ?? object.metric ?? value.metricRef ?? value.metric ?? '') }
-function structuredPeriod(object: Record<string, unknown>): string { const value = structuredValue(object); return String(object.fiscalPeriod ?? object.period ?? value.fiscalPeriod ?? value.period ?? '') }
-function objectText(object: Record<string, unknown>): string { const value = structuredValue(object); return [object.title, object.statement, object.name, object.metricRef, object.metric, object.fiscalPeriod, object.period, value.metricRef, value.metric, value.fiscalPeriod, value.period].filter(text).join(' ').toLowerCase() }
-function metricRelevant(finding: EarningsFinding, dependency: Record<string, unknown>): boolean {
-  const findingMetric = canonicalMetric(finding.metric); const dependencyMetric = canonicalMetric(structuredMetric(dependency)); const period = structuredPeriod(dependency); if (dependencyMetric && findingMetric && dependencyMetric !== findingMetric) return false
-  if (period && finding.fiscalPeriod && period !== finding.fiscalPeriod) return false
-  if (dependencyMetric && findingMetric && dependencyMetric === findingMetric) return true
-  const haystack = objectText(dependency); const key = metricKey(finding.metric); return Boolean(key && (haystack.includes(key) || (key === 'eps' && /earnings|profit|eps/.test(haystack)) || (key === 'net_profit' && /earnings|profit|net income/.test(haystack))))
+function edgeCriticality(edgeType: string): ThesisImpact['criticality'] { return LOAD_BEARING_EDGES.has(edgeType) ? 'load_bearing' : 'direct' }
+function relationFor(effect: ThesisEffect): ThesisImpact['relation'] { return effect === 'supports' ? 'supports_dependency' : effect === 'challenges' ? 'challenges_dependency' : 'implicates_dependency' }
+function contextDependencies(context: ThesisFilterContext): Map<string, { readonly thesis: EarningsThesisContext; readonly dependency: EarningsThesisContext['dependencies'][number] }> {
+  const map = new Map<string, { readonly thesis: EarningsThesisContext; readonly dependency: EarningsThesisContext['dependencies'][number] }>()
+  for (const thesis of context.theses) for (const dependency of thesis.dependencies) map.set(`${thesis.thesisRef}|${dependency.sourceRef}`, { thesis, dependency })
+  return map
 }
-
-function directDependencies(context: ThesisFilterContext, thesis: KnowledgeThesisV04): readonly { dependency: KnowledgeClaimV04 | KnowledgeObservationV04; edge: KnowledgeReasoningEdgeV04 }[] {
-  const byId = new Map<string, KnowledgeClaimV04 | KnowledgeObservationV04>([...context.claims, ...context.observations].map((item) => [item.id, item]))
-  return context.reasoningEdges.filter((edge) => edge.targetRef === thesis.id && byId.has(edge.sourceRef)).map((edge) => ({ dependency: byId.get(edge.sourceRef)!, edge })).sort((left, right) => left.dependency.id.localeCompare(right.dependency.id) || left.edge.id.localeCompare(right.edge.id))
-}
-
-function relationFor(findings: readonly EarningsFinding[]): ThesisImpactRelation {
-  const negative = findings.some((item) => ['below', 'lowered', 'down'].includes(item.direction)); const positive = findings.some((item) => ['above', 'raised', 'up'].includes(item.direction)); if (negative && !positive) return 'challenges_dependency'; if (positive && !negative) return 'supports_dependency'; return 'implicates_dependency'
-}
-
-export function filterThesisImpacts(findings: readonly EarningsFinding[], context: ThesisFilterContext | undefined): readonly ThesisImpact[] {
-  if (context === undefined) return []
-  const impacts: ThesisImpact[] = []
-  for (const thesis of [...context.theses].sort((left, right) => left.id.localeCompare(right.id))) {
-    for (const { dependency, edge } of directDependencies(context, thesis)) {
-      const relevant = findings.filter((finding) => metricRelevant(finding, dependency as unknown as Record<string, unknown>)); if (relevant.length === 0) continue
-      const dependencyStatement = 'statement' in dependency ? dependency.statement : `${dependency.observationType} ${dependency.metricRef}`
-      const relation = relationFor(relevant)
-      impacts.push({ thesisRef: thesis.id, thesisTitle: thesis.title, thesisStatus: thesis.status, dependencyRef: dependency.id, dependencyKind: dependency.id.startsWith('claim:') ? 'claim' : 'observation', dependencyStatement, reasoningEdgeRef: edge.id, reasoningEdgeType: edge.type, findingIds: relevant.map((item) => item.findingId).sort(), relation, rationale: `${relevant.map((item) => item.summary).join(' ')} This is a report-only implication of existing dependency ${dependency.id}; Thesis status and graph state are unchanged.` })
-    }
+function exactMatches(finding: EarningsFinding, context: ThesisFilterContext): ThesisImpact[] {
+  const matches: ThesisImpact[] = []
+  for (const thesis of context.theses) for (const dependency of thesis.dependencies) {
+    if (!finding.metric || !dependency.metric || metricKey(dependency.metric) !== metricKey(finding.metric)) continue
+    if (dependency.fiscalPeriod && dependency.fiscalPeriod !== finding.fiscalPeriod) continue
+    const criticality = edgeCriticality(dependency.edgeType)
+    matches.push({ findingId: finding.findingId, thesisRef: thesis.thesisRef, thesisTitle: thesis.title, thesisStatus: thesis.status, dependencyRef: dependency.sourceRef, dependencyKind: dependency.sourceKind, ...(dependency.statement ? { dependencyStatement: dependency.statement } : {}), reasoningEdgeRef: dependency.edgeRef, reasoningEdgeType: dependency.edgeType, criticality, effect: 'uncertain', relation: 'implicates_dependency', rationale: 'Exact structured metric relevance was found; effect remains unresolved until bounded semantic filtering.' })
   }
-  return impacts.sort((left, right) => `${left.thesisRef}|${left.dependencyRef}|${left.reasoningEdgeRef}`.localeCompare(`${right.thesisRef}|${right.dependencyRef}|${right.reasoningEdgeRef}`))
+  return matches.sort((a, b) => `${a.thesisRef}|${a.reasoningEdgeRef}`.localeCompare(`${b.thesisRef}|${b.reasoningEdgeRef}`))
+}
+
+export function filterThesisImpacts(findings: readonly EarningsFinding[], thesisContext?: ThesisFilterContext): readonly ThesisImpact[] { return thesisContext ? findings.flatMap((finding) => exactMatches(finding, thesisContext)) : [] }
+
+function classification(findingId: string, matches: readonly ThesisImpact[], unresolved: boolean, rationale: string): ThesisFindingClassification {
+  const value: ThesisFindingClassification['classification'] = matches.length === 0 ? (unresolved ? 'uncertain' : 'thesis_irrelevant') : matches.some((item) => item.criticality === 'load_bearing') ? 'thesis_critical' : 'thesis_relevant'
+  return { findingId, classification: value, matches, unresolved, rationale }
+}
+function fallbackClassifications(findings: readonly EarningsFinding[], impacts: readonly ThesisImpact[]): readonly ThesisFindingClassification[] {
+  const byFinding = new Map<string, ThesisImpact[]>(); for (const impact of impacts) byFinding.set(impact.findingId, [...(byFinding.get(impact.findingId) ?? []), impact])
+  return findings.map((finding) => { const matches = byFinding.get(finding.findingId) ?? []; return classification(finding.findingId, matches, true, matches.length > 0 ? 'Deterministic relevance is retained, but effect resolution is unavailable.' : 'Thesis relevance is uncertain because semantic resolution is unavailable.') })
+}
+function baseReasoning(overrides: Partial<ThesisFilterReasoning> = {}): ThesisFilterReasoning { return { called: false, validated: true, applied: true, fallbackUsed: false, repairAttempts: 0, operation: OPERATION, ...overrides } }
+
+function outputObject(value: unknown): Record<string, unknown> | undefined { return value && typeof value === 'object' ? value as Record<string, unknown> : undefined }
+function validateSemanticOutput(output: unknown, findings: readonly EarningsFinding[], context: ThesisFilterContext): { readonly decisions?: readonly SemanticFindingDecision[]; readonly error?: string } {
+  const root = outputObject(output); if (!root || !Array.isArray(root.decisions) || Object.keys(root).some((key) => key !== 'decisions')) return { error: 'semantic_output_shape_invalid' }
+  const findingIds = new Set(findings.map((item) => item.findingId)); const thesisRefs = new Set(context.theses.map((item) => item.thesisRef)); const validRefs = contextDependencies(context); const seen = new Set<string>(); const decisions: SemanticFindingDecision[] = []
+  for (const raw of root.decisions) {
+    const decision = outputObject(raw); if (!decision || typeof decision.findingId !== 'string' || !findingIds.has(decision.findingId) || seen.has(decision.findingId) || !Array.isArray(decision.matches) || typeof decision.unresolved !== 'boolean' || Object.keys(decision).some((key) => !['findingId', 'matches', 'unresolved'].includes(key))) return { error: 'semantic_decision_invalid' }
+    seen.add(decision.findingId); const matches: Array<{ readonly thesisRef: string; readonly dependencyRefs: readonly string[]; readonly effect: ThesisEffect; readonly rationale: string }> = []
+    for (const rawMatch of decision.matches) {
+      const match = outputObject(rawMatch); if (!match || typeof match.thesisRef !== 'string' || !thesisRefs.has(match.thesisRef) || !Array.isArray(match.dependencyRefs) || typeof match.effect !== 'string' || !ALLOWED_EFFECTS.has(match.effect as ThesisEffect) || typeof match.rationale !== 'string' || !text(match.rationale) || Object.keys(match).some((key) => !['thesisRef', 'dependencyRefs', 'effect', 'rationale'].includes(key))) return { error: 'semantic_match_invalid' }
+      const refs = match.dependencyRefs.filter((ref): ref is string => typeof ref === 'string'); if (refs.length !== match.dependencyRefs.length || new Set(refs).size !== refs.length) return { error: 'semantic_dependency_refs_invalid' }
+      for (const ref of refs) if (!validRefs.has(`${match.thesisRef}|${ref}`)) return { error: 'semantic_reference_invalid' }
+      matches.push({ thesisRef: match.thesisRef, dependencyRefs: refs, effect: match.effect as ThesisEffect, rationale: text(match.rationale) })
+    }
+    decisions.push({ findingId: decision.findingId, matches, unresolved: decision.unresolved })
+  }
+  if (seen.size !== findings.length) return { error: 'semantic_decisions_incomplete' }
+  return { decisions }
+}
+
+function mergeSemantic(findings: readonly EarningsFinding[], context: ThesisFilterContext, deterministic: readonly ThesisImpact[], decisions: readonly SemanticFindingDecision[]): { readonly impacts: readonly ThesisImpact[]; readonly classifications: readonly ThesisFindingClassification[] } {
+  const deterministicByFinding = new Map<string, ThesisImpact[]>(); for (const item of deterministic) deterministicByFinding.set(item.findingId, [...(deterministicByFinding.get(item.findingId) ?? []), item])
+  const decisionByFinding = new Map(decisions.map((item) => [item.findingId, item])); const refs = contextDependencies(context)
+  const classifications = findings.map((finding) => {
+    const decision = decisionByFinding.get(finding.findingId)!; const merged = [...(deterministicByFinding.get(finding.findingId) ?? [])]
+    for (const match of decision.matches) for (const dependencyRef of match.dependencyRefs) {
+      const resolved = refs.get(`${match.thesisRef}|${dependencyRef}`); if (!resolved) continue
+      if (merged.some((item) => item.thesisRef === match.thesisRef && item.reasoningEdgeRef === resolved.dependency.edgeRef)) continue
+      const dependency = resolved.dependency; merged.push({ findingId: finding.findingId, thesisRef: resolved.thesis.thesisRef, thesisTitle: resolved.thesis.title, thesisStatus: resolved.thesis.status, dependencyRef: dependency.sourceRef, dependencyKind: dependency.sourceKind, ...(dependency.statement ? { dependencyStatement: dependency.statement } : {}), reasoningEdgeRef: dependency.edgeRef, reasoningEdgeType: dependency.edgeType, criticality: edgeCriticality(dependency.edgeType), effect: match.effect, relation: relationFor(match.effect), rationale: match.rationale })
+    }
+    const unique = [...new Map(merged.map((item) => [`${item.thesisRef}|${item.reasoningEdgeRef}`, item])).values()]
+    return classification(finding.findingId, unique, decision.unresolved || unique.some((item) => item.effect === 'uncertain'), unique.length > 0 ? 'Bounded semantic relevance was validated and merged with deterministic matches.' : 'The bounded semantic filter found no existing Thesis dependency.')
+  })
+  return { impacts: classifications.flatMap((item) => item.matches), classifications }
+}
+
+export async function applyBoundedSemanticThesisFilter(findings: readonly EarningsFinding[], context: ThesisFilterContext | undefined, deterministicImpacts: readonly ThesisImpact[], executor?: ReasoningExecutor): Promise<{ readonly impacts: readonly ThesisImpact[]; readonly classifications: readonly ThesisFindingClassification[]; readonly reasoning: ThesisFilterReasoning }> {
+  const usableContext = context ?? { theses: [], diagnostics: ['thesis_context_unavailable'], status: 'unavailable' as const }
+  if (!executor || findings.length === 0 || usableContext.theses.length === 0) return { impacts: deterministicImpacts, classifications: fallbackClassifications(findings, deterministicImpacts), reasoning: baseReasoning({ fallbackUsed: true, diagnostic: !executor ? 'semantic_executor_unavailable' : 'thesis_context_unavailable' }) }
+  const input = { findings, theses: usableContext.theses, deterministicMatches: deterministicImpacts }
+  const request = { operation: OPERATION, instruction: 'Classify every finding against the bounded existing Thesis dependencies. Return only the declared decisions contract. Do not infer effect from numeric sign or magnitude.', input, outputContract: { decisions: 'one decision per findingId; matches use existing thesisRef and dependencyRefs only; effects supports|challenges|mixed|uncertain; rationale is required' } } as const
+  let attempts = 0; let diagnostic: string | undefined
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const result = await executor.execute(request); const validated = validateSemanticOutput(result.output, findings, usableContext)
+      if (validated.decisions) { const merged = mergeSemantic(findings, usableContext, deterministicImpacts, validated.decisions); return { ...merged, reasoning: baseReasoning({ called: true, validated: true, applied: true, repairAttempts: attempts }) } }
+      diagnostic = validated.error
+    } catch (error) { diagnostic = error instanceof Error ? error.message : String(error) }
+    if (attempt === 0) attempts += 1
+  }
+  return { impacts: deterministicImpacts, classifications: fallbackClassifications(findings, deterministicImpacts), reasoning: baseReasoning({ called: true, validated: false, applied: true, fallbackUsed: true, repairAttempts: attempts, diagnostic }) }
 }
 
 export function buildEarningsValuationImpactAndThesisFilter(input: EarningsValuationImpactInput): EarningsValuationImpactAnalysis {
-  const findings = normalizeEarningsExpectationFindings(input.expectationAnalysis); const valuationImpacts = buildValuationImpactBridges(findings); const thesisImpacts = filterThesisImpacts(findings, input.thesisContext); const implicated = new Set(thesisImpacts.flatMap((item) => item.findingIds));
-  return { findings, valuationImpacts, thesisImpacts, unmatchedFindingIds: findings.map((item) => item.findingId).filter((id) => !implicated.has(id)), diagnostics: [], thesisFilterReasoning: { called: false, validated: true, applied: true, fallbackUsed: false, repairAttempts: 0, operation: 'earnings_expectation_thesis_filter' } }
+  const normalized = normalizeDetailed(input.expectationAnalysis); const valuationImpacts = buildValuationImpactBridges(normalized.findings); const thesisImpacts = filterThesisImpacts(normalized.findings, input.thesisContext); const classifications = fallbackClassifications(normalized.findings, thesisImpacts)
+  return { findings: normalized.findings, valuationImpacts, thesisImpacts, thesisFindingClassifications: classifications, unmatchedFindingIds: classifications.filter((item) => item.matches.length === 0).map((item) => item.findingId), diagnostics: normalized.diagnostics, thesisContextStatus: input.thesisContext?.status ?? 'unavailable', thesisContextThesisCount: input.thesisContext?.theses.length ?? 0, thesisDependencyCount: input.thesisContext?.theses.reduce((sum, thesis) => sum + thesis.dependencies.length, 0) ?? 0, thesisFilterReasoning: baseReasoning() }
 }
 
-function parseModelObject(value: unknown): Record<string, unknown> {
-  if (typeof value === 'string') { const parsed = JSON.parse(value) as unknown; if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown> }
-  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>
-  throw new Error('thesis_filter_output_invalid')
+function appendSection(sections: readonly { readonly id: string; readonly title: string; readonly markdown: string; readonly sourceCandidateIds: readonly string[]; readonly assessmentRefs: readonly string[] }[], id: string, title: string, markdown: string, sourceCandidateIds: readonly string[]): typeof sections[number][] {
+  const existing = sections.find((section) => section.id === id || section.title === title); if (existing) return sections.map((section) => section.id === existing.id ? { ...section, markdown: `${section.markdown}\n\n${markdown}`, sourceCandidateIds: sortedUnique([...section.sourceCandidateIds, ...sourceCandidateIds]) } : section)
+  return [...sections, { id, title, markdown, sourceCandidateIds: sortedUnique(sourceCandidateIds), assessmentRefs: [] }]
 }
 
-function semanticImpacts(value: unknown, candidates: readonly ThesisImpact[]): readonly ThesisImpact[] {
-  const object = parseModelObject(value); const raw = object.impacts ?? object.thesisImpacts; if (!Array.isArray(raw)) throw new Error('thesis_filter_impacts_invalid')
-  const byKey = new Map(candidates.map((candidate) => [`${candidate.thesisRef}|${candidate.dependencyRef}|${candidate.reasoningEdgeRef}`, candidate])); const seen = new Set<string>(); const result: ThesisImpact[] = []
-  for (const entry of raw) {
-    if (!entry || typeof entry !== 'object') throw new Error('thesis_filter_impact_invalid')
-    const item = entry as Record<string, unknown>; const thesisRef = String(item.thesisRef ?? ''); const dependencyRef = String(item.dependencyRef ?? ''); const edgeRef = String(item.reasoningEdgeRef ?? ''); const candidate = byKey.get(`${thesisRef}|${dependencyRef}|${edgeRef}`); const findingIds = Array.isArray(item.findingIds) ? uniqueSorted(item.findingIds) : []; const relation = item.relation; const rationale = item.rationale
-    if (!candidate || seen.has(candidate.reasoningEdgeRef) || findingIds.length === 0 || !findingIds.every((id) => candidate.findingIds.includes(id)) || !['challenges_dependency', 'supports_dependency', 'implicates_dependency'].includes(String(relation)) || !text(rationale)) throw new Error('thesis_filter_impact_invalid')
-    seen.add(candidate.reasoningEdgeRef); result.push({ ...candidate, findingIds, relation: relation as ThesisImpactRelation, rationale: String(rationale).trim().slice(0, 1_000) })
-  }
-  return result.sort((left, right) => `${left.thesisRef}|${left.dependencyRef}|${left.reasoningEdgeRef}`.localeCompare(`${right.thesisRef}|${right.dependencyRef}|${right.reasoningEdgeRef}`))
-}
-
-function thesisFilterRequest(candidates: readonly ThesisImpact[], findings: readonly EarningsFinding[], repair?: { readonly prior: unknown; readonly diagnostic: string }): ReasoningRequest {
-  const allowedFindingIds = uniqueSorted(candidates.flatMap((candidate) => candidate.findingIds)); const request: Record<string, unknown> = { candidates: candidates.slice(0, 24).map((candidate) => ({ thesisRef: candidate.thesisRef, thesisTitle: candidate.thesisTitle, thesisStatus: candidate.thesisStatus, dependencyRef: candidate.dependencyRef, dependencyKind: candidate.dependencyKind, dependencyStatement: candidate.dependencyStatement, reasoningEdgeRef: candidate.reasoningEdgeRef, reasoningEdgeType: candidate.reasoningEdgeType, findingIds: candidate.findingIds })), findings: findings.filter((finding) => allowedFindingIds.includes(finding.findingId)).slice(0, 24).map((finding) => ({ findingId: finding.findingId, kind: finding.kind, metric: finding.metric, fiscalPeriod: finding.fiscalPeriod, direction: finding.direction, summary: finding.summary })), allowedThesisRefs: uniqueSorted(candidates.map((candidate) => candidate.thesisRef)), allowedDependencyRefs: uniqueSorted(candidates.map((candidate) => candidate.dependencyRef)), allowedReasoningEdgeRefs: uniqueSorted(candidates.map((candidate) => candidate.reasoningEdgeRef)), allowedFindingIds }
-  if (repair !== undefined) request.repair = { attempt: 1, diagnostic: repair.diagnostic, priorInvalidOutput: typeof repair.prior === 'string' ? repair.prior.slice(0, 8_000) : JSON.stringify(repair.prior).slice(0, 8_000) }
-  return { operation: 'earnings_expectation_thesis_filter', instruction: repair === undefined ? 'Filter the supplied eligible existing Thesis dependencies against verified expectation findings. Return only impacts that are materially implicated. Copy exact refs and finding IDs from the candidate allowlists. This is report-only: never change Thesis status and never create a Claim or ReasoningEdge.' : `Return a corrected replacement. Fix: ${repair.diagnostic}.`, input: request, outputContract: { type: 'object', required: ['impacts'], impacts: { type: 'array', maxItems: 12, item: { thesisRef: 'exact allowed Thesis ref', dependencyRef: 'exact allowed Claim or Observation ref', reasoningEdgeRef: 'exact allowed ReasoningEdge ref', findingIds: 'non-empty exact allowed finding IDs', relation: ['challenges_dependency', 'supports_dependency', 'implicates_dependency'], rationale: 'bounded non-empty text' } } }, metadata: { operationFamily: 'personal-research-v1', surface: 'earnings-review', purpose: 'report-only-thesis-filter' } } satisfies ReasoningRequest
-}
-
-export async function applyBoundedSemanticThesisFilter(candidates: readonly ThesisImpact[], executor: EarningsValuationImpactInput['reasoningExecutor'], findings: readonly EarningsFinding[] = []): Promise<{ readonly impacts: readonly ThesisImpact[]; readonly reasoning: ThesisFilterReasoning }> {
-  if (candidates.length === 0) return { impacts: [], reasoning: { called: false, validated: true, applied: true, fallbackUsed: false, repairAttempts: 0, operation: 'earnings_expectation_thesis_filter' } }
-  if (executor === undefined) return { impacts: candidates, reasoning: { called: false, validated: false, applied: true, fallbackUsed: true, repairAttempts: 0, operation: 'earnings_expectation_thesis_filter', diagnostic: 'reasoning_executor_unavailable' } }
-  let prior: unknown
-  let diagnostic = 'thesis_filter_output_invalid'
-  try { const result = await executor.execute(thesisFilterRequest(candidates, findings)); prior = result.output; return { impacts: semanticImpacts(result.output, candidates), reasoning: { called: true, validated: true, applied: true, fallbackUsed: false, repairAttempts: 0, operation: 'earnings_expectation_thesis_filter' } } } catch { /* bounded repair below */ }
-  try { const result = await executor.execute(thesisFilterRequest(candidates, findings, { prior, diagnostic })); return { impacts: semanticImpacts(result.output, candidates), reasoning: { called: true, validated: true, applied: true, fallbackUsed: false, repairAttempts: 1, operation: 'earnings_expectation_thesis_filter' } } } catch { return { impacts: candidates, reasoning: { called: true, validated: false, applied: true, fallbackUsed: true, repairAttempts: 1, operation: 'earnings_expectation_thesis_filter', diagnostic } } }
-}
-
-export const buildEarningsExpectationFindings = normalizeEarningsExpectationFindings
-export const buildValuationImpactBridge = buildValuationImpactBridges
-
-export type EarningsThesisFilterContext = ThesisFilterContext
-
-function append(section: EarningsReviewSection, markdown: string, sourceCandidateIds: readonly string[]): EarningsReviewSection {
-  return { ...section, markdown: `${section.markdown}${section.markdown.endsWith('\n') ? '' : '\n\n'}${markdown}`, sourceCandidateIds: uniqueSorted([...section.sourceCandidateIds, ...sourceCandidateIds]) }
-}
-
-function reportLines(values: readonly string[]): string { return values.length === 0 ? '' : values.map((value) => `- ${value}`).join('\n') }
-
-export function enrichEarningsReviewSectionsWithValuationImpact(sections: readonly EarningsReviewSection[], analysis: EarningsValuationImpactAnalysis): readonly EarningsReviewSection[] {
-  if (analysis.findings.length === 0) return sections
-  const sourceCandidateIds = uniqueSorted(analysis.findings.flatMap((finding) => finding.sourceCandidateIds))
-  const valuationLines = analysis.valuationImpacts.map((item) => `${item.metric || 'unspecified metric'} ${item.fiscalPeriod || 'unspecified period'}: affected inputs=${item.affectedValuationInputs.join(', ') || 'none'}; refresh=${item.requiresValuationRefresh ? 'required' : 'not mapped'}; ${item.rationale}`)
-  const thesisLines = analysis.thesisImpacts.map((item) => `${item.thesisTitle} [${item.thesisStatus}] -> dependency ${item.dependencyRef} via ${item.reasoningEdgeRef} (${item.reasoningEdgeType}): ${item.relation}. ${item.rationale}`)
-  const unmatched = analysis.unmatchedFindingIds.length > 0 ? `\n\n${analysis.unmatchedFindingIds.length} expectation finding(s) did not implicate an existing first-class Thesis dependency.` : ''
-  return sections.map((section) => {
-    if (section.title === 'Valuation Implications') {
-      const withoutSentinel = { ...section, markdown: section.markdown.replace('Consensus unavailable', '').trim() }
-      return append(withoutSentinel, `### Deterministic valuation-input bridge\n${reportLines(valuationLines)}\n\nNo target price, multiple, DCF value, or valuation assumption is calculated or changed by W2-005.`, sourceCandidateIds)
-    }
-    if (section.title === 'Thesis Impact') return append(section, `### Existing Thesis dependency filter\n${thesisLines.length > 0 ? reportLines(thesisLines) : 'No existing first-class Thesis dependency was implicated by the verified expectation findings.'}${unmatched}\n\nThis is report-only context; Thesis status, Claims, and ReasoningEdges are unchanged.`, sourceCandidateIds)
-    return section
-  })
+export function enrichEarningsReviewSectionsWithValuationImpact(sections: readonly any[], analysis: EarningsValuationImpactAnalysis): readonly any[] {
+  const valuation = analysis.valuationImpacts.length === 0 ? 'No verified expectation finding mapped to a valuation input.' : analysis.valuationImpacts.map((item) => `${item.findingId}: ${item.metric} ${item.fiscalPeriod}; affected inputs=${item.affectedValuationInputs.join(', ') || 'none'}; valuation refresh required=${item.requiresValuationRefresh ? 'yes' : 'no'}.`).join('\n')
+  const thesis = analysis.thesisFindingClassifications.length === 0 ? 'No expectation findings were available for Thesis filtering.' : analysis.thesisFindingClassifications.map((item) => item.matches.length > 0 ? item.matches.map((match) => `${item.findingId}: classification=${item.classification}; Thesis=${match.thesisRef}; dependency=${match.dependencyRef}; criticality=${match.criticality}; effect=${match.effect}; rationale=${match.rationale}`).join('\n') : item.classification === 'thesis_irrelevant' ? `${item.findingId}: classification=thesis_irrelevant; No existing Thesis dependency was found by successful semantic classification.` : `${item.findingId}: classification=uncertain; Thesis relevance is uncertain; semantic resolution is unavailable or failed.`).join('\n')
+  const sourceIds = analysis.findings.flatMap((finding) => finding.sourceCandidateIds)
+  return appendSection(appendSection(sections, 'valuation_implications', 'Valuation Implications', valuation, sourceIds), 'thesis_impact', 'Thesis Impact', thesis, sourceIds)
 }
