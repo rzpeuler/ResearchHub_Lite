@@ -23,3 +23,16 @@ Financial-quality rules:
 - Revenue-recognition outputs are bounded follow-up diagnostics, not fraud or
   earnings-manipulation conclusions. The current consensus rule and Knowledge
   mutation authority remain unchanged.
+
+W2-004 expectation integration:
+
+- Consensus is never inferred; only explicitly supplied, attributable,
+  point-in-time expectations are eligible.
+- Expectation arithmetic is code-owned and is appended after semantic
+  synthesis. The LLM remains expectation-blind in W2-004.
+- Report-only surprise, revision, Guidance, and Segment KPI results cannot
+  authorize Knowledge mutation or expectation-derived Claims.
+- Missing or invalid expectations preserve the fail-closed `Consensus
+  unavailable` behavior.
+- Actual-vs-consensus rejects post-result snapshots, and Guidance-vs-Consensus
+  rejects snapshots published after the relevant Guidance.

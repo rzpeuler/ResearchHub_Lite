@@ -1,9 +1,26 @@
 import type { KnowledgeBaseHandle } from '../../knowledge/storage/handle.ts'
-import type { ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchProviderOutcome } from '../../plugins/research-acquisition/contracts.ts'
+import type { NormalizedResearchSource, ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchProviderOutcome } from '../../plugins/research-acquisition/contracts.ts'
 import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { EarningsPeriod, EarningsReviewReasoningTelemetry, EarningsReviewSection, EarningsImpactAssessment } from '../../skills/earnings-review/index.ts'
 import type { ExternalIdentifierV04 } from '../../knowledge/schema/domain-v04.ts'
+import type { ConsensusSnapshot, EstimatePoint, GuidanceRange, SegmentKpiDeltaInput } from '../../skills/earnings-review/expectations/contracts.ts'
+import type { EarningsExpectationAnalysis } from './expectations-contracts.ts'
+
+export interface EstimateRevisionLink { readonly oldEstimateId: string; readonly newEstimateId: string }
+
+/** Explicit, caller-owned report-only expectations input. It is intentionally not a public App or Plugin contract. */
+export interface EarningsReviewExpectationsBundle {
+  readonly sources: readonly NormalizedResearchSource[]
+  readonly estimates?: readonly EstimatePoint[]
+  readonly consensusSnapshots?: readonly ConsensusSnapshot[]
+  readonly priorEstimateInstitutionKeys?: readonly string[]
+  readonly estimateRevisionLinks?: readonly EstimateRevisionLink[]
+  readonly guidances?: readonly GuidanceRange[]
+  readonly currentGuidanceIds?: readonly string[]
+  readonly segmentKpiComparisons?: readonly SegmentKpiDeltaInput[]
+  readonly resultPublishedAt?: string
+}
 
 export interface EarningsReviewWorkflowInput {
   readonly workflowRunId: string
@@ -22,6 +39,7 @@ export interface EarningsReviewWorkflowInput {
   readonly writeKnowledge?: boolean
   readonly useStructuredKnowledge?: boolean
   readonly externalIdentifiers?: readonly ExternalIdentifierV04[]
+  readonly expectations?: EarningsReviewExpectationsBundle
 }
 
 export interface EarningsReviewTelemetry {
@@ -35,7 +53,15 @@ export interface EarningsReviewTelemetry {
   readonly canonicalClaimCount: number
   readonly officialEvidenceStatus: 'available' | 'unavailable' | 'future_filtered'
   readonly structuredFinancialEvidenceStatus: 'available' | 'unavailable'
-  readonly consensusStatus: 'unavailable'
+  readonly consensusStatus: 'available' | 'unavailable'
+  readonly expectationStatus: 'not_provided' | 'available' | 'partial' | 'unavailable'
+  readonly expectationDiagnosticCount: number
+  readonly actualConsensusComparisonCount: number
+  readonly actualPriorEstimateComparisonCount: number
+  readonly estimateRevisionCount: number
+  readonly guidanceRevisionCount: number
+  readonly guidanceConsensusComparisonCount: number
+  readonly segmentKpiComparisonCount: number
 }
 
 export interface EarningsReviewWorkflowResult {
@@ -60,4 +86,5 @@ export interface EarningsReviewWorkflowResult {
   readonly assessments?: readonly EarningsImpactAssessment[]
   readonly telemetry: EarningsReviewTelemetry
   readonly providerOutcomes: readonly ResearchProviderOutcome[]
+  readonly expectationAnalysis?: EarningsExpectationAnalysis
 }

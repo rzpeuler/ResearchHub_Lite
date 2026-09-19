@@ -116,3 +116,25 @@ calculation uses one shared finite-safe implementation for validation and
 normalization; Guidance deltas, revisions, and range widths fail closed when
 their arithmetic cannot be represented finitely. Tests inspect JavaScript
 numbers recursively rather than relying on JSON serialization.
+# W2-004 — Earnings Review Expectations Integration
+
+W2-004 adds an optional, direct Workflow input for an explicit caller-supplied
+expectations bundle. It does not add live acquisition, broker integration, a
+public route, Pi input, or a new Knowledge persistence path.
+
+The Workflow validates source bindings, normalizes source IDs, reproduces
+consensus snapshots through the existing deterministic expectations primitives,
+and applies strict point-in-time boundaries. When available, the official
+selected result publication timestamp is authoritative; actual-vs-consensus
+requires a strictly earlier consensus snapshot. Actual-vs-prior-estimate uses
+only explicitly named institution keys. Current Guidance and estimate
+revision links are also explicit; Guidance-vs-Consensus retains its own
+Guidance publication cutoff.
+
+Expectation findings are deterministic post-synthesis report enrichment. The
+LLM does not receive expectation analysis in W2-004, and expectation findings
+cannot authorize durable Claims, Guidance persistence, surprise persistence,
+or revision persistence. Expectation-only sources remain report-only unless a
+separate independent Knowledge production path persists them. Invalid or
+incomplete expectations are non-blocking, and `Consensus unavailable` remains
+the fail-closed fallback when no valid actual-vs-consensus finding exists.
