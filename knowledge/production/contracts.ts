@@ -32,6 +32,13 @@ export interface SemanticProductionProposal {
   readonly estimateHorizon?: string | null
   readonly revisionOfProposalId?: string | null
   readonly contributingProposalIds?: readonly string[]
+  readonly consensusAsOf?: string
+  readonly consensusMean?: number
+  readonly consensusMedian?: number | null
+  readonly consensusHigh?: number | null
+  readonly consensusLow?: number | null
+  readonly consensusCount?: number
+  readonly consensusDispersion?: number | null
   readonly thesisTitle?: string
   readonly thesisStatus?: ThesisStatusV04
   readonly edgeType?: ReasoningEdgeTypeV04

@@ -50,3 +50,30 @@ zero.
 
 All derived comparison outputs are report-level analytical results. They do
 not create canonical objects in W2-001.
+
+## W2-002 durable Knowledge projection
+
+W2-002 adds one centralized Workflow-layer projection boundary:
+
+`EstimatePoint` → `Observation(estimate)`
+
+`ConsensusSnapshot` → `Observation(consensus)`
+
+Estimate observations preserve the attributable unit, source/raw provenance,
+published timestamp, institution, optional analyst, and fiscal period. Explicit
+revision links become durable `revisionOf` lineage; old estimate observations
+remain historical objects and are never overwritten. Exact replay reuses the
+same semantic identity and preserves `recordedAt`.
+
+Consensus observations preserve their own historical `asOf`, mean, median,
+high, low, count, dispersion, and canonical contributor Observation refs. The
+contributor refs must resolve only to Estimate observations and must agree on
+subject, metric, fiscal period, point-in-time eligibility, and unit. Consensus
+unit is validated through those contributor units; Schema v0.4 is unchanged and
+does not gain a standalone consensus unit field. A direct consensus Source is
+not fabricated when the snapshot is derived from estimates.
+
+W2-002 keeps surprise/beat-miss, actual-vs-consensus, actual-vs-prior-estimate,
+revision deltas, guidance, and valuation bridges report-only. It does not wire
+expectations into the live Earnings Review Workflow; that remains deferred to
+W2-004. No source acquisition or provider is part of this projection boundary.
