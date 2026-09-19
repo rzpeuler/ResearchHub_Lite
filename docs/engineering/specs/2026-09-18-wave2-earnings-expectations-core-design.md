@@ -83,3 +83,30 @@ FIX-001 projection integrity rules:
 - source candidate collections are canonicalized as deterministic sets before durable identity and provenance are built; partial declared Estimate provenance fails closed;
 - ambiguous valid revision lineage is never auto-selected, while exact duplicate links are harmless;
 - institution and analyst party local identity is namespaced by party kind, even when their domain keys are equal.
+
+## W2-003 report-only Guidance and Segment KPI core
+
+W2-003 adds schema-neutral deterministic methods under the existing Earnings
+Review expectations skill. Guidance remains report-only and is not projected to
+Knowledge. Numeric Guidance requires an explicit unit and type-specific shape;
+qualitative Guidance requires meaningful normalized qualifiers, does not invent
+a unit, and cannot enter numeric comparisons. Range midpoint is always
+calculated by code after validating any supplied midpoint.
+
+Guidance revision results preserve shared low, high, midpoint, and range-width
+dimensions separately. Revision requires compatible metric, fiscal period, and
+unit plus strictly later publication, with no unit conversion. Guidance versus
+Consensus uses `ConsensusSnapshot.mean`, requires matching metric, period, and
+unit, and rejects a Consensus snapshot published after the Guidance point in
+time. Minimum and maximum Guidance do not receive a fabricated midpoint.
+
+Segment KPI is a narrow caller-supplied research-domain contract rather than a
+universal segment ontology. Prior and expectation comparisons preserve their
+explicit fiscal periods, require matching segment/metric/unit semantics, fail
+closed when a supplied comparator is incompatible, and use deterministic
+numeric deltas. Numeric direction is descriptive only and is not an economic
+good/bad interpretation.
+
+W2-003 does not change the live Earnings Review Workflow or Skill, add source
+acquisition, perform LLM extraction, persist Guidance or Segment KPI results,
+or modify Knowledge Schema, the metric registry, or W2-002 projection.
