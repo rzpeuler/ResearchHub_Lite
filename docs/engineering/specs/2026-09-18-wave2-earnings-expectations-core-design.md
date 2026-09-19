@@ -77,3 +77,9 @@ W2-002 keeps surprise/beat-miss, actual-vs-consensus, actual-vs-prior-estimate,
 revision deltas, guidance, and valuation bridges report-only. It does not wire
 expectations into the live Earnings Review Workflow; that remains deferred to
 W2-004. No source acquisition or provider is part of this projection boundary.
+
+FIX-001 projection integrity rules:
+
+- source candidate collections are canonicalized as deterministic sets before durable identity and provenance are built; partial declared Estimate provenance fails closed;
+- ambiguous valid revision lineage is never auto-selected, while exact duplicate links are harmless;
+- institution and analyst party local identity is namespaced by party kind, even when their domain keys are equal.

@@ -38,6 +38,7 @@ function token(value: string): string { return [...value].map((char) => char.cha
 function estimateProposalId(estimateId: string): string { return `estimate-${token(estimateId)}` }
 function consensusProposalId(snapshot: ConsensusSnapshot): string { return `consensus-${token(`${snapshot.metric}|${snapshot.fiscalPeriod}|${snapshot.asOf}|${[...snapshot.contributingEstimateIds].sort().join('|')}`)}` }
 function partyProposalId(party: ExpectationPartyBinding): string { return `party-${token(`${party.kind}|${party.key}`)}` }
+function partyLocalKey(kind: ExpectationPartyBinding['kind'], key: string): string { return `party-${kind}-${token(key)}` }
 function metricRef(metric: string): string | undefined { const ref = `metric:${metric}`; return getMetricDefinitionV04(ref) === undefined ? undefined : ref }
 function sameNumber(left: number | null | undefined, right: number | null | undefined): boolean { return left === right || (left !== undefined && left !== null && right !== undefined && right !== null && Object.is(left, right)) }
 function estimateSort(left: EstimatePoint, right: EstimatePoint): number { return (timestamp(left.publishedAt) ?? 0) - (timestamp(right.publishedAt) ?? 0) || left.institutionKey.localeCompare(right.institutionKey) || (left.analystKey ?? '').localeCompare(right.analystKey ?? '') || left.estimateId.localeCompare(right.estimateId) }
@@ -82,7 +83,7 @@ export function projectExpectationsKnowledgeV04(input: ExpectationsKnowledgeV04P
   if (!SAFE_LOCAL_KEY.test(input.subjectKey)) diagnostics.push(`invalid_subject_key:${input.subjectKey}`)
   if (analysisAsOf === undefined) diagnostics.push('analysisAsOf_must_be_valid')
   const parties = partyMap(input.parties, diagnostics)
-  const partyProposals: SemanticProductionProposal[] = [...parties.values()].sort((left, right) => left.kind.localeCompare(right.kind) || left.key.localeCompare(right.key)).map((party) => ({ proposalId: partyProposalId(party), kind: 'entity', subjectKey: party.key, entityType: party.kind === 'institution' ? 'institution' : 'person', entityName: party.name }))
+  const partyProposals: SemanticProductionProposal[] = [...parties.values()].sort((left, right) => left.kind.localeCompare(right.kind) || left.key.localeCompare(right.key)).map((party) => ({ proposalId: partyProposalId(party), kind: 'entity', subjectKey: partyLocalKey(party.kind, party.key), entityType: party.kind === 'institution' ? 'institution' : 'person', entityName: party.name }))
   const idCounts = new Map<string, number>()
   for (const estimate of input.estimates) idCounts.set(estimate.estimateId, (idCounts.get(estimate.estimateId) ?? 0) + 1)
   const estimatesById = new Map<string, EstimatePoint>()
@@ -102,14 +103,21 @@ export function projectExpectationsKnowledgeV04(input: ExpectationsKnowledgeV04P
   const orderedEstimates = validEstimates.sort(estimateSort)
   const projectedEstimateIds = new Set(orderedEstimates.map((estimate) => estimate.estimateId))
   const revisionTargets = new Map<string, string>()
-  for (const link of [...(input.revisionLinks ?? [])].sort((left, right) => left.oldEstimateId.localeCompare(right.oldEstimateId) || left.newEstimateId.localeCompare(right.newEstimateId))) {
+  const validRevisionPredecessors = new Map<string, string[]>()
+  const normalizedRevisionLinks = [...new Map((input.revisionLinks ?? []).map((link) => [`${link.oldEstimateId}\u0000${link.newEstimateId}`, link] as const)).values()].sort((left, right) => left.oldEstimateId.localeCompare(right.oldEstimateId) || left.newEstimateId.localeCompare(right.newEstimateId))
+  for (const link of normalizedRevisionLinks) {
     const oldEstimate = estimatesById.get(link.oldEstimateId)
     const newEstimate = estimatesById.get(link.newEstimateId)
     const revision = oldEstimate === undefined || newEstimate === undefined ? undefined : buildEstimateRevisionBridge({ oldEstimate, newEstimate })
-    if (revision === undefined || revisionTargets.has(link.newEstimateId)) diagnostics.push(`invalid_revision_link:${link.oldEstimateId}->${link.newEstimateId}`)
-    else revisionTargets.set(link.newEstimateId, link.oldEstimateId)
+    if (revision === undefined) diagnostics.push(`invalid_revision_link:${link.oldEstimateId}->${link.newEstimateId}`)
+    else validRevisionPredecessors.set(link.newEstimateId, [...(validRevisionPredecessors.get(link.newEstimateId) ?? []), link.oldEstimateId])
   }
-  const estimateProposals: SemanticProductionProposal[] = orderedEstimates.map((estimate) => ({ proposalId: estimateProposalId(estimate.estimateId), kind: 'observation', observationType: 'estimate', subjectKey: input.subjectKey, metricRef: metricRef(estimate.metric)!, fiscalPeriod: estimate.fiscalPeriod, estimateValue: estimate.value, unit: estimate.unit, institutionKey: estimate.institutionKey, ...(estimate.analystKey === undefined ? {} : { analystKey: estimate.analystKey }), publishedAt: estimate.publishedAt, ...(estimate.estimateHorizon === undefined ? {} : { estimateHorizon: estimate.estimateHorizon }), ...(revisionTargets.has(estimate.estimateId) ? { revisionOfProposalId: estimateProposalId(revisionTargets.get(estimate.estimateId)!) } : {}), sourceCandidateIds: [...estimate.sourceCandidateIds] }))
+  for (const [newEstimateId, predecessors] of validRevisionPredecessors) {
+    const uniquePredecessors = uniqueSorted(predecessors)
+    if (uniquePredecessors.length > 1) diagnostics.push(`ambiguous_revision_target:${newEstimateId}`)
+    else revisionTargets.set(newEstimateId, uniquePredecessors[0]!)
+  }
+  const estimateProposals: SemanticProductionProposal[] = orderedEstimates.map((estimate) => ({ proposalId: estimateProposalId(estimate.estimateId), kind: 'observation', observationType: 'estimate', subjectKey: input.subjectKey, metricRef: metricRef(estimate.metric)!, fiscalPeriod: estimate.fiscalPeriod, estimateValue: estimate.value, unit: estimate.unit, institutionKey: partyLocalKey('institution', estimate.institutionKey), ...(estimate.analystKey === undefined ? {} : { analystKey: partyLocalKey('analyst', estimate.analystKey) }), publishedAt: estimate.publishedAt, ...(estimate.estimateHorizon === undefined ? {} : { estimateHorizon: estimate.estimateHorizon }), ...(revisionTargets.has(estimate.estimateId) ? { revisionOfProposalId: estimateProposalId(revisionTargets.get(estimate.estimateId)!) } : {}), sourceCandidateIds: uniqueSorted(estimate.sourceCandidateIds) }))
   const consensusProposals: SemanticProductionProposal[] = []
   for (const snapshot of [...input.consensusSnapshots].sort(snapshotSort)) if (validateConsensusSnapshot(snapshot, input, estimatesById, projectedEstimateIds, diagnostics)) consensusProposals.push({ proposalId: consensusProposalId(snapshot), kind: 'observation', observationType: 'consensus', subjectKey: input.subjectKey, metricRef: metricRef(snapshot.metric)!, fiscalPeriod: snapshot.fiscalPeriod, unit: snapshot.unit, value: snapshot.mean, consensusAsOf: snapshot.asOf, consensusMean: snapshot.mean, consensusMedian: snapshot.median, consensusHigh: snapshot.high, consensusLow: snapshot.low, consensusCount: snapshot.count, consensusDispersion: snapshot.dispersion ?? null, contributingProposalIds: [...snapshot.contributingEstimateIds].sort().map(estimateProposalId) })
   return { proposals: [...partyProposals, ...estimateProposals, ...consensusProposals], diagnostics: uniqueSorted(diagnostics) }

@@ -16,7 +16,7 @@ const NOW = '2026-09-19T00:00:00.000Z'
 const ANALYSIS_AS_OF = '2026-09-19T00:00:00.000Z'
 
 function source(candidateId = 'estimate-source', content = 'Attributable estimate fixture'): NormalizedResearchSource {
-  return { candidate: { candidateId, kind: 'structured_data', tier: 2, title: 'Estimate Fixture', provider: 'fixture', metadata: { companySymbol: '600519', dataKind: 'earnings_estimates' } }, retrievedAt: NOW, title: 'Estimate Fixture', content, contentHash: 'a'.repeat(64), publisher: 'Fixture Provider', rights: { accessScope: 'public', retentionAllowed: true, aiProcessingAllowed: true, derivativeKnowledgeAllowed: true, redistributionAllowed: false } }
+  return { candidate: { candidateId, kind: 'structured_data', tier: 2, title: 'Estimate Fixture', provider: 'fixture', metadata: { companySymbol: '600519', dataKind: 'earnings_estimates', sourceKey: candidateId } }, retrievedAt: NOW, title: 'Estimate Fixture', content, contentHash: 'a'.repeat(64), publisher: 'Fixture Provider', rights: { accessScope: 'public', retentionAllowed: true, aiProcessingAllowed: true, derivativeKnowledgeAllowed: true, redistributionAllowed: false } }
 }
 
 function estimate(overrides: Partial<EstimatePoint> = {}): EstimatePoint {
@@ -57,7 +57,7 @@ test('T1 EstimatePoint projects to an attributable estimate proposal', () => {
   assert.equal(proposal?.fiscalPeriod, '2026-FY')
   assert.equal(proposal?.estimateValue, 100)
   assert.equal(proposal?.unit, 'CNY')
-  assert.equal(proposal?.institutionKey, 'broker-a')
+  assert.equal(proposal?.institutionKey, 'party-institution-00620072006f006b00650072002d0061')
   assert.equal(proposal?.publishedAt, '2026-07-01T00:00:00.000Z')
   assert.deepEqual(proposal?.sourceCandidateIds, ['estimate-source'])
 })
@@ -219,4 +219,118 @@ test('T17 projection proposal order and content are input-order independent', ()
   const first = project({ estimates, consensusSnapshots: [snapshot], parties: [...parties(), { key: 'broker-b', name: 'Broker B Securities', kind: 'institution' as const }] })
   const reversed = project({ estimates: [...estimates].reverse(), consensusSnapshots: [{ ...snapshot, contributingEstimateIds: [...snapshot.contributingEstimateIds].reverse() }], parties: [{ key: 'broker-b', name: 'Broker B Securities', kind: 'institution' as const }, ...parties()] })
   assert.deepEqual(reversed, first)
+})
+
+test('T18 source candidate order does not change the Estimate proposal', () => {
+  const first = project({ estimates: [estimate({ sourceCandidateIds: ['source-a', 'source-b'] })] })
+  const reversed = project({ estimates: [estimate({ sourceCandidateIds: ['source-b', 'source-a'] })] })
+  assert.deepEqual(reversed, first)
+  assert.deepEqual(first.proposals.find((proposal) => proposal.observationType === 'estimate')?.sourceCandidateIds, ['source-a', 'source-b'])
+})
+
+test('T19 source candidate and evidence order does not change the canonical Estimate ID', async () => {
+  const firstRoot = await freshRoot('source-order-one')
+  const secondRoot = await freshRoot('source-order-two')
+  try {
+    const firstProjection = project({ estimates: [estimate({ sourceCandidateIds: ['source-a', 'source-b'] })] })
+    const secondProjection = project({ estimates: [estimate({ sourceCandidateIds: ['source-b', 'source-a'] })] })
+    const firstOutcome = await new KnowledgeProductionGateway().submit(await gatewayInput(firstRoot, firstProjection.proposals, [source('source-a', 'A'), source('source-b', 'B')], 'source-order-one'))
+    const secondOutcome = await new KnowledgeProductionGateway().submit(await gatewayInput(secondRoot, secondProjection.proposals, [source('source-b', 'B'), source('source-a', 'A')], 'source-order-two'))
+    assert.equal(firstOutcome.status, 'committed', firstOutcome.errors.join('; '))
+    assert.equal(secondOutcome.status, 'committed', secondOutcome.errors.join('; '))
+    const firstEstimate = (await readCanonicalV04Assets(firstRoot)).objects.find((item) => item.kind === 'observation' && (item.value as { observationType?: string }).observationType === 'estimate')?.value as { id: string } | undefined
+    const secondEstimate = (await readCanonicalV04Assets(secondRoot)).objects.find((item) => item.kind === 'observation' && (item.value as { observationType?: string }).observationType === 'estimate')?.value as { id: string } | undefined
+    assert.ok(firstEstimate && secondEstimate)
+    assert.equal(firstEstimate?.id, secondEstimate?.id)
+  } finally { await rm(firstRoot, { recursive: true, force: true }); await rm(secondRoot, { recursive: true, force: true }) }
+})
+
+test('T20 an Estimate with one missing declared source fails closed', async () => {
+  const root = await freshRoot('missing-source')
+  try {
+    const projected = project({ estimates: [estimate({ sourceCandidateIds: ['source-a', 'source-b'] })] })
+    const outcome = await new KnowledgeProductionGateway().submit(await gatewayInput(root, projected.proposals, [source('source-a', 'A')]))
+    assert.ok(outcome.resolutionIntents.some((item) => item.disposition === 'review_required'))
+    const estimates = (await readCanonicalV04Assets(root)).objects.filter((item) => item.kind === 'observation' && (item.value as { observationType?: string }).observationType === 'estimate')
+    assert.equal(estimates.length, 0)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('T21 duplicate source candidate IDs are normalized before persistence', async () => {
+  const root = await freshRoot('duplicate-source')
+  try {
+    const projected = project({ estimates: [estimate({ sourceCandidateIds: ['source-a', 'source-a'] })] })
+    const proposal = projected.proposals.find((item) => item.observationType === 'estimate')
+    assert.deepEqual(proposal?.sourceCandidateIds, ['source-a'])
+    const outcome = await new KnowledgeProductionGateway().submit(await gatewayInput(root, projected.proposals, [source('source-a', 'A')]))
+    assert.equal(outcome.status, 'committed', outcome.errors.join('; '))
+    const estimateObject = (await readCanonicalV04Assets(root)).objects.find((item) => item.kind === 'observation' && (item.value as { observationType?: string }).observationType === 'estimate')?.value as { provenance?: readonly unknown[]; sourceRef?: string } | undefined
+    assert.ok(estimateObject)
+    assert.equal(estimateObject?.provenance?.length, 1)
+    assert.ok(estimateObject?.sourceRef)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('T22 ambiguous valid revision predecessors fail closed independent of link order', () => {
+  const estimates = [
+    estimate({ estimateId: 'old-a', value: 100, publishedAt: '2026-07-01T00:00:00.000Z' }),
+    estimate({ estimateId: 'old-b', value: 105, publishedAt: '2026-07-02T00:00:00.000Z' }),
+    estimate({ estimateId: 'new', value: 110, publishedAt: '2026-08-01T00:00:00.000Z' }),
+  ]
+  const links = [{ oldEstimateId: 'old-a', newEstimateId: 'new' }, { oldEstimateId: 'old-b', newEstimateId: 'new' }]
+  const first = project({ estimates, revisionLinks: links })
+  const reversed = project({ estimates: [...estimates].reverse(), revisionLinks: [...links].reverse() })
+  const newProposal = first.proposals.find((item) => item.proposalId === `estimate-${[...'new'].map((char) => char.charCodeAt(0).toString(16).padStart(4, '0')).join('')}`)
+  assert.equal(newProposal?.revisionOfProposalId, undefined)
+  assert.ok(first.diagnostics.includes('ambiguous_revision_target:new'))
+  assert.deepEqual(reversed, first)
+})
+
+test('T23 exact duplicate revision links deduplicate to one valid lineage', () => {
+  const estimates = [estimate({ estimateId: 'old', value: 100 }), estimate({ estimateId: 'new', value: 110, publishedAt: '2026-08-01T00:00:00.000Z' })]
+  const result = project({ estimates, revisionLinks: [{ oldEstimateId: 'old', newEstimateId: 'new' }, { oldEstimateId: 'old', newEstimateId: 'new' }] })
+  const revised = result.proposals.find((item) => item.proposalId === `estimate-${[...'new'].map((char) => char.charCodeAt(0).toString(16).padStart(4, '0')).join('')}`)
+  assert.equal(revised?.revisionOfProposalId, `estimate-${[...'old'].map((char) => char.charCodeAt(0).toString(16).padStart(4, '0')).join('')}`)
+  assert.equal(result.diagnostics.some((item) => item.includes('invalid_revision_link')), false)
+})
+
+test('T24 institution and analyst with one literal key remain distinct canonical Entities', async () => {
+  const root = await freshRoot('party-key-isolation')
+  try {
+    const projected = project({ parties: [{ key: 'shared-key', name: 'Shared Broker', kind: 'institution' }, { key: 'shared-key', name: 'Shared Analyst', kind: 'analyst' }], estimates: [estimate({ institutionKey: 'shared-key', analystKey: 'shared-key' })] })
+    const estimateProposal = projected.proposals.find((item) => item.observationType === 'estimate')
+    assert.equal(estimateProposal?.institutionKey, 'party-institution-007300680061007200650064002d006b00650079')
+    assert.equal(estimateProposal?.analystKey, 'party-analyst-007300680061007200650064002d006b00650079')
+    const outcome = await new KnowledgeProductionGateway().submit(await gatewayInput(root, projected.proposals))
+    assert.equal(outcome.status, 'committed', outcome.errors.join('; '))
+    const entities = (await readCanonicalV04Assets(root)).objects.filter((item) => item.kind === 'entity').map((item) => item.value as { type?: string; name?: string })
+    assert.ok(entities.some((item) => item.type === 'institution' && item.name === 'Shared Broker'))
+    assert.ok(entities.some((item) => item.type === 'person' && item.name === 'Shared Analyst'))
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+async function canonicalValues(root: string): Promise<readonly unknown[]> {
+  return (await readCanonicalV04Assets(root)).objects.map((item) => item.value).sort((left, right) => left.id.localeCompare(right.id))
+}
+
+test('T25 full projection and canonical persistence are input-order independent', async () => {
+  const oldA = estimate({ estimateId: 'old-a', value: 100, publishedAt: '2026-07-01T00:00:00.000Z', sourceCandidateIds: ['source-a', 'source-b'] })
+  const newA = estimate({ estimateId: 'new-a', value: 110, publishedAt: '2026-08-01T00:00:00.000Z', sourceCandidateIds: ['source-b', 'source-a'] })
+  const oldB = estimate({ estimateId: 'old-b', institutionKey: 'broker-b', value: 90, publishedAt: '2026-07-02T00:00:00.000Z', sourceCandidateIds: ['source-a', 'source-b'] })
+  const newB = estimate({ estimateId: 'new-b', institutionKey: 'broker-b', value: 95, publishedAt: '2026-08-02T00:00:00.000Z', sourceCandidateIds: ['source-b', 'source-a'] })
+  const snapshotOld = consensusFrom([oldA, oldB], '2026-07-31T00:00:00.000Z')
+  const snapshotNew = consensusFrom([newA, newB], '2026-08-31T00:00:00.000Z')
+  const partyList = [...parties(), { key: 'broker-b', name: 'Broker B Securities', kind: 'institution' as const }]
+  const first = project({ estimates: [newA, newB, oldA, oldB], parties: [...partyList].reverse(), consensusSnapshots: [snapshotNew, snapshotOld], revisionLinks: [{ oldEstimateId: 'old-b', newEstimateId: 'new-b' }, { oldEstimateId: 'old-a', newEstimateId: 'new-a' }] })
+  const second = project({ estimates: [oldB, oldA, newB, newA].map((item) => ({ ...item, sourceCandidateIds: [...item.sourceCandidateIds].reverse() })), parties: partyList, consensusSnapshots: [{ ...snapshotOld, contributingEstimateIds: [...snapshotOld.contributingEstimateIds].reverse() }, { ...snapshotNew, contributingEstimateIds: [...snapshotNew.contributingEstimateIds].reverse() }], revisionLinks: [{ oldEstimateId: 'old-a', newEstimateId: 'new-a' }, { oldEstimateId: 'old-b', newEstimateId: 'new-b' }] })
+  assert.deepEqual(second, first)
+  const firstRoot = await freshRoot('full-order-one')
+  const secondRoot = await freshRoot('full-order-two')
+  try {
+    const firstOutcome = await new KnowledgeProductionGateway().submit(await gatewayInput(firstRoot, first.proposals, [source('source-a', 'A'), source('source-b', 'B')], 'full-order-one'))
+    const secondOutcome = await new KnowledgeProductionGateway().submit(await gatewayInput(secondRoot, second.proposals, [source('source-b', 'B'), source('source-a', 'A')], 'full-order-two'))
+    assert.equal(firstOutcome.status, 'committed', firstOutcome.errors.join('; '))
+    assert.equal(secondOutcome.status, 'committed', secondOutcome.errors.join('; '))
+    assert.deepEqual(await canonicalValues(secondRoot), await canonicalValues(firstRoot))
+  } finally { await rm(firstRoot, { recursive: true, force: true }); await rm(secondRoot, { recursive: true, force: true }) }
 })
