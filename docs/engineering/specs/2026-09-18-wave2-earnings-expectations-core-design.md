@@ -11,14 +11,25 @@ Accepted baseline:
 
 ## Scope
 
-The existing Earnings Review Skill owns a schema-neutral expectations domain.
-This slice implements attributable estimate points, point-in-time matching,
-latest-per-institution selection, consensus statistics, actual metric
-adaptation, actual-vs-expectation comparisons, actual-vs-prior-estimate
-matching, and estimate revision bridges.
+Wave 2 extends the existing Earnings Review capability with:
 
-It does not add a top-level Skill, Workflow, provider, acquisition call,
-Knowledge projection, Knowledge Schema change, or durable persistence rule.
+- attributable `EstimatePoint` and `ConsensusSnapshot` research-domain contracts;
+- deterministic point-in-time expectation matching and comparison;
+- centralized Estimate/Consensus projection into existing Knowledge v0.4;
+- report-only Guidance and Segment KPI analysis;
+- optional Earnings Review integration through caller-supplied historical expectations;
+- deterministic valuation-refresh bridges;
+- bounded first-class Thesis/ReasoningEdge relevance filtering.
+
+Wave 2 does not add:
+
+- a new top-level research Skill;
+- a new Knowledge Schema version;
+- live expectations acquisition or provider integration;
+- model-authored numerical arithmetic;
+- automatic Valuation Workflow reruns;
+- target-price calculation;
+- automatic Thesis mutation.
 
 ## Point-in-time discipline
 

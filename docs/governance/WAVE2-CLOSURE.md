@@ -11,6 +11,7 @@ registries.
 - Wave: `Wave 2 — Earnings Expectations Core`
 - Status: `COMPLETE / CLOSED`
 - Accepted implementation HEAD: `18259cb7bcb1f42e35669c01b0cfa5af22c3bb16`
+- Closure / promoted main baseline: `origin/main` (final FF-only promoted commit recorded in delivery history)
 - Current active phase: post-Wave-2 closure
 - Next development track: `PENDING POST-CLOSURE DECISION`
 
@@ -56,6 +57,6 @@ incomplete; Wave 2 consumes explicit historical expectation data when supplied.
 ## Closure history
 
 On 2026-09-20, the accepted W2-005 implementation chain was reconciled with
-the Wave 2 engineering specification and this governance state. Promotion to
-`main` is permitted only after the closure branch passes the release-level
-regression gate and an FF-only promotion.
+the Wave 2 engineering specification and this governance state. The closure
+branch passed the release-level regression gate and was promoted to `main`
+using FF-only history.
