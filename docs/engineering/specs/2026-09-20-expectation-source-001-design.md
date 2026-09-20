@@ -1,15 +1,15 @@
 # EXPECTATION-SOURCE-001 — Point-in-Time Expectation Source Design
 
 Date: 2026-09-20
-Status: `001B IMPLEMENTED / SOL ACCEPTANCE PENDING`
-Baseline: `414559326574842eaf029d5cb0486b5381869544`
+Status: `001C IMPLEMENTED / SOL ACCEPTANCE PENDING`
+Baseline: `66e7604ac0d950625ee60b1630b007e66827492b`
 
 ## Track state
 
 001A Eastmoney report-level EPS acquisition is complete. 001B adds the
-Workflow-owned automatic bundle assembler and Earnings Review wiring. 001C,
-real point-in-time end-to-end validation and robustness hardening, has not
-started.
+Workflow-owned automatic bundle assembler and Earnings Review wiring. 001C is
+the real point-in-time end-to-end validation and robustness phase and remains
+pending SOL acceptance.
 
 ## Activation and precedence
 
@@ -75,3 +75,39 @@ usable, partial, unavailable, and failed acquisition. Report methodology uses
 the corresponding high-level automatic state and never copies raw provider
 exceptions or diagnostic lists into the report. No aggregate consensus endpoint
 or LLM arithmetic is used. Existing 14-section report structure is preserved.
+
+## 001C Real PIT E2E
+
+The gated acceptance harness is
+`scripts/acceptance-expectation-source-001c-real.ts`, enabled only by
+`RHL_REAL_EXPECTATION_E2E=1`. It captures CNINFO, AKShare, and Eastmoney input
+in memory, seeds temporary Schema 0.4 Thesis context through
+`KnowledgeProductionGateway`, and writes summary-only evidence to
+`docs/project-state/evidence/2026-09-20-expectation-source-001c-real.json`.
+
+The live 600519 / SSE / 2026 H1 run used its execution timestamp as `asOf` and
+selected an official result at `2026-08-14T16:00:00.000Z`. The independent
+Eastmoney capture contained 224 report records, 224 normalized expectation
+sources, 202 EPS points, and 25 institutions. The automatic assembler retained
+191 estimates strictly before the result, produced one pre-result consensus
+with 25 contributors, and retained 22 genuine non-zero revision links,
+including 11 cross-result revisions. Reversing source, estimate, and
+institution order produced the same bundle hash. Post-result estimates stayed
+in safe history but did not enter the pre-result consensus.
+
+The annual estimate period remains `2026-FY`; the actual Earnings period is
+`2026-H1`. Exact-period matching therefore produces no actual-vs-consensus or
+actual-vs-prior-estimate comparison for those annual estimates. Annual
+revisions remain valid annual signals and are not relabeled as H1 evidence.
+
+The live full Workflow case is externally blocked in this environment before
+report completion: the managed document-parser setup initially ended in
+`PIP_INSTALL_FAILED`; after the host's existing Docling 2.116.0 and local model
+artifacts were made available, bridge smoke preflight remained
+`BRIDGE_SMOKE_FAILED`. The AKShare bridge is installed but the live calls
+returned no usable rows. The evidence therefore does not claim a
+full 14-section real-provider report pass. The live Eastmoney contract still
+demonstrated current forecast/revision readiness, while historical FY2025
+surprise reconstruction remains unavailable because `forecastBaseYear=2026`
+and the endpoint exposes a rolling current-year/+1/+2 horizon. No year
+relabeling or fabricated historical consensus is permitted.

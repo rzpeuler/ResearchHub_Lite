@@ -116,9 +116,11 @@ is recorded as the rolling-window limitation rather than fabricated historical
 truth. The 300750 H1 capture returned reports but no valid EPS points.
 
 The end-to-end workflow is externally blocked in this environment: CNINFO
-normalization requires the managed document-parser runtime, whose setup ended
-in `PIP_INSTALL_FAILED` and whose preflight is `MANAGED_PYTHON_MISSING`; the
-AKShare bridge is installed but returned no usable rows for these live calls.
+normalization requires the managed document-parser runtime. Its initial setup
+ended in `PIP_INSTALL_FAILED`; after the host's existing Docling 2.116.0 and
+local model artifacts were made available, bridge smoke preflight remained
+`BRIDGE_SMOKE_FAILED`. The AKShare bridge is installed but returned no usable
+rows for these live calls.
 Therefore the evidence records the implementation as externally blocked, not
 as a full real-provider workflow pass. The isolated expectation failure probe
 returned `failed` with zero estimates and zero consensus snapshots. No raw

@@ -1,16 +1,16 @@
 {
   "taskId": "RHL-EXPECTATION-SOURCE-001C-REAL-PIT-E2E-ROBUSTNESS",
-  "generatedAt": "2026-09-20T11:29:53.872Z",
+  "generatedAt": "2026-09-20T15:09:15.699Z",
   "baseline": "66e7604ac0d950625ee60b1630b007e66827492b",
-  "acceptanceScriptVersion": "001C-1",
+  "acceptanceScriptVersion": "001C-2",
   "executionClass": "gated real-provider E2E with in-memory capture/replay",
   "environment": {
     "node": "v24.16.0",
     "documentParser": {
-      "status": "MANAGED_PYTHON_MISSING",
-      "pythonReady": false,
-      "dependencyReady": false,
-      "artifactsReady": false,
+      "status": "BRIDGE_SMOKE_FAILED",
+      "pythonReady": true,
+      "dependencyReady": true,
+      "artifactsReady": true,
       "bridgeReady": false
     },
     "akshareBridge": "available:1.18.64",
@@ -23,7 +23,7 @@
       "exchange": "SSE",
       "fiscalYear": 2026,
       "period": "H1",
-      "asOf": "2026-09-20T11:29:44.879Z",
+      "asOf": "2026-09-20T15:08:48.243Z",
       "resultPublishedAt": "2026-08-14T16:00:00.000Z",
       "cninfo": {
         "provider": "cninfo",
@@ -41,7 +41,14 @@
         "providerFailed": false,
         "usableSourceCount": 0
       },
-      "eastmoney": null,
+      "eastmoney": {
+        "provider": "eastmoney-reportapi",
+        "providerAttempted": true,
+        "providerSucceeded": true,
+        "providerEmpty": false,
+        "providerFailed": false,
+        "usableSourceCount": 224
+      },
       "forecastBaseYear": 2026,
       "reports": 224,
       "expectationSources": 224,
@@ -79,7 +86,7 @@
       "exchange": "SZSE",
       "fiscalYear": 2026,
       "period": "H1",
-      "asOf": "2026-09-20T11:29:44.879Z",
+      "asOf": "2026-09-20T15:08:48.243Z",
       "cninfo": {
         "provider": "cninfo",
         "providerAttempted": true,
@@ -96,7 +103,14 @@
         "providerFailed": false,
         "usableSourceCount": 0
       },
-      "eastmoney": null,
+      "eastmoney": {
+        "provider": "eastmoney-reportapi",
+        "providerAttempted": true,
+        "providerSucceeded": true,
+        "providerEmpty": false,
+        "providerFailed": false,
+        "usableSourceCount": 136
+      },
       "forecastBaseYear": 2026,
       "reports": 136,
       "expectationSources": 136,
@@ -134,7 +148,7 @@
       "exchange": "SSE",
       "fiscalYear": 2025,
       "period": "FY",
-      "asOf": "2026-09-20T11:29:44.879Z",
+      "asOf": "2026-09-20T15:08:48.243Z",
       "cninfo": {
         "provider": "cninfo",
         "providerAttempted": true,
@@ -151,7 +165,14 @@
         "providerFailed": false,
         "usableSourceCount": 0
       },
-      "eastmoney": null,
+      "eastmoney": {
+        "provider": "eastmoney-reportapi",
+        "providerAttempted": true,
+        "providerSucceeded": true,
+        "providerEmpty": false,
+        "providerFailed": false,
+        "usableSourceCount": 350
+      },
       "forecastBaseYear": 2026,
       "reports": 350,
       "expectationSources": 350,
@@ -186,8 +207,8 @@
     }
   ],
   "primaryPITAudit": {
-    "bundleHash": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
-    "reversedHash": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
+    "bundleHash": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
+    "reversedHash": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
     "reversedEqual": true,
     "diagnostics": [],
     "estimateCount": 202,
@@ -195,6 +216,7 @@
     "preResultEstimateCount": 191,
     "postResultEstimateCount": 11,
     "consensusSnapshotCount": 1,
+    "consensusCutoff": "2026-08-14T15:59:59.999Z",
     "consensusContributorCount": 25,
     "allContributorsStrictlyPreResult": true,
     "postResultEstimatesInConsensus": false,
@@ -208,11 +230,11 @@
   },
   "replay": {
     "captureMode": "real capture once, identical in-memory replay twice",
-    "replayAHash": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
-    "replayHashB": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
+    "replayAHash": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
+    "replayHashB": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
     "equal": true,
-    "normalBundleHash": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
-    "reversedBundleHash": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
+    "normalBundleHash": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
+    "reversedBundleHash": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
     "reversedEqual": true
   },
   "degradation": {
@@ -247,5 +269,12 @@
     "A second target is retained even if externally blocked.",
     "No production behavior was changed by the acceptance harness."
   ],
-  "overallClassification": "EXTERNAL_SOURCE_BLOCKED"
+  "overallClassification": "EXTERNAL_SOURCE_BLOCKED",
+  "durability": {
+    "knowledgeRevisionBefore": 1,
+    "knowledgeRevisionAfter": 1,
+    "canonicalHashBefore": "eb5d39b36098cc92e6814972c92093d556a79844df6b94969743a4d8da1fb172",
+    "canonicalHashAfter": "eb5d39b36098cc92e6814972c92093d556a79844df6b94969743a4d8da1fb172",
+    "canonicalEastmoneySourceCount": 0
+  }
 }
