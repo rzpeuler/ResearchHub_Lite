@@ -1,0 +1,47 @@
+{
+  "taskId": "RHL-EXPECTATION-SOURCE-001C-ENV-001-PARSER-FINANCIAL-UNBLOCK",
+  "generatedAt": "2026-09-21T00:43:48+08:00",
+  "baseline": {
+    "requiredShort": "455bfac",
+    "resolved": "455bfacdb72e6ac06ffb0a13ca66a5f27f1e9f0d",
+    "branch": "origin/codex/expectation-source-001c-fix-001-evidence-e2e-unblock",
+    "originMainObserved": "f0cfa92ecca64843fcdb616869f4c78680454b9f"
+  },
+  "executionClass": "bounded parser and financial-provider unblock; full 001C remains externally blocked",
+  "parser": {
+    "basePython": { "version": "3.12.10", "platform": "win32", "architecture": "AMD64", "torchImportable": false, "torchvisionImportable": false },
+    "previousManagedEnvironment": { "version": "3.12.10", "pip": "25.0.1", "docling": "2.116.0", "torchImportable": false, "torchvisionImportable": false },
+    "requirements": "docling==2.116.0",
+    "systemSitePackages": false,
+    "standardInstallExperiment": { "status": "STALLED_DURING_DEPENDENCY_RESOLUTION", "result": "bounded fresh-venv experiment interrupted after no progress; no successful environment claimed" },
+    "officialCpuTorchExperiment": { "packages": ["torch", "torchvision"], "index": "https://download.pytorch.org/whl/cpu", "status": "EXTERNAL_NETWORK_BLOCKED", "diagnostic": "pip reached repeated SSLEOFError/UNEXPECTED_EOF_WHILE_READING; retry with trusted-host produced the same failure; no wheel installed" },
+    "setupAttempt": { "status": "INCONCLUSIVE", "reason": "CPU_TORCH_INSTALL_FAILED with bounded sanitized official-index TLS/EOF detail", "promotionOccurred": false },
+    "checkAfterAttempt": "MANAGED_PYTHON_MISSING",
+    "runtimeContract": { "dependencyReadyRequires": ["Docling exact version 2.116.0", "torch import", "torchvision import"], "bridgeSmokeRemainsFinalAuthority": true, "telemetryInstallReasonBoundedAndSanitized": true }
+  },
+  "akshare": {
+    "version": "1.18.64",
+    "requestedExactPeriod": "2026-H1",
+    "legacyAdapter": {
+      "function": "stock_financial_analysis_indicator",
+      "symbols": ["600519", "300750"],
+      "results": [{ "symbol": "600519", "success": true, "rowCount": 0, "columns": [], "periodLabels": [], "has2026H1": false }, { "symbol": "300750", "success": true, "rowCount": 0, "columns": [], "periodLabels": [], "has2026H1": false }],
+      "classification": "TRUE_UPSTREAM_EMPTY"
+    },
+    "alternative": {
+      "function": "stock_financial_analysis_indicator_em",
+      "symbolFormat": { "600519": "600519.SH", "300750": "300750.SZ" },
+      "results": [
+        { "symbol": "600519.SH", "success": true, "rowCount": 103, "columns": ["REPORT_DATE", "NOTICE_DATE", "EPSJB", "TOTALOPERATEREVE", "PARENTNETPROFIT", "XSMLL"], "periodLabels": ["2026-06-30"], "has2026H1": true },
+        { "symbol": "300750.SZ", "success": true, "rowCount": 41, "columns": ["REPORT_DATE", "NOTICE_DATE", "EPSJB", "TOTALOPERATEREVE", "PARENTNETPROFIT", "XSMLL"], "periodLabels": ["2026-06-30"], "has2026H1": true }
+      ],
+      "normalization": "verified exact-period usable rows for both symbols; mapped to ASCII aliases accepted by existing earnings and valuation normalizers",
+      "otherEastmoneyStatementApis": { "functions": ["stock_profit_sheet_by_report_em", "stock_balance_sheet_by_report_em", "stock_cash_flow_sheet_by_report_em"], "result": "all bounded calls failed with the same provider-side float/schema TypeError; no raw payload persisted" }
+    },
+    "productionChange": "narrow financialData bridge switch to stock_financial_analysis_indicator_em with exchange suffix and verified field aliases; no fallback or fabricated data"
+  },
+  "001A": { "realRun": true, "symbol": "600519", "providerCurrentYear": 2026, "reportsReturned": 224, "usableNormalizedSources": 224, "estimatePoints": 202, "distinctInstitutions": 25, "historicalReports": 224, "historicalEstimatePoints": 202, "historicalAllTimestampsAtOrBeforeAsOf": true },
+  "001C": { "realRerun": "NOT_EXECUTED_AFTER_ENV-001", "reason": "parser setup remains blocked before bridge READY; established Eastmoney PIT findings remain preserved in the prior evidence artifact", "overallClassification": "EXTERNAL_SOURCE_BLOCKED" },
+  "validation": { "focusedTests": "41/41", "nodeTests": "1205/1205", "typecheck": "PASS", "clientTypecheck": "PASS", "clientBuild": "PASS" },
+  "privacy": { "rawProviderBodiesIncluded": false, "credentialsIncluded": false, "privatePathsIncluded": false, "fullInstallLogsIncluded": false }
+}

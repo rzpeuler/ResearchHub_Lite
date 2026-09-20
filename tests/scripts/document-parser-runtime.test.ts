@@ -5,13 +5,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 // @ts-expect-error The implementation is intentionally a project-local .mjs CLI.
-import { bootstrapPlan, candidatePlan, DOCLING_VERSION, MODEL_FAMILIES, preflight, runCommand, setup, STAGE_TIMEOUTS } from '../../scripts/document-parser-runtime.mjs'
+import { bootstrapPlan, candidatePlan, CPU_TORCH_INDEX, CPU_TORCH_PACKAGES, DOCLING_VERSION, MODEL_FAMILIES, preflight, runCommand, setup, STAGE_TIMEOUTS } from '../../scripts/document-parser-runtime.mjs'
 
 type Candidate = { executable: string; args: string[] }
 type CommandOptions = { cwd?: string; env?: Record<string, string | undefined>; timeoutMs?: number }
 type Result = { ok: boolean; stdout: string; stderr: string; timedOut?: boolean }
 type Execute = (executable: string, args: string[], options?: CommandOptions) => Promise<Result>
-const probePayload = (docling = true) => JSON.stringify({ version: '3.12.0', venv: true, pip: true, docling, doclingVersion: docling ? DOCLING_VERSION : null })
+const probePayload = (docling = true, torch = true, torchvision = true) => JSON.stringify({ version: '3.12.0', venv: true, pip: true, docling, doclingVersion: docling ? DOCLING_VERSION : null, torch, torchVersion: torch ? '2.8.0+cpu' : null, torchvision, torchvisionVersion: torchvision ? '0.23.0+cpu' : null })
 
 async function fixture(options: { finalVenv?: boolean; finalModels?: boolean; finalDocling?: boolean } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'rhl-runtime-test-')); const runtime = join(root, '.researchhub-document-parser')
@@ -38,13 +38,18 @@ test('dependency is pinned, model families are fixed, and bootstrap uses a base 
   assert.deepEqual(plan.venv, { executable: 'py', args: ['-3', '-m', 'venv', 'managed-venv'], systemSitePackages: false }); assert.deepEqual(bootstrapPlan('linux').models.args.slice(0, 3), ['models', 'download', 'layout']); assert.equal(bootstrapPlan('linux').models.args.includes('tableformer'), true)
 })
 
+test('managed dependency contract includes official CPU Torch packages', () => {
+  assert.equal(CPU_TORCH_INDEX, 'https://download.pytorch.org/whl/cpu')
+  assert.deepEqual(CPU_TORCH_PACKAGES, ['torch', 'torchvision'])
+})
+
 test('pip install budget and command policy are bounded and explicit', async () => {
   assert.equal(STAGE_TIMEOUTS.pipInstall, 1_800_000)
   assert.deepEqual({ ...STAGE_TIMEOUTS, pipInstall: undefined }, { basePythonProbe: 30_000, venvCreation: 120_000, pipInstall: undefined, dependencyVerify: 30_000, modelDownload: 900_000, bridgeSmoke: 180_000, finalVerification: 180_000 })
   const args = bootstrapPlan('linux').install.args
   for (const value of ['--no-input', '--progress-bar', 'off', '--timeout', '30', '--retries', '2', '--prefer-binary', '--disable-pip-version-check', '-r', 'config/document-parser/requirements.txt']) assert.ok(args.includes(value), `missing ${value}`)
-  for (const value of ['--no-deps', '--only-binary', '--index-url', '--extra-index-url']) assert.equal(args.includes(value), false, `unexpected ${value}`)
-  const f = await fixture(); try { await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: f.execute }); const actual = f.calls.find((call) => call.args.includes('pip'))?.args ?? []; assert.deepEqual(actual.slice(0, 3), ['-m', 'pip', 'install']); for (const value of ['--no-input', '--progress-bar', 'off', '--timeout', '30', '--retries', '2', '--prefer-binary', '--disable-pip-version-check']) assert.ok(actual.includes(value), `actual command missing ${value}`); assert.equal(actual[actual.indexOf('-r') + 1], join(f.root, 'config/document-parser/requirements.txt')) } finally { await rm(f.root, { recursive: true, force: true }) }
+  for (const value of ['--no-deps', '--only-binary', '--extra-index-url']) assert.equal(args.includes(value), false, `unexpected ${value}`)
+  const f = await fixture(); try { await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: f.execute }); const installs = f.calls.filter((call) => call.args.includes('pip')); assert.equal(installs.length, 2); const cpu = installs[0].args; assert.equal(cpu[cpu.indexOf('--index-url') + 1], CPU_TORCH_INDEX); assert.deepEqual(cpu.slice(-CPU_TORCH_PACKAGES.length), CPU_TORCH_PACKAGES); const docling = installs[1].args; assert.deepEqual(docling.slice(0, 3), ['-m', 'pip', 'install']); for (const value of ['--no-input', '--progress-bar', 'off', '--timeout', '30', '--retries', '2', '--prefer-binary', '--disable-pip-version-check']) assert.ok(docling.includes(value), `actual command missing ${value}`); assert.equal(docling[docling.indexOf('-r') + 1], join(f.root, 'config/document-parser/requirements.txt')) } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
 test('candidate selection is bounded and explicit Python takes precedence', () => {
@@ -57,13 +62,27 @@ test('check mode is read-only and never installs or downloads', async () => {
 })
 
 test('setup failures are bounded and do not expose stderr', async (t) => {
-  for (const [name, expected, failAt] of [['base', 'BASE_PYTHON_MISSING', 'base'], ['venv', 'VENV_CREATION_FAILED', 'venv'], ['pip', 'PIP_INSTALL_FAILED', 'pip'], ['models', 'MODEL_DOWNLOAD_FAILED', 'models'], ['bridge', 'BRIDGE_SMOKE_FAILED', 'bridge']] as const) await t.test(name, async () => {
+  for (const [name, expected, failAt] of [['base', 'BASE_PYTHON_MISSING', 'base'], ['venv', 'VENV_CREATION_FAILED', 'venv'], ['pip', 'CPU_TORCH_INSTALL_FAILED: token=[redacted]', 'pip'], ['models', 'MODEL_DOWNLOAD_FAILED', 'models'], ['bridge', 'BRIDGE_SMOKE_FAILED', 'bridge']] as const) await t.test(name, async () => {
     const f = await fixture(); try { const result = await setup({ root: f.root, platform: 'linux', explicitPython: failAt === 'base' ? 'missing-python' : 'fixture-python', execute: (async (executable: string, args: string[], options?: CommandOptions) => { if (failAt === 'base' || (failAt === 'venv' && args.includes('venv')) || (failAt === 'pip' && args.includes('pip')) || (failAt === 'models' && args.includes('models')) || (failAt === 'bridge' && !args.includes('-c') && !args.includes('venv') && !args.includes('pip') && !args.includes('models'))) return { ok: false, stdout: '', stderr: 'private-token' }; return f.execute(executable, args, options) }) as Execute }); assert.equal(result.status, 'INCONCLUSIVE'); assert.equal(result.reason, expected); assert.doesNotMatch(JSON.stringify(result), /private-token|[A-Za-z]:\\Users\\/i) } finally { await rm(f.root, { recursive: true, force: true }) }
   })
 })
 
 test('partial final venv, missing Docling, and missing models are repaired to READY', async (t) => {
   for (const state of [{ finalVenv: false }, { finalVenv: true, finalDocling: false }, { finalVenv: true, finalModels: false }] as const) await t.test(JSON.stringify(state), async () => { const f = await fixture(state); try { assert.equal((await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: f.execute })).status, 'READY') } finally { await rm(f.root, { recursive: true, force: true }) } })
+})
+
+test('missing Torch is not reported as dependency-ready', async () => {
+  const f = await fixture({ finalVenv: true, finalModels: true });
+  try {
+    f.setFinalDocling(false)
+    const result = await preflight({ root: f.root, platform: 'linux', execute: (async (executable: string, args: string[], options?: CommandOptions) => {
+      const value = await f.execute(executable, args, options)
+      if (args.includes('-c')) return { ...value, stdout: probePayload(true, false, false) }
+      return value
+    }) as Execute })
+    assert.equal(result.dependencyReady, false)
+    assert.equal(result.status, 'DOCLING_OR_TORCH_DEPENDENCY_MISSING')
+  } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
 test('arbitrary non-empty models do not bypass a failed production bridge smoke', async () => {
@@ -115,12 +134,12 @@ test('timeout classifications stop setup before downstream stages and persist bo
 })
 
 test('pip failure remains distinct from pip timeout', async () => {
-  const f = await fixture(); try { const result = await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: (async (executable: string, args: string[], options?: CommandOptions) => args.includes('pip') ? { ok: false, stdout: '', stderr: 'index failure' } : f.execute(executable, args, options)) as Execute }); assert.equal(result.reason, 'PIP_INSTALL_FAILED'); const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); assert.deepEqual({ stage: state.stage, status: state.status, reason: state.reason }, { stage: 'PIP_INSTALL', status: 'FAILED', reason: 'PIP_INSTALL_FAILED' }) } finally { await rm(f.root, { recursive: true, force: true }) }
+  const f = await fixture(); try { const result = await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: (async (executable: string, args: string[], options?: CommandOptions) => args.includes('pip') ? { ok: false, stdout: '', stderr: 'index failure' } : f.execute(executable, args, options)) as Execute }); assert.equal(result.reason, 'CPU_TORCH_INSTALL_FAILED: index failure'); const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); assert.deepEqual({ stage: state.stage, status: state.status, reason: state.reason }, { stage: 'PIP_INSTALL', status: 'FAILED', reason: 'CPU_TORCH_INSTALL_FAILED: index failure' }) } finally { await rm(f.root, { recursive: true, force: true }) }
 })
 
 test('setup telemetry records running stages, ordered completion, READY, and interruption safely', async (t) => {
   await t.test('running before pip and ordered completion', async () => {
-    const f = await fixture(); const observed: string[] = []; try { const execute = (async (executable: string, args: string[], options?: CommandOptions) => { if (args.includes('pip') || args.includes('models')) { const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); observed.push(`${args.includes('pip') ? 'PIP_INSTALL' : 'MODEL_DOWNLOAD'}:${state.stage}:${state.status}:${state.lastCompletedStage}`) } return f.execute(executable, args, options) }) as Execute; const result = await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute }); assert.equal(result.status, 'READY'); assert.deepEqual(observed.slice(0, 2), ['PIP_INSTALL:PIP_INSTALL:RUNNING:VENV_CREATE', 'MODEL_DOWNLOAD:MODEL_DOWNLOAD:RUNNING:DEPENDENCY_VERIFY']); const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); assert.deepEqual({ stage: state.stage, status: state.status, lastCompletedStage: state.lastCompletedStage }, { stage: 'READY', status: 'SUCCEEDED', lastCompletedStage: 'READY' }); assert.equal(JSON.stringify(state).includes('raw-output'), false) } finally { await rm(f.root, { recursive: true, force: true }) }
+    const f = await fixture(); const observed: string[] = []; try { const execute = (async (executable: string, args: string[], options?: CommandOptions) => { if ((args.includes('pip') && !args.includes('--index-url')) || args.includes('models')) { const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); observed.push(`${args.includes('pip') ? 'PIP_INSTALL' : 'MODEL_DOWNLOAD'}:${state.stage}:${state.status}:${state.lastCompletedStage}`) } return f.execute(executable, args, options) }) as Execute; const result = await setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute }); assert.equal(result.status, 'READY'); assert.deepEqual(observed.slice(0, 2), ['PIP_INSTALL:PIP_INSTALL:RUNNING:VENV_CREATE', 'MODEL_DOWNLOAD:MODEL_DOWNLOAD:RUNNING:DEPENDENCY_VERIFY']); const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); assert.deepEqual({ stage: state.stage, status: state.status, lastCompletedStage: state.lastCompletedStage }, { stage: 'READY', status: 'SUCCEEDED', lastCompletedStage: 'READY' }); assert.equal(JSON.stringify(state).includes('raw-output'), false) } finally { await rm(f.root, { recursive: true, force: true }) }
   })
   await t.test('external interruption leaves active stage RUNNING', async () => { const f = await fixture(); try { await assert.rejects(() => setup({ root: f.root, platform: 'linux', explicitPython: 'fixture-python', execute: (async (executable: string, args: string[], options?: CommandOptions) => { if (args.includes('pip')) throw new Error('simulated external interruption'); return f.execute(executable, args, options) }) as Execute })); const state = JSON.parse(await readFile(join(f.root, '.researchhub-document-parser', 'setup-state.json'), 'utf8')); assert.deepEqual({ stage: state.stage, status: state.status }, { stage: 'PIP_INSTALL', status: 'RUNNING' }) } finally { await rm(f.root, { recursive: true, force: true }) } })
 })

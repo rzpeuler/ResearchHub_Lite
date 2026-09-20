@@ -1,4 +1,6 @@
 export declare const DOCLING_VERSION: string
+export declare const CPU_TORCH_INDEX: string
+export declare const CPU_TORCH_PACKAGES: readonly string[]
 export declare const MODEL_FAMILIES: readonly string[]
 export declare const STAGE_TIMEOUTS: Readonly<Record<'basePythonProbe' | 'venvCreation' | 'pipInstall' | 'dependencyVerify' | 'modelDownload' | 'bridgeSmoke' | 'finalVerification', number>>
 export declare const SETUP_STAGES: readonly ['PRECHECK', 'BASE_PYTHON_PROBE', 'VENV_CREATE', 'PIP_INSTALL', 'DEPENDENCY_VERIFY', 'MODEL_DOWNLOAD', 'BRIDGE_SMOKE', 'PROMOTION', 'FINAL_VERIFY', 'READY']

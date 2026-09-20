@@ -9,7 +9,9 @@ export interface AkshareClientOptions { readonly pythonCommand?: string; readonl
 const BRIDGE = `import json,sys,akshare as ak
 kind,symbol,start_date,end_date=sys.argv[1:]
 if kind=='basic': value=ak.stock_individual_info_em(symbol=symbol)
-elif kind=='financial': value=ak.stock_financial_analysis_indicator(symbol=symbol)
+elif kind=='financial':
+    market_symbol=symbol if symbol.endswith(('.SH','.SZ')) else symbol + ('.SH' if symbol.startswith('6') else '.SZ')
+    value=ak.stock_financial_analysis_indicator_em(symbol=market_symbol).rename(columns={'REPORT_DATE':'report_date','NOTICE_DATE':'publication_date','EPSJB':'basic_eps','TOTALOPERATEREVE':'operating_revenue','PARENTNETPROFIT':'net_profit','XSMLL':'gross_margin'})
 elif kind=='index': value=ak.stock_zh_index_daily(symbol=symbol)
 elif kind=='sector': value=ak.stock_board_industry_name_em()
 elif kind=='calendar': value=ak.tool_trade_date_hist_sina()
