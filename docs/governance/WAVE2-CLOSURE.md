@@ -12,7 +12,7 @@ registries.
 - Status: `COMPLETE / CLOSED`
 - Accepted implementation HEAD: `18259cb7bcb1f42e35669c01b0cfa5af22c3bb16`
 - Closure / promoted main baseline: `origin/main` (final FF-only promoted commit recorded in delivery history)
-- Current active phase: `EXPECTATION-SOURCE-001 / 001A`
+- Current active phase: `EXPECTATION-SOURCE-001 / 001B`
 - Next development track: `EXPECTATION-SOURCE-001` (`IN PROGRESS`)
 
 ## Task status
@@ -49,11 +49,13 @@ That product gap is now being addressed by the separate
 
 Current track status: `IN PROGRESS`
 
-Active slice: `001A Eastmoney Report-Level EPS Acquisition`
+Active slice: `001B Automatic Bundle Assembly + Earnings Wiring`
 
-001A is implemented on its isolated track but remains pending SOL acceptance.
-001B has not started.
+001A is implemented on its isolated track and remains accepted pending SOL
+review. 001B is implemented on its isolated track and remains pending SOL
+acceptance.
 
+- 001C: not started.
 - Wave 3: not started.
 
 ## Closure history

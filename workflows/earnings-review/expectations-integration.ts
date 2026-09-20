@@ -119,11 +119,13 @@ export function buildEarningsExpectationAnalysis(input: EarningsExpectationInteg
   for (const actual of actuals) {
     if (resultTime !== undefined) for (const snapshot of validSnapshots.filter((item) => item.metric === actual.metric && item.fiscalPeriod === actual.fiscalPeriod && item.unit === actual.unit && timestamp(item.asOf)! >= resultTime)) diagnostics.push(`consensus_not_pre_result:${actual.metric}:${actual.fiscalPeriod}:${snapshot.asOf}`)
     const selected = resultTime === undefined ? undefined : selectConsensus(validSnapshots, actual.metric, actual.fiscalPeriod, actual.unit, resultTime, input.analysisAsOf, diagnostics)
-    if (selected !== undefined) { const contributors = selected.contributingEstimateIds.flatMap((id) => estimateMap.get(id)?.sourceCandidateIds ?? []); addActualResult(actualVsConsensus, compareActualVsConsensus(actual, selected), sourceIds(actual.sourceCandidateIds, contributors)) }
-    for (const institutionKey of uniqueSorted(bundle.priorEstimateInstitutionKeys ?? [])) {
-      if (resultTime === undefined) continue
-      const prior = selectPriorEstimate({ estimates: [...estimateMap.values()], metric: actual.metric, fiscalPeriod: actual.fiscalPeriod, institutionKey, beforePublishedAt: resultCutoff!, analysisAsOf: input.analysisAsOf }); const result = compareActualVsPriorEstimate({ actual, estimates: [...estimateMap.values()], institutionKey, comparisonCutoff: resultCutoff! }); if (result !== undefined && prior !== undefined) actualVsPriorEstimate.push({ result, sourceCandidateIds: sourceIds(actual.sourceCandidateIds, prior.sourceCandidateIds), institutionKey }); else diagnostics.push(`prior_estimate_unavailable:${institutionKey}:${actual.metric}`)
-    }
+     if (selected !== undefined) { const contributors = selected.contributingEstimateIds.flatMap((id) => estimateMap.get(id)?.sourceCandidateIds ?? []); addActualResult(actualVsConsensus, compareActualVsConsensus(actual, selected), sourceIds(actual.sourceCandidateIds, contributors)) }
+     for (const institutionKey of uniqueSorted(bundle.priorEstimateInstitutionKeys ?? [])) {
+       if (resultTime === undefined) continue
+       const matchingEstimateExists = [...estimateMap.values()].some((estimate) => estimate.institutionKey === institutionKey && estimate.metric === actual.metric && estimate.fiscalPeriod === actual.fiscalPeriod)
+       if (!matchingEstimateExists) continue
+       const prior = selectPriorEstimate({ estimates: [...estimateMap.values()], metric: actual.metric, fiscalPeriod: actual.fiscalPeriod, institutionKey, beforePublishedAt: resultCutoff!, analysisAsOf: input.analysisAsOf }); const result = compareActualVsPriorEstimate({ actual, estimates: [...estimateMap.values()], institutionKey, comparisonCutoff: resultCutoff! }); if (result !== undefined && prior !== undefined) actualVsPriorEstimate.push({ result, sourceCandidateIds: sourceIds(actual.sourceCandidateIds, prior.sourceCandidateIds), institutionKey }); else diagnostics.push(`prior_estimate_unavailable:${institutionKey}:${actual.metric}`)
+     }
   }
   const estimateRevisions: SourcedEstimateRevision[] = []; const revisionTargets = new Map<string, string[]>(); const seenRevisionLinks = new Set<string>()
   for (const link of bundle.estimateRevisionLinks ?? []) {

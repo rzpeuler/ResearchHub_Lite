@@ -142,7 +142,8 @@ test('W2-004 fails closed on ambiguous or inconsistent consensus and duplicate s
 test('W2-004 prior estimate and revision require explicit institution and links', () => {
   const old = estimate({ estimateId: 'old', value: 90, publishedAt: '2026-06-01T00:00:00.000Z', sourceCandidateIds: ['old-source'] })
   const newer = estimate({ estimateId: 'new', value: 95, publishedAt: '2026-07-15T00:00:00.000Z', sourceCandidateIds: ['new-source'] })
-  const result = buildEarningsExpectationAnalysis({ analysisAsOf: AS_OF, resultPublishedAt: RESULT, actualMetrics: actual(), expectations: { ...validBundle({ estimates: [old, newer, estimate({ estimateId: 'other', institutionKey: 'house-b', value: 110, sourceCandidateIds: ['other-source'] })], consensusSnapshots: [] }), sources: [source('old-source'), source('new-source'), source('other-source')], priorEstimateInstitutionKeys: ['house-a', 'house-c'], estimateRevisionLinks: [{ oldEstimateId: 'old', newEstimateId: 'new' }] } })
+  const houseCPostResult = estimate({ estimateId: 'house-c-post-result', institutionKey: 'house-c', value: 101, publishedAt: '2026-09-01T00:00:00.000Z', sourceCandidateIds: ['house-c-source'] })
+  const result = buildEarningsExpectationAnalysis({ analysisAsOf: AS_OF, resultPublishedAt: RESULT, actualMetrics: actual(), expectations: { ...validBundle({ estimates: [old, newer, estimate({ estimateId: 'other', institutionKey: 'house-b', value: 110, sourceCandidateIds: ['other-source'] }), houseCPostResult], consensusSnapshots: [] }), sources: [source('old-source'), source('new-source'), source('other-source'), source('house-c-source')], priorEstimateInstitutionKeys: ['house-a', 'house-c'], estimateRevisionLinks: [{ oldEstimateId: 'old', newEstimateId: 'new' }] } })
   assert.equal(result.actualVsPriorEstimate.length, 1)
   assert.equal(result.actualVsPriorEstimate[0]?.result.benchmark, 95)
   assert.equal(result.estimateRevisions[0]?.result.absoluteRevision, 5)

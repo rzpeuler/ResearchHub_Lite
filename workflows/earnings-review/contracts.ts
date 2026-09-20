@@ -1,6 +1,7 @@
 import type { KnowledgeBaseHandle } from '../../knowledge/storage/handle.ts'
 import type { NormalizedResearchSource, ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchProviderOutcome } from '../../plugins/research-acquisition/contracts.ts'
 import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
+import type { EastmoneyEstimateSourceRequest, EastmoneyReportAcquisitionResult } from '../../plugins/research-acquisition/expectations/contracts.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { EarningsPeriod, EarningsReviewReasoningTelemetry, EarningsReviewSection, EarningsImpactAssessment } from '../../skills/earnings-review/index.ts'
 import type { ExternalIdentifierV04 } from '../../knowledge/schema/domain-v04.ts'
@@ -23,6 +24,10 @@ export interface EarningsReviewExpectationsBundle {
   readonly resultPublishedAt?: string
 }
 
+export interface EarningsEastmoneyExpectationSource {
+  acquire(request: EastmoneyEstimateSourceRequest): Promise<EastmoneyReportAcquisitionResult>
+}
+
 export interface EarningsReviewWorkflowInput {
   readonly workflowRunId: string
   readonly handle: KnowledgeBaseHandle
@@ -41,6 +46,7 @@ export interface EarningsReviewWorkflowInput {
   readonly useStructuredKnowledge?: boolean
   readonly externalIdentifiers?: readonly ExternalIdentifierV04[]
   readonly expectations?: EarningsReviewExpectationsBundle
+  readonly eastmoneyExpectationSource?: EarningsEastmoneyExpectationSource
 }
 
 export interface EarningsReviewTelemetry {
@@ -56,6 +62,12 @@ export interface EarningsReviewTelemetry {
   readonly structuredFinancialEvidenceStatus: 'available' | 'unavailable'
   readonly consensusStatus: 'available' | 'unavailable'
   readonly expectationStatus: 'not_provided' | 'available' | 'partial' | 'unavailable'
+  readonly expectationInputMode: 'none' | 'caller' | 'automatic'
+  readonly expectationAcquisitionStatus: 'not_attempted' | 'available' | 'partial' | 'unavailable' | 'failed'
+  readonly expectationEstimateCount: number
+  readonly expectationInstitutionCount: number
+  readonly expectationConsensusSnapshotCount: number
+  readonly expectationRevisionLinkCount: number
   readonly expectationDiagnosticCount: number
   readonly actualConsensusComparisonCount: number
   readonly actualPriorEstimateComparisonCount: number

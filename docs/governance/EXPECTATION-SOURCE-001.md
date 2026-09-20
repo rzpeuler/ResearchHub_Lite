@@ -6,8 +6,11 @@ Updated: 2026-09-20
 
 - Track: `EXPECTATION-SOURCE-001`
 - Status: `IN PROGRESS`
-- Baseline: `f0cfa92ecca64843fcdb616869f4c78680454b9f`
-- Active slice: `001A Eastmoney Report-Level EPS Acquisition`
+- Baseline: `414559326574842eaf029d5cb0486b5381869544`
+- Active slice: `001B Automatic Bundle Assembly + Earnings Wiring`
+- 001A: `COMPLETE`
+- 001B: `IN PROGRESS`
+- 001C: `NOT STARTED`
 - Wave 2: `COMPLETE / CLOSED`
 - Wave 3: `NOT STARTED`
 
@@ -25,6 +28,7 @@ Updated: 2026-09-20
 ## Slice boundaries
 
 001A provides a bounded Eastmoney report-level EPS source and Workflow-side
-`EstimatePoint` projection only. Automatic expectations bundle assembly,
-consensus/revision construction, Earnings Review wiring, and real point-in-time
-end-to-end closure remain 001B/001C work.
+`EstimatePoint` projection. 001B adds opt-in Workflow-owned automatic bundle
+assembly and Earnings Review wiring while preserving caller-bundle precedence,
+report-only expectation sources, and expectation-blind reasoning. 001C remains
+the real point-in-time end-to-end and robustness phase.
