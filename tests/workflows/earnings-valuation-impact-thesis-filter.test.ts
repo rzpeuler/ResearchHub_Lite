@@ -38,12 +38,13 @@ test('exact duplicate Findings union source provenance deterministically', () =>
 })
 
 test('explicit valuation map is closed and zero delta does not require refresh', () => {
-  const a = analysis({ actualVsConsensus: [{ result: { metric: 'metric:revenue', fiscalPeriod: 'FY2026', actual: 100, benchmark: 100, absoluteDelta: 0, direction: 'in_line', benchmarkType: 'consensus' }, sourceCandidateIds: ['s'] }], actualVsPriorEstimate: [{ result: { metric: 'shipment', fiscalPeriod: 'FY2026', actual: 1, benchmark: 2, absoluteDelta: -1, direction: 'below', benchmarkType: 'prior_estimate' }, sourceCandidateIds: ['s'], institutionKey: 'broker-a' }] })
+  const a = analysis({ actualVsConsensus: [{ result: { metric: 'metric:revenue', fiscalPeriod: 'FY2026', actual: 100, benchmark: 100, absoluteDelta: 0, direction: 'in_line', benchmarkType: 'consensus' }, sourceCandidateIds: ['s'] }], actualVsPriorEstimate: [{ result: { metric: 'shipment', fiscalPeriod: 'FY2026', actual: 1, benchmark: 2, absoluteDelta: -1, direction: 'below', benchmarkType: 'prior_estimate' }, sourceCandidateIds: ['s'], institutionKey: 'broker-a' }, { result: { metric: 'ASP', fiscalPeriod: 'FY2026', actual: 1, benchmark: 2, absoluteDelta: -1, direction: 'below', benchmarkType: 'prior_estimate' }, sourceCandidateIds: ['s'], institutionKey: 'broker-b' }] })
   const result = buildEarningsValuationImpactAndThesisFilter({ expectationAnalysis: a })
-  assert.equal(result.findings.length, 2)
-  assert.deepEqual(result.valuationImpacts.map((item) => item.affectedValuationInputs), [['revenue'], []])
+  assert.equal(result.findings.length, 3)
+  assert.deepEqual(result.valuationImpacts.map((item) => item.affectedValuationInputs), [['revenue'], [], []])
   assert.equal(result.valuationImpacts[0]?.requiresValuationRefresh, false)
   assert.equal(result.valuationImpacts[1]?.requiresValuationRefresh, false)
+  assert.equal(result.valuationImpacts[2]?.requiresValuationRefresh, false)
   assert.doesNotMatch(JSON.stringify(result), /target price|DCF value|multiple =/i)
 })
 
