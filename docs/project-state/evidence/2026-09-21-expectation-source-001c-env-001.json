@@ -7,16 +7,17 @@
     "branch": "origin/codex/expectation-source-001c-fix-001-evidence-e2e-unblock",
     "originMainObserved": "f0cfa92ecca64843fcdb616869f4c78680454b9f"
   },
-  "executionClass": "bounded parser and financial-provider unblock; full 001C remains externally blocked",
+  "executionClass": "bounded parser and financial-provider unblock; full 001C validated with a clean repository-managed CPU-only environment",
   "parser": {
     "basePython": { "version": "3.12.10", "platform": "win32", "architecture": "AMD64", "torchImportable": false, "torchvisionImportable": false },
     "previousManagedEnvironment": { "version": "3.12.10", "pip": "25.0.1", "docling": "2.116.0", "torchImportable": false, "torchvisionImportable": false },
     "requirements": "docling==2.116.0",
     "systemSitePackages": false,
-    "standardInstallExperiment": { "status": "STALLED_DURING_DEPENDENCY_RESOLUTION", "result": "bounded fresh-venv experiment interrupted after no progress; no successful environment claimed" },
-    "officialCpuTorchExperiment": { "packages": ["torch", "torchvision"], "index": "https://download.pytorch.org/whl/cpu", "status": "EXTERNAL_NETWORK_BLOCKED", "diagnostic": "pip reached repeated SSLEOFError/UNEXPECTED_EOF_WHILE_READING; retry with trusted-host produced the same failure; no wheel installed" },
-    "setupAttempt": { "status": "INCONCLUSIVE", "reason": "CPU_TORCH_INSTALL_FAILED with bounded sanitized official-index TLS/EOF detail", "promotionOccurred": false },
-    "checkAfterAttempt": "MANAGED_PYTHON_MISSING",
+    "standardInstallExperiment": { "status": "SUCCEEDED_WITH_PROXY_BOOTSTRAP", "result": "fresh repository-managed environment completed with PySocks bootstrap, official CPU wheels, PyPI Docling requirements, model download, and bridge smoke" },
+    "officialCpuTorchExperiment": { "packages": ["torch==2.14.0+cpu", "torchvision==0.29.0+cpu"], "index": "https://download.pytorch.org/whl/cpu", "status": "SUCCEEDED_VIA_SYSTEM_SOCKS5_PROXY", "diagnostic": "Windows ProxyServer 127.0.0.1:7892 was detected, PySocks was bootstrapped from the configured mirror, and the official CPU index was reached through socks5h" },
+    "setupAttempt": { "status": "READY", "reason": "clean setup promoted a verified managed environment after dependency, model, and bridge checks", "promotionOccurred": true },
+    "cleanManagedEnvironmentValidation": { "status": "READY", "docling": "2.116.0", "torch": "2.14.0+cpu", "torchvision": "0.29.0+cpu", "torchCuda": null, "torchCudaAvailable": false, "torchCpuOnly": true, "bridgeSmoke": "PASS", "scope": "fresh repository-managed environment created by npm run document-parser:setup" },
+    "checkAfterAttempt": "READY",
     "runtimeContract": { "dependencyReadyRequires": ["Docling exact version 2.116.0", "torch import", "torchvision import"], "bridgeSmokeRemainsFinalAuthority": true, "telemetryInstallReasonBoundedAndSanitized": true }
   },
   "akshare": {
@@ -41,7 +42,7 @@
     "productionChange": "narrow financialData bridge switch to stock_financial_analysis_indicator_em with exchange suffix and verified field aliases; no fallback or fabricated data"
   },
   "001A": { "realRun": true, "symbol": "600519", "providerCurrentYear": 2026, "reportsReturned": 224, "usableNormalizedSources": 224, "estimatePoints": 202, "distinctInstitutions": 25, "historicalReports": 224, "historicalEstimatePoints": 202, "historicalAllTimestampsAtOrBeforeAsOf": true },
-  "001C": { "realRerun": "NOT_EXECUTED_AFTER_ENV-001", "reason": "parser setup remains blocked before bridge READY; established Eastmoney PIT findings remain preserved in the prior evidence artifact", "overallClassification": "EXTERNAL_SOURCE_BLOCKED" },
-  "validation": { "focusedTests": "41/41", "nodeTests": "1205/1205", "typecheck": "PASS", "clientTypecheck": "PASS", "clientBuild": "PASS" },
+  "001C": { "realRerun": "PASS_WITH_CLEAN_MANAGED_ENVIRONMENT", "primaryWorkflow": "completed", "primaryReportSections": 14, "primaryExpectations": "automatic/available", "primaryEstimateRevisionCount": 22, "primaryValuationImpactCount": 22, "primaryValuationRefreshRequired": true, "primaryThesisCriticalCount": 22, "pitDeterminism": true, "workflowReplay": true, "degradation": true, "secondaryWorkflow": "completed_partial", "historicalCapability": "rolling-window limited", "cleanSetupReady": true, "overallClassification": "PASS" },
+  "validation": { "focusedTests": "42/42", "nodeTests": "1205/1205", "typecheck": "PASS", "clientTypecheck": "PASS", "clientBuild": "PASS", "documentParserCheck": "READY" },
   "privacy": { "rawProviderBodiesIncluded": false, "credentialsIncluded": false, "privatePathsIncluded": false, "fullInstallLogsIncluded": false }
 }
