@@ -1,15 +1,15 @@
 # EXPECTATION-SOURCE-001 — Point-in-Time Expectation Source Design
 
 Date: 2026-09-20
-Status: `001C IMPLEMENTED / SOL ACCEPTANCE PENDING`
+Status: `IMPLEMENTED / VALIDATED / CLOSED`
 Baseline: `033394269a847118468a3fd27f4cbb25be0a6d13`
 
 ## Track state
 
 001A Eastmoney report-level EPS acquisition is complete. 001B adds the
 Workflow-owned automatic bundle assembler and Earnings Review wiring. 001C is
-the real point-in-time end-to-end validation and robustness phase and remains
-pending SOL acceptance.
+the real point-in-time end-to-end validation and robustness phase and is now
+validated and closed after SOL acceptance.
 
 ## Activation and precedence
 
@@ -144,3 +144,21 @@ case completed with `forecastBaseYear=2026`, zero usable estimates, no fabricate
 consensus, and explicit unsupported-year diagnostics. Historical surprise
 reconstruction remains limited because the provider exposes only a rolling
 current-year/+1/+2 forecast horizon; no year relabeling is permitted.
+
+## Track closure
+
+`EXPECTATION-SOURCE-001` is `COMPLETE / CLOSED` at accepted functional
+implementation HEAD `54cbf00ce594dbaf25d797324e2b19181a9912eb`. The final
+release gates retained the documented limitations: the source is EPS-only and
+annual FY-estimate-only; historical surprise reconstruction is not generally
+available; Guidance and Segment KPI acquisition, automatic expectation
+Knowledge persistence, target-price calculation, and public API/UI exposure
+remain out of scope.
+
+Accepted real evidence is retained at
+`docs/project-state/evidence/2026-09-20-expectation-source-001c-real.json` and
+the parser/financial environment summary at
+`docs/project-state/evidence/2026-09-21-expectation-source-001c-env-001.json`.
+Wave 2 remains `COMPLETE / CLOSED`; this post-Wave-2 source-acquisition track
+does not reopen or modify it. The next track remains undecided pending the next
+Sol review.

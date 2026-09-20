@@ -1,6 +1,6 @@
 # ResearchHub Lite — Wave 2 Governance State
 
-Updated: 2026-09-20
+Updated: 2026-09-21
 
 This is the concise current governance record for Wave 2. Older project-state
 files and task reports remain historical evidence and are not active task
@@ -12,8 +12,8 @@ registries.
 - Status: `COMPLETE / CLOSED`
 - Accepted implementation HEAD: `18259cb7bcb1f42e35669c01b0cfa5af22c3bb16`
 - Closure / promoted main baseline: `origin/main` (final FF-only promoted commit recorded in delivery history)
-- Current active phase: `EXPECTATION-SOURCE-001 / 001C`
-- Next development track: `EXPECTATION-SOURCE-001` (`IN PROGRESS`)
+- Current active phase: post-Wave-2 closure
+- Next development track: `PENDING POST-CLOSURE DECISION`
 
 ## Task status
 
@@ -47,17 +47,21 @@ Live point-in-time expectation acquisition was not part of Wave 2.
 That product gap is now being addressed by the separate
 `EXPECTATION-SOURCE-001` track.
 
-Current track status: `IN PROGRESS`
+Current track status: `COMPLETE / CLOSED`
 
-Active slice: `001C Real PIT E2E, Robustness & Closure Readiness`
+Active slice: `001C Real PIT E2E, Robustness & Closure Readiness` (closed)
 
 001A is COMPLETE / SOL accepted. 001B is COMPLETE / SOL accepted. 001C is
-`IMPLEMENTED / SOL ACCEPTANCE PENDING` on its isolated branch. Its final gated
-real run completed with the repaired parser environment and provider-level
-evidence; see the detailed evidence artifact for the fresh values.
+`COMPLETE / SOL accepted` on its isolated branch. Its final gated real run
+completed with the repaired parser environment and provider-level evidence;
+see the detailed evidence artifact for the accepted values. This was a
+post-Wave-2 source-acquisition track; closing it does not reopen or modify
+Wave 2.
 
-- EXPECTATION-SOURCE-001: IN PROGRESS.
-- 001C: IMPLEMENTED / SOL ACCEPTANCE PENDING.
+- EXPECTATION-SOURCE-001: COMPLETE / CLOSED.
+- 001A: COMPLETE / SOL accepted.
+- 001B: COMPLETE / SOL accepted.
+- 001C: COMPLETE / SOL accepted.
 - Wave 2: COMPLETE / CLOSED.
 - Wave 3: not started.
 
