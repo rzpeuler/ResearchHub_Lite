@@ -1,6 +1,6 @@
 import type { ActualVsExpectationResult, EstimateRevisionResult, GuidanceRange, GuidanceRevisionResult, GuidanceVsConsensusResult, SegmentKpiDeltaResult } from '../../skills/earnings-review/expectations/contracts.ts'
 
-export interface SourcedActualExpectationComparison { readonly result: ActualVsExpectationResult; readonly sourceCandidateIds: readonly string[] }
+export interface SourcedActualExpectationComparison { readonly result: ActualVsExpectationResult; readonly sourceCandidateIds: readonly string[]; readonly institutionKey?: string }
 export interface SourcedEstimateRevision { readonly result: EstimateRevisionResult; readonly sourceCandidateIds: readonly string[] }
 export interface SourcedGuidanceRevision { readonly result: GuidanceRevisionResult; readonly sourceCandidateIds: readonly string[] }
 export interface SourcedGuidanceConsensusComparison { readonly result: GuidanceVsConsensusResult; readonly sourceCandidateIds: readonly string[] }

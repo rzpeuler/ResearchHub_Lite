@@ -30,6 +30,7 @@ export interface EarningsFinding {
   readonly metric: string
   readonly fiscalPeriod: string
   readonly unit?: string
+  readonly institutionKey?: string
   readonly direction: FindingDirection
   readonly relationship?: string
   readonly absoluteDelta?: number
@@ -135,6 +136,7 @@ export interface SemanticFindingDecision {
   readonly findingId: string
   readonly matches: readonly {
     readonly thesisRef: string
+    /** Bounded direct ReasoningEdge refs, not Claim/Observation source refs. */
     readonly dependencyRefs: readonly string[]
     readonly effect: ThesisEffect
     readonly rationale: string

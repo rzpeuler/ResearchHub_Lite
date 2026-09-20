@@ -149,6 +149,17 @@ test('W2-004 prior estimate and revision require explicit institution and links'
   assert.ok(result.diagnostics.includes('prior_estimate_unavailable:house-c:revenue'))
 })
 
+test('W2-005-FIX-002 prior comparisons preserve explicit institution identity through integration sort and dedup', () => {
+  const base = validBundle({ consensusSnapshots: [], priorEstimateInstitutionKeys: ['house-a', 'house-b'] })
+  const result = buildEarningsExpectationAnalysis({ analysisAsOf: AS_OF, resultPublishedAt: RESULT, actualMetrics: actual(), expectations: base })
+  const reversed = buildEarningsExpectationAnalysis({ analysisAsOf: AS_OF, resultPublishedAt: RESULT, actualMetrics: actual(), expectations: { ...base, priorEstimateInstitutionKeys: ['house-b', 'house-a'] } })
+  assert.deepEqual(result.actualVsPriorEstimate.map((item) => item.institutionKey), ['house-a', 'house-b'])
+  assert.deepEqual(result.actualVsPriorEstimate.map((item) => item.institutionKey), reversed.actualVsPriorEstimate.map((item) => item.institutionKey))
+  assert.deepEqual(result.actualVsPriorEstimate.map((item) => item.result.benchmark), [100, 110])
+  const sameValue = buildEarningsExpectationAnalysis({ analysisAsOf: AS_OF, resultPublishedAt: RESULT, actualMetrics: actual(), expectations: { ...base, estimates: base.estimates?.map((item) => item.institutionKey === 'house-b' ? { ...item, value: 100 } : item) } })
+  assert.deepEqual(sameValue.actualVsPriorEstimate.map((item) => item.institutionKey), ['house-a', 'house-b'])
+})
+
 test('W2-004-FIX-001 invalid revision links do not suppress one valid predecessor', () => {
   const old = estimate({ estimateId: 'old', value: 90, publishedAt: '2026-06-01T00:00:00.000Z', sourceCandidateIds: ['old-source'] })
   const newer = estimate({ estimateId: 'new', value: 95, publishedAt: '2026-07-15T00:00:00.000Z', sourceCandidateIds: ['new-source'] })

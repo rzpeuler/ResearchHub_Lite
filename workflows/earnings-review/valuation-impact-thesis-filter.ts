@@ -52,18 +52,20 @@ function mappedValuationInput(metric: string): ValuationInput | undefined { retu
 
 interface DraftFinding { finding: EarningsFinding; identity: string; payload: string }
 
-function makeFinding(kind: EarningsFindingKind, result: Record<string, unknown>, sourceCandidateIds: readonly string[], deterministicDeltas: readonly FindingDelta[], fields: { readonly identity: string; readonly direction?: EarningsFinding['direction']; readonly relationship?: string; readonly metric?: string; readonly fiscalPeriod?: string; readonly unit?: string; }): DraftFinding | undefined {
+function makeFinding(kind: EarningsFindingKind, result: Record<string, unknown>, sourceCandidateIds: readonly string[], deterministicDeltas: readonly FindingDelta[], fields: { readonly identity: string; readonly direction?: EarningsFinding['direction']; readonly relationship?: string; readonly metric?: string; readonly fiscalPeriod?: string; readonly unit?: string; readonly institutionKey?: string; }): DraftFinding | undefined {
   const metric = metricKey(fields.metric ?? result.metric)
   const fiscalPeriod = text(fields.fiscalPeriod ?? result.fiscalPeriod)
-  if (!metric || !fiscalPeriod || fields.identity.split('|').some((part) => part.length === 0) || (deterministicDeltas.length === 0 && kind !== 'guidance_vs_consensus')) return undefined
+  const institutionKey = text(fields.institutionKey)
+  if (!metric || !fiscalPeriod || (kind === 'actual_vs_prior_estimate' && !institutionKey) || fields.identity.split('|').some((part) => part.length === 0) || (deterministicDeltas.length === 0 && kind !== 'guidance_vs_consensus')) return undefined
   const identity = `${kind}|${fields.identity}`
-  const payload = jsonIdentity({ kind, metric, fiscalPeriod, unit: fields.unit ?? text(result.unit), direction: fields.direction ?? result.direction ?? 'mixed', relationship: fields.relationship ?? result.relationship, deltas: deterministicDeltas })
+  const payload = jsonIdentity({ kind, metric, fiscalPeriod, unit: fields.unit ?? text(result.unit), institutionKey: institutionKey || undefined, direction: fields.direction ?? result.direction ?? 'mixed', relationship: fields.relationship ?? result.relationship, deltas: deterministicDeltas })
   const finding: EarningsFinding = {
     findingId: `finding:${safePart(identity)}`,
     kind,
     metric,
     fiscalPeriod,
     ...(text(fields.unit ?? result.unit) ? { unit: text(fields.unit ?? result.unit) } : {}),
+    ...(institutionKey ? { institutionKey } : {}),
     direction: fields.direction ?? ((text(result.direction) as EarningsFinding['direction']) || 'mixed'),
     ...(text(fields.relationship ?? result.relationship) ? { relationship: text(fields.relationship ?? result.relationship) } : {}),
     ...(deterministicDeltas.length === 1 ? { absoluteDelta: deterministicDeltas[0]!.absoluteDelta, ...(deterministicDeltas[0]!.relativeDelta === undefined ? {} : { relativeDelta: deterministicDeltas[0]!.relativeDelta }) } : {}),
@@ -85,7 +87,8 @@ function normalizeDetailed(expectationAnalysis: EarningsExpectationAnalysis): { 
   }
   for (const item of expectationAnalysis.actualVsPriorEstimate) {
     const result = resultOf(item.result)
-    add(makeFinding('actual_vs_prior_estimate', result, sourceIds(item.sourceCandidateIds), [delta('benchmark', result.absoluteDelta, result.relativeDelta)].filter((item): item is FindingDelta => item !== undefined), { identity: [metricKey(result.metric), text(result.fiscalPeriod), text(result.benchmarkType)].join('|'), direction: text(result.direction) as EarningsFinding['direction'] }), 'finding_missing_stable_identity:actual_vs_prior_estimate')
+    const institutionKey = text(item.institutionKey)
+    add(makeFinding('actual_vs_prior_estimate', result, sourceIds(item.sourceCandidateIds), [delta('benchmark', result.absoluteDelta, result.relativeDelta)].filter((item): item is FindingDelta => item !== undefined), { identity: [institutionKey, metricKey(result.metric), text(result.fiscalPeriod), text(result.benchmarkType)].join('|'), institutionKey, direction: text(result.direction) as EarningsFinding['direction'] }), institutionKey ? 'finding_missing_stable_identity:actual_vs_prior_estimate' : 'finding_missing_institution_identity:actual_vs_prior_estimate')
   }
   for (const item of expectationAnalysis.estimateRevisions) {
     const result = resultOf(item.result)
@@ -120,7 +123,8 @@ function normalizeDetailed(expectationAnalysis: EarningsExpectationAnalysis): { 
   for (const [findingId, sameId] of byId) {
     const payloads = new Set(sameId.map((item) => item.payload))
     if (payloads.size > 1) { diagnostics.push(`finding_identity_collision:${findingId}`); continue }
-    valid.push(sameId[0]!.finding)
+    const provenance = sortedUnique(sameId.flatMap((item) => item.finding.sourceCandidateIds))
+    valid.push({ ...sameId[0]!.finding, sourceCandidateIds: provenance })
   }
   valid.sort((a, b) => a.findingId.localeCompare(b.findingId))
   return { findings: valid, diagnostics: sortedUnique(diagnostics) }
@@ -145,7 +149,7 @@ function edgeCriticality(edgeType: string): ThesisImpact['criticality'] { return
 function relationFor(effect: ThesisEffect): ThesisImpact['relation'] { return effect === 'supports' ? 'supports_dependency' : effect === 'challenges' ? 'challenges_dependency' : 'implicates_dependency' }
 function contextDependencies(context: ThesisFilterContext): Map<string, { readonly thesis: EarningsThesisContext; readonly dependency: EarningsThesisContext['dependencies'][number] }> {
   const map = new Map<string, { readonly thesis: EarningsThesisContext; readonly dependency: EarningsThesisContext['dependencies'][number] }>()
-  for (const thesis of context.theses) for (const dependency of thesis.dependencies) map.set(`${thesis.thesisRef}|${dependency.sourceRef}`, { thesis, dependency })
+  for (const thesis of context.theses) for (const dependency of thesis.dependencies) map.set(`${thesis.thesisRef}|${dependency.edgeRef}`, { thesis, dependency })
   return map
 }
 function exactMatches(finding: EarningsFinding, context: ThesisFilterContext): ThesisImpact[] {
@@ -178,9 +182,11 @@ function validateSemanticOutput(output: unknown, findings: readonly EarningsFind
   for (const raw of root.decisions) {
     const decision = outputObject(raw); if (!decision || typeof decision.findingId !== 'string' || !findingIds.has(decision.findingId) || seen.has(decision.findingId) || !Array.isArray(decision.matches) || typeof decision.unresolved !== 'boolean' || Object.keys(decision).some((key) => !['findingId', 'matches', 'unresolved'].includes(key))) return { error: 'semantic_decision_invalid' }
     seen.add(decision.findingId); const matches: Array<{ readonly thesisRef: string; readonly dependencyRefs: readonly string[]; readonly effect: ThesisEffect; readonly rationale: string }> = []
+    const seenDependencyRefs = new Set<string>()
     for (const rawMatch of decision.matches) {
       const match = outputObject(rawMatch); if (!match || typeof match.thesisRef !== 'string' || !thesisRefs.has(match.thesisRef) || !Array.isArray(match.dependencyRefs) || typeof match.effect !== 'string' || !ALLOWED_EFFECTS.has(match.effect as ThesisEffect) || typeof match.rationale !== 'string' || !text(match.rationale) || Object.keys(match).some((key) => !['thesisRef', 'dependencyRefs', 'effect', 'rationale'].includes(key))) return { error: 'semantic_match_invalid' }
-      const refs = match.dependencyRefs.filter((ref): ref is string => typeof ref === 'string'); if (refs.length !== match.dependencyRefs.length || new Set(refs).size !== refs.length) return { error: 'semantic_dependency_refs_invalid' }
+      const refs = match.dependencyRefs.filter((ref): ref is string => typeof ref === 'string'); if (refs.length !== match.dependencyRefs.length || new Set(refs).size !== refs.length || refs.some((ref) => seenDependencyRefs.has(`${match.thesisRef}|${ref}`))) return { error: 'semantic_dependency_refs_invalid' }
+      refs.forEach((ref) => seenDependencyRefs.add(`${match.thesisRef}|${ref}`))
       for (const ref of refs) if (!validRefs.has(`${match.thesisRef}|${ref}`)) return { error: 'semantic_reference_invalid' }
       matches.push({ thesisRef: match.thesisRef, dependencyRefs: refs, effect: match.effect as ThesisEffect, rationale: text(match.rationale) })
     }
@@ -197,8 +203,13 @@ function mergeSemantic(findings: readonly EarningsFinding[], context: ThesisFilt
     const decision = decisionByFinding.get(finding.findingId)!; const merged = [...(deterministicByFinding.get(finding.findingId) ?? [])]
     for (const match of decision.matches) for (const dependencyRef of match.dependencyRefs) {
       const resolved = refs.get(`${match.thesisRef}|${dependencyRef}`); if (!resolved) continue
-      if (merged.some((item) => item.thesisRef === match.thesisRef && item.reasoningEdgeRef === resolved.dependency.edgeRef)) continue
-      const dependency = resolved.dependency; merged.push({ findingId: finding.findingId, thesisRef: resolved.thesis.thesisRef, thesisTitle: resolved.thesis.title, thesisStatus: resolved.thesis.status, dependencyRef: dependency.sourceRef, dependencyKind: dependency.sourceKind, ...(dependency.statement ? { dependencyStatement: dependency.statement } : {}), reasoningEdgeRef: dependency.edgeRef, reasoningEdgeType: dependency.edgeType, criticality: edgeCriticality(dependency.edgeType), effect: match.effect, relation: relationFor(match.effect), rationale: match.rationale })
+      const existingIndex = merged.findIndex((item) => item.thesisRef === match.thesisRef && item.reasoningEdgeRef === resolved.dependency.edgeRef)
+      if (existingIndex >= 0) {
+        const existing = merged[existingIndex]!
+        merged[existingIndex] = { ...existing, effect: match.effect, relation: relationFor(match.effect), rationale: match.rationale }
+      } else {
+        const dependency = resolved.dependency; merged.push({ findingId: finding.findingId, thesisRef: resolved.thesis.thesisRef, thesisTitle: resolved.thesis.title, thesisStatus: resolved.thesis.status, dependencyRef: dependency.sourceRef, dependencyKind: dependency.sourceKind, ...(dependency.statement ? { dependencyStatement: dependency.statement } : {}), reasoningEdgeRef: dependency.edgeRef, reasoningEdgeType: dependency.edgeType, criticality: edgeCriticality(dependency.edgeType), effect: match.effect, relation: relationFor(match.effect), rationale: match.rationale })
+      }
     }
     const unique = [...new Map(merged.map((item) => [`${item.thesisRef}|${item.reasoningEdgeRef}`, item])).values()]
     return classification(finding.findingId, unique, decision.unresolved || unique.some((item) => item.effect === 'uncertain'), unique.length > 0 ? 'Bounded semantic relevance was validated and merged with deterministic matches.' : 'The bounded semantic filter found no existing Thesis dependency.')
@@ -210,7 +221,7 @@ export async function applyBoundedSemanticThesisFilter(findings: readonly Earnin
   const usableContext = context ?? { theses: [], diagnostics: ['thesis_context_unavailable'], status: 'unavailable' as const }
   if (!executor || findings.length === 0 || usableContext.theses.length === 0) return { impacts: deterministicImpacts, classifications: fallbackClassifications(findings, deterministicImpacts), reasoning: baseReasoning({ fallbackUsed: true, diagnostic: !executor ? 'semantic_executor_unavailable' : 'thesis_context_unavailable' }) }
   const input = { findings, theses: usableContext.theses, deterministicMatches: deterministicImpacts }
-  const request = { operation: OPERATION, instruction: 'Classify every finding against the bounded existing Thesis dependencies. Return only the declared decisions contract. Do not infer effect from numeric sign or magnitude.', input, outputContract: { decisions: 'one decision per findingId; matches use existing thesisRef and dependencyRefs only; effects supports|challenges|mixed|uncertain; rationale is required' } } as const
+  const request = { operation: OPERATION, instruction: 'Classify every finding against the bounded existing Thesis dependencies. Return only the declared decisions contract. Do not infer effect from numeric sign or magnitude.', input, outputContract: { decisions: 'one decision per findingId; matches use existing thesisRef and direct ReasoningEdge dependencyRefs (edgeRef values) only; effects supports|challenges|mixed|uncertain; rationale is required' } } as const
   let attempts = 0; let diagnostic: string | undefined
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {

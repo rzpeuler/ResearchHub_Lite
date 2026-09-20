@@ -63,6 +63,29 @@ an item as `thesis_irrelevant`; unavailable or failed semantic resolution is
 probability, magnitude, sign-derived effect, or valuation conclusion is
 accepted from the semantic output.
 
+## FIX-002 identity and merge integrity
+
+Prior-estimate comparisons preserve the explicit caller-selected institution
+metadata at the Workflow wrapper. `actual_vs_prior_estimate` Findings require
+that institution identity and include it in their stable identity, so
+multi-institution comparisons remain distinct even when their values match.
+Exact semantic duplicate Findings union their sorted unique source provenance;
+material identity collisions still fail closed.
+
+Thesis dependency projection first selects eligible Company Theses, then
+resolves active direct incoming ReasoningEdges against all active Claim and
+Observation objects. A dependency source may belong to another entity; the
+edge targeting the Company Thesis establishes bounded relevance. The
+projection remains direct-only and bounded to eight Theses and twelve
+dependencies per Thesis.
+
+Semantic dependency references are edge-level (`dependencyRefs` contains
+`edgeRef` values), not source-level IDs. Validated semantic effects enrich the
+same deterministic relevance match while criticality remains code-owned.
+Semantic omission or explicit no-relation cannot remove deterministic
+structured relevance. A resolved non-uncertain effect with `unresolved=false`
+clears unresolved state; an uncertain effect or unresolved decision retains it.
+
 ## Report and telemetry
 
 The existing `Valuation Implications` and `Thesis Impact` sections are enriched

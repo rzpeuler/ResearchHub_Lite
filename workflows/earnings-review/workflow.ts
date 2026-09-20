@@ -100,8 +100,8 @@ export function projectEarningsThesisContext(rootRef: string, objects: readonly 
   const thesisLimit = 8
   const selectedTheses = theses.slice(0, thesisLimit)
   const diagnostics: string[] = theses.length > thesisLimit ? ['thesis_context_truncated'] : []
-  const claims = new Map(objects.filter((item): item is KnowledgeClaimV04 => item.id.startsWith('claim:') && active(item) && Array.isArray((item as unknown as { subjectRefs?: unknown }).subjectRefs) && ((item as unknown as { subjectRefs: readonly string[] }).subjectRefs).includes(rootRef)).map((item) => [item.id, item]))
-  const observations = new Map(objects.filter((item): item is KnowledgeObservationV04 => item.id.startsWith('observation:') && active(item) && (item as unknown as { subjectRef?: unknown }).subjectRef === rootRef).map((item) => [item.id, item]))
+  const claims = new Map(objects.filter((item): item is KnowledgeClaimV04 => item.id.startsWith('claim:') && active(item)).map((item) => [item.id, item]))
+  const observations = new Map(objects.filter((item): item is KnowledgeObservationV04 => item.id.startsWith('observation:') && active(item)).map((item) => [item.id, item]))
   const sources = new Map<string, KnowledgeClaimV04 | KnowledgeObservationV04>([...claims, ...observations])
   const edgeObjects = objects.filter((item): item is KnowledgeReasoningEdgeV04 => { const value = item as unknown as KnowledgeReasoningEdgeV04; return item.id.startsWith('reasoning-edge:') && active(item) && selectedTheses.some((thesis) => thesis.id === value.targetRef) && sources.has(value.sourceRef) }).sort((left, right) => left.id.localeCompare(right.id))
   const dependencyFor = (edge: KnowledgeReasoningEdgeV04): EarningsThesisContext['dependencies'][number] | undefined => {
