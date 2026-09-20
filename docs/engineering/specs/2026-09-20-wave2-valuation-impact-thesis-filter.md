@@ -95,3 +95,32 @@ telemetry includes the aggregate valuation-refresh flag, Thesis context status a
 counts, filter finding count, and `thesis_critical`, `thesis_relevant`,
 `thesis_irrelevant`, and `uncertain` classification counts. Legacy telemetry
 fields remain for compatibility.
+
+## 001C real PIT validation
+
+The 2026-09-20 gated acceptance harness is
+`scripts/acceptance-expectation-source-001c-real.ts` and is enabled only with
+`RHL_REAL_EXPECTATION_E2E=1`. It captures provider output in memory, replays
+the same capture twice into fresh fixture-seeded Schema 0.4 knowledge bases,
+and writes summary-only evidence to
+`docs/project-state/evidence/2026-09-20-expectation-source-001c-real.json`.
+
+The real Eastmoney capture for primary `600519` / 2026 H1 produced 224 reports,
+224 expectation sources, 202 EPS points across 25 institutions, 191 estimates
+strictly before the selected result publication, one pre-result consensus with
+25 contributors, and 22 genuine non-zero revision links. Reversing provider
+input order produced the same bundle hash; no post-result estimate entered the
+consensus and all source bindings were valid. The negative 600519 FY2025 case
+was unavailable because the live provider forecast base year was 2026, which
+is recorded as the rolling-window limitation rather than fabricated historical
+truth. The 300750 H1 capture returned reports but no valid EPS points.
+
+The end-to-end workflow is externally blocked in this environment: CNINFO
+normalization requires the managed document-parser runtime, whose setup ended
+in `PIP_INSTALL_FAILED` and whose preflight is `MANAGED_PYTHON_MISSING`; the
+AKShare bridge is installed but returned no usable rows for these live calls.
+Therefore the evidence records the implementation as externally blocked, not
+as a full real-provider workflow pass. The isolated expectation failure probe
+returned `failed` with zero estimates and zero consensus snapshots. No raw
+provider bodies, broker PDFs, credentials, private paths, reasoning traces, or
+canonical Eastmoney writes were persisted.

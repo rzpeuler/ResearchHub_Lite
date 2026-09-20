@@ -1,0 +1,251 @@
+{
+  "taskId": "RHL-EXPECTATION-SOURCE-001C-REAL-PIT-E2E-ROBUSTNESS",
+  "generatedAt": "2026-09-20T11:29:53.872Z",
+  "baseline": "66e7604ac0d950625ee60b1630b007e66827492b",
+  "acceptanceScriptVersion": "001C-1",
+  "executionClass": "gated real-provider E2E with in-memory capture/replay",
+  "environment": {
+    "node": "v24.16.0",
+    "documentParser": {
+      "status": "MANAGED_PYTHON_MISSING",
+      "pythonReady": false,
+      "dependencyReady": false,
+      "artifactsReady": false,
+      "bridgeReady": false
+    },
+    "akshareBridge": "available:1.18.64",
+    "cninfo": "verified by gated target capture",
+    "eastmoney": "verified by gated target capture"
+  },
+  "targets": [
+    {
+      "symbol": "600519",
+      "exchange": "SSE",
+      "fiscalYear": 2026,
+      "period": "H1",
+      "asOf": "2026-09-20T11:29:44.879Z",
+      "resultPublishedAt": "2026-08-14T16:00:00.000Z",
+      "cninfo": {
+        "provider": "cninfo",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": false,
+        "providerFailed": true,
+        "usableSourceCount": 0
+      },
+      "akshare": {
+        "provider": "akshare",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": true,
+        "providerFailed": false,
+        "usableSourceCount": 0
+      },
+      "eastmoney": null,
+      "forecastBaseYear": 2026,
+      "reports": 224,
+      "expectationSources": 224,
+      "estimates": 202,
+      "institutions": 25,
+      "preResultEstimateCount": 191,
+      "postResultEstimateCount": 11,
+      "consensusSnapshotCount": 1,
+      "consensusContributorCount": 25,
+      "revisionLinkCount": 22,
+      "crossResultRevisionCount": 11,
+      "actualConsensusComparisonCount": 0,
+      "actualPriorEstimateComparisonCount": 0,
+      "estimateRevisionCount": 0,
+      "valuationImpactCount": 0,
+      "valuationRefreshRequired": false,
+      "thesisCounts": {
+        "thesisCritical": 0,
+        "thesisRelevant": 0,
+        "thesisUncertain": 0
+      },
+      "expectationInputMode": "none",
+      "expectationAcquisitionStatus": "not_attempted",
+      "expectationStatus": "not_provided",
+      "workflowStatus": "blocked",
+      "reportSectionCount": 0,
+      "allContributorsStrictlyPreResult": true,
+      "postResultEstimatesInConsensus": false,
+      "sourceBindingsValid": true,
+      "invalidRevisionLinks": [],
+      "finitePaths": []
+    },
+    {
+      "symbol": "300750",
+      "exchange": "SZSE",
+      "fiscalYear": 2026,
+      "period": "H1",
+      "asOf": "2026-09-20T11:29:44.879Z",
+      "cninfo": {
+        "provider": "cninfo",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": true,
+        "providerFailed": false,
+        "usableSourceCount": 0
+      },
+      "akshare": {
+        "provider": "akshare",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": true,
+        "providerFailed": false,
+        "usableSourceCount": 0
+      },
+      "eastmoney": null,
+      "forecastBaseYear": 2026,
+      "reports": 136,
+      "expectationSources": 136,
+      "estimates": 0,
+      "institutions": 0,
+      "preResultEstimateCount": 0,
+      "postResultEstimateCount": 0,
+      "consensusSnapshotCount": 0,
+      "consensusContributorCount": 0,
+      "revisionLinkCount": 0,
+      "crossResultRevisionCount": 0,
+      "actualConsensusComparisonCount": 0,
+      "actualPriorEstimateComparisonCount": 0,
+      "estimateRevisionCount": 0,
+      "valuationImpactCount": 0,
+      "valuationRefreshRequired": false,
+      "thesisCounts": {
+        "thesisCritical": 0,
+        "thesisRelevant": 0,
+        "thesisUncertain": 0
+      },
+      "expectationInputMode": "none",
+      "expectationAcquisitionStatus": "not_attempted",
+      "expectationStatus": "not_provided",
+      "workflowStatus": "blocked",
+      "reportSectionCount": 0,
+      "allContributorsStrictlyPreResult": false,
+      "postResultEstimatesInConsensus": false,
+      "sourceBindingsValid": false,
+      "invalidRevisionLinks": [],
+      "finitePaths": []
+    },
+    {
+      "symbol": "600519",
+      "exchange": "SSE",
+      "fiscalYear": 2025,
+      "period": "FY",
+      "asOf": "2026-09-20T11:29:44.879Z",
+      "cninfo": {
+        "provider": "cninfo",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": true,
+        "providerFailed": false,
+        "usableSourceCount": 0
+      },
+      "akshare": {
+        "provider": "akshare",
+        "providerAttempted": true,
+        "providerSucceeded": false,
+        "providerEmpty": true,
+        "providerFailed": false,
+        "usableSourceCount": 0
+      },
+      "eastmoney": null,
+      "forecastBaseYear": 2026,
+      "reports": 350,
+      "expectationSources": 350,
+      "estimates": 0,
+      "institutions": 0,
+      "preResultEstimateCount": 0,
+      "postResultEstimateCount": 0,
+      "consensusSnapshotCount": 0,
+      "consensusContributorCount": 0,
+      "revisionLinkCount": 0,
+      "crossResultRevisionCount": 0,
+      "actualConsensusComparisonCount": 0,
+      "actualPriorEstimateComparisonCount": 0,
+      "estimateRevisionCount": 0,
+      "valuationImpactCount": 0,
+      "valuationRefreshRequired": false,
+      "thesisCounts": {
+        "thesisCritical": 0,
+        "thesisRelevant": 0,
+        "thesisUncertain": 0
+      },
+      "expectationInputMode": "none",
+      "expectationAcquisitionStatus": "not_attempted",
+      "expectationStatus": "not_provided",
+      "workflowStatus": "blocked",
+      "reportSectionCount": 0,
+      "allContributorsStrictlyPreResult": false,
+      "postResultEstimatesInConsensus": false,
+      "sourceBindingsValid": false,
+      "invalidRevisionLinks": [],
+      "finitePaths": []
+    }
+  ],
+  "primaryPITAudit": {
+    "bundleHash": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
+    "reversedHash": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
+    "reversedEqual": true,
+    "diagnostics": [],
+    "estimateCount": 202,
+    "institutionCount": 25,
+    "preResultEstimateCount": 191,
+    "postResultEstimateCount": 11,
+    "consensusSnapshotCount": 1,
+    "consensusContributorCount": 25,
+    "allContributorsStrictlyPreResult": true,
+    "postResultEstimatesInConsensus": false,
+    "sourceBindingsValid": true,
+    "revisionLinkCount": 22,
+    "genuineNonZeroRevisionCount": 22,
+    "crossResultRevisionCount": 11,
+    "invalidRevisionLinks": [],
+    "oneLatestRevisionPerInstitution": true,
+    "finitePaths": []
+  },
+  "replay": {
+    "captureMode": "real capture once, identical in-memory replay twice",
+    "replayAHash": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
+    "replayHashB": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
+    "equal": true,
+    "normalBundleHash": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
+    "reversedBundleHash": "f417f2e030557e792a5610399f25475e3c887d962106ed19271d6f8285feed4b",
+    "reversedEqual": true
+  },
+  "degradation": {
+    "available": false,
+    "expectationFailureProbe": {
+      "acquisitionStatus": "failed",
+      "estimateCount": 0,
+      "consensusSnapshotCount": 0,
+      "diagnostics": [
+        "automatic_expectation_source_exception:[injected failure]"
+      ]
+    },
+    "baseWorkflowFailureInjectionExercised": false
+  },
+  "historicalCapability": {
+    "liveCurrentForecastAndRevisionReady": true,
+    "historicalSurpriseReady": false,
+    "historicalSurpriseLimitedByRollingWindow": true,
+    "reason": "REAL_HISTORICAL_SURPRISE_NOT_DEMONSTRATED; provider contract exposes rolling currentYear/+1/+2 horizons"
+  },
+  "thesisContext": "fixture-seeded pre-existing Knowledge for pipeline validation only",
+  "privacy": {
+    "rawBodiesIncluded": false,
+    "brokerPdfIncluded": false,
+    "credentialsIncluded": false,
+    "privatePathsIncluded": false,
+    "reasoningTraceIncluded": false
+  },
+  "notes": [
+    "No raw provider bodies were persisted.",
+    "Eastmoney expectations remain report-only.",
+    "A second target is retained even if externally blocked.",
+    "No production behavior was changed by the acceptance harness."
+  ],
+  "overallClassification": "EXTERNAL_SOURCE_BLOCKED"
+}
