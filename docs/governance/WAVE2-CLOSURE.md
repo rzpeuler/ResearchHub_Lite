@@ -51,7 +51,8 @@ incomplete; Wave 2 consumes explicit historical expectation data when supplied.
 
 - Wave 2: closed.
 - Preferred candidate: `EXPECTATION-SOURCE-001`.
-- Candidate status: `PENDING POST-CLOSURE DECISION`.
+- Candidate status: `SELECTED / IN PROGRESS`.
+- Active slice: `001A`.
 - Wave 3: not started; status `PENDING POST-CLOSURE DECISION`.
 
 ## Closure history
