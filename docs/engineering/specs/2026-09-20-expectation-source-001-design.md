@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Status: `001C IMPLEMENTED / SOL ACCEPTANCE PENDING`
-Baseline: `66e7604ac0d950625ee60b1630b007e66827492b`
+Baseline: `033394269a847118468a3fd27f4cbb25be0a6d13`
 
 ## Track state
 
@@ -101,13 +101,21 @@ actual-vs-prior-estimate comparison for those annual estimates. Annual
 revisions remain valid annual signals and are not relabeled as H1 evidence.
 
 The live full Workflow case is externally blocked in this environment before
-report completion: the managed document-parser setup initially ended in
-`PIP_INSTALL_FAILED`; after the host's existing Docling 2.116.0 and local model
-artifacts were made available, bridge smoke preflight remained
-`BRIDGE_SMOKE_FAILED`. The AKShare bridge is installed but the live calls
-returned no usable rows. The evidence therefore does not claim a
-full 14-section real-provider report pass. The live Eastmoney contract still
-demonstrated current forecast/revision readiness, while historical FY2025
-surprise reconstruction remains unavailable because `forecastBaseYear=2026`
-and the endpoint exposes a rolling current-year/+1/+2 horizon. No year
-relabeling or fabricated historical consensus is permitted.
+report completion. Repository-authoritative parser preflight is
+`BRIDGE_SMOKE_FAILED` with Python ready, Docling `2.116.0`, model artifacts
+ready, and bridge exit code `1`; the captured bridge stderr ends with
+`document_parser_failed: No module named 'torch'`. The AKShare bridge is
+installed (`1.18.64`) but independent calls for both `600519` and `300750`
+returned zero rows and were classified `UPSTREAM_EMPTY`. The evidence therefore
+does not claim a full 14-section real-provider report pass. The live Eastmoney
+contract still demonstrated current forecast/revision readiness, while
+historical FY2025 surprise reconstruction remains unavailable because
+`forecastBaseYear=2026` and the endpoint exposes a rolling current-year/+1/+2
+horizon. No year relabeling or fabricated historical consensus is permitted.
+
+The acceptance evidence distinguishes deterministic bundle assembly from
+Workflow replay. Reversed-input assembly is demonstrated by equal normal and
+reversed bundle hashes; `workflowReplay` remains unavailable with
+`FULL_WORKFLOW_NOT_COMPLETED`, and both replay hashes are null because two
+completed Workflow replays did not occur. This is a blocked partial E2E result,
+not a replay pass.

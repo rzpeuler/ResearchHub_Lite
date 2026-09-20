@@ -1,12 +1,21 @@
 {
   "taskId": "RHL-EXPECTATION-SOURCE-001C-REAL-PIT-E2E-ROBUSTNESS",
-  "generatedAt": "2026-09-20T15:09:15.699Z",
-  "baseline": "66e7604ac0d950625ee60b1630b007e66827492b",
-  "acceptanceScriptVersion": "001C-2",
-  "executionClass": "gated real-provider E2E with in-memory capture/replay",
+  "generatedAt": "2026-09-20T15:28:56.786Z",
+  "baseline": "033394269a847118468a3fd27f4cbb25be0a6d13",
+  "acceptanceScriptVersion": "001C-FIX-001",
+  "executionClass": "gated real-provider partial E2E; Eastmoney PIT capture/assembly validated; full Workflow externally blocked",
   "environment": {
     "node": "v24.16.0",
     "documentParser": {
+      "preflightCommand": "npm run document-parser:check",
+      "command": "managed-python plugins/document/parsers/docling/bridge/docling_bridge.py <temporary-pdf>",
+      "exitCode": 1,
+      "stderrSummary": "[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used. [redacted] RequestsDependencyWarning: urllib3 (2.6.1) or chardet (7.4.3)/charset_normalizer (3.4.4) doesn't match a supported version! warnings.warn( document_parser_failed: No module named 'torch'",
+      "stdoutSummary": "",
+      "bridgeInvocationFailure": "[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used. [redacted] RequestsDependencyWarning: urllib3 (2.6.1) or chardet (7.4.3)/charset_normalizer (3.4.4) doesn't match a supported version! warnings.warn( document_parser_failed: No module named 'torch'",
+      "pythonExecutable": ".researchhub-document-parser/venv/Scripts/python.exe",
+      "doclingVersion": "2.116.0",
+      "modelArtifactPath": ".researchhub-document-parser/models",
       "status": "BRIDGE_SMOKE_FAILED",
       "pythonReady": true,
       "dependencyReady": true,
@@ -14,6 +23,32 @@
       "bridgeReady": false
     },
     "akshareBridge": "available:1.18.64",
+    "akshareDiagnostics": [
+      {
+        "symbol": "600519",
+        "rawCallSucceeded": true,
+        "rawRowCount": 0,
+        "periodLabels": [],
+        "requestedExactPeriod": "2026-H1",
+        "requestedExactPeriodFound": false,
+        "normalizerDiagnostics": [
+          "Exact financial period 2026-H1 was not found"
+        ],
+        "classification": "UPSTREAM_EMPTY"
+      },
+      {
+        "symbol": "300750",
+        "rawCallSucceeded": true,
+        "rawRowCount": 0,
+        "periodLabels": [],
+        "requestedExactPeriod": "2026-H1",
+        "requestedExactPeriodFound": false,
+        "normalizerDiagnostics": [
+          "Exact financial period 2026-H1 was not found"
+        ],
+        "classification": "UPSTREAM_EMPTY"
+      }
+    ],
     "cninfo": "verified by gated target capture",
     "eastmoney": "verified by gated target capture"
   },
@@ -23,7 +58,7 @@
       "exchange": "SSE",
       "fiscalYear": 2026,
       "period": "H1",
-      "asOf": "2026-09-20T15:08:48.243Z",
+      "asOf": "2026-09-20T15:28:21.203Z",
       "resultPublishedAt": "2026-08-14T16:00:00.000Z",
       "cninfo": {
         "provider": "cninfo",
@@ -86,7 +121,7 @@
       "exchange": "SZSE",
       "fiscalYear": 2026,
       "period": "H1",
-      "asOf": "2026-09-20T15:08:48.243Z",
+      "asOf": "2026-09-20T15:28:21.203Z",
       "cninfo": {
         "provider": "cninfo",
         "providerAttempted": true,
@@ -148,7 +183,7 @@
       "exchange": "SSE",
       "fiscalYear": 2025,
       "period": "FY",
-      "asOf": "2026-09-20T15:08:48.243Z",
+      "asOf": "2026-09-20T15:28:21.203Z",
       "cninfo": {
         "provider": "cninfo",
         "providerAttempted": true,
@@ -207,8 +242,8 @@
     }
   ],
   "primaryPITAudit": {
-    "bundleHash": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
-    "reversedHash": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
+    "bundleHash": "cae58a5d076e83d4b60c7e18f2c2659ae1abd27912c5e11eb69e3fbd24d5ab21",
+    "reversedHash": "cae58a5d076e83d4b60c7e18f2c2659ae1abd27912c5e11eb69e3fbd24d5ab21",
     "reversedEqual": true,
     "diagnostics": [],
     "estimateCount": 202,
@@ -228,14 +263,18 @@
     "oneLatestRevisionPerInstitution": true,
     "finitePaths": []
   },
-  "replay": {
-    "captureMode": "real capture once, identical in-memory replay twice",
-    "replayAHash": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
-    "replayHashB": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
-    "equal": true,
-    "normalBundleHash": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
-    "reversedBundleHash": "134304871b71c713b742d22c3cffa6da22801d5d9214306c60dddff13c5cdca5",
-    "reversedEqual": true
+  "bundleDeterminism": {
+    "available": true,
+    "normalHash": "cae58a5d076e83d4b60c7e18f2c2659ae1abd27912c5e11eb69e3fbd24d5ab21",
+    "reversedInputHash": "cae58a5d076e83d4b60c7e18f2c2659ae1abd27912c5e11eb69e3fbd24d5ab21",
+    "equal": true
+  },
+  "workflowReplay": {
+    "available": false,
+    "reason": "FULL_WORKFLOW_NOT_COMPLETED",
+    "replayAHash": null,
+    "replayBHash": null,
+    "equal": null
   },
   "degradation": {
     "available": false,
@@ -273,8 +312,8 @@
   "durability": {
     "knowledgeRevisionBefore": 1,
     "knowledgeRevisionAfter": 1,
-    "canonicalHashBefore": "eb5d39b36098cc92e6814972c92093d556a79844df6b94969743a4d8da1fb172",
-    "canonicalHashAfter": "eb5d39b36098cc92e6814972c92093d556a79844df6b94969743a4d8da1fb172",
+    "canonicalHashBefore": "7eaabece67f9835b45b0e7bbc10e8c2c3f80067a319d2b7aeaae6400f061183d",
+    "canonicalHashAfter": "7eaabece67f9835b45b0e7bbc10e8c2c3f80067a319d2b7aeaae6400f061183d",
     "canonicalEastmoneySourceCount": 0
   }
 }
