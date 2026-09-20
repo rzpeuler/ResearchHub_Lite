@@ -1,9 +1,24 @@
 import { sha256 } from '../../plugins/research-acquisition/hash.ts'
-import type { EastmoneyEstimateProjectionResult, EastmoneyReportAcquisitionResult, EastmoneyResearchReportRecord } from '../../plugins/research-acquisition/expectations/contracts.ts'
+import type { NormalizedResearchSource, ResearchProviderOutcome } from '../../plugins/research-acquisition/contracts.ts'
+import type { EastmoneyReportAcquisitionResult, EastmoneyResearchReportRecord } from '../../plugins/research-acquisition/expectations/contracts.ts'
 import { validateEstimatePoint } from '../../skills/earnings-review/expectations/matching.ts'
 import type { EstimatePoint } from '../../skills/earnings-review/expectations/contracts.ts'
 
 export const EASTMONEY_EPS_UNIT = 'CNY_per_share' as const
+
+export interface EastmoneyEstimateProjectionResult {
+  readonly sources: readonly NormalizedResearchSource[]
+  readonly estimates: readonly EstimatePoint[]
+  readonly institutions: readonly {
+    readonly institutionKey: string
+    readonly name: string
+    readonly providerCode: string
+  }[]
+  readonly diagnostics: readonly string[]
+  readonly providerOutcome: ResearchProviderOutcome
+  readonly forecastBaseYear?: number
+  readonly truncated: boolean
+}
 
 function uniqueSorted(values: readonly string[]): readonly string[] {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right))

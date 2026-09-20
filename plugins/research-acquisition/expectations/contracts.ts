@@ -56,17 +56,3 @@ export interface EastmoneyReportAcquisitionResult {
   readonly forecastBaseYear?: number
   readonly truncated: boolean
 }
-
-export interface EastmoneyEstimateProjectionResult {
-  readonly sources: readonly NormalizedResearchSource[]
-  readonly estimates: readonly import('../../../skills/earnings-review/expectations/contracts.ts').EstimatePoint[]
-  readonly institutions: readonly {
-    readonly institutionKey: string
-    readonly name: string
-    readonly providerCode: string
-  }[]
-  readonly diagnostics: readonly string[]
-  readonly providerOutcome: ResearchProviderOutcome
-  readonly forecastBaseYear?: number
-  readonly truncated: boolean
-}

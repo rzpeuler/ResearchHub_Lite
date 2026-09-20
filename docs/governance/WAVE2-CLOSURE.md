@@ -12,8 +12,8 @@ registries.
 - Status: `COMPLETE / CLOSED`
 - Accepted implementation HEAD: `18259cb7bcb1f42e35669c01b0cfa5af22c3bb16`
 - Closure / promoted main baseline: `origin/main` (final FF-only promoted commit recorded in delivery history)
-- Current active phase: post-Wave-2 closure
-- Next development track: `PENDING POST-CLOSURE DECISION`
+- Current active phase: `EXPECTATION-SOURCE-001 / 001A`
+- Next development track: `EXPECTATION-SOURCE-001` (`IN PROGRESS`)
 
 ## Task status
 
@@ -40,20 +40,21 @@ registries.
 - No Knowledge Schema revision was required, and no new top-level research Skill
   was created.
 
-## Remaining acquisition gap
+## Current acquisition track
 
-`EXPECTATION-SOURCE-001` remains a candidate next track for point-in-time
-expectation acquisition. It was not part of Wave 2 and is not implemented or
-accepted here. Its absence does not make the Wave 2 method implementation
-incomplete; Wave 2 consumes explicit historical expectation data when supplied.
+Live point-in-time expectation acquisition was not part of Wave 2.
 
-## Next-track decision state
+That product gap is now being addressed by the separate
+`EXPECTATION-SOURCE-001` track.
 
-- Wave 2: closed.
-- Preferred candidate: `EXPECTATION-SOURCE-001`.
-- Candidate status: `SELECTED / IN PROGRESS`.
-- Active slice: `001A`.
-- Wave 3: not started; status `PENDING POST-CLOSURE DECISION`.
+Current track status: `IN PROGRESS`
+
+Active slice: `001A Eastmoney Report-Level EPS Acquisition`
+
+001A is implemented on its isolated track but remains pending SOL acceptance.
+001B has not started.
+
+- Wave 3: not started.
 
 ## Closure history
 

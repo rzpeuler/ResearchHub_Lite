@@ -15,8 +15,11 @@ if (process.env.RHL_REAL_EXPECTATION_SOURCE !== '1') {
   const company = { symbol: '600519', name: '贵州茅台', exchange: 'SSE' as const }
   const calls: URL[] = []
   const client = new EastmoneyReportClient({ fetchImpl: async (input, init) => { calls.push(new URL(String(input))); return fetch(input, init) } })
-  const current = await client.acquire({ company, asOf, targetFiscalYear: now.getUTCFullYear() })
-  const currentProjection = projectEastmoneyEstimatePoints({ acquisition: current, targetFiscalYear: now.getUTCFullYear() })
+  const provisionalTargetFiscalYear = now.getUTCFullYear()
+  const current = await client.acquire({ company, asOf, targetFiscalYear: provisionalTargetFiscalYear })
+  if (current.forecastBaseYear === undefined) throw new Error('real preflight did not return provider forecastBaseYear')
+  const projectionTargetFiscalYear = current.forecastBaseYear
+  const currentProjection = projectEastmoneyEstimatePoints({ acquisition: current, targetFiscalYear: projectionTargetFiscalYear })
   if (!current.providerOutcome.providerSucceeded || current.sources.length === 0 || currentProjection.estimates.length === 0) throw new Error(`real preflight did not produce a usable EPS estimate: ${JSON.stringify({ current, currentProjection })}`)
   const currentEndTime = shanghaiDate(now)
   if (calls[0]?.searchParams.get('endTime') !== currentEndTime) throw new Error(`current request did not use Shanghai endTime: ${calls[0]?.searchParams.get('endTime')}`)
@@ -25,7 +28,7 @@ if (process.env.RHL_REAL_EXPECTATION_SOURCE !== '1') {
   for (const estimate of currentProjection.estimates) {
     if (!sourceIds.has(estimate.sourceCandidateIds[0] ?? '') || estimate.institutionKey === '' || estimate.unit !== 'CNY_per_share' || !Number.isFinite(estimate.value) || Date.parse(estimate.publishedAt) > Date.parse(asOf)) throw new Error(`real preflight estimate invariant failed: ${JSON.stringify(estimate)}`)
   }
-  const historical = await client.acquire({ company, asOf: historicalAsOf, targetFiscalYear: current.forecastBaseYear ?? now.getUTCFullYear() })
+  const historical = await client.acquire({ company, asOf: historicalAsOf, targetFiscalYear: current.forecastBaseYear })
   const historicalDatesValid = historical.records.every((item) => Date.parse(item.publishedAt) <= Date.parse(historicalAsOf))
   if (!historicalDatesValid) throw new Error('historical preflight included a report after asOf')
   const historicalEndTime = shanghaiDate(new Date(historicalAsOf))
@@ -33,6 +36,8 @@ if (process.env.RHL_REAL_EXPECTATION_SOURCE !== '1') {
   console.log(JSON.stringify({
     symbol: company.symbol,
     asOf,
+    provisionalTargetFiscalYear,
+    projectionTargetFiscalYear,
     providerCurrentYear: current.forecastBaseYear,
     reportsReturned: current.records.length,
     usableNormalizedSources: current.sources.length,
@@ -44,7 +49,7 @@ if (process.env.RHL_REAL_EXPECTATION_SOURCE !== '1') {
     historicalAsOf,
     historicalEndTime,
     historicalReports: historical.records.length,
-    historicalEstimatePoints: projectEastmoneyEstimatePoints({ acquisition: historical, targetFiscalYear: historical.forecastBaseYear ?? current.forecastBaseYear ?? now.getUTCFullYear() }).estimates.length,
+    historicalEstimatePoints: projectEastmoneyEstimatePoints({ acquisition: historical, targetFiscalYear: historical.forecastBaseYear ?? current.forecastBaseYear }).estimates.length,
     historicalAllTimestampsAtOrBeforeAsOf: historicalDatesValid,
   }, null, 2))
 }

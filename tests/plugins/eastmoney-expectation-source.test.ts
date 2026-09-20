@@ -1,8 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readdirSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { EastmoneyReportClient, normalizeEastmoneyTimestamp } from '../../plugins/research-acquisition/expectations/index.ts'
 
 const COMPANY = { symbol: '600519', name: '贵州茅台', exchange: 'SSE' as const }
+const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
@@ -23,6 +27,14 @@ function page(data: readonly unknown[], totalPages = 1, currentYear = 2026): Rec
 function client(fetchImpl: typeof fetch, options: { readonly now?: string; readonly maxPages?: number } = {}): EastmoneyReportClient {
   return new EastmoneyReportClient({ fetchImpl, now: () => options.now ?? '2026-09-20T00:00:00.000Z', maxPages: options.maxPages })
 }
+
+test('plugin expectation contracts and barrels have no reverse layer references', () => {
+  const expectationDir = join(REPOSITORY_ROOT, 'plugins', 'research-acquisition', 'expectations')
+  const expectationFiles = readdirSync(expectationDir).filter((name) => name.endsWith('.ts')).map((name) => join(expectationDir, name))
+  const inspectedFiles = [...expectationFiles, join(REPOSITORY_ROOT, 'plugins', 'research-acquisition', 'index.ts')]
+  const forbidden = /skills\/|workflows\/|knowledge\/|app\/|client\//
+  for (const file of inspectedFiles) assert.doesNotMatch(readFileSync(file, 'utf8'), forbidden, file)
+})
 
 test('Eastmoney request uses bounded PIT parameters and strict source normalization', async () => {
   const calls: URL[] = []
