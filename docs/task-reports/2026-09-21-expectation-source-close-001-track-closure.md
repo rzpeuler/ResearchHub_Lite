@@ -4,9 +4,9 @@ task_id: `RHL-EXPECTATION-SOURCE-CLOSE-001-TRACK-CLOSURE`
 status: `READY_FOR_SOL_REVIEW`
 baseline: `54cbf00ce594dbaf25d797324e2b19181a9912eb`
 branch: `codex/expectation-source-close-001`
-implementation_commit: `pending`
-verified_remote_tip: `pending`
-sync_status: `READY_TO_SYNC`
+implementation_commit: `7161c99f3867391cd39c1ca866dcd3f6b3af3c8f`
+verified_remote_tip: `7161c99f3867391cd39c1ca866dcd3f6b3af3c8f`
+sync_status: `SYNCED`
 
 ## Summary
 
