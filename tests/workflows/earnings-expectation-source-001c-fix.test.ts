@@ -34,18 +34,19 @@ test('001C-FIX-001 partial replay never exposes a one-sided Workflow hash', () =
   assert.equal(evidence.equal, null)
 })
 
-test('001C-FIX-001 committed blocked evidence keeps bundle determinism independent from Workflow replay', async () => {
+test('001C-FIX-001 committed real evidence keeps bundle determinism distinct from Workflow replay', async () => {
   const evidence = JSON.parse(await readFile('docs/project-state/evidence/2026-09-20-expectation-source-001c-real.json', 'utf8')) as {
     readonly bundleDeterminism: { readonly equal: boolean }
     readonly workflowReplay: { readonly available: boolean; readonly replayAHash: string | null; readonly replayBHash: string | null; readonly equal: boolean | null }
     readonly targets: readonly { readonly symbol: string; readonly reports: number; readonly estimates: number; readonly expectationProjectionDiagnostics?: readonly string[] }[]
   }
   assert.equal(evidence.bundleDeterminism.equal, true)
-  assert.equal(evidence.workflowReplay.available, false)
-  assert.equal(evidence.workflowReplay.replayAHash, null)
-  assert.equal(evidence.workflowReplay.replayBHash, null)
-  assert.equal(evidence.workflowReplay.equal, null)
+  assert.equal(evidence.workflowReplay.available, true)
+  assert.match(evidence.workflowReplay.replayAHash ?? '', /^[a-f0-9]{64}$/)
+  assert.equal(evidence.workflowReplay.replayAHash, evidence.workflowReplay.replayBHash)
+  assert.equal(evidence.workflowReplay.equal, true)
   const secondary = evidence.targets.find((target) => target.symbol === '300750')
   assert.ok(secondary && secondary.reports > 0)
-  assert.equal(secondary?.estimates === 0, secondary?.expectationProjectionDiagnostics?.some((item) => item.includes('eastmoney_target_fiscal_year_eps_unavailable')))
+  assert.ok((secondary?.estimates ?? 0) > 0)
+  assert.ok(secondary?.expectationProjectionDiagnostics?.some((item) => item.includes('automatic_result_cutoff_unavailable')))
 })

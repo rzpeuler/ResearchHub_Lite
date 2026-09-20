@@ -24,4 +24,6 @@ Other relevant Eastmoney statement APIs were probed but returned a provider-side
 - Full 001C real E2E passed with the clean repository-managed CPU-only environment.
 - No valuation arithmetic, expectation methodology, Thesis state, Knowledge schema, or canonical mutation was changed.
 
-Evidence: `docs/project-state/evidence/2026-09-21-expectation-source-001c-env-001.json`.
+Summary evidence: `docs/project-state/evidence/2026-09-21-expectation-source-001c-env-001.json`.
+
+Detailed real-run evidence: `docs/project-state/evidence/2026-09-20-expectation-source-001c-real.json`.

@@ -1,53 +1,115 @@
 {
   "taskId": "RHL-EXPECTATION-SOURCE-001C-REAL-PIT-E2E-ROBUSTNESS",
-  "generatedAt": "2026-09-20T15:55:05.877Z",
+  "generatedAt": "2026-09-20T18:11:56.778Z",
   "baseline": "033394269a847118468a3fd27f4cbb25be0a6d13",
   "acceptanceScriptVersion": "001C-FIX-001",
-  "executionClass": "gated real-provider partial E2E; Eastmoney PIT capture/assembly validated; full Workflow externally blocked",
+  "executionClass": "gated real-provider E2E with in-memory Workflow replay",
   "environment": {
     "node": "v24.16.0",
     "documentParser": {
       "preflightCommand": "npm run document-parser:check",
       "command": "managed-python plugins/document/parsers/docling/bridge/docling_bridge.py <temporary-pdf>",
-      "exitCode": 1,
-      "stderrSummary": "[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used. [redacted] RequestsDependencyWarning: urllib3 (2.6.1) or chardet (7.4.3)/charset_normalizer (3.4.4) doesn't match a supported version! warnings.warn( document_parser_failed: No module named 'torch'",
-      "stdoutSummary": "",
-      "bridgeInvocationFailure": "[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used. [redacted] RequestsDependencyWarning: urllib3 (2.6.1) or chardet (7.4.3)/charset_normalizer (3.4.4) doesn't match a supported version! warnings.warn( document_parser_failed: No module named 'torch'",
-      "classification": "EXTERNAL_DEPENDENCY_BLOCKED",
+      "exitCode": 0,
+      "stderrSummary": "",
+      "stdoutSummary": "bridge returned structured output",
+      "classification": "ENVIRONMENT_CONFIGURATION_FIXED",
       "pythonExecutable": ".researchhub-document-parser/venv/Scripts/python.exe",
       "doclingVersion": "2.116.0",
       "modelArtifactPath": ".researchhub-document-parser/models",
-      "status": "BRIDGE_SMOKE_FAILED",
+      "status": "READY",
       "pythonReady": true,
       "dependencyReady": true,
       "artifactsReady": true,
-      "bridgeReady": false
+      "bridgeReady": true,
+      "torchVersion": "2.14.0+cpu",
+      "torchCuda": null,
+      "torchCudaAvailable": false,
+      "torchCpuOnly": true,
+      "torchvisionVersion": "0.29.0+cpu"
     },
     "akshareBridge": "available:1.18.64",
     "akshareDiagnostics": [
       {
         "symbol": "600519",
         "rawCallSucceeded": true,
-        "rawRowCount": 0,
-        "periodLabels": [],
-        "requestedExactPeriod": "2026-H1",
-        "requestedExactPeriodFound": false,
-        "normalizerDiagnostics": [
-          "Exact financial period 2026-H1 was not found"
+        "rawRowCount": 103,
+        "periodLabels": [
+          "1998-12-31 00:00:00",
+          "1999-12-31 00:00:00",
+          "2000-12-31 00:00:00",
+          "2001-06-30 00:00:00",
+          "2001-12-31 00:00:00",
+          "2002-03-31 00:00:00",
+          "2002-06-30 00:00:00",
+          "2002-09-30 00:00:00",
+          "2002-12-31 00:00:00",
+          "2003-03-31 00:00:00",
+          "2003-06-30 00:00:00",
+          "2003-09-30 00:00:00",
+          "2003-12-31 00:00:00",
+          "2004-03-31 00:00:00",
+          "2004-06-30 00:00:00",
+          "2004-09-30 00:00:00",
+          "2004-12-31 00:00:00",
+          "2005-03-31 00:00:00",
+          "2005-06-30 00:00:00",
+          "2005-09-30 00:00:00",
+          "2005-12-31 00:00:00",
+          "2006-03-31 00:00:00",
+          "2006-06-30 00:00:00",
+          "2006-09-30 00:00:00",
+          "2006-12-31 00:00:00",
+          "2007-03-31 00:00:00",
+          "2007-06-30 00:00:00",
+          "2007-09-30 00:00:00",
+          "2007-12-31 00:00:00",
+          "2008-03-31 00:00:00"
         ],
-        "classification": "UPSTREAM_EMPTY"
+        "requestedExactPeriod": "2026-H1",
+        "requestedExactPeriodFound": true,
+        "normalizerDiagnostics": [],
+        "classification": "usable"
       },
       {
         "symbol": "300750",
         "rawCallSucceeded": true,
-        "rawRowCount": 0,
-        "periodLabels": [],
-        "requestedExactPeriod": "2026-H1",
-        "requestedExactPeriodFound": false,
-        "normalizerDiagnostics": [
-          "Exact financial period 2026-H1 was not found"
+        "rawRowCount": 41,
+        "periodLabels": [
+          "2014-12-31 00:00:00",
+          "2015-12-31 00:00:00",
+          "2016-12-31 00:00:00",
+          "2017-03-31 00:00:00",
+          "2017-06-30 00:00:00",
+          "2017-09-30 00:00:00",
+          "2017-12-31 00:00:00",
+          "2018-03-31 00:00:00",
+          "2018-06-30 00:00:00",
+          "2018-09-30 00:00:00",
+          "2018-12-31 00:00:00",
+          "2019-03-31 00:00:00",
+          "2019-06-30 00:00:00",
+          "2019-09-30 00:00:00",
+          "2019-12-31 00:00:00",
+          "2020-03-31 00:00:00",
+          "2020-06-30 00:00:00",
+          "2020-09-30 00:00:00",
+          "2020-12-31 00:00:00",
+          "2021-03-31 00:00:00",
+          "2021-06-30 00:00:00",
+          "2021-09-30 00:00:00",
+          "2021-12-31 00:00:00",
+          "2022-03-31 00:00:00",
+          "2022-06-30 00:00:00",
+          "2022-09-30 00:00:00",
+          "2022-12-31 00:00:00",
+          "2023-03-31 00:00:00",
+          "2023-06-30 00:00:00",
+          "2023-09-30 00:00:00"
         ],
-        "classification": "UPSTREAM_EMPTY"
+        "requestedExactPeriod": "2026-H1",
+        "requestedExactPeriodFound": true,
+        "normalizerDiagnostics": [],
+        "classification": "usable"
       }
     ],
     "cninfo": "verified by gated target capture",
@@ -59,23 +121,23 @@
       "exchange": "SSE",
       "fiscalYear": 2026,
       "period": "H1",
-      "asOf": "2026-09-20T15:54:28.691Z",
+      "asOf": "2026-09-20T18:04:20.197Z",
       "resultPublishedAt": "2026-08-14T16:00:00.000Z",
       "cninfo": {
         "provider": "cninfo",
         "providerAttempted": true,
-        "providerSucceeded": false,
+        "providerSucceeded": true,
         "providerEmpty": false,
-        "providerFailed": true,
-        "usableSourceCount": 0
+        "providerFailed": false,
+        "usableSourceCount": 1
       },
       "akshare": {
         "provider": "akshare",
         "providerAttempted": true,
-        "providerSucceeded": false,
-        "providerEmpty": true,
+        "providerSucceeded": true,
+        "providerEmpty": false,
         "providerFailed": false,
-        "usableSourceCount": 0
+        "usableSourceCount": 1
       },
       "eastmoney": {
         "provider": "eastmoney-reportapi",
@@ -98,19 +160,19 @@
       "crossResultRevisionCount": 11,
       "actualConsensusComparisonCount": 0,
       "actualPriorEstimateComparisonCount": 0,
-      "estimateRevisionCount": 0,
-      "valuationImpactCount": 0,
-      "valuationRefreshRequired": false,
+      "estimateRevisionCount": 22,
+      "valuationImpactCount": 22,
+      "valuationRefreshRequired": true,
       "thesisCounts": {
-        "thesisCritical": 0,
+        "thesisCritical": 22,
         "thesisRelevant": 0,
         "thesisUncertain": 0
       },
-      "expectationInputMode": "none",
-      "expectationAcquisitionStatus": "not_attempted",
-      "expectationStatus": "not_provided",
-      "workflowStatus": "blocked",
-      "reportSectionCount": 0,
+      "expectationInputMode": "automatic",
+      "expectationAcquisitionStatus": "available",
+      "expectationStatus": "available",
+      "workflowStatus": "completed",
+      "reportSectionCount": 14,
       "expectationProjectionDiagnostics": [],
       "allContributorsStrictlyPreResult": true,
       "postResultEstimatesInConsensus": false,
@@ -123,7 +185,7 @@
       "exchange": "SZSE",
       "fiscalYear": 2026,
       "period": "H1",
-      "asOf": "2026-09-20T15:54:28.691Z",
+      "asOf": "2026-09-20T18:04:20.197Z",
       "cninfo": {
         "provider": "cninfo",
         "providerAttempted": true,
@@ -135,10 +197,10 @@
       "akshare": {
         "provider": "akshare",
         "providerAttempted": true,
-        "providerSucceeded": false,
-        "providerEmpty": true,
+        "providerSucceeded": true,
+        "providerEmpty": false,
         "providerFailed": false,
-        "usableSourceCount": 0
+        "usableSourceCount": 1
       },
       "eastmoney": {
         "provider": "eastmoney-reportapi",
@@ -161,19 +223,19 @@
       "crossResultRevisionCount": 0,
       "actualConsensusComparisonCount": 0,
       "actualPriorEstimateComparisonCount": 0,
-      "estimateRevisionCount": 0,
-      "valuationImpactCount": 0,
-      "valuationRefreshRequired": false,
+      "estimateRevisionCount": 18,
+      "valuationImpactCount": 18,
+      "valuationRefreshRequired": true,
       "thesisCounts": {
-        "thesisCritical": 0,
+        "thesisCritical": 18,
         "thesisRelevant": 0,
         "thesisUncertain": 0
       },
-      "expectationInputMode": "none",
-      "expectationAcquisitionStatus": "not_attempted",
-      "expectationStatus": "not_provided",
-      "workflowStatus": "blocked",
-      "reportSectionCount": 0,
+      "expectationInputMode": "automatic",
+      "expectationAcquisitionStatus": "partial",
+      "expectationStatus": "partial",
+      "workflowStatus": "completed",
+      "reportSectionCount": 14,
       "expectationProjectionDiagnostics": [
         "automatic_result_cutoff_unavailable"
       ],
@@ -188,7 +250,7 @@
       "exchange": "SSE",
       "fiscalYear": 2025,
       "period": "FY",
-      "asOf": "2026-09-20T15:54:28.691Z",
+      "asOf": "2026-09-20T18:04:20.197Z",
       "cninfo": {
         "provider": "cninfo",
         "providerAttempted": true,
@@ -200,10 +262,10 @@
       "akshare": {
         "provider": "akshare",
         "providerAttempted": true,
-        "providerSucceeded": false,
-        "providerEmpty": true,
+        "providerSucceeded": true,
+        "providerEmpty": false,
         "providerFailed": false,
-        "usableSourceCount": 0
+        "usableSourceCount": 1
       },
       "eastmoney": {
         "provider": "eastmoney-reportapi",
@@ -234,11 +296,11 @@
         "thesisRelevant": 0,
         "thesisUncertain": 0
       },
-      "expectationInputMode": "none",
-      "expectationAcquisitionStatus": "not_attempted",
-      "expectationStatus": "not_provided",
-      "workflowStatus": "blocked",
-      "reportSectionCount": 0,
+      "expectationInputMode": "automatic",
+      "expectationAcquisitionStatus": "unavailable",
+      "expectationStatus": "unavailable",
+      "workflowStatus": "completed",
+      "reportSectionCount": 14,
       "expectationProjectionDiagnostics": [
         "eastmoney_target_fiscal_year_eps_unavailable:2025",
         "eastmoney_unsupported_target_fiscal_year:2025"
@@ -251,8 +313,8 @@
     }
   ],
   "primaryPITAudit": {
-    "bundleHash": "fddcbac89cffff61d91a09652b9d241dbd65e9ed08bf64b3fe24d8bf04b439e1",
-    "reversedHash": "fddcbac89cffff61d91a09652b9d241dbd65e9ed08bf64b3fe24d8bf04b439e1",
+    "bundleHash": "6b97f1a7ef2783fb3d9460ab0f3957a1a54e312b5f52500e6a1aa005c5e94d04",
+    "reversedHash": "6b97f1a7ef2783fb3d9460ab0f3957a1a54e312b5f52500e6a1aa005c5e94d04",
     "reversedEqual": true,
     "diagnostics": [],
     "estimateCount": 202,
@@ -274,19 +336,33 @@
   },
   "bundleDeterminism": {
     "available": true,
-    "normalHash": "fddcbac89cffff61d91a09652b9d241dbd65e9ed08bf64b3fe24d8bf04b439e1",
-    "reversedInputHash": "fddcbac89cffff61d91a09652b9d241dbd65e9ed08bf64b3fe24d8bf04b439e1",
+    "normalHash": "6b97f1a7ef2783fb3d9460ab0f3957a1a54e312b5f52500e6a1aa005c5e94d04",
+    "reversedInputHash": "6b97f1a7ef2783fb3d9460ab0f3957a1a54e312b5f52500e6a1aa005c5e94d04",
     "equal": true
   },
   "workflowReplay": {
-    "available": false,
-    "reason": "FULL_WORKFLOW_NOT_COMPLETED",
-    "replayAHash": null,
-    "replayBHash": null,
-    "equal": null
+    "available": true,
+    "replayAHash": "679dba4b35837eaaa42218db97be66b74eea8cccd311e2be31fc89ffdfab74b2",
+    "replayBHash": "679dba4b35837eaaa42218db97be66b74eea8cccd311e2be31fc89ffdfab74b2",
+    "equal": true
   },
   "degradation": {
-    "available": false,
+    "available": true,
+    "acceptedProposalSetEqual": true,
+    "committedIdsEqual": true,
+    "failureCompleted": true,
+    "failureAcquisitionStatus": "failed",
+    "failureExpectationStatus": "unavailable",
+    "failureMethodologyTruthful": true,
+    "knowledgeRevisionBefore": 1,
+    "knowledgeRevisionAfter": 1,
+    "canonicalHashBefore": "92389fcd30848a27d18dc227c9a572ed33fbca398f42ba20d2348dea682a9444",
+    "canonicalHashAfter": "92389fcd30848a27d18dc227c9a572ed33fbca398f42ba20d2348dea682a9444",
+    "canonicalEastmoneySourceCount": 0,
+    "failureKnowledgeRevisionBefore": 1,
+    "failureKnowledgeRevisionAfter": 1,
+    "failureCanonicalHashBefore": "92389fcd30848a27d18dc227c9a572ed33fbca398f42ba20d2348dea682a9444",
+    "failureCanonicalHashAfter": "92389fcd30848a27d18dc227c9a572ed33fbca398f42ba20d2348dea682a9444",
     "expectationFailureProbe": {
       "acquisitionStatus": "failed",
       "estimateCount": 0,
@@ -295,7 +371,7 @@
         "automatic_expectation_source_exception:[injected failure]"
       ]
     },
-    "baseWorkflowFailureInjectionExercised": false
+    "baseWorkflowFailureInjectionExercised": true
   },
   "historicalCapability": {
     "liveCurrentForecastAndRevisionReady": true,
@@ -314,15 +390,15 @@
   "notes": [
     "No raw provider bodies were persisted.",
     "Eastmoney expectations remain report-only.",
-    "A second target is retained even if externally blocked.",
+    "A second target is retained with partial expectation status because its result cutoff is unavailable.",
     "No production behavior was changed by the acceptance harness."
   ],
-  "overallClassification": "EXTERNAL_SOURCE_BLOCKED",
+  "overallClassification": "PASS",
   "durability": {
     "knowledgeRevisionBefore": 1,
     "knowledgeRevisionAfter": 1,
-    "canonicalHashBefore": "0cca543cd4b09165b1bf06e17142a4ea77a8184af40bf9a6ca9fe35135d94e75",
-    "canonicalHashAfter": "0cca543cd4b09165b1bf06e17142a4ea77a8184af40bf9a6ca9fe35135d94e75",
+    "canonicalHashBefore": "92389fcd30848a27d18dc227c9a572ed33fbca398f42ba20d2348dea682a9444",
+    "canonicalHashAfter": "92389fcd30848a27d18dc227c9a572ed33fbca398f42ba20d2348dea682a9444",
     "canonicalEastmoneySourceCount": 0
   }
 }

@@ -52,11 +52,13 @@ Current track status: `IN PROGRESS`
 Active slice: `001C Real PIT E2E, Robustness & Closure Readiness`
 
 001A is COMPLETE / SOL accepted. 001B is COMPLETE / SOL accepted. 001C is
-implemented on its isolated branch and remains pending SOL acceptance. Its
-gated real run is externally blocked before full earnings-report completion;
-see the evidence artifact for the provider-level facts.
+`IMPLEMENTED / SOL ACCEPTANCE PENDING` on its isolated branch. Its final gated
+real run completed with the repaired parser environment and provider-level
+evidence; see the detailed evidence artifact for the fresh values.
 
-- 001C: in progress / pending SOL acceptance.
+- EXPECTATION-SOURCE-001: IN PROGRESS.
+- 001C: IMPLEMENTED / SOL ACCEPTANCE PENDING.
+- Wave 2: COMPLETE / CLOSED.
 - Wave 3: not started.
 
 ## Closure history

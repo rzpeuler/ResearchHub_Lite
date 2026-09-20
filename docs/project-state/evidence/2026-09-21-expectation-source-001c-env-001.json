@@ -1,6 +1,6 @@
 {
   "taskId": "RHL-EXPECTATION-SOURCE-001C-ENV-001-PARSER-FINANCIAL-UNBLOCK",
-  "generatedAt": "2026-09-21T00:43:48+08:00",
+  "generatedAt": "2026-09-21T02:17:11+08:00",
   "baseline": {
     "requiredShort": "455bfac",
     "resolved": "455bfacdb72e6ac06ffb0a13ca66a5f27f1e9f0d",
@@ -43,6 +43,8 @@
   },
   "001A": { "realRun": true, "symbol": "600519", "providerCurrentYear": 2026, "reportsReturned": 224, "usableNormalizedSources": 224, "estimatePoints": 202, "distinctInstitutions": 25, "historicalReports": 224, "historicalEstimatePoints": 202, "historicalAllTimestampsAtOrBeforeAsOf": true },
   "001C": { "realRerun": "PASS_WITH_CLEAN_MANAGED_ENVIRONMENT", "primaryWorkflow": "completed", "primaryReportSections": 14, "primaryExpectations": "automatic/available", "primaryEstimateRevisionCount": 22, "primaryValuationImpactCount": 22, "primaryValuationRefreshRequired": true, "primaryThesisCriticalCount": 22, "pitDeterminism": true, "workflowReplay": true, "degradation": true, "secondaryWorkflow": "completed_partial", "historicalCapability": "rolling-window limited", "cleanSetupReady": true, "overallClassification": "PASS" },
+  "detailed001cEvidence": "docs/project-state/evidence/2026-09-20-expectation-source-001c-real.json",
+  "detailedEvidenceSemanticHash": "8E9BEEE8A6C09D6A68822E84464ED526A757F77987E29EFE16DF3373CD0A782D",
   "validation": { "focusedTests": "42/42", "nodeTests": "1205/1205", "typecheck": "PASS", "clientTypecheck": "PASS", "clientBuild": "PASS", "documentParserCheck": "READY" },
   "privacy": { "rawProviderBodiesIncluded": false, "credentialsIncluded": false, "privatePathsIncluded": false, "fullInstallLogsIncluded": false }
 }

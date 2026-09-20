@@ -100,28 +100,47 @@ The annual estimate period remains `2026-FY`; the actual Earnings period is
 actual-vs-prior-estimate comparison for those annual estimates. Annual
 revisions remain valid annual signals and are not relabeled as H1 evidence.
 
-The live full Workflow case is externally blocked in this environment before
-report completion. Repository-authoritative parser preflight is
-`BRIDGE_SMOKE_FAILED` with Python ready, Docling `2.116.0`, model artifacts
-ready, and bridge exit code `1`; the captured bridge stderr ends with
-`document_parser_failed: No module named 'torch'`, classified as
-`EXTERNAL_DEPENDENCY_BLOCKED`. The AKShare bridge is
-installed (`1.18.64`) but independent calls for both `600519` and `300750`
-returned zero rows and were classified `UPSTREAM_EMPTY`. The evidence therefore
-does not claim a full 14-section real-provider report pass. The live Eastmoney
-contract still demonstrated current forecast/revision readiness, while
-historical FY2025 surprise reconstruction remains unavailable because
-`forecastBaseYear=2026` and the endpoint exposes a rolling current-year/+1/+2
-horizon. No year relabeling or fabricated historical consensus is permitted.
+The parser environment was repaired before the final rerun: the managed
+environment reports Docling `2.116.0`, Torch `2.14.0+cpu`, torchvision
+`0.29.0+cpu`, CPU-only execution, and a passing bridge smoke. The Windows
+setup uses the detected local SOCKS5 proxy, exact official CPU wheels, and
+short temporary staging to avoid the earlier dependency and Long Path failures.
+The financial adapter was also repaired narrowly: the legacy
+`stock_financial_analysis_indicator` call remains classified
+`TRUE_UPSTREAM_EMPTY`, while `stock_financial_analysis_indicator_em` with
+`600519.SH` / `300750.SZ` provides usable exact `2026-H1` financial data.
 
-The current 300750 rerun returned 136 report records and 124 valid 2026-FY EPS
-points across 19 institutions; it was not treated as an empty projection. The
-600519 FY2025 negative case returned zero points with explicit unsupported-year
-diagnostics, preserving the rolling-window conclusion.
+The final live 600519 / SSE / 2026 H1 Workflow completed with the required 14
+report sections. CNINFO, AKShare, and Eastmoney each supplied usable evidence;
+Eastmoney supplied 224 reports, 202 EstimatePoints, and 25 institutions. The
+result was published at `2026-08-14T16:00:00.000Z`; 191 estimates were strictly
+pre-result and 11 were post-result history. The PIT cutoff was
+`2026-08-14T15:59:59.999Z`, with one consensus snapshot and 25 contributors,
+22 revision links, and 11 cross-result revisions. No post-result estimate
+entered consensus, and bundle reversal remained deterministic.
 
-The acceptance evidence distinguishes deterministic bundle assembly from
-Workflow replay. Reversed-input assembly is demonstrated by equal normal and
-reversed bundle hashes; `workflowReplay` remains unavailable with
-`FULL_WORKFLOW_NOT_COMPLETED`, and both replay hashes are null because two
-completed Workflow replays did not occur. This is a blocked partial E2E result,
-not a replay pass.
+The annual expectation period remains `2026-FY`, while the actual Earnings
+period is `2026-H1`; actual-vs-consensus and actual-vs-prior-estimate counts
+therefore remain zero. The Workflow produced 22 estimate revisions, 22
+valuation-impact bridge findings, and `valuationRefreshRequired=true`, without
+calculating a target price. Existing first-class Thesis context classified all
+22 findings as critical, with zero relevant or uncertain findings, and did not
+mutate Thesis state.
+
+Two complete captured-input Workflow replays produced identical hashes
+(`679dba4b35837eaaa42218db97be66b74eea8cccd311e2be31fc89ffdfab74b2`), while
+the independent bundle determinism hash was
+`6b97f1a7ef2783fb3d9460ab0f3957a1a54e312b5f52500e6a1aa005c5e94d04` for both
+normal and reversed input. The full injected-Eastmoney-failure Workflow also
+completed with the 14-section base report preserved, expectation acquisition
+`failed`, expectation status `unavailable`, truthful methodology, unchanged
+Knowledge revision/hash, and zero canonical Eastmoney Sources.
+
+The 300750 / SZSE / 2026 H1 Workflow completed partially with 14 sections,
+usable AKShare exact-period evidence, 136 Eastmoney reports, 124 estimates,
+19 institutions, 18 revision links, and 18 critical Thesis findings. Its
+result cutoff was unavailable, so no consensus was asserted. The 600519 FY2025
+case completed with `forecastBaseYear=2026`, zero usable estimates, no fabricated
+consensus, and explicit unsupported-year diagnostics. Historical surprise
+reconstruction remains limited because the provider exposes only a rolling
+current-year/+1/+2 forecast horizon; no year relabeling is permitted.
