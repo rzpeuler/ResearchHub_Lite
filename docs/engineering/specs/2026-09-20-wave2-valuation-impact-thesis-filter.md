@@ -113,13 +113,16 @@ input order produced the same bundle hash; no post-result estimate entered the
 consensus and all source bindings were valid. The negative 600519 FY2025 case
 was unavailable because the live provider forecast base year was 2026, which
 is recorded as the rolling-window limitation rather than fabricated historical
-truth. The 300750 H1 capture returned reports but no valid EPS points.
+truth. The latest 300750 H1 capture returned 136 reports, 136 normalized
+sources, and 124 valid 2026-FY EPS points across 19 institutions. It remained
+Workflow blocked because the official-provider path did not complete.
 
 The end-to-end workflow is externally blocked in this environment: CNINFO
 normalization requires the managed document-parser runtime. Repository-
 authoritative preflight reports `BRIDGE_SMOKE_FAILED` with Python ready,
 Docling `2.116.0`, model artifacts ready, and bridge exit code `1`; the exact
-captured failure ends with `document_parser_failed: No module named 'torch'`.
+captured failure ends with `document_parser_failed: No module named 'torch'`,
+classified as `EXTERNAL_DEPENDENCY_BLOCKED`.
 The AKShare bridge is installed (`1.18.64`) but independent calls for both live
 symbols returned zero rows and were classified `UPSTREAM_EMPTY`.
 Therefore the evidence records the implementation as externally blocked, not

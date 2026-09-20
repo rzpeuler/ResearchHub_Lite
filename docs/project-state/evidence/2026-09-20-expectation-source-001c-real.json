@@ -1,6 +1,6 @@
 {
   "taskId": "RHL-EXPECTATION-SOURCE-001C-REAL-PIT-E2E-ROBUSTNESS",
-  "generatedAt": "2026-09-20T15:28:56.786Z",
+  "generatedAt": "2026-09-20T15:55:05.877Z",
   "baseline": "033394269a847118468a3fd27f4cbb25be0a6d13",
   "acceptanceScriptVersion": "001C-FIX-001",
   "executionClass": "gated real-provider partial E2E; Eastmoney PIT capture/assembly validated; full Workflow externally blocked",
@@ -13,6 +13,7 @@
       "stderrSummary": "[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used. [redacted] RequestsDependencyWarning: urllib3 (2.6.1) or chardet (7.4.3)/charset_normalizer (3.4.4) doesn't match a supported version! warnings.warn( document_parser_failed: No module named 'torch'",
       "stdoutSummary": "",
       "bridgeInvocationFailure": "[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used. [redacted] RequestsDependencyWarning: urllib3 (2.6.1) or chardet (7.4.3)/charset_normalizer (3.4.4) doesn't match a supported version! warnings.warn( document_parser_failed: No module named 'torch'",
+      "classification": "EXTERNAL_DEPENDENCY_BLOCKED",
       "pythonExecutable": ".researchhub-document-parser/venv/Scripts/python.exe",
       "doclingVersion": "2.116.0",
       "modelArtifactPath": ".researchhub-document-parser/models",
@@ -58,7 +59,7 @@
       "exchange": "SSE",
       "fiscalYear": 2026,
       "period": "H1",
-      "asOf": "2026-09-20T15:28:21.203Z",
+      "asOf": "2026-09-20T15:54:28.691Z",
       "resultPublishedAt": "2026-08-14T16:00:00.000Z",
       "cninfo": {
         "provider": "cninfo",
@@ -110,6 +111,7 @@
       "expectationStatus": "not_provided",
       "workflowStatus": "blocked",
       "reportSectionCount": 0,
+      "expectationProjectionDiagnostics": [],
       "allContributorsStrictlyPreResult": true,
       "postResultEstimatesInConsensus": false,
       "sourceBindingsValid": true,
@@ -121,7 +123,7 @@
       "exchange": "SZSE",
       "fiscalYear": 2026,
       "period": "H1",
-      "asOf": "2026-09-20T15:28:21.203Z",
+      "asOf": "2026-09-20T15:54:28.691Z",
       "cninfo": {
         "provider": "cninfo",
         "providerAttempted": true,
@@ -149,13 +151,13 @@
       "forecastBaseYear": 2026,
       "reports": 136,
       "expectationSources": 136,
-      "estimates": 0,
-      "institutions": 0,
+      "estimates": 124,
+      "institutions": 19,
       "preResultEstimateCount": 0,
       "postResultEstimateCount": 0,
       "consensusSnapshotCount": 0,
       "consensusContributorCount": 0,
-      "revisionLinkCount": 0,
+      "revisionLinkCount": 18,
       "crossResultRevisionCount": 0,
       "actualConsensusComparisonCount": 0,
       "actualPriorEstimateComparisonCount": 0,
@@ -172,9 +174,12 @@
       "expectationStatus": "not_provided",
       "workflowStatus": "blocked",
       "reportSectionCount": 0,
+      "expectationProjectionDiagnostics": [
+        "automatic_result_cutoff_unavailable"
+      ],
       "allContributorsStrictlyPreResult": false,
       "postResultEstimatesInConsensus": false,
-      "sourceBindingsValid": false,
+      "sourceBindingsValid": true,
       "invalidRevisionLinks": [],
       "finitePaths": []
     },
@@ -183,7 +188,7 @@
       "exchange": "SSE",
       "fiscalYear": 2025,
       "period": "FY",
-      "asOf": "2026-09-20T15:28:21.203Z",
+      "asOf": "2026-09-20T15:54:28.691Z",
       "cninfo": {
         "provider": "cninfo",
         "providerAttempted": true,
@@ -234,16 +239,20 @@
       "expectationStatus": "not_provided",
       "workflowStatus": "blocked",
       "reportSectionCount": 0,
+      "expectationProjectionDiagnostics": [
+        "eastmoney_target_fiscal_year_eps_unavailable:2025",
+        "eastmoney_unsupported_target_fiscal_year:2025"
+      ],
       "allContributorsStrictlyPreResult": false,
       "postResultEstimatesInConsensus": false,
-      "sourceBindingsValid": false,
+      "sourceBindingsValid": true,
       "invalidRevisionLinks": [],
       "finitePaths": []
     }
   ],
   "primaryPITAudit": {
-    "bundleHash": "cae58a5d076e83d4b60c7e18f2c2659ae1abd27912c5e11eb69e3fbd24d5ab21",
-    "reversedHash": "cae58a5d076e83d4b60c7e18f2c2659ae1abd27912c5e11eb69e3fbd24d5ab21",
+    "bundleHash": "fddcbac89cffff61d91a09652b9d241dbd65e9ed08bf64b3fe24d8bf04b439e1",
+    "reversedHash": "fddcbac89cffff61d91a09652b9d241dbd65e9ed08bf64b3fe24d8bf04b439e1",
     "reversedEqual": true,
     "diagnostics": [],
     "estimateCount": 202,
@@ -265,8 +274,8 @@
   },
   "bundleDeterminism": {
     "available": true,
-    "normalHash": "cae58a5d076e83d4b60c7e18f2c2659ae1abd27912c5e11eb69e3fbd24d5ab21",
-    "reversedInputHash": "cae58a5d076e83d4b60c7e18f2c2659ae1abd27912c5e11eb69e3fbd24d5ab21",
+    "normalHash": "fddcbac89cffff61d91a09652b9d241dbd65e9ed08bf64b3fe24d8bf04b439e1",
+    "reversedInputHash": "fddcbac89cffff61d91a09652b9d241dbd65e9ed08bf64b3fe24d8bf04b439e1",
     "equal": true
   },
   "workflowReplay": {
@@ -312,8 +321,8 @@
   "durability": {
     "knowledgeRevisionBefore": 1,
     "knowledgeRevisionAfter": 1,
-    "canonicalHashBefore": "7eaabece67f9835b45b0e7bbc10e8c2c3f80067a319d2b7aeaae6400f061183d",
-    "canonicalHashAfter": "7eaabece67f9835b45b0e7bbc10e8c2c3f80067a319d2b7aeaae6400f061183d",
+    "canonicalHashBefore": "0cca543cd4b09165b1bf06e17142a4ea77a8184af40bf9a6ca9fe35135d94e75",
+    "canonicalHashAfter": "0cca543cd4b09165b1bf06e17142a4ea77a8184af40bf9a6ca9fe35135d94e75",
     "canonicalEastmoneySourceCount": 0
   }
 }

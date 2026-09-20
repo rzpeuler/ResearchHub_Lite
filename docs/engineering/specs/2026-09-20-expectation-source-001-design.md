@@ -104,7 +104,8 @@ The live full Workflow case is externally blocked in this environment before
 report completion. Repository-authoritative parser preflight is
 `BRIDGE_SMOKE_FAILED` with Python ready, Docling `2.116.0`, model artifacts
 ready, and bridge exit code `1`; the captured bridge stderr ends with
-`document_parser_failed: No module named 'torch'`. The AKShare bridge is
+`document_parser_failed: No module named 'torch'`, classified as
+`EXTERNAL_DEPENDENCY_BLOCKED`. The AKShare bridge is
 installed (`1.18.64`) but independent calls for both `600519` and `300750`
 returned zero rows and were classified `UPSTREAM_EMPTY`. The evidence therefore
 does not claim a full 14-section real-provider report pass. The live Eastmoney
@@ -112,6 +113,11 @@ contract still demonstrated current forecast/revision readiness, while
 historical FY2025 surprise reconstruction remains unavailable because
 `forecastBaseYear=2026` and the endpoint exposes a rolling current-year/+1/+2
 horizon. No year relabeling or fabricated historical consensus is permitted.
+
+The current 300750 rerun returned 136 report records and 124 valid 2026-FY EPS
+points across 19 institutions; it was not treated as an empty projection. The
+600519 FY2025 negative case returned zero points with explicit unsupported-year
+diagnostics, preserving the rolling-window conclusion.
 
 The acceptance evidence distinguishes deterministic bundle assembly from
 Workflow replay. Reversed-input assembly is demonstrated by equal normal and
