@@ -184,7 +184,7 @@ test('explicit empty caller bundle remains caller-owned', async () => {
   const caller = { sources: [], estimates: [], consensusSnapshots: [] }
   const result = await resolveEarningsExpectations({ workflow: workflow({ expectations: caller }), company: workflow().company, analysisAsOf: AS_OF })
   assert.equal(result.mode, 'caller')
-  assert.equal(result.acquisitionStatus, 'unavailable')
+  assert.equal(result.acquisitionStatus, 'not_attempted')
 })
 
 test('no caller and no source preserves no-attempt behavior', async () => {
@@ -237,7 +237,20 @@ test('workflow caller bundle wins over configured automatic source', async () =>
     assert.equal(result.status, 'completed')
     assert.equal(calls.length, 0)
     assert.equal(result.telemetry.expectationInputMode, 'caller')
-    assert.equal(result.telemetry.expectationAcquisitionStatus, 'unavailable')
+    assert.equal(result.telemetry.expectationAcquisitionStatus, 'not_attempted')
+    assert.equal(result.telemetry.expectationStatus, 'unavailable')
+    assert.equal(result.providerOutcomes.some((item) => item.provider === 'eastmoney-reportapi'), false)
+  } finally { await fixture.close() }
+})
+
+test('non-empty caller expectations remain caller-owned and never report provider acquisition', async () => {
+  const fixture = await workflowFixture(); const calls: unknown[] = []; const caller = { sources: [source('caller-source')], estimates: [estimate()] }
+  try {
+    const result = await runWorkflowFixture(fixture, { expectations: caller, eastmoneyExpectationSource: automaticSourceClient(calls) })
+    assert.equal(result.status, 'completed')
+    assert.equal(calls.length, 0)
+    assert.equal(result.telemetry.expectationInputMode, 'caller')
+    assert.equal(result.telemetry.expectationAcquisitionStatus, 'not_attempted')
     assert.equal(result.providerOutcomes.some((item) => item.provider === 'eastmoney-reportapi'), false)
   } finally { await fixture.close() }
 })
@@ -262,8 +275,36 @@ test('workflow automatically acquires once, keeps estimates report-only, and exp
     assert.equal(assets.objects.some((item) => JSON.stringify(item.value).includes('eastmoney-reportapi')), false)
     const report = await readFile(result.report!.outputPath, 'utf8')
     assert.match(report, /automatically acquired Eastmoney report-level point-in-time EPS estimates/)
+    assert.match(report, /ResearchHub deterministic institution-level consensus\/revision assembly/)
     const reportMetadata = await readFile(`${result.report!.outputPath}.json`, 'utf8')
     assert.match(reportMetadata, /https:\/\/data\.eastmoney\.com\/report\/stock\.jshtml/)
+  } finally { await fixture.close() }
+})
+
+test('automatic partial acquisition is explicit in methodology and provider outcome', async () => {
+  const fixture = await workflowFixture(); const calls: unknown[] = []; const base = automaticSourceClient(calls)
+  try {
+    const result = await runWorkflowFixture(fixture, { eastmoneyExpectationSource: { acquire: async (request: unknown) => ({ ...(await base.acquire(request)), truncated: true }) } })
+    assert.equal(result.status, 'completed')
+    assert.equal(result.telemetry.expectationAcquisitionStatus, 'partial')
+    assert.equal(result.providerOutcomes.filter((item) => item.provider === 'eastmoney-reportapi').length, 1)
+    const report = await readFile(result.report!.outputPath, 'utf8')
+    assert.match(report, /partially acquired Eastmoney report-level point-in-time EPS estimates/)
+    assert.doesNotMatch(report, /automatically acquired Eastmoney report-level point-in-time EPS estimates/)
+  } finally { await fixture.close() }
+})
+
+test('automatic unavailable acquisition does not claim successful acquisition', async () => {
+  const fixture = await workflowFixture()
+  try {
+    const result = await runWorkflowFixture(fixture, { eastmoneyExpectationSource: { acquire: async () => acquisition([], { records: [] }) } })
+    assert.equal(result.status, 'completed')
+    assert.equal(result.telemetry.expectationAcquisitionStatus, 'unavailable')
+    assert.equal(result.telemetry.expectationStatus, 'unavailable')
+    assert.equal(result.providerOutcomes.filter((item) => item.provider === 'eastmoney-reportapi').length, 1)
+    const report = await readFile(result.report!.outputPath, 'utf8')
+    assert.match(report, /automatic Eastmoney expectation acquisition was attempted but produced no usable expectations/)
+    assert.doesNotMatch(report, /automatically acquired Eastmoney report-level point-in-time EPS estimates/)
   } finally { await fixture.close() }
 })
 
@@ -305,5 +346,8 @@ test('automatic provider failure completes the base Earnings Review', async () =
     assert.equal(result.telemetry.expectationAcquisitionStatus, 'failed')
     assert.equal(result.telemetry.expectationStatus, 'unavailable')
     assert.ok(result.acquisitionDiagnostics.some((item) => item.provider === 'eastmoney-reportapi' && item.status === 'failed'))
+    const report = await readFile(result.report!.outputPath, 'utf8')
+    assert.match(report, /automatic Eastmoney expectation acquisition failed/)
+    assert.doesNotMatch(report, /automatically acquired Eastmoney report-level point-in-time EPS estimates/)
   } finally { await fixture.close() }
 })

@@ -162,7 +162,7 @@ export async function resolveEarningsExpectations(input: { readonly workflow: Ea
   const caller = input.workflow.expectations
   if (caller !== undefined) {
     const counts = callerCounts(caller)
-    return { mode: 'caller', bundle: caller, diagnostics: [], acquisitionDiagnostics: [], acquisitionStatus: counts.estimateCount > 0 || counts.consensusSnapshotCount > 0 ? 'available' : 'unavailable', ...counts }
+    return { mode: 'caller', bundle: caller, diagnostics: [], acquisitionDiagnostics: [], acquisitionStatus: 'not_attempted', ...counts }
   }
   const source: EarningsEastmoneyExpectationSource | undefined = input.workflow.eastmoneyExpectationSource
   if (source === undefined) return { mode: 'none', diagnostics: [], acquisitionDiagnostics: [], acquisitionStatus: 'not_attempted', estimateCount: 0, institutionCount: 0, consensusSnapshotCount: 0, revisionLinkCount: 0 }

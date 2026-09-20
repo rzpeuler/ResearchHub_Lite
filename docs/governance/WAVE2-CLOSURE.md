@@ -51,9 +51,8 @@ Current track status: `IN PROGRESS`
 
 Active slice: `001B Automatic Bundle Assembly + Earnings Wiring`
 
-001A is implemented on its isolated track and remains accepted pending SOL
-review. 001B is implemented on its isolated track and remains pending SOL
-acceptance.
+001A is COMPLETE / SOL accepted. 001B is implemented on its isolated branch
+and remains pending SOL acceptance. 001C has not started.
 
 - 001C: not started.
 - Wave 3: not started.

@@ -68,7 +68,10 @@ they are excluded from semantic evidence validation and Knowledge Production
 Gateway bindings. Automatic expectations cannot create canonical Sources,
 Claims, Observations, Thesis state, or durable proposals.
 
-Report methodology distinguishes caller-supplied expectations from automatic
-Eastmoney report-level EPS acquisition plus ResearchHub deterministic
-consensus/revision assembly. No aggregate consensus endpoint or LLM arithmetic
-is used. Existing 14-section report structure is preserved.
+Caller mode records provider acquisition as `not_attempted` regardless of
+caller bundle contents; `expectationStatus` separately reports whether caller
+expectations produced usable findings. Automatic telemetry distinguishes clean
+usable, partial, unavailable, and failed acquisition. Report methodology uses
+the corresponding high-level automatic state and never copies raw provider
+exceptions or diagnostic lists into the report. No aggregate consensus endpoint
+or LLM arithmetic is used. Existing 14-section report structure is preserved.
