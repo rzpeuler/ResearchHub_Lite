@@ -1,8 +1,13 @@
-# Wave 2 Earnings Expectations Core
+# Wave 2 — Earnings Expectations Core
 
-Date: 2026-09-18
-Task: `W2-001 — Expectations Domain + Deterministic Comparison Engine`
-Status: implementation slice; no Workflow or Knowledge integration
+Initial design date: 2026-09-18
+Final closure date: 2026-09-20
+
+Status:
+COMPLETE / CLOSED
+
+Accepted baseline:
+`18259cb7bcb1f42e35669c01b0cfa5af22c3bb16`
 
 ## Scope
 
@@ -157,3 +162,41 @@ numeric fields are not fabricated. Revision-link ambiguity is evaluated only
 after each link is individually valid, so an invalid extra predecessor cannot
 suppress a unique valid revision while multiple valid predecessors still fail
 closed.
+
+## W2-005 — Valuation Impact + Thesis Filter
+
+W2-005 normalizes W2-004 expectation results into stable report-level
+`Finding` records. Valuation input mapping is a closed explicit map: zero
+change does not trigger a refresh, unknown metrics including shipment and ASP
+remain unmapped unless explicitly governed, multiples are never inferred, and
+no target-price arithmetic occurs.
+
+The report-only Thesis filter reads bounded context from existing first-class
+Thesis and ReasoningEdge objects. A company Thesis may depend directly on
+active cross-entity Claim or Observation sources; only direct incoming active
+ReasoningEdges are considered. Structured relevance matching is exact on metric
+and period. One bounded semantic pass may add textual relation, while
+dependency criticality remains code-owned. Semantic reasoning may resolve the
+effect but cannot remove deterministic relevance.
+
+The final classifications are `thesis_critical`, `thesis_relevant`,
+`thesis_irrelevant`, and `uncertain`. W2-005 does not mutate Thesis status,
+create or mutate ReasoningEdges, persist expectation-derived analytical deltas,
+or invoke the Valuation Workflow.
+
+## Wave 2 closure
+
+With W2-001 through W2-005 closed, Wave 2 can answer:
+
+- What was expected at the historical point in time?
+- What actually happened?
+- How large was the surprise?
+- Which institution revised an estimate?
+- How did Guidance change?
+- How did Guidance compare with point-in-time consensus?
+- Which valuation inputs require refresh?
+- Which existing Thesis dependencies are implicated?
+
+It does so without fabricated consensus, look-ahead bias, unit mixing,
+model-authored arithmetic, derived-delta persistence, target-price invention,
+automatic Thesis mutation, or Knowledge Schema proliferation.
