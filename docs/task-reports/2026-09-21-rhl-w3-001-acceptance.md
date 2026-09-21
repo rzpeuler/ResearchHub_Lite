@@ -4,9 +4,9 @@ task_id: RHL-W3-001
 status: READY_FOR_SOL_REVIEW
 baseline: 72ff9a2c2d672c16df91af4c0fed3b031fb7b0a0
 branch: codex/w3-001-company-industry-research-depth
-implementation_commit: pending
-verified_remote_tip: pending
-sync_status: READY_TO_SYNC
+implementation_commit: b3c14d2cbd05cec077e737327b41930c5ab6944c
+verified_remote_tip: b3c14d2cbd05cec077e737327b41930c5ab6944c
+sync_status: SYNCED
 summary: Wave 3 company and industry research depth is implemented with deterministic evidence-gated Skills, Workflow-owned company-industry bridging, focused tests, and one unrelated pre-existing full-suite timing failure.
 tests: Focused Wave 3 tests pass; client 28/28; Node 1264/1265; typecheck, client typecheck, build, and diff check pass.
 acceptance_criteria: Company and industry depth contracts, runtime registration, routing, bridge, docs, and fixture-backed Target A/B evidence are complete; authenticated provider/model E2E remains pending.
