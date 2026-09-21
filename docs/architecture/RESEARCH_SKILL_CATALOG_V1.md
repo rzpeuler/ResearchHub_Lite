@@ -14,8 +14,8 @@ entries are intentionally not runtime registered.
 | `management_execution` | Company Economics | How has management executed against commitments? | IMPLEMENTED | Yes | `skills/management_execution/` | Explicit commitment-to-outcome comparison; no personality scoring |
 | `capital_allocation_review` | Company Economics | How has capital been allocated and with what result? | IMPLEMENTED | Yes | `skills/capital_allocation_review/` | Explicit capital metrics and return/hurdle assessment |
 | `market_structure_analysis` | Industry | What is the structure and boundary of the market? | IMPLEMENTED | Yes | `skills/market_structure_analysis/` | Explicit boundary, segmentation, sizing methodology, and value-chain result |
-| `industry_supply_demand_cycle` | Industry | What drives capacity, inventory, pricing, and cycle? | PARTIAL | No | Industry Supply Demand module | Preserve missing cycle depth; do not claim Wave 3 completion |
-| `competitive_market_map` | Industry | Who competes and how is the market positioned? | PARTIAL | No | Industry Competitive Landscape and Company Mapping modules | Extract bounded map later |
+| `industry_supply_demand_cycle` | Industry | What drives capacity, inventory, pricing, and cycle? | IMPLEMENTED | Yes | `skills/industry_supply_demand_cycle/` | Explicit demand, effective capacity, utilization, inventory, pricing, and cycle-state analysis; preserve contradictions |
+| `competitive_market_map` | Industry | Who competes and how is the market positioned? | IMPLEMENTED | Yes | `skills/competitive_market_map/` | Explicit attributable peers, positioning, competitive events, and need/economics whitespace assessment |
 | `consensus_expectations_analysis` | Earnings / Expectations | What is the current point-in-time consensus state? | IMPLEMENTED | Yes | `skills/earnings-review/expectations/consensus.ts`; Earnings Workflow | Register canonical metadata and preserve PIT gate |
 | `earnings_variance_analysis` | Earnings / Expectations | Why did reported actuals differ from expectation/prior? | IMPLEMENTED | Yes | `actual-vs-expectation.ts`, segment KPI logic; Earnings Workflow | Register canonical metadata and collision tests |
 | `guidance_analysis` | Earnings / Expectations | How did forward management guidance compare with prior/consensus? | IMPLEMENTED | Yes | `guidance.ts`; Earnings Workflow | Register canonical metadata and preserve unavailable behavior |
@@ -38,7 +38,7 @@ entries are intentionally not runtime registered.
 
 ## Runtime registration policy
 
-The runtime set is the fifteen `IMPLEMENTED` entries with an independently
+The runtime set is the seventeen `IMPLEMENTED` entries with an independently
 executable boundary. `business_model_map` and `thesis_red_team` are
 `SEMANTIC_EXECUTABLE` through the existing bounded session/Workflow reasoning
 boundaries. Consensus expectations, earnings variance, guidance, estimate

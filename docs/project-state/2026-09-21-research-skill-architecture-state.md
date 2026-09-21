@@ -9,7 +9,7 @@ Date: 2026-09-21
   `docs/architecture/RESEARCH_SKILL_CATALOG_V1.md`.
 - The existing Research Skill Registry now validates canonical descriptor
   metadata and required SKILL.md sections at registration time.
-- Fourteen independently executable methods are runtime registered: business
+- Seventeen independently executable methods are runtime registered: business
   model map, business driver analysis, unit economics, financial quality,
   management execution, capital allocation, market structure, consensus expectations, earnings
   variance, guidance, estimate revisions, DCF, reverse DCF, scenario valuation,
@@ -32,8 +32,8 @@ Date: 2026-09-21
 
 | State | Count | Runtime |
 | --- | ---: | --- |
-| IMPLEMENTED | 15 | yes |
-| PARTIAL | 9 | no |
+| IMPLEMENTED | 17 | yes |
+| PARTIAL | 7 | no |
 | PLANNED | 5 | no |
 
 ## Boundaries preserved

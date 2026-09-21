@@ -4,6 +4,7 @@ import type { ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchSignal
 import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { ResolutionIntentSummary } from '../../knowledge/production/contracts.ts'
+import type { CompanyIndustryExposureInput, IndustryExposureBridgeResult } from './industry-exposure-bridge.ts'
 
 export interface CompanyDeepResearchInput {
   readonly workflowRunId: string
@@ -20,6 +21,7 @@ export interface CompanyDeepResearchInput {
   readonly reasoningExecutor?: ReasoningExecutor
   readonly writeKnowledge?: boolean
   readonly useStructuredKnowledge?: boolean
+  readonly industryExposure?: CompanyIndustryExposureInput
 }
 export interface CompanyDeepResearchResult {
   readonly workflowRunId: string
@@ -37,4 +39,5 @@ export interface CompanyDeepResearchResult {
   readonly research?: CompanyResearchResult
   readonly acquisitionDiagnostics?: readonly ResearchAcquisitionDiagnostic[]
   readonly providerOutcomes?: readonly ResearchProviderOutcome[]
+  readonly industryExposure?: IndustryExposureBridgeResult
 }
