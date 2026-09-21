@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url'
 import { join, resolve } from 'node:path'
 
 export type ResearchSkillCatalogStatus = 'IMPLEMENTED' | 'PARTIAL' | 'PLANNED'
+export type ResearchSkillExecutionClass = 'SEMANTIC_EXECUTABLE' | 'DETERMINISTIC_EXECUTABLE' | 'NOT_INDEPENDENTLY_EXECUTABLE'
 
 export interface ResearchSkillCatalogEntry {
   readonly canonicalSkillId: string
@@ -16,6 +17,8 @@ export interface ResearchSkillCatalogEntry {
   readonly currentOwner: string
   readonly migrationAction: string
   readonly notes: string
+  readonly executionClass?: ResearchSkillExecutionClass
+  readonly runtimeBinding?: string
 }
 
 export const REQUIRED_RESEARCH_SKILL_SECTIONS = [
@@ -35,6 +38,33 @@ export const REQUIRED_RESEARCH_SKILL_SECTIONS = [
 const skillRoot = resolve(fileURLToPath(new URL('../../skills/', import.meta.url)))
 const pathFor = (id: string): string => join(skillRoot, id, 'SKILL.md')
 
+const EXECUTION_CLASS_BY_ID: Readonly<Partial<Record<string, ResearchSkillExecutionClass>>> = {
+  business_model_map: 'SEMANTIC_EXECUTABLE',
+  business_driver_analysis: 'NOT_INDEPENDENTLY_EXECUTABLE',
+  unit_economics: 'NOT_INDEPENDENTLY_EXECUTABLE',
+  consensus_expectations_analysis: 'DETERMINISTIC_EXECUTABLE',
+  earnings_variance_analysis: 'DETERMINISTIC_EXECUTABLE',
+  guidance_analysis: 'DETERMINISTIC_EXECUTABLE',
+  estimate_revision_analysis: 'DETERMINISTIC_EXECUTABLE',
+  dcf_valuation: 'DETERMINISTIC_EXECUTABLE',
+  reverse_dcf_expectation_decode: 'DETERMINISTIC_EXECUTABLE',
+  scenario_valuation: 'DETERMINISTIC_EXECUTABLE',
+  valuation_crosscheck: 'NOT_INDEPENDENTLY_EXECUTABLE',
+  thesis_red_team: 'SEMANTIC_EXECUTABLE',
+}
+
+const RUNTIME_BINDING_BY_ID: Readonly<Partial<Record<string, string>>> = {
+  business_model_map: 'ResearchDispatchService session boundary: methodology + bounded captured result',
+  consensus_expectations_analysis: 'skills/earnings-review/expectations/consensus.ts:buildConsensusSnapshot',
+  earnings_variance_analysis: 'skills/earnings-review/expectations/actual-vs-expectation.ts:compareActualToExpectation',
+  guidance_analysis: 'skills/earnings-review/expectations/guidance.ts:buildGuidanceRevisionBridge',
+  estimate_revision_analysis: 'skills/earnings-review/expectations/actual-vs-expectation.ts:buildEstimateRevisionBridge',
+  dcf_valuation: 'skills/valuation/calculations/dcf.ts:calculateForwardDcf',
+  reverse_dcf_expectation_decode: 'skills/valuation/calculations/dcf.ts:calculateReverseDcf',
+  scenario_valuation: 'skills/valuation/financials.ts:calculateValuation',
+  thesis_red_team: 'skills/thesis-red-team/skill.ts through Thesis Red Team Workflow',
+}
+
 const entry = (
   canonicalSkillId: string,
   domain: string,
@@ -48,14 +78,14 @@ const entry = (
   currentOwner: string,
   migrationAction: string,
   notes: string,
-): ResearchSkillCatalogEntry => ({ canonicalSkillId, domain, purpose, invocationMatch, inputs, produces, status, runtimeRegistered, currentSource, currentOwner, migrationAction, notes })
+): ResearchSkillCatalogEntry => ({ canonicalSkillId, domain, purpose, invocationMatch, inputs, produces, status, runtimeRegistered, currentSource, currentOwner, migrationAction, notes, executionClass: EXECUTION_CLASS_BY_ID[canonicalSkillId], runtimeBinding: RUNTIME_BINDING_BY_ID[canonicalSkillId] })
 
 export const CANONICAL_RESEARCH_SKILL_CATALOG: readonly ResearchSkillCatalogEntry[] = [
   entry('evidence_normalization', 'Evidence', 'Normalize supplied evidence into bounded, attributable inputs.', 'Use when a Workflow must normalize evidence before peer Skills; do not use as a standalone conclusion.', ['raw/source candidates', 'asOf', 'source class'], ['normalized evidence set', 'availability diagnostics'], 'PARTIAL', false, 'Existing acquisition/provider normalizers', 'Workflow + Plugin', 'Keep as helper/Workflow responsibility until independently callable.', 'No separate stable Skill result contract yet.'),
   entry('document_change_analysis', 'Evidence', 'Identify attributable changes between two documents.', 'Use only when two comparable, attributable document versions are supplied; do not infer changes from one document.', ['prior document', 'current document', 'asOf', 'source refs'], ['change set', 'unchanged regions', 'gaps'], 'PLANNED', false, 'None', 'Future Wave', 'Implement a point-in-time document-diff method.', 'No runtime registration.'),
   entry('business_model_map', 'Company Economics', 'Explain how a company makes money and how its segments fit together.', 'Use for how-the-company-makes-money questions; do not use for consolidated driver attribution or unit economics.', ['company identity', 'segments/products', 'source refs', 'asOf'], ['business model map', 'segment relationships', 'source refs'], 'IMPLEMENTED', true, 'Company Research Business Model section', 'Company Research Workflow', 'Register the extracted bounded methodology.', 'The standalone contract preserves the existing evidence-only section boundary.'),
-  entry('business_driver_analysis', 'Company Economics', 'Attribute consolidated revenue and profit changes to supplied business drivers.', 'Use for volume/price/mix/segment driver questions; do not use for a generic business model description.', ['period-aligned financials', 'segment/KPI data', 'source refs'], ['driver decomposition', 'contribution diagnostics', 'gaps'], 'IMPLEMENTED', true, 'Company Research Revenue / Profit Drivers section', 'Company Research Workflow', 'Register the extracted attributable driver methodology.', 'No synthetic volume, price, or mix values.'),
-  entry('unit_economics', 'Company Economics', 'Analyze a measurable underlying economic unit and its economics.', 'Use when the user names an economic unit such as customer, shipment, or site; do not use for consolidated financial drivers.', ['unit definition', 'unit counts', 'revenue/cost data', 'period', 'source refs'], ['unit metrics', 'cohort/trend diagnostics', 'gaps'], 'IMPLEMENTED', true, 'New bounded methodology extracted from the Company Economics requirement', 'Company Economics Workflow', 'Register only the evidence-gated methodology; no synthetic unit metrics.', 'Runtime execution requires explicit unit evidence and fails closed when absent.'),
+  entry('business_driver_analysis', 'Company Economics', 'Attribute consolidated revenue and profit changes to supplied business drivers.', 'Use for volume/price/mix/segment driver questions; do not use for a generic business model description.', ['period-aligned financials', 'segment/KPI data', 'source refs'], ['driver decomposition', 'contribution diagnostics', 'gaps'], 'PARTIAL', false, 'Company Research Revenue / Profit Drivers section', 'Company Research Workflow', 'Promote after an independently callable deterministic driver implementation exists.', 'The methodology declares code-owned arithmetic, but no direct canonical execution binding exists.'),
+  entry('unit_economics', 'Company Economics', 'Analyze a measurable underlying economic unit and its economics.', 'Use when the user names an economic unit such as customer, shipment, or site; do not use for consolidated financial drivers.', ['unit definition', 'unit counts', 'revenue/cost data', 'period', 'source refs'], ['unit metrics', 'cohort/trend diagnostics', 'gaps'], 'PARTIAL', false, 'New bounded methodology extracted from the Company Economics requirement', 'Company Economics Workflow', 'Promote after an independently callable deterministic unit-economics implementation exists.', 'The methodology declares code-owned arithmetic, but no direct canonical execution binding exists.'),
   entry('management_execution', 'Company Economics', 'Assess management execution against attributable prior commitments.', 'Use only when dated commitments and outcomes are supplied; do not infer execution quality from generic management prose.', ['dated commitments', 'outcomes', 'company identity', 'source refs'], ['commitment-to-outcome assessment', 'gaps'], 'PLANNED', false, 'Management narrative section only', 'Future Wave', 'Require historical commitment/result evidence.', 'No independent implementation.'),
   entry('capital_allocation_review', 'Company Economics', 'Review capital allocation decisions and attributable outcomes.', 'Use for capital allocation questions with dated transaction and outcome evidence; do not treat a report heading as an implementation.', ['capital actions', 'financial context', 'outcomes', 'source refs'], ['allocation assessment', 'evidence map', 'gaps'], 'PARTIAL', false, 'Company Research Management / Capital Allocation section', 'Company Research Workflow', 'Extract a stable source/period contract.', 'Current behavior is narrative-only.'),
   entry('market_structure_analysis', 'Industry', 'Define the market boundary, participants, and structural relationships.', 'Use for market definition and structure questions; do not use for a full supply-demand cycle or competitive ranking.', ['industry target', 'scope', 'market evidence', 'asOf'], ['market boundary', 'participant map', 'gaps'], 'PARTIAL', false, 'Industry eight-module definition/landscape modules', 'Industry Workflow', 'Extract module-level result contract.', 'Existing Skill is an eight-module composite.'),
@@ -73,7 +103,7 @@ export const CANONICAL_RESEARCH_SKILL_CATALOG: readonly ResearchSkillCatalogEntr
   entry('reverse_dcf_expectation_decode', 'Valuation', 'Decode future performance implied by current price or enterprise value.', 'Use for price-in expectation questions; do not use for forward intrinsic value from user forecasts.', ['price/EV', 'shares', 'debt/cash', 'FCFF forecast', 'discount/growth', 'source refs'], ['implied terminal FCFF/revenue/CAGR', 'assumption diagnostics'], 'IMPLEMENTED', true, 'skills/valuation/calculations/dcf.ts:calculateReverseDcf', 'Valuation Workflow', 'Register canonical methodology and routing collision tests.', 'Requires explicit positive terminal economics.'),
   entry('comps_valuation', 'Valuation', 'Calculate an attributable peer-set valuation comparison.', 'Use only when a real peer set and metric basis are supplied; do not use synthetic/default multiples.', ['peer set', 'metrics', 'target basis', 'source refs'], ['peer multiples', 'implied value', 'rejections'], 'PARTIAL', false, 'skills/valuation/calculations/comps.ts', 'Valuation Workflow', 'Close peer-set contract before runtime promotion.', 'Helper arithmetic exists; standalone evidence contract is incomplete.'),
   entry('scenario_valuation', 'Valuation', 'Calculate Bear/Base/Bull value from explicit assumptions.', 'Use for scenario and sensitivity questions; do not substitute defaults for missing assumptions.', ['valuation basis', 'method', 'three scenarios', 'target year', 'source refs'], ['scenario results', '9-cell sensitivity', 'QC'], 'IMPLEMENTED', true, 'skills/valuation/financials.ts', 'Valuation Workflow', 'Register canonical methodology and preserve code arithmetic.', 'Existing scenario engine is deterministic.'),
-  entry('valuation_crosscheck', 'Valuation', 'Compare independently calculated valuation methods.', 'Use to explain convergence/divergence; do not calculate primary method outputs here.', ['validated method results', 'shared basis', 'assumptions', 'source refs'], ['comparison', 'divergence diagnostics', 'gaps'], 'IMPLEMENTED', true, 'Valuation secondary-method and QC logic', 'Valuation Workflow', 'Register canonical methodology and consume peer results.', 'Workflow owns composition.'),
+  entry('valuation_crosscheck', 'Valuation', 'Compare independently calculated valuation methods.', 'Use to explain convergence/divergence; do not calculate primary method outputs here.', ['validated method results', 'shared basis', 'assumptions', 'source refs'], ['comparison', 'divergence diagnostics', 'gaps'], 'PARTIAL', false, 'Valuation secondary-method and QC logic', 'Valuation Workflow', 'Promote after a directly callable cross-check implementation exists.', 'Workflow has comparison/report logic, but no direct canonical execution binding exists.'),
   entry('expectation_gap', 'Thesis', 'Locate disagreement between market expectations and company/thesis evidence.', 'Use when the question asks where views differ; do not formalize or attack a thesis.', ['consensus', 'company evidence', 'thesis context', 'asOf'], ['gap propositions', 'evidence map', 'gaps'], 'PARTIAL', false, 'Earnings valuation-impact/thesis filter', 'Earnings / Thesis Workflow', 'Extract a stable disagreement contract.', 'Current output is a bounded filter, not a standalone Skill.'),
   entry('thesis_formalize', 'Thesis', 'State explicit thesis propositions, dependencies, and falsification conditions.', 'Use to formalize a thesis; do not perform adversarial testing or mutate canonical Thesis state.', ['company', 'claims', 'evidence', 'assumptions'], ['thesis propositions', 'dependencies', 'falsification conditions'], 'PARTIAL', false, 'Existing Thesis claims and Workflow context', 'Thesis Workflow', 'Extract without direct Knowledge mutation.', 'No independent entrypoint.'),
   entry('thesis_red_team', 'Thesis', 'Adversarially test one active thesis with bounded evidence.', 'Use when the user asks where a thesis may be wrong or what would falsify it; do not run a full Thesis Lifecycle.', ['company', 'thesis ref', 'dependencies', 'signals', 'sources', 'lookback'], ['attack vectors', 'challenge assessments', 'bounded proposals', 'gaps'], 'IMPLEMENTED', true, 'skills/thesis-red-team/', 'Thesis Red Team Workflow', 'Normalize legacy path/ID and retain Workflow boundary.', 'Existing independent methodology and tests exist.'),

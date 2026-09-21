@@ -6,6 +6,7 @@ import { CANONICAL_RESEARCH_SKILL_CATALOG, REQUIRED_RESEARCH_SKILL_SECTIONS } fr
 import { createResearchSkillRegistry } from '../../../app/services/skill-registry.ts'
 import { createWorkflowDefinitionRegistry } from '../../../app/services/workflow-registry.ts'
 import { ResearchDispatchService } from '../../../app/services/research-dispatch-service.ts'
+import { calculateForwardDcf } from '../../../skills/valuation/calculations/dcf.ts'
 
 test('canonical catalog has exactly 29 unique statuses and runtime is a strict implemented subset', () => {
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.length, 29)
@@ -25,6 +26,22 @@ test('canonical catalog has exactly 29 unique statuses and runtime is a strict i
     assert.ok(definition.produces?.length)
   }
   for (const item of CANONICAL_RESEARCH_SKILL_CATALOG.filter((entry) => !entry.runtimeRegistered)) assert.equal(registry.get(item.canonicalSkillId), undefined, item.canonicalSkillId)
+})
+
+test('runtime registration has an explicit execution classification and deterministic binding', () => {
+  const registry = createResearchSkillRegistry()
+  const runtime = registry.canonicalResearchCandidates()
+  assert.deepEqual(runtime.map((item) => item.id), ['business_model_map', 'consensus_expectations_analysis', 'dcf_valuation', 'earnings_variance_analysis', 'estimate_revision_analysis', 'guidance_analysis', 'reverse_dcf_expectation_decode', 'scenario_valuation', 'thesis_red_team'])
+  assert.equal(runtime.every((item) => item.executionClass !== undefined && item.runtimeBinding), true)
+  assert.equal(runtime.filter((item) => item.executionClass === 'DETERMINISTIC_EXECUTABLE').every((item) => typeof item.runtimeExecutor === 'function'), true)
+  assert.equal(runtime.filter((item) => item.executionClass === 'SEMANTIC_EXECUTABLE').every((item) => item.runtimeExecutor === undefined), true)
+  assert.equal(registry.get('business_driver_analysis'), undefined)
+  assert.equal(registry.get('unit_economics'), undefined)
+  assert.equal(registry.get('valuation_crosscheck'), undefined)
+  const input = { fcff: [100, 110, 120], discountRate: 0.09, terminalGrowthRate: 0.03 }
+  const direct = calculateForwardDcf(input)
+  const bound = registry.get('dcf_valuation')?.runtimeExecutor?.(input) as typeof direct
+  assert.deepEqual(bound, direct)
 })
 
 test('every runtime canonical methodology contains the required contract sections', async () => {
@@ -68,8 +85,6 @@ test('narrow semantic routing selects the intended canonical Skill and composite
     ['这次收入为什么beat consensus？', 'earnings_variance_analysis'],
     ['管理层这次guidance相对上次有什么变化？', 'guidance_analysis'],
     ['这家公司到底靠什么赚钱？', 'business_model_map'],
-    ['收入增长到底是销量、价格还是mix驱动？', 'business_driver_analysis'],
-    ['当前最合理的经济单位是什么？', 'unit_economics'],
     ['我这个投资逻辑最容易错在哪里？', 'thesis_red_team'],
   ] as const
   for (const [query, expected] of cases) {
@@ -77,7 +92,25 @@ test('narrow semantic routing selects the intended canonical Skill and composite
     assert.equal(result.decision.mode, 'skill_plan', query)
     assert.deepEqual(result.decision.skills.map((skill) => skill.id), [expected], query)
   }
+  assert.equal(service.resolve({ query: '收入增长到底是销量、价格还是mix驱动？', mode: { type: 'free_research' } }).decision.mode, 'free_research')
+  assert.equal(service.resolve({ query: '当前最合理的经济单位是什么？', mode: { type: 'free_research' } }).decision.mode, 'free_research')
   const composite = service.resolve({ query: '完整研究这家公司。', mode: { type: 'free_research' } })
   assert.equal(composite.decision.mode, 'workflow')
   assert.equal(composite.decision.workflow?.id, 'company_research')
+})
+
+test('fixture-backed session execution produces a bounded semantic canonical Skill result', async () => {
+  const values = new Map<string, any>()
+  const store = { async put(bundle: any) { values.set(bundle.bundleId, bundle) }, async get(id: string) { return values.get(id) }, async list() { return [...values.values()] } }
+  const service = new ResearchDispatchService({ bundleStore: store as never })
+  const started = service.start({ query: '这家公司到底靠什么赚钱？', mode: { type: 'free_research' } })
+  assert.equal(started.status, 'skill_plan')
+  assert.ok(started.runId)
+  const context = await service.getSessionResearchContext(started.runId!)
+  assert.deepEqual(context?.selectedSkills.map((skill) => skill.id), ['business_model_map'])
+  assert.match(context?.selectedSkills[0]?.methodology ?? '', /## Methodology/)
+  await service.completeSessionResearch(started.runId!, 'Evidence-backed result: the company monetizes its disclosed products through identified customer channels; unknown relationships remain unavailable.')
+  const bundle = await service.getBundle(`research-bundle-${started.runId!}`) as { readonly structuredResult?: { readonly status: string; readonly answer?: string } }
+  assert.equal(bundle.structuredResult?.status, 'completed')
+  assert.match(bundle.structuredResult?.answer ?? '', /Evidence-backed result/)
 })

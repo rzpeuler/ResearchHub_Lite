@@ -1,10 +1,16 @@
 import { readFile, stat } from 'node:fs/promises'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { canonicalResearchSkillMdPath, CANONICAL_RESEARCH_SKILL_IDS, getCanonicalResearchSkill, REQUIRED_RESEARCH_SKILL_SECTIONS, RUNTIME_CANONICAL_RESEARCH_SKILLS, type ResearchSkillCatalogStatus } from './research-skill-catalog.ts'
+import { buildConsensusSnapshot } from '../../skills/earnings-review/expectations/consensus.ts'
+import { compareActualToExpectation, buildEstimateRevisionBridge } from '../../skills/earnings-review/expectations/actual-vs-expectation.ts'
+import { buildGuidanceRevisionBridge } from '../../skills/earnings-review/expectations/guidance.ts'
+import { calculateForwardDcf, calculateReverseDcf } from '../../skills/valuation/calculations/dcf.ts'
+import { calculateValuation } from '../../skills/valuation/financials.ts'
+import { canonicalResearchSkillMdPath, CANONICAL_RESEARCH_SKILL_IDS, getCanonicalResearchSkill, REQUIRED_RESEARCH_SKILL_SECTIONS, RUNTIME_CANONICAL_RESEARCH_SKILLS, type ResearchSkillCatalogStatus, type ResearchSkillExecutionClass } from './research-skill-catalog.ts'
 
 export type ResearchHubSkillKind = 'research' | 'knowledge' | 'utility'
 export type ResearchSkillOrigin = 'canonical' | 'external'
+export type ResearchSkillRuntimeExecutor = (input: unknown) => unknown | Promise<unknown>
 
 export interface ResearchSkillMethodologySource {
   readonly type: 'researchhub_skill'
@@ -26,6 +32,9 @@ export interface ResearchSkillDefinition {
   readonly methodologySource?: ResearchSkillMethodologySource
   readonly skillMdPath?: string
   readonly catalogStatus?: ResearchSkillCatalogStatus
+  readonly executionClass?: ResearchSkillExecutionClass
+  readonly runtimeBinding?: string
+  readonly runtimeExecutor?: ResearchSkillRuntimeExecutor
   readonly origin?: ResearchSkillOrigin
   readonly enabled: boolean
   readonly scope: 'researchhub'
@@ -35,6 +44,7 @@ function canonicalDefinition(id: string): ResearchSkillDefinition {
   const metadata = getCanonicalResearchSkill(id)
   if (metadata === undefined || !metadata.runtimeRegistered || metadata.status !== 'IMPLEMENTED') throw new Error(`Cannot register non-runtime canonical Research Skill: ${id}`)
   const skillMdPath = canonicalResearchSkillMdPath(id)
+  const runtimeExecutor = CANONICAL_RUNTIME_EXECUTORS[id]
   return {
     id,
     kind: 'research',
@@ -49,10 +59,29 @@ function canonicalDefinition(id: string): ResearchSkillDefinition {
     methodologySource: { type: 'researchhub_skill', path: skillMdPath },
     skillMdPath,
     catalogStatus: metadata.status,
+    executionClass: metadata.executionClass,
+    runtimeBinding: metadata.runtimeBinding,
+    ...(runtimeExecutor === undefined ? {} : { runtimeExecutor }),
     origin: 'canonical',
     enabled: true,
     scope: 'researchhub',
   }
+}
+
+const CANONICAL_RUNTIME_EXECUTORS: Readonly<Partial<Record<string, ResearchSkillRuntimeExecutor>>> = {
+  consensus_expectations_analysis: (input) => buildConsensusSnapshot(input as Parameters<typeof buildConsensusSnapshot>[0]),
+  earnings_variance_analysis: (input) => {
+    const value = input as Parameters<typeof compareActualToExpectation>[0]
+    return compareActualToExpectation(value)
+  },
+  guidance_analysis: (input) => buildGuidanceRevisionBridge(input as Parameters<typeof buildGuidanceRevisionBridge>[0]),
+  estimate_revision_analysis: (input) => buildEstimateRevisionBridge(input as Parameters<typeof buildEstimateRevisionBridge>[0]),
+  dcf_valuation: (input) => calculateForwardDcf(input as Parameters<typeof calculateForwardDcf>[0]),
+  reverse_dcf_expectation_decode: (input) => calculateReverseDcf(input as Parameters<typeof calculateReverseDcf>[0]),
+  scenario_valuation: (input) => {
+    const value = input as { readonly basis: Parameters<typeof calculateValuation>[0]; readonly plan: Parameters<typeof calculateValuation>[1]; readonly eligibleMethods: Parameters<typeof calculateValuation>[2] }
+    return calculateValuation(value.basis, value.plan, value.eligibleMethods)
+  },
 }
 
 const CORE_SKILLS: readonly ResearchSkillDefinition[] = [
@@ -81,6 +110,10 @@ function contractDiagnostics(definition: ResearchSkillDefinition): readonly stri
   if (definition.produces === undefined || definition.produces.length === 0) errors.push('produces_missing')
   if (definition.origin === 'canonical') {
     if (definition.catalogStatus !== 'IMPLEMENTED') errors.push('canonical_skill_not_implemented')
+    if (definition.executionClass === undefined) errors.push('execution_class_missing')
+    if (!definition.runtimeBinding?.trim()) errors.push('runtime_binding_missing')
+    if (definition.executionClass === 'DETERMINISTIC_EXECUTABLE' && typeof definition.runtimeExecutor !== 'function') errors.push('deterministic_runtime_executor_missing')
+    if (definition.executionClass === 'NOT_INDEPENDENTLY_EXECUTABLE') errors.push('canonical_skill_not_independently_executable')
     if (definition.skillMdPath === undefined) errors.push('skill_md_path_missing')
     else {
       try {

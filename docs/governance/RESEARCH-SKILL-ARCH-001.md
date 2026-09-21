@@ -14,7 +14,11 @@ are unchanged.
 
 ## Accepted engineering facts
 
-- Canonical catalog: 29 entries; 12 runtime-registered, 11 partial, 6 planned.
+- Canonical catalog: 29 entries; 9 runtime-registered, 14 partial, 6 planned
+  after RHL-SKILL-ARCH-001-FIX-001 closed the runtime integrity audit.
+- Runtime entries are classified as `SEMANTIC_EXECUTABLE` or
+  `DETERMINISTIC_EXECUTABLE`; deterministic entries must expose a direct
+  callable binding to the authoritative calculation implementation.
 - Runtime canonical entries expose purpose, Invocation Match, inputs, produces,
   methodology path, and complete SKILL.md contract sections.
 - Earnings, valuation, Company Economics, and Thesis Red Team narrow intents
@@ -26,6 +30,9 @@ are unchanged.
   and are marked as external extensions rather than built-in catalog entries.
 - No Agent, Planner, Capability layer, Provider abstraction, Knowledge Schema,
   or unrelated UI/runtime change was introduced.
+- Semantic Workflow decisions reject mapped Skills that are absent, disabled,
+  non-research, or canonical but not `IMPLEMENTED`; automatic Workflow
+  selection uses the same executable subset.
 
 ## Evidence
 

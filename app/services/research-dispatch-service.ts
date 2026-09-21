@@ -170,10 +170,13 @@ function scoreWorkflow(definition: WorkflowDefinition, query: string): number {
 }
 
 function selectedSkillIds(registry: ResearchSkillRegistry, definition: WorkflowDefinition): readonly string[] {
-  return definition.skillIds.filter((id) => {
-    const skill = registry.get(id)
-    return skill?.kind === 'research' && skill.enabled === true
-  })
+  return definition.skillIds.filter((id) => isExecutableResearchSkill(registry, id))
+}
+
+function isExecutableResearchSkill(registry: ResearchSkillRegistry, id: string): boolean {
+  const skill = registry.get(id)
+  if (skill?.kind !== 'research' || skill.enabled !== true) return false
+  return skill.origin !== 'canonical' || skill.catalogStatus === 'IMPLEMENTED'
 }
 
 const dispatchOutputContract = {
@@ -202,8 +205,9 @@ function assertSemanticDecision(request: ResearchRequest, decision: ResearchDisp
     if (!decision.workflow || workflowRegistry.get(decision.workflow.id) === undefined) throw new ApplicationServiceError('not_found', `Semantic dispatch selected an unknown Workflow: ${decision.workflow?.id ?? 'missing'}`)
     const allowed = new Set(workflowRegistry.get(decision.workflow.id)!.skillIds)
     if (decision.skills.some((skill) => !allowed.has(skill.id))) throw new ApplicationServiceError('invalid_input', `Semantic dispatch selected a Skill that is not mapped to Workflow ${decision.workflow.id}`)
+    if (decision.skills.some((skill) => !isExecutableResearchSkill(skillRegistry, skill.id))) throw new ApplicationServiceError('invalid_input', `Semantic dispatch selected an unavailable Research Skill for Workflow ${decision.workflow.id}`)
   }
-  if (decision.mode === 'skill_plan' && (decision.skills.length === 0 || decision.skills.some((skill) => skillRegistry.get(skill.id)?.kind !== 'research' || skillRegistry.get(skill.id)?.enabled !== true))) throw new ApplicationServiceError('invalid_input', 'Semantic dispatch selected an unavailable Research Skill')
+  if (decision.mode === 'skill_plan' && (decision.skills.length === 0 || decision.skills.some((skill) => !isExecutableResearchSkill(skillRegistry, skill.id)))) throw new ApplicationServiceError('invalid_input', 'Semantic dispatch selected an unavailable Research Skill')
   if (decision.mode === 'free_research' && decision.skills.length > 0) throw new ApplicationServiceError('invalid_input', 'Free Research cannot include selected Research Skills')
 }
 

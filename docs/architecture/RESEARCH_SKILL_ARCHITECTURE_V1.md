@@ -68,6 +68,8 @@ invocationMatch
 inputs
 produces
 skillMdPath / methodologySource
+executionClass / runtimeBinding
+runtimeExecutor for deterministic entries
 ```
 
 Existing output-contract, capability, and onboarding provenance fields remain
@@ -139,12 +141,14 @@ Automated checks must prove:
 1. The catalog contains exactly 29 unique canonical IDs with a valid status.
 2. Built-in runtime IDs are catalog IDs and `PLANNED` IDs are not registered.
 3. Every runtime Skill has valid descriptor metadata and all required
-   `SKILL.md` sections.
+   `SKILL.md` sections; deterministic entries have a callable binding to their
+   authoritative implementation.
 4. Canonical Skill code contains no direct cross-Skill or Skill-to-Workflow
    invocation.
 5. Workflow mappings refer only to known canonical IDs and compose peers.
 6. Collision scenarios resolve to the intended narrow Skill.
-7. Legacy compatibility, existing reports, Knowledge boundaries, and public
+7. Semantic Workflow decisions cannot advertise mapped but unavailable Skills.
+8. Legacy compatibility, existing reports, Knowledge boundaries, and public
    request contracts remain covered.
 
 The exact test commands are the current repository commands documented in the

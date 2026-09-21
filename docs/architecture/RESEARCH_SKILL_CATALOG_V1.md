@@ -9,8 +9,8 @@ entries are intentionally not runtime registered.
 | `evidence_normalization` | Evidence | How should supplied evidence be normalized and bounded? | PARTIAL | No | Existing provider/workflow normalization | Keep as Workflow/helper responsibility until independent contract is extracted |
 | `document_change_analysis` | Evidence | What changed between two attributable documents? | PLANNED | No | No stable implementation | Future document-diff wave |
 | `business_model_map` | Company Economics | How does the company make money? | IMPLEMENTED | Yes | Company Research Business Model section | Evidence-gated standalone methodology |
-| `business_driver_analysis` | Company Economics | What drives consolidated revenue/profit? | IMPLEMENTED | Yes | Company Research Revenue / Profit Drivers section | Evidence-gated driver decomposition |
-| `unit_economics` | Company Economics | What measurable economic unit explains the business? | IMPLEMENTED | Yes | Bounded Company Economics methodology | Requires explicit unit evidence; no synthetic metrics |
+| `business_driver_analysis` | Company Economics | What drives consolidated revenue/profit? | PARTIAL | No | Company Research Revenue / Profit Drivers section | Promote after an independently callable deterministic driver binding exists |
+| `unit_economics` | Company Economics | What measurable economic unit explains the business? | PARTIAL | No | Bounded Company Economics methodology | Promote after an independently callable deterministic unit-economics binding exists |
 | `management_execution` | Company Economics | How has management executed against commitments? | PLANNED | No | Narrative Management section only | Require historical commitment/result evidence |
 | `capital_allocation_review` | Company Economics | How has capital been allocated and with what result? | PARTIAL | No | Company Management / Capital Allocation section | Extract after stable source/period contract |
 | `market_structure_analysis` | Industry | What is the structure and boundary of the market? | PARTIAL | No | Industry eight-module design and definition module | Extract module-level result contract |
@@ -28,7 +28,7 @@ entries are intentionally not runtime registered.
 | `reverse_dcf_expectation_decode` | Valuation | What future performance is implied by price/EV? | IMPLEMENTED | Yes | `calculateReverseDcf` in valuation calculations | Register methodology; require all explicit inputs |
 | `comps_valuation` | Valuation | What does an attributable peer set imply? | PARTIAL | No | `skills/valuation/calculations/comps.ts`; product path has bounded multiples | Separate peer-set contract before runtime promotion |
 | `scenario_valuation` | Valuation | How do Bear/Base/Bull assumptions change value? | IMPLEMENTED | Yes | `skills/valuation/financials.ts`; Valuation Workflow | Register methodology and reuse code arithmetic |
-| `valuation_crosscheck` | Valuation | Do independent valuation methods agree or diverge? | IMPLEMENTED | Yes | Valuation secondary-method and QC logic | Register methodology; consume computed results |
+| `valuation_crosscheck` | Valuation | Do independent valuation methods agree or diverge? | PARTIAL | No | Valuation secondary-method and QC logic | Promote after a directly callable cross-check binding exists |
 | `expectation_gap` | Thesis | Where do market/company views differ? | PARTIAL | No | Earnings valuation-impact/thesis filter | Extract a stable disagreement contract |
 | `thesis_formalize` | Thesis | What are the explicit thesis propositions and dependencies? | PARTIAL | No | Existing Thesis claims and Workflow context | Extract without mutating Knowledge from Skill |
 | `thesis_red_team` | Thesis | How could an active thesis be wrong? | IMPLEMENTED | Yes | `skills/thesis-red-team/`; Thesis Red Team Workflow | Normalize legacy ID and retain Workflow composition |
@@ -38,14 +38,21 @@ entries are intentionally not runtime registered.
 
 ## Runtime registration policy
 
-The initial runtime set is the twelve `IMPLEMENTED` entries with executable
-methodology sources: consensus expectations, earnings variance, guidance,
-estimate revisions, DCF, reverse DCF, scenario valuation, valuation cross-check,
-and thesis red team. `comps_valuation` is intentionally `PARTIAL` despite
-existing helper calculations because an independent attributable peer-set
-contract is not yet closed. `financial_quality_analysis` is also `PARTIAL`
-because its current implementation is report-only and primarily owned by the
-Earnings Review implementation.
+The runtime set is the nine `IMPLEMENTED` entries with an independently
+executable boundary. `business_model_map` and `thesis_red_team` are
+`SEMANTIC_EXECUTABLE` through the existing bounded session/Workflow reasoning
+boundaries. Consensus expectations, earnings variance, guidance, estimate
+revisions, forward DCF, reverse DCF, and scenario valuation are
+`DETERMINISTIC_EXECUTABLE` and bind directly to the existing authoritative
+calculation functions. `business_driver_analysis`, `unit_economics`, and
+`valuation_crosscheck` are `PARTIAL` because their SKILL.md contracts declare
+code-owned work but no direct canonical execution binding exists. `comps_valuation`
+and `financial_quality_analysis` remain `PARTIAL` for their previously recorded
+evidence/ownership gaps.
+
+Every runtime entry records an execution class and binding in the catalog. A
+deterministic entry must also expose a callable `runtimeExecutor`; a methodology
+source alone is not evidence of deterministic runtime execution.
 
 The existing composite Workflows remain the product execution boundary while
 their canonical skill metadata is introduced. Their mapped skill IDs are
