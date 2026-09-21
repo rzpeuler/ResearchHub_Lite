@@ -11,7 +11,7 @@ Date: 2026-09-21
   metadata and required SKILL.md sections at registration time.
 - Fourteen independently executable methods are runtime registered: business
   model map, business driver analysis, unit economics, financial quality,
-  management execution, capital allocation, consensus expectations, earnings
+  management execution, capital allocation, market structure, consensus expectations, earnings
   variance, guidance, estimate revisions, DCF, reverse DCF, scenario valuation,
   and thesis red team. Valuation cross-check remains explicitly `PARTIAL` until a
   direct canonical execution binding exists.
@@ -32,8 +32,8 @@ Date: 2026-09-21
 
 | State | Count | Runtime |
 | --- | ---: | --- |
-| IMPLEMENTED | 14 | yes |
-| PARTIAL | 10 | no |
+| IMPLEMENTED | 15 | yes |
+| PARTIAL | 9 | no |
 | PLANNED | 5 | no |
 
 ## Boundaries preserved

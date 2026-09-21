@@ -27,7 +27,7 @@ canonical Skills; planned methods are skipped and surfaced as gaps/metadata.
 | Company Research | `business_model_map`, `business_driver_analysis`, `unit_economics`, `financial_quality_analysis`, `management_execution`, `capital_allocation_review`; `thesis_red_team` only when explicitly requested | expectation gap, research QC |
 | Earnings Review | `consensus_expectations_analysis`, `earnings_variance_analysis`, `guidance_analysis`, `financial_quality_analysis`, `estimate_revision_analysis` | `earnings_call_analysis`, expectation gap, thesis refresh |
 | Valuation | `dcf_valuation`, `reverse_dcf_expectation_decode`, `scenario_valuation` | `valuation_crosscheck` and `comps_valuation` until direct execution/evidence contracts close |
-| Industry Research | none promoted as independently executable; current eight-module Skill remains transitional | market structure, supply/demand cycle, competitive map |
+| Industry Research | `market_structure_analysis`; current eight-module Workflow remains the product boundary | supply/demand cycle, competitive map |
 | Event Research | none; current event Skill remains Workflow-owned | catalyst map |
 | Daily Intelligence | none; current signal/report Skill remains Workflow-owned | evidence normalization, catalyst map, thesis refresh |
 | Thesis Lifecycle | `thesis_red_team` when the lifecycle requests adversarial review | thesis formalization, expectation gap, catalyst map, thesis refresh |
