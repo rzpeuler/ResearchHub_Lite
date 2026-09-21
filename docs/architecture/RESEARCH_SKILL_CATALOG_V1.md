@@ -21,7 +21,7 @@ entries are intentionally not runtime registered.
 | `guidance_analysis` | Earnings / Expectations | How did forward management guidance compare with prior/consensus? | IMPLEMENTED | Yes | `guidance.ts`; Earnings Workflow | Register canonical metadata and preserve unavailable behavior |
 | `earnings_call_analysis` | Earnings / Expectations | What did the transcript/Q&A reveal? | PLANNED | No | No transcript speaker/Q&A implementation | Future transcript wave |
 | `estimate_revision_analysis` | Earnings / Expectations | How did estimates change from old to new? | IMPLEMENTED | Yes | `estimate-revision` logic and expectation integration | Register canonical metadata and preserve PIT links |
-| `financial_quality_analysis` | Financial | What is the quality of reported earnings/cash conversion? | PARTIAL | No | `skills/earnings-review/financial-quality/`; current report-only consumer | Promote only after independent multi-consumer contract |
+| `financial_quality_analysis` | Financial | What is the quality of reported earnings/cash conversion? | IMPLEMENTED | Yes | `skills/financial_quality_analysis/` plus Wave 1 deterministic calculations | Shared report-level diagnostic with explicit partial/unavailable behavior |
 | `financial_model_build_update` | Financial | How should a complete forecast model be built or updated? | PLANNED | No | No complete model implementation | Future financial-model wave |
 | `model_audit` | Financial | Are model formulas, inputs, and outputs internally consistent? | PLANNED | No | No independent model-audit implementation | Future model wave |
 | `dcf_valuation` | Valuation | What is forward intrinsic value from explicit FCFF forecasts? | IMPLEMENTED | Yes | `skills/valuation/calculations/dcf.ts`, `fcff.ts`, `discount-rate.ts` | Register methodology; keep product DCF readiness gate |
@@ -38,7 +38,7 @@ entries are intentionally not runtime registered.
 
 ## Runtime registration policy
 
-The runtime set is the eleven `IMPLEMENTED` entries with an independently
+The runtime set is the twelve `IMPLEMENTED` entries with an independently
 executable boundary. `business_model_map` and `thesis_red_team` are
 `SEMANTIC_EXECUTABLE` through the existing bounded session/Workflow reasoning
 boundaries. Consensus expectations, earnings variance, guidance, estimate

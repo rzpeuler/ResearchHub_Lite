@@ -10,7 +10,7 @@ Knowledge Schema change: `NO`
 | --- | --- | --- | --- | --- | --- |
 | `company-research` | 19-section company synthesis, local proposals, report material, bounded valuation gap | Yes | business model, segments, drivers, competition, financial quality narrative, capital allocation, thesis, valuation section | `company-deep-research` / `company_research` | Workflow composition; `business_model_map`, `business_driver_analysis`, and `unit_economics` have direct bounded runtime bindings |
 | `industry-research` | Eight-module design, module analysis, cross-module synthesis, evidence/gap validation | Yes | market definition, size/growth, supply/demand, chain, competition, technology, mapping, risk | `industry-deep-research` / `industry_research` | Workflow composition; three industry catalog methods remain PARTIAL |
-| `earnings-review` | Exact-period synthesis plus deterministic expectation and financial-quality integration | Yes | consensus, actual-vs-expectation, guidance, segment KPI delta, estimate revisions, financial quality | `earnings-review` / `earnings_review` | Four expectation methods runtime; financial quality PARTIAL |
+| `earnings-review` | Exact-period synthesis plus deterministic expectation and financial-quality integration | Yes | consensus, actual-vs-expectation, guidance, segment KPI delta, estimate revisions, financial quality | `earnings-review` / `earnings_review` | Four expectation methods and canonical financial quality runtime; report behavior preserved |
 | `valuation` | PIT basis, method eligibility, scenario assumptions, deterministic target prices/sensitivity, synthesis | Yes | WACC, FCFF, forward DCF, reverse DCF, multiples, scenarios, QC | `valuation` | DCF/reverse DCF/scenario have direct bindings; cross-check and comps remain PARTIAL |
 | `event-research` | Event anchor verification, evidence assessment, impact synthesis, durable proposal gate | Yes | event evidence, impact, catalyst/risk/assumption effects | `event-research` / `event_research` | Workflow responsibility; catalyst map PARTIAL |
 | `daily-intelligence` | Signal acquisition/enrichment/ranking, change assessment, morning/evening report | Yes | signal normalization, change assessment, catalyst/risk/thesis updates | `daily-intelligence` / `daily_intelligence` | Workflow responsibility; evidence normalization and thesis/catalyst methods PARTIAL |
@@ -24,8 +24,8 @@ canonical Skills; planned methods are skipped and surfaced as gaps/metadata.
 
 | Workflow | Canonical peer methods currently available | Planned/partial methods skipped |
 | --- | --- | --- |
-| Company Research | `business_model_map`, `business_driver_analysis`, `unit_economics`; `thesis_red_team` only when explicitly requested | management, capital allocation, financial quality, expectation gap, research QC |
-| Earnings Review | `consensus_expectations_analysis`, `earnings_variance_analysis`, `guidance_analysis`, `estimate_revision_analysis` | `earnings_call_analysis`, `financial_quality_analysis`, expectation gap, thesis refresh |
+| Company Research | `business_model_map`, `business_driver_analysis`, `unit_economics`, `financial_quality_analysis`; `thesis_red_team` only when explicitly requested | management, capital allocation, expectation gap, research QC |
+| Earnings Review | `consensus_expectations_analysis`, `earnings_variance_analysis`, `guidance_analysis`, `financial_quality_analysis`, `estimate_revision_analysis` | `earnings_call_analysis`, expectation gap, thesis refresh |
 | Valuation | `dcf_valuation`, `reverse_dcf_expectation_decode`, `scenario_valuation` | `valuation_crosscheck` and `comps_valuation` until direct execution/evidence contracts close |
 | Industry Research | none promoted as independently executable; current eight-module Skill remains transitional | market structure, supply/demand cycle, competitive map |
 | Event Research | none; current event Skill remains Workflow-owned | catalyst map |
