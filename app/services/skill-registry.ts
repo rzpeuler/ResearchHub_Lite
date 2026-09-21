@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises'
-import { readFileSync, statSync } from 'node:fs'
+import { readFile, stat } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { canonicalResearchSkillMdPath, CANONICAL_RESEARCH_SKILL_IDS, getCanonicalResearchSkill, REQUIRED_RESEARCH_SKILL_SECTIONS, RUNTIME_CANONICAL_RESEARCH_SKILLS, type ResearchSkillCatalogStatus } from './research-skill-catalog.ts'
 
@@ -108,7 +108,7 @@ export async function loadResearchSkillMethodology(definition: ResearchSkillDefi
   const normalized = normalize(definition)
   if (normalized.kind !== 'research' || normalized.methodologySource?.type !== 'researchhub_skill') throw new Error(`Research Skill methodology source is unavailable: ${definition.id}`)
   const sourcePath = resolve(normalized.methodologySource.path)
-  const metadata = await statSync(sourcePath)
+  const metadata = await stat(sourcePath)
   if (!metadata.isFile() || metadata.size === 0 || metadata.size > maxBytes) throw new Error(`Research Skill methodology is missing or exceeds ${maxBytes} bytes: ${definition.id}`)
   const methodology = (await readFile(sourcePath, 'utf8')).trim()
   if (methodology === '') throw new Error(`Research Skill methodology is empty: ${definition.id}`)
