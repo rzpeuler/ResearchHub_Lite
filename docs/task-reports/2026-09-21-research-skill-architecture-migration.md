@@ -1,6 +1,21 @@
 # RHL-SKILL-ARCH-001 ACCEPTANCE REPORT
 
-Status: `IMPLEMENTED / SOL ACCEPTANCE PENDING`
+Delivery classification: `READY_FOR_SOL_REVIEW`
+
+## Delivery Fields
+
+task_id: RHL-SKILL-ARCH-001
+status: READY_FOR_SOL_REVIEW
+baseline: 0b53e462cf5da00b568a7af52dec4375c7dfb5b9
+branch: codex/skill-arch-001-single-level-research-skills
+implementation_commit: pending
+verified_remote_tip: pending
+sync_status: READY_TO_SYNC
+summary: Implemented the flat canonical Research Skill catalog, metadata validation, Workflow composition mappings, collision-aware dispatch, canonical SKILL.md contracts, compatibility boundaries, tests, and governance documentation.
+tests: npm run typecheck; npm test; npm run client:typecheck; npm run client:build; focused Workflow/E2E suite; architecture suite
+acceptance_criteria: 29 canonical IDs; 12 IMPLEMENTED, 11 PARTIAL, 6 PLANNED; runtime registry excludes PARTIAL/PLANNED; required SKILL.md sections validated; Workflow mappings and routing collision cases covered; no Knowledge schema/storage mutation
+governance_status: IMPLEMENTED / SOL ACCEPTANCE PENDING
+blockers: none in the validated local scope; authenticated provider/model E2E and Sol acceptance remain environment-dependent
 
 ## 1. Baseline
 
