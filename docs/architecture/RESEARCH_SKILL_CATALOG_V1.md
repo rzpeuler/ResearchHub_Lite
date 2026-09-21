@@ -11,8 +11,8 @@ entries are intentionally not runtime registered.
 | `business_model_map` | Company Economics | How does the company make money? | IMPLEMENTED | Yes | Company Research Business Model section | Evidence-gated standalone methodology |
 | `business_driver_analysis` | Company Economics | What drives consolidated revenue/profit? | IMPLEMENTED | Yes | `skills/business_driver_analysis/calculations.ts` | Direct period-aligned driver decomposition with explicit residuals |
 | `unit_economics` | Company Economics | What measurable economic unit explains the business? | IMPLEMENTED | Yes | `skills/unit_economics/calculations.ts` | Direct explicit-unit, per-unit, growth, and operating-leverage calculations |
-| `management_execution` | Company Economics | How has management executed against commitments? | PLANNED | No | Narrative Management section only | Require historical commitment/result evidence |
-| `capital_allocation_review` | Company Economics | How has capital been allocated and with what result? | PARTIAL | No | Company Management / Capital Allocation section | Extract after stable source/period contract |
+| `management_execution` | Company Economics | How has management executed against commitments? | IMPLEMENTED | Yes | `skills/management_execution/` | Explicit commitment-to-outcome comparison; no personality scoring |
+| `capital_allocation_review` | Company Economics | How has capital been allocated and with what result? | IMPLEMENTED | Yes | `skills/capital_allocation_review/` | Explicit capital metrics and return/hurdle assessment |
 | `market_structure_analysis` | Industry | What is the structure and boundary of the market? | PARTIAL | No | Industry eight-module design and definition module | Extract module-level result contract |
 | `industry_supply_demand_cycle` | Industry | What drives capacity, inventory, pricing, and cycle? | PARTIAL | No | Industry Supply Demand module | Preserve missing cycle depth; do not claim Wave 3 completion |
 | `competitive_market_map` | Industry | Who competes and how is the market positioned? | PARTIAL | No | Industry Competitive Landscape and Company Mapping modules | Extract bounded map later |
@@ -38,17 +38,18 @@ entries are intentionally not runtime registered.
 
 ## Runtime registration policy
 
-The runtime set is the twelve `IMPLEMENTED` entries with an independently
+The runtime set is the fourteen `IMPLEMENTED` entries with an independently
 executable boundary. `business_model_map` and `thesis_red_team` are
 `SEMANTIC_EXECUTABLE` through the existing bounded session/Workflow reasoning
 boundaries. Consensus expectations, earnings variance, guidance, estimate
 revisions, forward DCF, reverse DCF, and scenario valuation are
 `DETERMINISTIC_EXECUTABLE` and bind directly to the existing authoritative
-calculation functions. `valuation_crosscheck` is `PARTIAL` because its SKILL.md
+calculation functions. Business driver, unit economics, financial quality,
+management execution, and capital allocation bind to their new deterministic
+contracts. `valuation_crosscheck` is `PARTIAL` because its SKILL.md
 contract declares code-owned work but no direct canonical execution binding
-exists. `comps_valuation`
-and `financial_quality_analysis` remain `PARTIAL` for their previously recorded
-evidence/ownership gaps.
+exists. `comps_valuation` remains `PARTIAL` for its previously recorded
+peer-evidence gap.
 
 Every runtime entry records an execution class and binding in the catalog. A
 deterministic entry must also expose a callable `runtimeExecutor`; a methodology

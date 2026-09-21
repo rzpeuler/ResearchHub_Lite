@@ -9,6 +9,8 @@ import { calculateValuation } from '../../skills/valuation/financials.ts'
 import { calculateBusinessDriverAnalysis } from '../../skills/business_driver_analysis/calculations.ts'
 import { calculateUnitEconomics } from '../../skills/unit_economics/calculations.ts'
 import { calculateFinancialQualityAnalysis } from '../../skills/financial_quality_analysis/calculations.ts'
+import { assessManagementExecution } from '../../skills/management_execution/calculations.ts'
+import { assessCapitalAllocation } from '../../skills/capital_allocation_review/calculations.ts'
 import { canonicalResearchSkillMdPath, CANONICAL_RESEARCH_SKILL_IDS, getCanonicalResearchSkill, REQUIRED_RESEARCH_SKILL_SECTIONS, RUNTIME_CANONICAL_RESEARCH_SKILLS, type ResearchSkillCatalogStatus, type ResearchSkillExecutionClass } from './research-skill-catalog.ts'
 
 export type ResearchHubSkillKind = 'research' | 'knowledge' | 'utility'
@@ -75,6 +77,8 @@ const CANONICAL_RUNTIME_EXECUTORS: Readonly<Partial<Record<string, ResearchSkill
   business_driver_analysis: (input) => calculateBusinessDriverAnalysis(input as Parameters<typeof calculateBusinessDriverAnalysis>[0]),
   unit_economics: (input) => calculateUnitEconomics(input as Parameters<typeof calculateUnitEconomics>[0]),
   financial_quality_analysis: (input) => calculateFinancialQualityAnalysis(input as Parameters<typeof calculateFinancialQualityAnalysis>[0]),
+  management_execution: (input) => assessManagementExecution(input as Parameters<typeof assessManagementExecution>[0]),
+  capital_allocation_review: (input) => assessCapitalAllocation(input as Parameters<typeof assessCapitalAllocation>[0]),
   consensus_expectations_analysis: (input) => buildConsensusSnapshot(input as Parameters<typeof buildConsensusSnapshot>[0]),
   earnings_variance_analysis: (input) => {
     const value = input as Parameters<typeof compareActualToExpectation>[0]

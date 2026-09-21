@@ -14,9 +14,9 @@ are unchanged.
 
 ## Accepted engineering facts
 
-- Canonical catalog: 29 entries; 12 runtime-registered, 11 partial, 6 planned
+- Canonical catalog: 29 entries; 14 runtime-registered, 10 partial, 5 planned
   after the Wave 3 checkpoints promoted business-driver analysis, unit
-  economics, and financial quality.
+  economics, financial quality, management execution, and capital allocation.
 - Runtime entries are classified as `SEMANTIC_EXECUTABLE` or
   `DETERMINISTIC_EXECUTABLE`; deterministic entries must expose a direct
   callable binding to the authoritative calculation implementation.
