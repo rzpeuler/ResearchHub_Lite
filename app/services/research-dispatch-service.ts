@@ -12,6 +12,8 @@ import { createResearchBundle } from './research-bundle.ts'
 import type { SourceLibraryService, SourceLibraryHit } from './source-library.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import type { ReasoningExecutor, ReasoningRequest } from '../../plugins/reasoning/contracts.ts'
+import { runThesisLifecycle } from '../../workflows/thesis-lifecycle/workflow.ts'
+import type { ThesisLifecycleInput } from '../../workflows/thesis-lifecycle/contracts.ts'
 
 export interface ResearchSessionContext {
   readonly selectedSkills: readonly LoadedResearchSkill[]
@@ -61,6 +63,7 @@ const WORKFLOW_KEYWORDS: Readonly<Record<string, readonly string[]>> = {
   earnings_review: ['半年报', '上半年', '年报', '季报', '季度', '业绩', 'earnings', 'financial results', 'q1', 'h1', 'q3', 'fy'],
   valuation: ['估值', 'valuation', '市盈率', '市净率', 'ev/ebitda', 'pe', 'pb'],
   thesis_red_team: ['反驳', '反向验证', '红队', 'red team', 'red-team', 'thesis', '投资论点'],
+  thesis_lifecycle: ['thesis lifecycle', 'thesis 生命周期', '投资论点生命周期', '创建并维护 thesis', 'create and refresh thesis'],
   event_research: ['事件', '公告', '新闻', '消息', 'event', 'announcement', 'headline'],
   industry_research: ['行业', '产业', '产业链', 'industry', 'pcb', '半导体', '服务器'],
   company_research: ['公司', '个股', 'company', '股票'],
@@ -150,6 +153,10 @@ export function extractWorkflowArguments(definition: WorkflowDefinition, query: 
     const thesisRef = extractThesisRef(query)
     if (thesisRef !== undefined) args.thesisRef = thesisRef
   }
+  if (definition.id === 'thesis_lifecycle') {
+    if (/refresh|更新|刷新|财报出来|生命周期/i.test(query)) args.mode = 'REFRESH'
+    else if (/create|创建|整理|形式化|formalize/i.test(query)) args.mode = 'CREATE'
+  }
   if (definition.id === 'daily_intelligence') {
     const briefType = /晚间|盘后|evening/i.test(query) ? 'evening' : /早盘|盘前|morning/i.test(query) ? 'morning' : undefined
     const tradeDate = query.match(/\b20\d{2}-\d{2}-\d{2}\b/)?.[0]
@@ -169,8 +176,14 @@ function scoreWorkflow(definition: WorkflowDefinition, query: string): number {
   return keywordScore
 }
 
-function selectedSkillIds(registry: ResearchSkillRegistry, workflowId: string): readonly string[] {
-  return registry.researchCandidates().filter((skill) => skill.researchCapability === workflowId).map((skill) => skill.id)
+function selectedSkillIds(registry: ResearchSkillRegistry, definition: WorkflowDefinition): readonly string[] {
+  return definition.skillIds.filter((id) => isExecutableResearchSkill(registry, id))
+}
+
+function isExecutableResearchSkill(registry: ResearchSkillRegistry, id: string): boolean {
+  const skill = registry.get(id)
+  if (skill?.kind !== 'research' || skill.enabled !== true) return false
+  return skill.origin !== 'canonical' || skill.catalogStatus === 'IMPLEMENTED'
 }
 
 const dispatchOutputContract = {
@@ -197,8 +210,11 @@ function assertSemanticDecision(request: ResearchRequest, decision: ResearchDisp
   if (explicitWorkflowId !== undefined && (decision.mode !== 'workflow' || decision.workflow?.id !== explicitWorkflowId)) throw new ApplicationServiceError('conflict', 'Semantic dispatch output cannot replace the explicit Workflow')
   if (decision.mode === 'workflow') {
     if (!decision.workflow || workflowRegistry.get(decision.workflow.id) === undefined) throw new ApplicationServiceError('not_found', `Semantic dispatch selected an unknown Workflow: ${decision.workflow?.id ?? 'missing'}`)
+    const allowed = new Set(workflowRegistry.get(decision.workflow.id)!.skillIds)
+    if (decision.skills.some((skill) => !allowed.has(skill.id))) throw new ApplicationServiceError('invalid_input', `Semantic dispatch selected a Skill that is not mapped to Workflow ${decision.workflow.id}`)
+    if (decision.skills.some((skill) => !isExecutableResearchSkill(skillRegistry, skill.id))) throw new ApplicationServiceError('invalid_input', `Semantic dispatch selected an unavailable Research Skill for Workflow ${decision.workflow.id}`)
   }
-  if (decision.mode === 'skill_plan' && (decision.skills.length === 0 || decision.skills.some((skill) => skillRegistry.get(skill.id)?.kind !== 'research' || skillRegistry.get(skill.id)?.enabled !== true))) throw new ApplicationServiceError('invalid_input', 'Semantic dispatch selected an unavailable Research Skill')
+  if (decision.mode === 'skill_plan' && (decision.skills.length === 0 || decision.skills.some((skill) => !isExecutableResearchSkill(skillRegistry, skill.id)))) throw new ApplicationServiceError('invalid_input', 'Semantic dispatch selected an unavailable Research Skill')
   if (decision.mode === 'free_research' && decision.skills.length > 0) throw new ApplicationServiceError('invalid_input', 'Free Research cannot include selected Research Skills')
 }
 
@@ -232,18 +248,22 @@ export class ResearchDispatchService {
   resolve(input: unknown): { readonly request: ResearchRequest; readonly decision: ResearchDispatchDecision; readonly summary: ResearchExecutionSummary } {
     const request = normalizeResearchRequest(input)
     const explicit = request.mode.type === 'workflow'
-    const definition = explicit ? this.workflowRegistry.get(request.mode.workflowId) : this.bestWorkflow(request.query)
-    if (definition !== undefined) {
-      const extracted = extractWorkflowArguments(definition, request.query)
-      const decision = validateResearchDispatchDecision({ mode: 'workflow', workflow: { id: definition.id, confidence: explicit ? 1 : Math.min(1, 0.5 + scoreWorkflow(definition, request.query) / 10), arguments: extracted.arguments }, skills: selectedSkillIds(this.skillRegistry, definition.id).map((id) => ({ id, purpose: 'selected by the authoritative Workflow definition' })), entities: this.entities(request.query), missingRequiredInputs: extracted.missingRequiredInputs, contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: explicit ? 'User-selected Workflow has precedence over automatic routing.' : `Matched existing Workflow definition ${definition.id}.` })
-      return { request, decision, summary: this.summary(request, decision, definition) }
+    const definition = explicit ? this.workflowRegistry.get(request.mode.workflowId) : undefined
+    if (explicit && definition === undefined) throw new ApplicationServiceError('not_found', `Workflow definition not found: ${request.mode.workflowId}`)
+    if (!explicit) {
+      const directSkill = this.bestSkill(request.query)
+      if (directSkill !== undefined) {
+        const decision = validateResearchDispatchDecision({ mode: 'skill_plan', skills: [{ id: directSkill.id, purpose: directSkill.purpose ?? directSkill.whenToUse }], entities: this.entities(request.query), missingRequiredInputs: [], contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: `Matched one narrow Research Skill by semantic intent: ${directSkill.id}.` })
+        return { request, decision, summary: this.summary(request, decision) }
+      }
+    }
+    const routedDefinition = definition ?? this.bestWorkflow(request.query)
+    if (routedDefinition !== undefined) {
+      const extracted = extractWorkflowArguments(routedDefinition, request.query)
+      const decision = validateResearchDispatchDecision({ mode: 'workflow', workflow: { id: routedDefinition.id, confidence: explicit ? 1 : Math.min(1, 0.5 + scoreWorkflow(routedDefinition, request.query) / 10), arguments: extracted.arguments }, skills: selectedSkillIds(this.skillRegistry, routedDefinition).map((id) => ({ id, purpose: this.skillRegistry.get(id)?.purpose ?? 'selected by the authoritative Workflow definition' })), entities: this.entities(request.query), missingRequiredInputs: extracted.missingRequiredInputs, contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: explicit ? 'User-selected Workflow has precedence over automatic routing.' : `Matched existing Workflow definition ${routedDefinition.id}.` })
+      return { request, decision, summary: this.summary(request, decision, routedDefinition) }
     }
     if (explicit) throw new ApplicationServiceError('not_found', `Workflow definition not found: ${request.mode.workflowId}`)
-    const skill = this.bestSkill(request.query)
-    if (skill !== undefined) {
-      const decision = validateResearchDispatchDecision({ mode: 'skill_plan', skills: [{ id: skill.id, purpose: skill.whenToUse }], entities: this.entities(request.query), missingRequiredInputs: [], contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: `No suitable Workflow matched; selected Research Skill ${skill.id}.` })
-      return { request, decision, summary: this.summary(request, decision) }
-    }
     const decision = validateResearchDispatchDecision({ mode: 'free_research', skills: [], entities: this.entities(request.query), missingRequiredInputs: [], contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: 'No suitable Workflow or enabled Research Skill matched; continue as Free Research.' })
     return { request, decision, summary: this.summary(request, decision) }
   }
@@ -350,7 +370,10 @@ export class ResearchDispatchService {
         const definition = decision.workflow === undefined ? undefined : this.workflowRegistry.get(decision.workflow.id)
         const required = definition?.requiredInputs ?? []
         const missing = [...new Set([...decision.missingRequiredInputs, ...required.filter((key) => decision.workflow?.arguments[key] === undefined)])].sort()
-        const normalized = missing.length === decision.missingRequiredInputs.length ? decision : validateResearchDispatchDecision({ ...decision, missingRequiredInputs: missing })
+        const mappedSkills = decision.mode === 'workflow' && decision.workflow !== undefined && decision.skills.length === 0
+          ? selectedSkillIds(this.skillRegistry, this.workflowRegistry.get(decision.workflow.id)!).map((id) => ({ id, purpose: this.skillRegistry.get(id)?.purpose ?? 'selected by the authoritative Workflow definition' }))
+          : decision.skills
+        const normalized = validateResearchDispatchDecision({ ...decision, skills: mappedSkills, ...(missing.length === decision.missingRequiredInputs.length ? {} : { missingRequiredInputs: missing }) })
         return { decision: normalized, resolution: { source: attempt === 1 ? 'reasoning_executor' : 'bounded_repair', attempts: attempt, diagnostics } }
       } catch (error) {
         diagnostics.push(error instanceof Error ? error.message.slice(0, 240) : 'semantic_resolution_invalid')
@@ -380,7 +403,32 @@ export class ResearchDispatchService {
 
   private bestSkill(query: string): ResearchSkillDefinition | undefined {
     const text = safeQuery(query)
-    return this.skillRegistry.researchCandidates().map((skill) => {
+    const canonical = this.skillRegistry.canonicalResearchCandidates()
+    const intentMatches: readonly { readonly id: string; readonly include: readonly RegExp[]; readonly exclude?: readonly RegExp[] }[] = [
+      { id: 'comps_valuation', include: [/(?:comps|comparable|peer|可比|同行|相对估值)/i, /(?:valuation|multiple|PE|PB|EV\s*[/：:]?\s*EBITDA|估值|倍数|合理价值)/i], exclude: [/(?:implied|price.?in|隐含|增长|growth)/i] },
+      { id: 'reverse_dcf_expectation_decode', include: [/(?:price|priced|price.?in|隐含|股价|当前价格)/i, /(?:growth|revenue|margin|增长|收入|利润|假设)/i], exclude: [/(?:my|按我的|forecast|预测|build|做).*(?:dcf|discounted|DCF)/i] },
+      { id: 'dcf_valuation', include: [/(?:DCF|discounted cash flow|内在价值|intrinsic value)/i, /(?:forecast|预测|revenue|收入|profit|利润|FCFF|现金流|assumption|假设)/i] },
+      { id: 'earnings_variance_analysis', include: [/(?:beat|miss|surprise|超预期|低于预期|为什么|原因)/i, /(?:revenue|sales|profit|income|营收|收入|利润)/i], exclude: [/(?:guidance|指引|展望)/i] },
+      { id: 'guidance_analysis', include: [/(?:guidance|指引|展望)/i, /(?:change|changed|prior|last|变化|上次|相比)/i] },
+      { id: 'estimate_revision_analysis', include: [/(?:estimate|estimates|revision|revised|预测|估计|预期).*(?:revision|change|上调|下调|调整)|(?:上调|下调|调整).*(?:预测|预期|estimate)/i] },
+      { id: 'consensus_expectations_analysis', include: [/(?:consensus|一致预期|市场预期)/i], exclude: [/(?:beat|miss|guidance|revision|修订|指引)/i] },
+      { id: 'business_model_map', include: [/(?:business model|makes money|how.*make|商业模式|靠什么赚钱|怎么赚钱|客户.*产品)/i] },
+      { id: 'market_structure_analysis', include: [/(?:market structure|market definition|market size|市场结构|市场边界|市场规模|细分市场)/i] },
+      { id: 'industry_supply_demand_cycle', include: [/(?:supply.?demand|industry cycle|inventory|utilization|capacity|pricing|供需|周期|库存|利用率|产能|行业价格)/i] },
+      { id: 'competitive_market_map', include: [/(?:competitor|competition|competitive|peer|market share|竞争|竞品|竞争格局|市场份额)/i] },
+      { id: 'business_driver_analysis', include: [/(?:volume|price|mix|segment|driver|销量|价格|mix|分部|驱动)/i, /(?:revenue|sales|profit|营收|收入|利润|增长)/i] },
+      { id: 'unit_economics', include: [/(?:unit economics|economic unit|per customer|per shipment|每客|每单|每个客户|经济单位)/i] },
+      { id: 'expectation_gap', include: [/(?:market|price|consensus|management|own research|市场|股价|一致预期|管理层|我们(?:的)?研究)/i, /(?:gap|disagreement|difference|分歧|差异|预期差|核心分歧)/i] },
+      { id: 'thesis_formalize', include: [/(?:thesis|investment logic|投资逻辑|投资论点)/i, /(?:proposition|falsifiable|formalize|整理|命题|可证伪)/i] },
+      { id: 'catalyst_map', include: [/(?:catalyst|event|事件|催化剂)/i, /(?:validate|验证|confirm|确认|未来|upcoming)/i] },
+      { id: 'thesis_refresh', include: [/(?:thesis|投资逻辑|投资论点)/i, /(?:refresh|changed|change|财报|更新|变化|变了|哪些地方)/i] },
+      { id: 'thesis_red_team', include: [/(?:red.?team|falsif|反驳|反向验证|最容易错|哪里.*错|投资逻辑)/i] },
+    ]
+    for (const match of intentMatches) {
+      const skill = canonical.find((item) => item.id === match.id)
+      if (skill !== undefined && match.include.every((pattern) => pattern.test(text)) && (match.exclude === undefined || match.exclude.every((pattern) => !pattern.test(text)))) return skill
+    }
+    return this.skillRegistry.researchCandidates().filter((skill) => skill.origin !== 'canonical').map((skill) => {
       const workflowScore = WORKFLOW_KEYWORDS[skill.researchCapability ?? '']?.reduce((score, term) => score + (containsTerm(text, term) ? 1 : 0), 0) ?? 0
       const explicitSkillScore = containsTerm(text, skill.id) ? 2 : 0
       const usageScore = containsTerm(text, skill.whenToUse) ? 1 : 0
@@ -405,6 +453,7 @@ export class ResearchDispatchService {
       if (daily === undefined) throw new ApplicationServiceError('failed', 'Daily Intelligence service is not configured')
       return daily.startBrief({ workflowRunId: runId, briefType: args.briefType as 'morning' | 'evening', tradeDate: args.tradeDate as string, writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
     }
+    if (workflowId === 'thesis_lifecycle') return Promise.resolve(runThesisLifecycle(args as unknown as ThesisLifecycleInput))
     if (research === undefined) throw new ApplicationServiceError('failed', 'Research service is not configured')
     if (workflowId === 'company_research') return research.startResearchCompany({ workflowRunId: runId, symbol: args.symbol as string, ...(typeof args.name === 'string' ? { name: args.name } : {}), writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
     if (workflowId === 'industry_research') return research.startIndustryResearch({ workflowRunId: runId, name: args.name as string, writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion

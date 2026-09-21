@@ -81,3 +81,60 @@ test('semantic resolver cannot replace an explicit Workflow or policy', async ()
   const resolved = await service.resolveAsync({ query: '请估值 600519', mode: { type: 'workflow', workflowId: 'valuation' }, contextPolicy: { structuredKnowledge: false, sourceLibrary: false }, persistencePolicy: { writeKnowledge: true } })
   assert.equal(resolved.decision.workflow?.id, 'valuation'); assert.deepEqual(resolved.decision.contextPolicy, { structuredKnowledge: false, sourceLibrary: false }); assert.equal(resolved.resolution.source, 'deterministic_fallback')
 })
+
+test('semantic Workflow decisions reject mapped but unavailable canonical Skills', async () => {
+  const cases = [
+    { workflowId: 'company_research', unavailableSkill: 'research_qc', query: '研究 600519 公司' },
+    { workflowId: 'earnings_review', unavailableSkill: 'earnings_call_analysis', query: '研究 600519 2026 年半年报' },
+    { workflowId: 'industry_research', unavailableSkill: 'research_qc', query: '研究 PCB 行业' },
+  ] as const
+  for (const item of cases) {
+    let calls = 0
+    const service = new ResearchDispatchService({
+      reasoningExecutor: {
+        capabilities: () => ({ maxContextTokens: 1000, maxOutputTokens: 1000, structuredOutputSupport: true, maxConcurrency: 1 }),
+        execute: async (request) => {
+          calls += 1
+          const argumentsValue = item.workflowId === 'company_research'
+            ? { symbol: '600519' }
+            : item.workflowId === 'earnings_review'
+              ? { symbol: '600519', fiscalYear: 2026, period: 'H1' }
+              : { name: 'PCB' }
+          return {
+            operation: request.operation,
+            output: {
+              mode: 'workflow',
+              workflow: { id: item.workflowId, confidence: 1, arguments: argumentsValue },
+              skills: [{ id: item.unavailableSkill, purpose: 'future peer capability' }],
+              entities: [],
+              missingRequiredInputs: [],
+              contextPolicy: { structuredKnowledge: true, sourceLibrary: true },
+              persistencePolicy: { writeKnowledge: false },
+              rationale: 'fixture proposes an unavailable mapped peer',
+            },
+          }
+        },
+      },
+    })
+    const resolved = await service.resolveAsync({ query: item.query, mode: { type: 'free_research' } })
+    assert.equal(calls, 2, item.workflowId)
+    assert.equal(resolved.resolution.source, 'deterministic_fallback', item.workflowId)
+    assert.equal(resolved.decision.workflow?.id, item.workflowId)
+    assert.equal(resolved.decision.skills.some((skill) => skill.id === item.unavailableSkill), false, item.workflowId)
+    assert.equal(resolved.decision.skills.every((skill) => { const definition = service.skillRegistry.get(skill.id); return definition?.kind === 'research' && definition.enabled === true && (definition.origin !== 'canonical' || definition.catalogStatus === 'IMPLEMENTED') }), true, item.workflowId)
+  }
+})
+
+test('industry depth queries route to the narrow executable canonical Skill', () => {
+  const service = new ResearchDispatchService()
+  const cases = [
+    ['这个市场的边界和细分市场怎么定义？', 'market_structure_analysis'],
+    ['这个行业库存、产能利用率和供需周期如何？', 'industry_supply_demand_cycle'],
+    ['哪些公司是真正的竞争对手，市场份额如何比较？', 'competitive_market_map'],
+  ] as const
+  for (const [query, expected] of cases) {
+    const result = service.resolve({ query, mode: { type: 'free_research' } })
+    assert.equal(result.decision.mode, 'skill_plan', query)
+    assert.deepEqual(result.decision.skills.map((item) => item.id), [expected], query)
+  }
+})

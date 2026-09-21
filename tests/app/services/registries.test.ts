@@ -6,7 +6,7 @@ import { createWorkflowDefinitionRegistry } from '../../../app/services/workflow
 test('Workflow Definition Registry exposes the current executable research set', () => {
   const registry = createWorkflowDefinitionRegistry()
   const ids = registry.list().map((definition) => definition.id)
-  assert.deepEqual(ids, ['company_research', 'daily_intelligence', 'earnings_review', 'event_research', 'industry_research', 'thesis_red_team', 'valuation'])
+  assert.deepEqual(ids, ['company_research', 'daily_intelligence', 'earnings_review', 'event_research', 'industry_research', 'thesis_lifecycle', 'thesis_red_team', 'valuation'])
   assert.deepEqual(registry.get('earnings_review')?.requiredInputs, ['symbol', 'fiscalYear', 'period'])
   const definition = registry.get('company_research')!
   ;(definition.inputSchema as Record<string, unknown>).symbol = { type: 'number' }

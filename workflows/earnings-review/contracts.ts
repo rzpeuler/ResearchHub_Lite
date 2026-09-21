@@ -8,6 +8,7 @@ import type { ExternalIdentifierV04 } from '../../knowledge/schema/domain-v04.ts
 import type { ConsensusSnapshot, EstimatePoint, GuidanceRange, SegmentKpiDeltaInput } from '../../skills/earnings-review/expectations/contracts.ts'
 import type { EarningsExpectationAnalysis } from './expectations-contracts.ts'
 import type { EarningsValuationImpactAnalysis, ThesisFilterReasoning } from './valuation-impact-thesis-filter-contracts.ts'
+import type { ResearchQualityGateResult } from '../research-quality-gate.ts'
 
 export interface EstimateRevisionLink { readonly oldEstimateId: string; readonly newEstimateId: string }
 
@@ -114,4 +115,5 @@ export interface EarningsReviewWorkflowResult {
   readonly providerOutcomes: readonly ResearchProviderOutcome[]
   readonly expectationAnalysis?: EarningsExpectationAnalysis
   readonly valuationImpactAnalysis?: EarningsValuationImpactAnalysis
+  readonly qualityGate?: ResearchQualityGateResult
 }
