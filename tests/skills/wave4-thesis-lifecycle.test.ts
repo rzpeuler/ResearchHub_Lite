@@ -92,15 +92,17 @@ test('red-team fragility is categorical and kill criteria require threshold prov
   assert.equal(evaluateThesisKillCriterion({ conditionId: 'k', statement: 'growth fails', severity: 'high', targetExistingClaimRefs: ['claim:assumption'] }, []).status, 'threshold_pending_evidence')
 })
 
-test('Wave 4 Skills have direct runtime bindings while partial/planned catalog entries remain absent', () => {
+test('Wave 4 Skills expose honest semantic or deterministic runtime classifications', () => {
   const registry = createResearchSkillRegistry()
-  for (const id of ['thesis_formalize', 'expectation_gap', 'catalyst_map', 'thesis_refresh']) {
-    assert.equal(typeof registry.get(id)?.runtimeExecutor, 'function', id)
+  for (const id of ['thesis_formalize', 'catalyst_map', 'thesis_refresh']) {
+    assert.equal(registry.get(id)?.executionClass, 'SEMANTIC_EXECUTABLE', id)
+    assert.equal(registry.get(id)?.runtimeExecutor, undefined, id)
     assert.equal(registry.get(id)?.catalogStatus, 'IMPLEMENTED')
   }
+  assert.equal(typeof registry.get('expectation_gap')?.runtimeExecutor, 'function')
   const counts = CANONICAL_RESEARCH_SKILL_CATALOG.reduce<Record<string, number>>((out, item) => { out[item.status] = (out[item.status] ?? 0) + 1; return out }, {})
   assert.deepEqual(counts, { IMPLEMENTED: 21, PARTIAL: 4, PLANNED: 4 })
-  assert.equal(registry.get('thesis_refresh')?.runtimeExecutor?.({ currentAsOf: '2026-09-21T00:00:00.000Z', evidence: [] }) !== undefined, true)
+  assert.equal(registry.get('thesis_refresh')?.runtimeBinding?.includes('executeThesisRefresh'), true)
 })
 
 test('thesis lifecycle CREATE composes peer Skills without Skill-to-Skill invocation', () => {

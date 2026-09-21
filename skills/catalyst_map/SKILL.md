@@ -18,9 +18,9 @@ catalyst map.
 
 ## Inputs
 
-An input-supplied thesis reference, proposition references, optional expectation
-gap references, attributable event candidates, timing evidence, status, and
-observable outcomes.
+A formalized thesis, optional expectation gaps, and bounded attributable event
+evidence. The semantic stage identifies candidate event-to-proposition and
+event-to-gap mappings without requiring the caller to pre-link them.
 
 ## Produces
 
@@ -29,7 +29,8 @@ optional event-to-expectation-to-thesis resolution mechanism.
 
 ## Methodology
 
-Validate event identity, preserve scheduled/conditional/occurred/cancelled/
+The `ReasoningExecutor` proposes event mappings once, with one bounded repair
+when needed. Validate event identity, preserve scheduled/conditional/occurred/cancelled/
 unknown status, require proposition linkage, and retain uncertainty when dates
 are not supported. A catalyst may confirm, challenge, or resolve uncertainty;
 it does not imply stock direction.
@@ -42,7 +43,8 @@ supported; unsupported future dates are rejected.
 
 ## Deterministic / Model Boundary
 
-Code owns reference validation, status/timing validation, and bounded mapping.
+Reasoning owns candidate event-to-thesis mapping over supplied evidence. Code
+owns reference validation, status/timing validation, and bounded normalization.
 The Skill does not call valuation, consensus, thesis, or event Skills.
 
 ## Missing Data

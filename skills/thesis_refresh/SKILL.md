@@ -19,8 +19,8 @@ proposition after any event.
 ## Inputs
 
 A prior thesis snapshot with `priorAsOf`, new bounded evidence with publication
-times and proposition refs, current as-of, and optional evidence-backed kill
-criteria.
+times but without caller-supplied target or relation labels, current as-of, and
+optional evidence-backed kill criteria.
 
 ## Produces
 
@@ -29,7 +29,9 @@ thesis transition, kill-criterion assessments, evidence refs, and diagnostics.
 
 ## Methodology
 
-Require a prior snapshot, apply strict `publishedAt > priorAsOf` and
+The `ReasoningExecutor` classifies evidence targets and relations once, with one
+bounded repair when needed. Require a prior snapshot, apply strict
+`publishedAt > priorAsOf` and
 `publishedAt <= currentAsOf` filtering, target only referenced propositions,
 and preserve unrelated propositions. Deterministic kill predicates may produce
 `invalidation_condition_met` only when their sourced threshold is satisfied.
@@ -42,9 +44,11 @@ not a new delta; future evidence is rejected.
 
 ## Deterministic / Model Boundary
 
+Reasoning owns target/relation classification over the supplied evidence.
 Code owns PIT filtering, reference checks, targeted delta mapping, and numeric
-kill-criterion evaluation. The Skill does not call upstream Skills, mutate a
-canonical Thesis, or emit BUY/SELL/HOLD decisions.
+kill-criterion evaluation. Invalid semantic output fails closed. The Skill does
+not call upstream Skills, mutate a canonical Thesis, or emit BUY/SELL/HOLD
+decisions.
 
 ## Missing Data
 

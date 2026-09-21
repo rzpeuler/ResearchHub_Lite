@@ -25,6 +25,42 @@ export interface CatalystMapInput {
   readonly catalysts: readonly CatalystCandidate[]
 }
 
+export interface CatalystEventEvidence {
+  readonly eventId: string
+  readonly description: string
+  readonly sourceRefs: readonly string[]
+  readonly eventType?: CatalystEventType
+  readonly eventDate?: string
+  readonly eventWindow?: { readonly start?: string; readonly end?: string }
+  readonly status?: CatalystStatus
+  readonly observable?: string
+  readonly resolutionMechanism?: string
+}
+
+export interface CatalystMapSemanticInput {
+  readonly thesisRef: string
+  readonly propositions: readonly { readonly propositionId: string; readonly statement?: string }[]
+  readonly expectationGaps?: readonly { readonly gapId: string; readonly statement?: string }[]
+  readonly asOf: string
+  readonly events: readonly CatalystEventEvidence[]
+}
+
+export interface CatalystMapSemanticTelemetry {
+  readonly called: boolean
+  readonly validated: boolean
+  readonly applied: boolean
+  readonly fallbackUsed: boolean
+  readonly repairAttempts: number
+  readonly diagnostics: readonly string[]
+}
+
+export interface CatalystMapSemanticResult {
+  readonly status: 'complete' | 'blocked'
+  readonly result?: CatalystMapResult
+  readonly diagnostics: readonly string[]
+  readonly telemetry: CatalystMapSemanticTelemetry
+}
+
 export interface CatalystMapResult {
   readonly status: 'complete' | 'partial' | 'unavailable'
   readonly thesisRef: string

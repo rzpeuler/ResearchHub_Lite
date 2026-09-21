@@ -41,6 +41,10 @@ test('runtime registration has an explicit execution classification and determin
   assert.equal(registry.get('valuation_crosscheck'), undefined)
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'business_driver_analysis')?.executionClass, 'DETERMINISTIC_EXECUTABLE')
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'unit_economics')?.executionClass, 'DETERMINISTIC_EXECUTABLE')
+  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'thesis_formalize')?.executionClass, 'SEMANTIC_EXECUTABLE')
+  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'catalyst_map')?.executionClass, 'SEMANTIC_EXECUTABLE')
+  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'thesis_refresh')?.executionClass, 'SEMANTIC_EXECUTABLE')
+  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'expectation_gap')?.executionClass, 'DETERMINISTIC_EXECUTABLE')
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'valuation_crosscheck')?.executionClass, 'NOT_INDEPENDENTLY_EXECUTABLE')
   const input = { fcff: [100, 110, 120], discountRate: 0.09, terminalGrowthRate: 0.03 }
   const direct = calculateForwardDcf(input)

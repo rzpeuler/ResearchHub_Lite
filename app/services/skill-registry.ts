@@ -14,10 +14,7 @@ import { assessCapitalAllocation } from '../../skills/capital_allocation_review/
 import { analyzeMarketStructure } from '../../skills/market_structure_analysis/calculations.ts'
 import { analyzeIndustrySupplyDemandCycle } from '../../skills/industry_supply_demand_cycle/calculations.ts'
 import { analyzeCompetitiveMarketMap } from '../../skills/competitive_market_map/calculations.ts'
-import { formalizeThesis } from '../../skills/thesis_formalize/calculations.ts'
 import { analyzeExpectationGap } from '../../skills/expectation_gap/calculations.ts'
-import { mapCatalysts } from '../../skills/catalyst_map/calculations.ts'
-import { refreshThesis } from '../../skills/thesis_refresh/calculations.ts'
 import { canonicalResearchSkillMdPath, CANONICAL_RESEARCH_SKILL_IDS, getCanonicalResearchSkill, REQUIRED_RESEARCH_SKILL_SECTIONS, RUNTIME_CANONICAL_RESEARCH_SKILLS, type ResearchSkillCatalogStatus, type ResearchSkillExecutionClass } from './research-skill-catalog.ts'
 
 export type ResearchHubSkillKind = 'research' | 'knowledge' | 'utility'
@@ -102,10 +99,7 @@ const CANONICAL_RUNTIME_EXECUTORS: Readonly<Partial<Record<string, ResearchSkill
     const value = input as { readonly basis: Parameters<typeof calculateValuation>[0]; readonly plan: Parameters<typeof calculateValuation>[1]; readonly eligibleMethods: Parameters<typeof calculateValuation>[2] }
     return calculateValuation(value.basis, value.plan, value.eligibleMethods)
   },
-  thesis_formalize: (input) => formalizeThesis(input as Parameters<typeof formalizeThesis>[0]),
   expectation_gap: (input) => analyzeExpectationGap(input as Parameters<typeof analyzeExpectationGap>[0]),
-  catalyst_map: (input) => mapCatalysts(input as Parameters<typeof mapCatalysts>[0]),
-  thesis_refresh: (input) => refreshThesis(input as Parameters<typeof refreshThesis>[0]),
 }
 
 const CORE_SKILLS: readonly ResearchSkillDefinition[] = [

@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Turn an input-supplied investment thesis into explicit, traceable propositions
-and an acyclic dependency graph.
+Turn a narrative investment thesis and bounded research context into explicit,
+traceable propositions and an acyclic dependency graph.
 
 ## Invocation Match
 
@@ -19,9 +19,9 @@ mutation.
 
 ## Inputs
 
-An input-supplied summary, propositions, proposition types, evidence basis,
-time horizons, references, dependencies, verification conditions, and research
-gaps.
+A narrative thesis, bounded attributable evidence, and optional structured
+proposition hints. The semantic stage proposes proposition types, evidence
+basis, horizons, dependencies, verification conditions, and research gaps.
 
 ## Produces
 
@@ -30,7 +30,8 @@ load-bearing identification, evidence availability, and bounded diagnostics.
 
 ## Methodology
 
-Validate proposition identity and references, reject duplicate/self/cyclic
+The `ReasoningExecutor` proposes candidates once, with one bounded repair when
+needed. Validate proposition identity and references, reject duplicate/self/cyclic
 dependencies, preserve `verified_evidence`, `inference`, and `hypothesis`
 without upgrading them, and derive load-bearing status from downstream
 dependency count. Research gaps remain explicit.
@@ -43,9 +44,10 @@ the Skill does not resolve or create canonical objects.
 
 ## Deterministic / Model Boundary
 
-Validation, graph construction, cycle checks, and load-bearing derivation are
-deterministic. No model is allowed to invent a proposition, evidence, date, or
-threshold.
+Semantic proposition generation is bounded to the supplied narrative and
+evidence allowlist. Validation, graph construction, cycle checks, and
+load-bearing derivation are deterministic. No model is allowed to invent a
+source ref, date, or threshold; invalid output fails closed.
 
 ## Missing Data
 

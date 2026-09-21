@@ -39,6 +39,39 @@ export interface ThesisFormalizeInput {
   readonly asOf?: string
 }
 
+export interface ThesisFormalizeEvidence {
+  readonly evidenceId: string
+  readonly statement: string
+  readonly sourceRefs: readonly string[]
+  readonly publishedAt?: string
+  readonly basisHint?: ThesisEvidenceBasis
+}
+
+export interface ThesisFormalizeSemanticInput {
+  readonly narrative: string
+  readonly evidence: readonly ThesisFormalizeEvidence[]
+  readonly thesisId?: string
+  readonly localRef?: string
+  readonly asOf?: string
+  readonly propositionHints?: readonly ThesisPropositionInput[]
+}
+
+export interface ThesisFormalizeSemanticTelemetry {
+  readonly called: boolean
+  readonly validated: boolean
+  readonly applied: boolean
+  readonly fallbackUsed: boolean
+  readonly repairAttempts: number
+  readonly diagnostics: readonly string[]
+}
+
+export interface ThesisFormalizeSemanticResult {
+  readonly status: 'complete' | 'blocked'
+  readonly result?: FormalizedThesisResult
+  readonly diagnostics: readonly string[]
+  readonly telemetry: ThesisFormalizeSemanticTelemetry
+}
+
 export interface ThesisDependency {
   readonly dependencyId: string
   readonly sourcePropositionRef: string

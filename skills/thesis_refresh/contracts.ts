@@ -56,6 +56,40 @@ export interface ThesisRefreshInput {
   readonly killCriteria?: readonly KillCriterion[]
 }
 
+export interface RefreshEvidenceCandidate {
+  readonly evidenceId: string
+  readonly publishedAt: string
+  readonly sourceRefs: readonly string[]
+  readonly statement?: string
+  readonly metric?: string
+  readonly period?: string
+  readonly unit?: string
+  readonly value?: number
+}
+
+export interface ThesisRefreshSemanticInput {
+  readonly priorSnapshot?: PriorThesisSnapshot
+  readonly currentAsOf: string
+  readonly evidence: readonly RefreshEvidenceCandidate[]
+  readonly killCriteria?: readonly KillCriterion[]
+}
+
+export interface ThesisRefreshSemanticTelemetry {
+  readonly called: boolean
+  readonly validated: boolean
+  readonly applied: boolean
+  readonly fallbackUsed: boolean
+  readonly repairAttempts: number
+  readonly diagnostics: readonly string[]
+}
+
+export interface ThesisRefreshSemanticResult {
+  readonly status: 'complete' | 'blocked'
+  readonly result?: ThesisRefreshResult
+  readonly diagnostics: readonly string[]
+  readonly telemetry: ThesisRefreshSemanticTelemetry
+}
+
 export interface PropositionRefreshDelta {
   readonly propositionRef: string
   readonly previousStatus: string

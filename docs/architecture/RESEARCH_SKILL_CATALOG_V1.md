@@ -30,10 +30,10 @@ entries are intentionally not runtime registered.
 | `scenario_valuation` | Valuation | How do Bear/Base/Bull assumptions change value? | IMPLEMENTED | Yes | `skills/valuation/financials.ts`; Valuation Workflow | Register methodology and reuse code arithmetic |
 | `valuation_crosscheck` | Valuation | Do independent valuation methods agree or diverge? | PARTIAL | No | Valuation secondary-method and QC logic | Promote after a directly callable cross-check binding exists |
 | `expectation_gap` | Thesis | Where do price-implied, consensus, management, and research views differ? | IMPLEMENTED | Yes | `skills/expectation_gap/` | Deterministic compatibility, range, delta, and no-gap contract |
-| `thesis_formalize` | Thesis | What are the explicit thesis propositions and dependencies? | IMPLEMENTED | Yes | `skills/thesis_formalize/` | Deterministic proposition, evidence-basis, and acyclic dependency contract |
+| `thesis_formalize` | Thesis | What are the explicit thesis propositions and dependencies? | IMPLEMENTED | Yes | `skills/thesis_formalize/` | Semantic candidate proposition generation over bounded evidence, followed by deterministic evidence-basis and acyclic-dependency validation |
 | `thesis_red_team` | Thesis | How could an active thesis be wrong? | IMPLEMENTED | Yes | `skills/thesis-red-team/`; Thesis Red Team Workflow | Normalize legacy ID and retain Workflow composition |
-| `catalyst_map` | Thesis | Which attributable events could change the thesis? | IMPLEMENTED | Yes | `skills/catalyst_map/` | Deterministic proposition-linked event/timing/status contract |
-| `thesis_refresh` | Thesis | What changed in an existing thesis since last review? | IMPLEMENTED | Yes | `skills/thesis_refresh/` | Deterministic PIT-filtered targeted proposition refresh |
+| `catalyst_map` | Thesis | Which attributable events could change the thesis? | IMPLEMENTED | Yes | `skills/catalyst_map/` | Semantic event-to-proposition mapping over bounded attributable evidence, followed by deterministic timing/status validation |
+| `thesis_refresh` | Thesis | What changed in an existing thesis since last review? | IMPLEMENTED | Yes | `skills/thesis_refresh/` | Semantic target/relation classification over bounded new evidence, followed by deterministic PIT, no-drift, and kill logic |
 | `research_qc` | Cross-domain QC | Is the assembled research result internally/evidentially valid? | PARTIAL | No | Existing validators and Workflow terminal gates | Consolidate only pure QC rules; keep Workflow gate owner |
 
 ## Runtime registration policy
@@ -45,8 +45,10 @@ boundaries. Consensus expectations, earnings variance, guidance, estimate
 revisions, forward DCF, reverse DCF, and scenario valuation are
 `DETERMINISTIC_EXECUTABLE` and bind directly to the existing authoritative
 calculation functions. Business driver, unit economics, financial quality,
-management execution, capital allocation, thesis formalization, expectation
-gap, catalyst mapping, and thesis refresh bind to deterministic contracts.
+management execution, capital allocation, and expectation gap bind to
+deterministic contracts. Thesis formalization, catalyst mapping, and thesis
+refresh bind to semantic executors which pass bounded model output into
+deterministic contracts.
 `valuation_crosscheck` is `PARTIAL` because its SKILL.md
 contract declares code-owned work but no direct canonical execution binding
 exists. `comps_valuation` remains `PARTIAL` for its previously recorded
@@ -74,4 +76,6 @@ W4 promotes only `thesis_formalize`, `expectation_gap`, `catalyst_map`, and
 no canonical Knowledge mutation. The catalog is now 21 `IMPLEMENTED`, 4
 `PARTIAL`, and 4 `PLANNED`; `thesis_red_team` remains the semantic peer and
 adds deterministic fragility and kill-criterion evaluation without becoming a
-composite Skill.
+composite Skill. FIX-001 closes semantic ownership for the three target Skills:
+each calls `ReasoningExecutor` at most twice, allowlists supplied refs, and
+fails closed before its deterministic validator on invalid model output.

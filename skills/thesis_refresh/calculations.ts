@@ -12,7 +12,8 @@ function blocked(input: ThesisRefreshInput, diagnostics: readonly string[]): The
 
 function validateEvidence(evidence: RefreshEvidence, propositionRefs: ReadonlySet<string>): void {
   if (!ID.test(evidence.evidenceId) || !text(evidence.publishedAt) || Number.isNaN(Date.parse(evidence.publishedAt)) || !REFRESH_EVIDENCE_RELATIONS.includes(evidence.relation)) throw new ThesisRefreshError('REFRESH_EVIDENCE_INVALID')
-  if (refs(evidence.targetPropositionRefs).length === 0 || refs(evidence.targetPropositionRefs).some((ref) => !propositionRefs.has(ref))) throw new ThesisRefreshError('REFRESH_EVIDENCE_PROPOSITION_REF_INVALID')
+  if (refs(evidence.targetPropositionRefs).length === 0 && evidence.relation !== 'context' && evidence.relation !== 'irrelevant') throw new ThesisRefreshError('REFRESH_EVIDENCE_PROPOSITION_REF_INVALID')
+  if (refs(evidence.targetPropositionRefs).some((ref) => !propositionRefs.has(ref))) throw new ThesisRefreshError('REFRESH_EVIDENCE_PROPOSITION_REF_INVALID')
   if (refs(evidence.sourceRefs).length === 0) throw new ThesisRefreshError('REFRESH_EVIDENCE_SOURCE_MISSING')
   if (evidence.value !== undefined && !finite(evidence.value)) throw new ThesisRefreshError('REFRESH_EVIDENCE_VALUE_INVALID')
 }
