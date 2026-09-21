@@ -33,8 +33,8 @@ test('runtime registration has an explicit execution classification and determin
   const registry = createResearchSkillRegistry()
   const runtime = registry.canonicalResearchCandidates()
   const counts = CANONICAL_RESEARCH_SKILL_CATALOG.reduce<Record<string, number>>((result, item) => { result[item.status] = (result[item.status] ?? 0) + 1; return result }, {})
-  assert.deepEqual(counts, { IMPLEMENTED: 17, PARTIAL: 7, PLANNED: 5 })
-  assert.deepEqual(runtime.map((item) => item.id), ['business_driver_analysis', 'business_model_map', 'capital_allocation_review', 'competitive_market_map', 'consensus_expectations_analysis', 'dcf_valuation', 'earnings_variance_analysis', 'estimate_revision_analysis', 'financial_quality_analysis', 'guidance_analysis', 'industry_supply_demand_cycle', 'management_execution', 'market_structure_analysis', 'reverse_dcf_expectation_decode', 'scenario_valuation', 'thesis_red_team', 'unit_economics'])
+  assert.deepEqual(counts, { IMPLEMENTED: 21, PARTIAL: 4, PLANNED: 4 })
+  assert.deepEqual(runtime.map((item) => item.id), ['business_driver_analysis', 'business_model_map', 'capital_allocation_review', 'catalyst_map', 'competitive_market_map', 'consensus_expectations_analysis', 'dcf_valuation', 'earnings_variance_analysis', 'estimate_revision_analysis', 'expectation_gap', 'financial_quality_analysis', 'guidance_analysis', 'industry_supply_demand_cycle', 'management_execution', 'market_structure_analysis', 'reverse_dcf_expectation_decode', 'scenario_valuation', 'thesis_formalize', 'thesis_red_team', 'thesis_refresh', 'unit_economics'])
   assert.equal(runtime.every((item) => item.executionClass !== undefined && item.runtimeBinding), true)
   assert.equal(runtime.filter((item) => item.executionClass === 'DETERMINISTIC_EXECUTABLE').every((item) => typeof item.runtimeExecutor === 'function'), true)
   assert.equal(runtime.filter((item) => item.executionClass === 'SEMANTIC_EXECUTABLE').every((item) => item.runtimeExecutor === undefined), true)
@@ -92,6 +92,10 @@ test('narrow semantic routing selects the intended canonical Skill and composite
     ['管理层这次guidance相对上次有什么变化？', 'guidance_analysis'],
     ['这家公司到底靠什么赚钱？', 'business_model_map'],
     ['我这个投资逻辑最容易错在哪里？', 'thesis_red_team'],
+    ['市场和我们的核心分歧是什么？', 'expectation_gap'],
+    ['把我的投资逻辑整理成可证伪命题。', 'thesis_formalize'],
+    ['未来哪些事件会验证这个逻辑？', 'catalyst_map'],
+    ['财报出来以后，原来的 thesis 哪些地方变了？', 'thesis_refresh'],
   ] as const
   for (const [query, expected] of cases) {
     const result = service.resolve({ query, mode: { type: 'free_research' } })

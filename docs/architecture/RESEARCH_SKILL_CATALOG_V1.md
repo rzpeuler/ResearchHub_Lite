@@ -29,24 +29,25 @@ entries are intentionally not runtime registered.
 | `comps_valuation` | Valuation | What does an attributable peer set imply? | PARTIAL | No | `skills/valuation/calculations/comps.ts`; product path has bounded multiples | Separate peer-set contract before runtime promotion |
 | `scenario_valuation` | Valuation | How do Bear/Base/Bull assumptions change value? | IMPLEMENTED | Yes | `skills/valuation/financials.ts`; Valuation Workflow | Register methodology and reuse code arithmetic |
 | `valuation_crosscheck` | Valuation | Do independent valuation methods agree or diverge? | PARTIAL | No | Valuation secondary-method and QC logic | Promote after a directly callable cross-check binding exists |
-| `expectation_gap` | Thesis | Where do market/company views differ? | PARTIAL | No | Earnings valuation-impact/thesis filter | Extract a stable disagreement contract |
-| `thesis_formalize` | Thesis | What are the explicit thesis propositions and dependencies? | PARTIAL | No | Existing Thesis claims and Workflow context | Extract without mutating Knowledge from Skill |
+| `expectation_gap` | Thesis | Where do price-implied, consensus, management, and research views differ? | IMPLEMENTED | Yes | `skills/expectation_gap/` | Deterministic compatibility, range, delta, and no-gap contract |
+| `thesis_formalize` | Thesis | What are the explicit thesis propositions and dependencies? | IMPLEMENTED | Yes | `skills/thesis_formalize/` | Deterministic proposition, evidence-basis, and acyclic dependency contract |
 | `thesis_red_team` | Thesis | How could an active thesis be wrong? | IMPLEMENTED | Yes | `skills/thesis-red-team/`; Thesis Red Team Workflow | Normalize legacy ID and retain Workflow composition |
-| `catalyst_map` | Thesis | Which attributable events could change the thesis? | PARTIAL | No | Event/Daily/Thesis report sections | Extract event-linked catalyst contract later |
-| `thesis_refresh` | Thesis | What changed in an existing thesis since last review? | PLANNED | No | No independent refresh implementation | Future thesis lifecycle wave |
+| `catalyst_map` | Thesis | Which attributable events could change the thesis? | IMPLEMENTED | Yes | `skills/catalyst_map/` | Deterministic proposition-linked event/timing/status contract |
+| `thesis_refresh` | Thesis | What changed in an existing thesis since last review? | IMPLEMENTED | Yes | `skills/thesis_refresh/` | Deterministic PIT-filtered targeted proposition refresh |
 | `research_qc` | Cross-domain QC | Is the assembled research result internally/evidentially valid? | PARTIAL | No | Existing validators and Workflow terminal gates | Consolidate only pure QC rules; keep Workflow gate owner |
 
 ## Runtime registration policy
 
-The runtime set is the seventeen `IMPLEMENTED` entries with an independently
+The runtime set is the twenty-one `IMPLEMENTED` entries with an independently
 executable boundary. `business_model_map` and `thesis_red_team` are
 `SEMANTIC_EXECUTABLE` through the existing bounded session/Workflow reasoning
 boundaries. Consensus expectations, earnings variance, guidance, estimate
 revisions, forward DCF, reverse DCF, and scenario valuation are
 `DETERMINISTIC_EXECUTABLE` and bind directly to the existing authoritative
 calculation functions. Business driver, unit economics, financial quality,
-management execution, and capital allocation bind to their new deterministic
-contracts. `valuation_crosscheck` is `PARTIAL` because its SKILL.md
+management execution, capital allocation, thesis formalization, expectation
+gap, catalyst mapping, and thesis refresh bind to deterministic contracts.
+`valuation_crosscheck` is `PARTIAL` because its SKILL.md
 contract declares code-owned work but no direct canonical execution binding
 exists. `comps_valuation` remains `PARTIAL` for its previously recorded
 peer-evidence gap.
@@ -67,3 +68,10 @@ inflection; management execution treats qualitative labels as non-authoritative
 and fails closed without deterministic predicates; and capital allocation gates
 value assessment to applicable action types, attributable return/hurdle
 evidence, and subsequent outcomes.
+
+W4 promotes only `thesis_formalize`, `expectation_gap`, `catalyst_map`, and
+`thesis_refresh`: each has a direct bounded result, executable validation, and
+no canonical Knowledge mutation. The catalog is now 21 `IMPLEMENTED`, 4
+`PARTIAL`, and 4 `PLANNED`; `thesis_red_team` remains the semantic peer and
+adds deterministic fragility and kill-criterion evaluation without becoming a
+composite Skill.

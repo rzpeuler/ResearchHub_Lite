@@ -26,7 +26,8 @@ references.
 
 Attack vectors, implicit assumptions, invalidation conditions, qualified
 supporting/disconfirming evidence, challenge assessments, bounded report
-sections, and admissible local proposal candidates.
+sections, categorical thesis-fragility assessments, executable kill-criterion
+evaluations, and admissible local proposal candidates.
 
 ## Methodology
 
@@ -44,7 +45,17 @@ source IDs, canonical thesis refs, and local proposal refs are validated.
 
 The model may design attacks and bounded interpretations. Code owns identity,
 reference, date, evidence qualification, proposal admissibility, and Gateway
-authority.
+authority. Fragility is categorical (`critical`, `high`, `medium`, `low`, or
+`insufficient_evidence`); the Skill does not invent a numeric confidence score.
+
+## Executable Kill Criteria
+
+An invalidation condition may declare an observable metric, operator, threshold,
+period, deadline, source requirement, and threshold source references. A
+threshold must be traceable to supplied sources or remain explicitly pending;
+the Skill never invents a threshold. Deterministic evaluation may report
+`pending`, `met`, `missed`, `expired`, or `insufficient_evidence`, and does not
+mutate canonical Thesis state.
 
 ## Missing Data
 

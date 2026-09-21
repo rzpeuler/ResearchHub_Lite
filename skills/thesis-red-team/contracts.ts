@@ -20,6 +20,10 @@ export const RED_TEAM_RELATIONS = ['disconfirms','supports','context','irrelevan
 export type RedTeamEvidenceRelation = typeof RED_TEAM_RELATIONS[number]
 export const RED_TEAM_STRENGTHS = ['low','medium','high'] as const
 export type RedTeamEvidenceStrength = typeof RED_TEAM_STRENGTHS[number]
+export const KILL_CRITERION_STATUSES = ['not_yet_observable', 'not_met', 'met', 'inconclusive', 'threshold_pending_evidence'] as const
+export type KillCriterionStatus = typeof KILL_CRITERION_STATUSES[number]
+export const KILL_CRITERION_OPERATORS = ['eq', 'gt', 'gte', 'lt', 'lte'] as const
+export type KillCriterionOperator = typeof KILL_CRITERION_OPERATORS[number]
 
 export interface ThesisRedTeamInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly thesisRef: string; readonly lookbackDays?: number }
 export interface ThesisRedTeamCompany { readonly symbol: string; readonly name?: string; readonly exchange?: string }
@@ -28,8 +32,9 @@ export interface ThesisDependencyProjection { readonly targetThesisRef: string; 
 export interface ThesisSignalContext { readonly signalId: string; readonly title: string; readonly excerpt?: string; readonly narrative?: string; readonly publishedAt?: string; readonly category: string; readonly provider: string }
 export interface ThesisAttackVector { readonly vectorId: string; readonly vectorType: ThesisAttackVectorType; readonly priority: RedTeamPriority; readonly targetExistingClaimRefs: readonly string[]; readonly falsificationQuestion: string; readonly failureMechanism: string; readonly evidenceNeeded: string; readonly searchTerms: readonly string[] }
 export interface ImplicitThesisAssumption { readonly assumptionId: string; readonly statement: string; readonly rationale: string }
-export interface ThesisInvalidationCondition { readonly conditionId: string; readonly statement: string; readonly severity: 'high'|'critical'; readonly targetExistingClaimRefs: readonly string[] }
-export interface ThesisAttackDesign { readonly attackVectors: readonly ThesisAttackVector[]; readonly implicitAssumptions: readonly ImplicitThesisAssumption[]; readonly invalidationConditions: readonly ThesisInvalidationCondition[] }
+export interface ThesisInvalidationCondition { readonly conditionId: string; readonly statement: string; readonly severity: 'high'|'critical'; readonly targetExistingClaimRefs: readonly string[]; readonly observableMetric?: string; readonly operator?: KillCriterionOperator; readonly threshold?: number; readonly period?: string; readonly deadline?: string; readonly sourceRequirement?: string; readonly thresholdSourceRefs?: readonly string[]; readonly status?: KillCriterionStatus }
+export interface ThesisFragilityAssessment { readonly assumptionRef: string; readonly level: 'critical'|'high'|'medium'|'low'|'insufficient_evidence'; readonly downstreamClaimCount: number; readonly evidenceStrength: RedTeamEvidenceStrength | 'unknown'; readonly rationale: string }
+export interface ThesisAttackDesign { readonly attackVectors: readonly ThesisAttackVector[]; readonly implicitAssumptions: readonly ImplicitThesisAssumption[]; readonly invalidationConditions: readonly ThesisInvalidationCondition[]; readonly fragilityAssessments?: readonly ThesisFragilityAssessment[] }
 export interface RedTeamEvidenceSource { readonly candidateId: string; readonly title: string; readonly provider: string; readonly kind?: string; readonly url?: string; readonly publishedAt?: string; readonly excerpt: string; readonly official?: boolean }
 export interface RedTeamEvidenceAssessment { readonly sourceCandidateId: string; readonly attackVectorRefs: readonly string[]; readonly relation: RedTeamEvidenceRelation; readonly strength: RedTeamEvidenceStrength; readonly rationale: string }
 export interface QualifiedRedTeamEvidence { readonly sourceCandidateId: string; readonly relation: RedTeamEvidenceRelation; readonly strength: RedTeamEvidenceStrength; readonly effectiveStrength?: RedTeamEvidenceStrength; readonly qualified: boolean; readonly durableEligible: boolean; readonly reason: string; readonly qualificationReason?: string; readonly attackVectorRefs?: readonly string[]; readonly corroboratingSourceIds?: readonly string[] }

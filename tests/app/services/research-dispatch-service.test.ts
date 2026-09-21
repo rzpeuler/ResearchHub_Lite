@@ -84,7 +84,7 @@ test('semantic resolver cannot replace an explicit Workflow or policy', async ()
 
 test('semantic Workflow decisions reject mapped but unavailable canonical Skills', async () => {
   const cases = [
-    { workflowId: 'company_research', unavailableSkill: 'thesis_formalize', query: '研究 600519 公司' },
+    { workflowId: 'company_research', unavailableSkill: 'research_qc', query: '研究 600519 公司' },
     { workflowId: 'earnings_review', unavailableSkill: 'earnings_call_analysis', query: '研究 600519 2026 年半年报' },
     { workflowId: 'industry_research', unavailableSkill: 'research_qc', query: '研究 PCB 行业' },
   ] as const

@@ -12,6 +12,8 @@ import { createResearchBundle } from './research-bundle.ts'
 import type { SourceLibraryService, SourceLibraryHit } from './source-library.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import type { ReasoningExecutor, ReasoningRequest } from '../../plugins/reasoning/contracts.ts'
+import { runThesisLifecycle } from '../../workflows/thesis-lifecycle/workflow.ts'
+import type { ThesisLifecycleInput } from '../../workflows/thesis-lifecycle/contracts.ts'
 
 export interface ResearchSessionContext {
   readonly selectedSkills: readonly LoadedResearchSkill[]
@@ -61,6 +63,7 @@ const WORKFLOW_KEYWORDS: Readonly<Record<string, readonly string[]>> = {
   earnings_review: ['半年报', '上半年', '年报', '季报', '季度', '业绩', 'earnings', 'financial results', 'q1', 'h1', 'q3', 'fy'],
   valuation: ['估值', 'valuation', '市盈率', '市净率', 'ev/ebitda', 'pe', 'pb'],
   thesis_red_team: ['反驳', '反向验证', '红队', 'red team', 'red-team', 'thesis', '投资论点'],
+  thesis_lifecycle: ['thesis lifecycle', 'thesis 生命周期', '投资论点生命周期', '创建并维护 thesis', 'create and refresh thesis'],
   event_research: ['事件', '公告', '新闻', '消息', 'event', 'announcement', 'headline'],
   industry_research: ['行业', '产业', '产业链', 'industry', 'pcb', '半导体', '服务器'],
   company_research: ['公司', '个股', 'company', '股票'],
@@ -149,6 +152,10 @@ export function extractWorkflowArguments(definition: WorkflowDefinition, query: 
   if (definition.id === 'thesis_red_team') {
     const thesisRef = extractThesisRef(query)
     if (thesisRef !== undefined) args.thesisRef = thesisRef
+  }
+  if (definition.id === 'thesis_lifecycle') {
+    if (/refresh|更新|刷新|财报出来|生命周期/i.test(query)) args.mode = 'REFRESH'
+    else if (/create|创建|整理|形式化|formalize/i.test(query)) args.mode = 'CREATE'
   }
   if (definition.id === 'daily_intelligence') {
     const briefType = /晚间|盘后|evening/i.test(query) ? 'evening' : /早盘|盘前|morning/i.test(query) ? 'morning' : undefined
@@ -410,6 +417,10 @@ export class ResearchDispatchService {
       { id: 'competitive_market_map', include: [/(?:competitor|competition|competitive|peer|market share|竞争|竞品|竞争格局|市场份额)/i] },
       { id: 'business_driver_analysis', include: [/(?:volume|price|mix|segment|driver|销量|价格|mix|分部|驱动)/i, /(?:revenue|sales|profit|营收|收入|利润|增长)/i] },
       { id: 'unit_economics', include: [/(?:unit economics|economic unit|per customer|per shipment|每客|每单|每个客户|经济单位)/i] },
+      { id: 'expectation_gap', include: [/(?:market|price|consensus|management|own research|市场|股价|一致预期|管理层|我们(?:的)?研究)/i, /(?:gap|disagreement|difference|分歧|差异|预期差|核心分歧)/i] },
+      { id: 'thesis_formalize', include: [/(?:thesis|investment logic|投资逻辑|投资论点)/i, /(?:proposition|falsifiable|formalize|整理|命题|可证伪)/i] },
+      { id: 'catalyst_map', include: [/(?:catalyst|event|事件|催化剂)/i, /(?:validate|验证|confirm|确认|未来|upcoming)/i] },
+      { id: 'thesis_refresh', include: [/(?:thesis|投资逻辑|投资论点)/i, /(?:refresh|changed|change|财报|更新|变化|变了|哪些地方)/i] },
       { id: 'thesis_red_team', include: [/(?:red.?team|falsif|反驳|反向验证|最容易错|哪里.*错|投资逻辑)/i] },
     ]
     for (const match of intentMatches) {
@@ -441,6 +452,7 @@ export class ResearchDispatchService {
       if (daily === undefined) throw new ApplicationServiceError('failed', 'Daily Intelligence service is not configured')
       return daily.startBrief({ workflowRunId: runId, briefType: args.briefType as 'morning' | 'evening', tradeDate: args.tradeDate as string, writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
     }
+    if (workflowId === 'thesis_lifecycle') return Promise.resolve(runThesisLifecycle(args as unknown as ThesisLifecycleInput))
     if (research === undefined) throw new ApplicationServiceError('failed', 'Research service is not configured')
     if (workflowId === 'company_research') return research.startResearchCompany({ workflowRunId: runId, symbol: args.symbol as string, ...(typeof args.name === 'string' ? { name: args.name } : {}), writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
     if (workflowId === 'industry_research') return research.startIndustryResearch({ workflowRunId: runId, name: args.name as string, writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal).completion
