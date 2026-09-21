@@ -116,12 +116,12 @@ Company×Industry: PASS, 5 tests (3 bridge + 2 Wave 3 composition fixtures).
 
 Skill architecture: PASS, 7 tests.
 Dispatch: PASS, focused dispatch suite including 12 tests and three Wave 3 collision routes.
-Company: `PENDING_FULL_VALIDATION`.
-Industry: `PENDING_FULL_VALIDATION`.
-Earnings: `PENDING_FULL_VALIDATION`.
-Valuation: `PENDING_FULL_VALIDATION`.
-Thesis: `PENDING_FULL_VALIDATION`.
-Knowledge: `PENDING_FULL_VALIDATION`.
+Company: PASS in Node regression.
+Industry: PASS in Node regression.
+Earnings: PASS in Node regression.
+Valuation: PASS except the pre-existing timing-sensitive `VAL-HTTP-001` route assertion.
+Thesis: PASS in Node regression.
+Knowledge: PASS in Node regression.
 Node total: `1264/1265 PASS`; one pre-existing timing-sensitive valuation-route failure.
 Client: `28/28 PASS`.
 Typecheck: PASS, `npm run typecheck`.
@@ -131,34 +131,34 @@ Diff check: PASS.
 
 ## 9. Real E2E — Target A
 
-Target: fixture industrial/manufacturing company.
-Archetype: manufacturing.
+- Target: fixture industrial/manufacturing company.
+- Archetype: manufacturing.
 Skills executed: business driver, unit economics, industry supply-demand cycle, and Workflow-owned company × industry bridge.
 Real source coverage: fixture source references only; no authenticated provider was used.
 Unavailable data: none in the complete fixture path; production/provider availability remains unverified.
 Research result: complete deterministic driver bridge, shipment economics, oversupply state, and explicit negative exposure impact.
-Classification: `FIXTURE_BACKED_OFFLINE / AUTHENTICATED_PROVIDER_PENDING`.
+- Classification: `FIXTURE_BACKED_OFFLINE / AUTHENTICATED_PROVIDER_PENDING`.
 
 ## 10. Generalization — Target B
 
-Target: fixture SaaS/service company.
-Archetype: software_saas.
+- Target: fixture SaaS/service company.
+- Archetype: software_saas.
 Skills executed: business driver, unit economics, and qualitative company × industry bridge.
 Research result: customer/ARPU bridge and customer-level economics complete; missing sensitivity remains qualitative.
 Hard-coded manufacturing assumptions found: no.
-Classification: `FIXTURE_BACKED_OFFLINE / GENERALIZATION PASS`.
+- Classification: `FIXTURE_BACKED_OFFLINE / GENERALIZATION PASS`.
 
 ## 11. Catalog Delta
 
 Before:
 IMPLEMENTED: 9
-PARTIAL: 14
-PLANNED: 6
+- PARTIAL: 14
+- PLANNED: 6
 
 After:
 IMPLEMENTED: 17
-PARTIAL: 7
-PLANNED: 5
+- PARTIAL: 7
+- PLANNED: 5
 
 Promoted Skills:
 - business_driver_analysis
