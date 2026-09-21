@@ -405,6 +405,7 @@ export class ResearchDispatchService {
     const text = safeQuery(query)
     const canonical = this.skillRegistry.canonicalResearchCandidates()
     const intentMatches: readonly { readonly id: string; readonly include: readonly RegExp[]; readonly exclude?: readonly RegExp[] }[] = [
+      { id: 'comps_valuation', include: [/(?:comps|comparable|peer|可比|同行|相对估值)/i, /(?:valuation|multiple|PE|PB|EV\s*[/：:]?\s*EBITDA|估值|倍数|合理价值)/i], exclude: [/(?:implied|price.?in|隐含|增长|growth)/i] },
       { id: 'reverse_dcf_expectation_decode', include: [/(?:price|priced|price.?in|隐含|股价|当前价格)/i, /(?:growth|revenue|margin|增长|收入|利润|假设)/i], exclude: [/(?:my|按我的|forecast|预测|build|做).*(?:dcf|discounted|DCF)/i] },
       { id: 'dcf_valuation', include: [/(?:DCF|discounted cash flow|内在价值|intrinsic value)/i, /(?:forecast|预测|revenue|收入|profit|利润|FCFF|现金流|assumption|假设)/i] },
       { id: 'earnings_variance_analysis', include: [/(?:beat|miss|surprise|超预期|低于预期|为什么|原因)/i, /(?:revenue|sales|profit|income|营收|收入|利润)/i], exclude: [/(?:guidance|指引|展望)/i] },

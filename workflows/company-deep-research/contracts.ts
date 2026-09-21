@@ -5,6 +5,7 @@ import type { AkshareDataClient } from '../../plugins/research-acquisition/aksha
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { ResolutionIntentSummary } from '../../knowledge/production/contracts.ts'
 import type { CompanyIndustryExposureInput, IndustryExposureBridgeResult } from './industry-exposure-bridge.ts'
+import type { ResearchQualityGateResult } from '../research-quality-gate.ts'
 
 export interface CompanyDeepResearchInput {
   readonly workflowRunId: string
@@ -40,4 +41,5 @@ export interface CompanyDeepResearchResult {
   readonly acquisitionDiagnostics?: readonly ResearchAcquisitionDiagnostic[]
   readonly providerOutcomes?: readonly ResearchProviderOutcome[]
   readonly industryExposure?: IndustryExposureBridgeResult
+  readonly qualityGate?: ResearchQualityGateResult
 }

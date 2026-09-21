@@ -18,6 +18,7 @@ export interface DailySynthesisProposal {
   readonly confidence: number
 }
 export interface DailySynthesisResult {
+  readonly briefReasoningUsed?: boolean
   readonly sections: readonly DailyBriefSection[]
   readonly proposals: readonly DailySynthesisProposal[]
   readonly reasoningUsed: boolean
@@ -41,7 +42,7 @@ export class DailyBriefSynthesisSkill {
         })
         const normalized = normalizeReasoningStructuredOutput(result.output)
         const parsed = validateModelOutput(normalized.value, signals, assessments, clusters, type)
-        if (parsed) { const sections = finalizeSections(parsed.sections); return { ...parsed, sections, reasoningUsed: true, fallbackUsed: false, modelDerivedItemCount: sections.flatMap((section) => section.items).filter((item) => item.signalRefs.length > 0).length, reasoningDiagnostics: normalized.diagnostics.map((item) => item.code) } }
+        if (parsed) { const sections = finalizeSections(parsed.sections); return { ...parsed, sections, reasoningUsed: true, briefReasoningUsed: true, fallbackUsed: false, modelDerivedItemCount: sections.flatMap((section) => section.items).filter((item) => item.signalRefs.length > 0).length, reasoningDiagnostics: normalized.diagnostics.map((item) => item.code) } }
         lastDiagnostics = [...normalized.diagnostics.map((item) => item.code), ...outputShapeDiagnostics(normalized.value), 'validation_shape_or_reference_rejected']
       } catch (error) {
         lastDiagnostics = [errorCode(error)]
@@ -56,7 +57,7 @@ export class DailyBriefSynthesisSkill {
       const resolution = resolutionForAssessment(assessment)
       return subjectKey && sourceCandidateIds.length && existingKnowledgeRefs.length && resolution ? [{ proposalId: `daily-proposal-${index + 1}`, kind: 'claim' as const, subjectKey, claimType: assessment.disposition === 'risk' ? 'risk' as const : assessment.disposition === 'catalyst' ? 'trend' as const : 'viewpoint' as const, statement: assessment.rationale, sourceCandidateIds, assessmentRefs: [assessment.clusterId], existingKnowledgeRefs, resolution, confidence: 0.65 }] : []
     })
-    return { sections, proposals, reasoningUsed: false, fallbackUsed: true, modelDerivedItemCount: 0, reasoningDiagnostics: lastDiagnostics }
+    return { sections, proposals, reasoningUsed: false, briefReasoningUsed: false, fallbackUsed: true, modelDerivedItemCount: 0, reasoningDiagnostics: lastDiagnostics }
   }
 }
 

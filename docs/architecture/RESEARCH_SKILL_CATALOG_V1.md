@@ -6,7 +6,6 @@ entries are intentionally not runtime registered.
 
 | Skill | Domain | Research question | Status | Runtime | Existing source / owner | Migration action |
 | --- | --- | --- | --- | --- | --- | --- |
-| `evidence_normalization` | Evidence | How should supplied evidence be normalized and bounded? | PARTIAL | No | Existing provider/workflow normalization | Keep as Workflow/helper responsibility until independent contract is extracted |
 | `document_change_analysis` | Evidence | What changed between two attributable documents? | PLANNED | No | No stable implementation | Future document-diff wave |
 | `business_model_map` | Company Economics | How does the company make money? | IMPLEMENTED | Yes | Company Research Business Model section | Evidence-gated standalone methodology |
 | `business_driver_analysis` | Company Economics | What drives consolidated revenue/profit? | IMPLEMENTED | Yes | `skills/business_driver_analysis/calculations.ts` | Direct period-aligned driver decomposition with explicit residuals |
@@ -26,19 +25,17 @@ entries are intentionally not runtime registered.
 | `model_audit` | Financial | Are model formulas, inputs, and outputs internally consistent? | PLANNED | No | No independent model-audit implementation | Future model wave |
 | `dcf_valuation` | Valuation | What is forward intrinsic value from explicit FCFF forecasts? | IMPLEMENTED | Yes | `skills/valuation/calculations/dcf.ts`, `fcff.ts`, `discount-rate.ts` | Register methodology; keep product DCF readiness gate |
 | `reverse_dcf_expectation_decode` | Valuation | What future performance is implied by price/EV? | IMPLEMENTED | Yes | `calculateReverseDcf` in valuation calculations | Register methodology; require all explicit inputs |
-| `comps_valuation` | Valuation | What does an attributable peer set imply? | PARTIAL | No | `skills/valuation/calculations/comps.ts`; product path has bounded multiples | Separate peer-set contract before runtime promotion |
+| `comps_valuation` | Valuation | What does an attributable peer set imply? | IMPLEMENTED | Yes | `skills/comps_valuation/`; existing `skills/valuation/calculations/comps.ts` | Direct peer identity, PIT, comparability, metric availability, distribution, and implied-value contract |
 | `scenario_valuation` | Valuation | How do Bear/Base/Bull assumptions change value? | IMPLEMENTED | Yes | `skills/valuation/financials.ts`; Valuation Workflow | Register methodology and reuse code arithmetic |
-| `valuation_crosscheck` | Valuation | Do independent valuation methods agree or diverge? | PARTIAL | No | Valuation secondary-method and QC logic | Promote after a directly callable cross-check binding exists |
 | `expectation_gap` | Thesis | Where do price-implied, consensus, management, and research views differ? | IMPLEMENTED | Yes | `skills/expectation_gap/` | Deterministic compatibility, range, delta, and no-gap contract |
 | `thesis_formalize` | Thesis | What are the explicit thesis propositions and dependencies? | IMPLEMENTED | Yes | `skills/thesis_formalize/` | Semantic candidate proposition generation over bounded evidence, followed by deterministic evidence-basis and acyclic-dependency validation |
 | `thesis_red_team` | Thesis | How could an active thesis be wrong? | IMPLEMENTED | Yes | `skills/thesis-red-team/`; Thesis Red Team Workflow | Normalize legacy ID and retain Workflow composition |
 | `catalyst_map` | Thesis | Which attributable events could change the thesis? | IMPLEMENTED | Yes | `skills/catalyst_map/` | Semantic event-to-proposition mapping over bounded attributable evidence, followed by deterministic timing/status validation |
 | `thesis_refresh` | Thesis | What changed in an existing thesis since last review? | IMPLEMENTED | Yes | `skills/thesis_refresh/` | Semantic target/relation classification over bounded new evidence, followed by deterministic PIT, no-drift, and kill logic |
-| `research_qc` | Cross-domain QC | Is the assembled research result internally/evidentially valid? | PARTIAL | No | Existing validators and Workflow terminal gates | Consolidate only pure QC rules; keep Workflow gate owner |
 
 ## Runtime registration policy
 
-The runtime set is the twenty-one `IMPLEMENTED` entries with an independently
+The runtime set is the twenty-two `IMPLEMENTED` entries with an independently
 executable boundary. `business_model_map` and `thesis_red_team` are
 `SEMANTIC_EXECUTABLE` through the existing bounded session/Workflow reasoning
 boundaries. Consensus expectations, earnings variance, guidance, estimate
@@ -49,10 +46,13 @@ management execution, capital allocation, and expectation gap bind to
 deterministic contracts. Thesis formalization, catalyst mapping, and thesis
 refresh bind to semantic executors which pass bounded model output into
 deterministic contracts.
-`valuation_crosscheck` is `PARTIAL` because its SKILL.md
-contract declares code-owned work but no direct canonical execution binding
-exists. `comps_valuation` remains `PARTIAL` for its previously recorded
-peer-evidence gap.
+`comps_valuation` is a semantic executable with a deterministic arithmetic
+boundary: the Workflow supplies the attributable peer set and the Skill
+validates identity, point-in-time, comparability, metric availability, and
+source evidence before reusing the shared comparable calculations. It never
+creates synthetic peers. `valuation_crosscheck` remains Workflow-owned
+composition, and cross-domain terminal QC is the reusable Workflow-layer
+`ResearchQualityGate`; neither is a canonical Skill.
 
 Every runtime entry records an execution class and binding in the catalog. A
 deterministic entry must also expose a callable `runtimeExecutor`; a methodology
@@ -73,9 +73,11 @@ evidence, and subsequent outcomes.
 
 W4 promotes only `thesis_formalize`, `expectation_gap`, `catalyst_map`, and
 `thesis_refresh`: each has a direct bounded result, executable validation, and
-no canonical Knowledge mutation. The catalog is now 21 `IMPLEMENTED`, 4
-`PARTIAL`, and 4 `PLANNED`; `thesis_red_team` remains the semantic peer and
-adds deterministic fragility and kill-criterion evaluation without becoming a
+no canonical Knowledge mutation. Wave 5 promotes `comps_valuation` and
+corrects ownership for three former catalog entries. The catalog is now 22
+`IMPLEMENTED`, 0 `PARTIAL`, and 4 `PLANNED`; the four planned entries remain
+visible as roadmap items. `thesis_red_team` remains the semantic peer and adds
+deterministic fragility and kill-criterion evaluation without becoming a
 composite Skill. FIX-001 closes semantic ownership for the three target Skills:
 each calls `ReasoningExecutor` at most twice, allowlists supplied refs, and
 fails closed before its deterministic validator on invalid model output.

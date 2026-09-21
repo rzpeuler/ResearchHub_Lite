@@ -3,6 +3,8 @@ import type { AkshareDataClient } from '../../plugins/research-acquisition/aksha
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { ResearchCompanyIdentity } from '../../plugins/research-acquisition/contracts.ts'
 import type { ValuationComputation, ValuationAssumptionPlan, ValuationMethod, ValuationReasoningTelemetry, ValuationSynthesisOutput } from '../../skills/valuation/index.ts'
+import type { CompsValuationInput, CompsValuationResult } from '../../skills/comps_valuation/index.ts'
+import type { ResearchQualityGateResult } from '../research-quality-gate.ts'
 
 export interface ValuationWorkflowInput {
   readonly workflowRunId: string
@@ -18,6 +20,7 @@ export interface ValuationWorkflowInput {
   readonly now?: () => string
   readonly writeKnowledge?: boolean
   readonly useStructuredKnowledge?: boolean
+  readonly comps?: CompsValuationInput
 }
 
 export interface ValuationProviderOutcome {
@@ -53,6 +56,17 @@ export interface ValuationWorkflowResult {
   readonly computation?: ValuationComputation
   readonly synthesis?: ValuationSynthesisOutput
   readonly telemetry: ValuationTelemetrySnapshot
+  readonly compsResult?: CompsValuationResult
+  readonly qualityGate?: ResearchQualityGateResult
+  readonly crosscheck?: ValuationCrosscheck
+}
+
+export interface ValuationCrosscheck {
+  readonly availableMethods: readonly ValuationMethod[]
+  readonly unavailableMethods: readonly ValuationMethod[]
+  readonly selectedPrimary?: ValuationMethod
+  readonly conflicts: readonly string[]
+  readonly automaticAveraging: false
 }
 
 export interface ValuationTelemetrySnapshot {

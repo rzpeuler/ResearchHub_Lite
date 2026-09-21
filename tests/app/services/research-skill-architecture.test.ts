@@ -9,9 +9,9 @@ import { ResearchDispatchService } from '../../../app/services/research-dispatch
 import { calculateForwardDcf } from '../../../skills/valuation/calculations/dcf.ts'
 import { calculateBusinessDriverAnalysis } from '../../../skills/business_driver_analysis/calculations.ts'
 
-test('canonical catalog has exactly 29 unique statuses and runtime is a strict implemented subset', () => {
-  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.length, 29)
-  assert.equal(new Set(CANONICAL_RESEARCH_SKILL_CATALOG.map((item) => item.canonicalSkillId)).size, 29)
+test('canonical catalog has exactly 26 unique statuses and runtime is a strict implemented subset', () => {
+  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.length, 26)
+  assert.equal(new Set(CANONICAL_RESEARCH_SKILL_CATALOG.map((item) => item.canonicalSkillId)).size, 26)
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.every((item) => ['IMPLEMENTED', 'PARTIAL', 'PLANNED'].includes(item.status)), true)
   const registry = createResearchSkillRegistry()
   const catalog = new Map(CANONICAL_RESEARCH_SKILL_CATALOG.map((item) => [item.canonicalSkillId, item]))
@@ -33,11 +33,11 @@ test('runtime registration has an explicit execution classification and determin
   const registry = createResearchSkillRegistry()
   const runtime = registry.canonicalResearchCandidates()
   const counts = CANONICAL_RESEARCH_SKILL_CATALOG.reduce<Record<string, number>>((result, item) => { result[item.status] = (result[item.status] ?? 0) + 1; return result }, {})
-  assert.deepEqual(counts, { IMPLEMENTED: 21, PARTIAL: 4, PLANNED: 4 })
-  assert.deepEqual(runtime.map((item) => item.id), ['business_driver_analysis', 'business_model_map', 'capital_allocation_review', 'catalyst_map', 'competitive_market_map', 'consensus_expectations_analysis', 'dcf_valuation', 'earnings_variance_analysis', 'estimate_revision_analysis', 'expectation_gap', 'financial_quality_analysis', 'guidance_analysis', 'industry_supply_demand_cycle', 'management_execution', 'market_structure_analysis', 'reverse_dcf_expectation_decode', 'scenario_valuation', 'thesis_formalize', 'thesis_red_team', 'thesis_refresh', 'unit_economics'])
+  assert.deepEqual({ IMPLEMENTED: counts.IMPLEMENTED ?? 0, PARTIAL: counts.PARTIAL ?? 0, PLANNED: counts.PLANNED ?? 0 }, { IMPLEMENTED: 22, PARTIAL: 0, PLANNED: 4 })
+  assert.deepEqual(runtime.map((item) => item.id), ['business_driver_analysis', 'business_model_map', 'capital_allocation_review', 'catalyst_map', 'competitive_market_map', 'comps_valuation', 'consensus_expectations_analysis', 'dcf_valuation', 'earnings_variance_analysis', 'estimate_revision_analysis', 'expectation_gap', 'financial_quality_analysis', 'guidance_analysis', 'industry_supply_demand_cycle', 'management_execution', 'market_structure_analysis', 'reverse_dcf_expectation_decode', 'scenario_valuation', 'thesis_formalize', 'thesis_red_team', 'thesis_refresh', 'unit_economics'])
   assert.equal(runtime.every((item) => item.executionClass !== undefined && item.runtimeBinding), true)
   assert.equal(runtime.filter((item) => item.executionClass === 'DETERMINISTIC_EXECUTABLE').every((item) => typeof item.runtimeExecutor === 'function'), true)
-  assert.equal(runtime.filter((item) => item.executionClass === 'SEMANTIC_EXECUTABLE').every((item) => item.runtimeExecutor === undefined), true)
+  assert.equal(runtime.filter((item) => item.executionClass === 'SEMANTIC_EXECUTABLE').every((item) => item.id === 'comps_valuation' || item.runtimeExecutor === undefined), true)
   assert.equal(registry.get('valuation_crosscheck'), undefined)
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'business_driver_analysis')?.executionClass, 'DETERMINISTIC_EXECUTABLE')
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'unit_economics')?.executionClass, 'DETERMINISTIC_EXECUTABLE')
@@ -45,7 +45,8 @@ test('runtime registration has an explicit execution classification and determin
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'catalyst_map')?.executionClass, 'SEMANTIC_EXECUTABLE')
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'thesis_refresh')?.executionClass, 'SEMANTIC_EXECUTABLE')
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'expectation_gap')?.executionClass, 'DETERMINISTIC_EXECUTABLE')
-  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'valuation_crosscheck')?.executionClass, 'NOT_INDEPENDENTLY_EXECUTABLE')
+  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.some((item) => ['research_qc', 'evidence_normalization', 'valuation_crosscheck'].includes(item.canonicalSkillId)), false)
+  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'comps_valuation')?.executionClass, 'SEMANTIC_EXECUTABLE')
   const input = { fcff: [100, 110, 120], discountRate: 0.09, terminalGrowthRate: 0.03 }
   const direct = calculateForwardDcf(input)
   const bound = registry.get('dcf_valuation')?.runtimeExecutor?.(input) as typeof direct
@@ -68,7 +69,8 @@ test('Workflow metadata composes canonical peers without registering composite S
   const registry = createResearchSkillRegistry()
   const workflows = createWorkflowDefinitionRegistry().list()
   assert.equal(workflows.every((workflow) => workflow.skillIds.every((id) => CANONICAL_RESEARCH_SKILL_CATALOG.some((item) => item.canonicalSkillId === id))), true)
-  assert.deepEqual(workflows.find((item) => item.id === 'earnings_review')?.skillIds.slice(0, 4), ['consensus_expectations_analysis', 'earnings_variance_analysis', 'guidance_analysis', 'earnings_call_analysis'])
+  assert.deepEqual(workflows.find((item) => item.id === 'earnings_review')?.skillIds.slice(0, 4), ['consensus_expectations_analysis', 'earnings_variance_analysis', 'guidance_analysis', 'financial_quality_analysis'])
+  assert.equal(workflows.every((workflow) => workflow.qualityGateProfile !== undefined), true)
   assert.equal(registry.get('company-research'), undefined)
   assert.equal(registry.get('earnings-review'), undefined)
   assert.equal(registry.get('valuation'), undefined)
@@ -100,6 +102,7 @@ test('narrow semantic routing selects the intended canonical Skill and composite
     ['把我的投资逻辑整理成可证伪命题。', 'thesis_formalize'],
     ['未来哪些事件会验证这个逻辑？', 'catalyst_map'],
     ['财报出来以后，原来的 thesis 哪些地方变了？', 'thesis_refresh'],
+    ['用可比公司和同行估值，给出 peer median 合理价值。', 'comps_valuation'],
   ] as const
   for (const [query, expected] of cases) {
     const result = service.resolve({ query, mode: { type: 'free_research' } })

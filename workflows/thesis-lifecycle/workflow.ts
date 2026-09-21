@@ -3,6 +3,7 @@ import { analyzeExpectationGap } from '../../skills/expectation_gap/calculations
 import { formalizeThesis } from '../../skills/thesis_formalize/calculations.ts'
 import { refreshThesis } from '../../skills/thesis_refresh/calculations.ts'
 import type { ThesisLifecycleInput, ThesisLifecycleResult } from './contracts.ts'
+import { runResearchQualityGate } from '../research-quality-gate.ts'
 
 function blocked(input: ThesisLifecycleInput | undefined, diagnostics: readonly string[]): ThesisLifecycleResult {
   return { status: 'blocked', mode: input?.mode === 'REFRESH' ? 'REFRESH' : 'CREATE', steps: [], diagnostics }
@@ -36,6 +37,7 @@ export function runThesisLifecycle(input: ThesisLifecycleInput | undefined): The
     diagnostics.push(error instanceof Error ? error.message : String(error))
     return { status: 'blocked', mode: input.mode, steps, ...(formalization === undefined ? {} : { formalization }), ...(expectationGap === undefined ? {} : { expectationGap }), ...(catalystMap === undefined ? {} : { catalystMap }), ...(refresh === undefined ? {} : { refresh }), diagnostics }
   }
-  const resultStatus = [formalization?.status, expectationGap?.status, catalystMap?.status, refresh?.status].some((status) => status === 'blocked' || status === 'unavailable') ? 'blocked' : 'completed'
-  return { status: resultStatus, mode: input.mode, steps, ...(formalization === undefined ? {} : { formalization }), ...(expectationGap === undefined ? {} : { expectationGap }), ...(catalystMap === undefined ? {} : { catalystMap }), ...(refresh === undefined ? {} : { refresh }), diagnostics }
+  const qualityGate = runResearchQualityGate({ profile: 'thesis_lifecycle', asOf: new Date().toISOString(), sources: [], optionalUnavailableSections: [expectationGap === undefined ? 'expectation_gap' : '', catalystMap === undefined ? 'catalyst_map' : ''].filter(Boolean) })
+  const resultStatus = [formalization?.status, expectationGap?.status, catalystMap?.status, refresh?.status].some((status) => status === 'blocked' || status === 'unavailable') || !qualityGate.eligibleForGateway ? 'blocked' : 'completed'
+  return { status: resultStatus, mode: input.mode, steps, ...(formalization === undefined ? {} : { formalization }), ...(expectationGap === undefined ? {} : { expectationGap }), ...(catalystMap === undefined ? {} : { catalystMap }), ...(refresh === undefined ? {} : { refresh }), diagnostics: [...diagnostics, ...qualityGate.diagnostics.map((item) => item.code)], qualityGate }
 }

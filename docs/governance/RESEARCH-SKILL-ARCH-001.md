@@ -1,20 +1,25 @@
 # RHL-SKILL-ARCH-001 Governance State
 
-Updated: 2026-09-21  
+Updated: 2026-09-22
 Status: `IMPLEMENTED / SOL ACCEPTANCE PENDING`  
 Implementation HEAD before closure documentation: `28a7b8f`
 
 ## Scope
 
 Research Skills now have one canonical flat layer. Composite product missions
-remain existing Workflows. The 29-item catalog records `IMPLEMENTED`, `PARTIAL`,
-and `PLANNED` status; the runtime registry registers only implemented built-in
+remain existing Workflows. The 26-item catalog records 22 `IMPLEMENTED` and 4
+`PLANNED` entries; the runtime registry registers only implemented built-in
 canonical entries. Knowledge Schema and the Gateway/ChangeSet/Writer boundary
 are unchanged.
 
 ## Accepted engineering facts
 
-- Canonical catalog: 29 entries; 17 runtime-registered, 7 partial, 5 planned
+- Canonical catalog after RHL-W5-001: 26 entries; 22 runtime-registered, 0 partial, 4 planned
+- Responsibility correction: `evidence_normalization` is acquisition/shared infrastructure,
+  `valuation_crosscheck` is Valuation Workflow composition, and `research_qc` is
+  the reusable Workflow-layer `ResearchQualityGate`; none is a canonical Skill.
+- `comps_valuation` is independently executable and registered with explicit
+  peer/source/PIT/comparability contracts.
   after the Wave 3 checkpoints promoted business-driver analysis, unit
   economics, financial quality, management execution, and capital allocation.
 - Runtime entries are classified as `SEMANTIC_EXECUTABLE` or
@@ -46,7 +51,7 @@ are unchanged.
 
 ## Remaining acceptance boundary
 
-Sol acceptance remains pending. PARTIAL/PLANNED capabilities must not be
+Sol acceptance remains pending. Planned capabilities must not be
 represented as implemented in future routing or reports. Authenticated external
 provider/model E2E remains environment-dependent and is not upgraded by the
 fixture-backed architecture tests.

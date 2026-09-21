@@ -192,6 +192,7 @@ export interface DailyBriefReport {
   readonly briefFallbackCount?: number
   readonly briefReasoningUsed?: boolean
   readonly reasoningDiagnostics?: Readonly<Record<string, readonly string[]>>
+  readonly qualityGate?: import('../../workflows/research-quality-gate.ts').ResearchQualityGateResult
 }
 
 export interface DailyIntelligenceInput {
@@ -241,4 +242,5 @@ export interface DailyIntelligenceResult {
   readonly briefFallbackCount?: number
   readonly modelDerivedItemCount?: number
   readonly reasoningDiagnostics?: Readonly<Record<string, readonly string[]>>
+  readonly qualityGate?: import('../../workflows/research-quality-gate.ts').ResearchQualityGateResult
 }

@@ -76,11 +76,14 @@ Existing output-contract, capability, and onboarding provenance fields remain
 where needed for compatibility. No separate router, planner, provider layer, or
 capability framework is introduced.
 
-The runtime registry contains executable canonical Skills only. The catalog is
-the broader 29-item roadmap and may contain `PARTIAL` and `PLANNED` entries.
+The runtime registry contains executable canonical Skills only. The catalog has
+26 built-in entries: 22 `IMPLEMENTED` and 4 `PLANNED`; no `PARTIAL` status is
+used after Wave 5. Cross-domain terminal QC is a Workflow-layer
+`ResearchQualityGate`, and valuation cross-check remains Valuation Workflow
+composition rather than a canonical Skill.
 Approved externally onboarded Skills retain their existing plugin onboarding
 boundary and are explicitly marked as external extensions; they are not
-silently treated as one of the 29 built-in catalog entries.
+silently treated as built-in catalog entries.
 
 ## Invocation Match
 
@@ -120,6 +123,18 @@ by the existing Workflow -> Knowledge Production Gateway -> validation ->
 Writer path. No Skill in this migration changes Knowledge Schema or writes
 canonical Knowledge directly.
 
+## Workflow terminal quality gate
+
+`workflows/research-quality-gate.ts` is a reusable Workflow-layer terminal
+gate. It runs after acquisition and semantic composition but before the
+Knowledge Production Gateway. It checks source-reference integrity and
+point-in-time eligibility, period/unit/currency compatibility, forecast to
+valuation basis, expectation-to-thesis consistency, thesis-to-catalyst
+proposition linkage, peer-quality warnings, and optional-section status. It
+does not reacquire evidence, invoke Skills, mutate Knowledge, or average
+valuation methods. `eligibleForGateway` is false only when an `ERROR`
+diagnostic is present.
+
 ## Migration and compatibility
 
 Legacy composite IDs are not canonical ownership. They may remain transitional
@@ -138,7 +153,9 @@ underlying analytical capability.
 
 Automated checks must prove:
 
-1. The catalog contains exactly 29 unique canonical IDs with a valid status.
+1. The catalog contains exactly 26 unique canonical IDs: 22 `IMPLEMENTED`
+   and 4 `PLANNED`; `research_qc`, `evidence_normalization`, and
+   `valuation_crosscheck` are not canonical catalog IDs.
 2. Built-in runtime IDs are catalog IDs and `PLANNED` IDs are not registered.
 3. Every runtime Skill has valid descriptor metadata and all required
    `SKILL.md` sections; deterministic entries have a callable binding to their

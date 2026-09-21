@@ -6,6 +6,7 @@ import { compareActualToExpectation, buildEstimateRevisionBridge } from '../../s
 import { buildGuidanceRevisionBridge } from '../../skills/earnings-review/expectations/guidance.ts'
 import { calculateForwardDcf, calculateReverseDcf } from '../../skills/valuation/calculations/dcf.ts'
 import { calculateValuation } from '../../skills/valuation/financials.ts'
+import { executeCompsValuation } from '../../skills/comps_valuation/skill.ts'
 import { calculateBusinessDriverAnalysis } from '../../skills/business_driver_analysis/calculations.ts'
 import { calculateUnitEconomics } from '../../skills/unit_economics/calculations.ts'
 import { calculateFinancialQualityAnalysis } from '../../skills/financial_quality_analysis/calculations.ts'
@@ -95,6 +96,7 @@ const CANONICAL_RUNTIME_EXECUTORS: Readonly<Partial<Record<string, ResearchSkill
   estimate_revision_analysis: (input) => buildEstimateRevisionBridge(input as Parameters<typeof buildEstimateRevisionBridge>[0]),
   dcf_valuation: (input) => calculateForwardDcf(input as Parameters<typeof calculateForwardDcf>[0]),
   reverse_dcf_expectation_decode: (input) => calculateReverseDcf(input as Parameters<typeof calculateReverseDcf>[0]),
+  comps_valuation: (input) => executeCompsValuation(input as Parameters<typeof executeCompsValuation>[0]),
   scenario_valuation: (input) => {
     const value = input as { readonly basis: Parameters<typeof calculateValuation>[0]; readonly plan: Parameters<typeof calculateValuation>[1]; readonly eligibleMethods: Parameters<typeof calculateValuation>[2] }
     return calculateValuation(value.basis, value.plan, value.eligibleMethods)

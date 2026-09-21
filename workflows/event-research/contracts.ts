@@ -5,6 +5,7 @@ import type { ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchProvid
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { EventAnchor } from '../../app/services/contracts.ts'
 import type { EventEvidenceAssessmentOutput, EventImpactAssessment, EventResearchSection, EventResearchSynthesisOutput, EventResearchReasoningTelemetry, EventVerificationResult } from '../../skills/event-research/contracts.ts'
+import type { ResearchQualityGateResult } from '../research-quality-gate.ts'
 
 export type EventSourceRole = 'anchor_context' | 'verification' | 'supporting' | 'contradicting' | 'background'
 
@@ -133,6 +134,7 @@ export interface EventResearchWorkflowResult {
   readonly synthesis?: EventResearchSynthesisOutput
   readonly resolutionIntents: readonly ResolutionIntentSummary[]
   readonly telemetry: EventResearchTelemetry
+  readonly qualityGate?: ResearchQualityGateResult
 }
 
 /**

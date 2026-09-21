@@ -2,6 +2,7 @@ import type { CatalystMapInput, CatalystMapResult } from '../../skills/catalyst_
 import type { ExpectationGapInput, ExpectationGapResult } from '../../skills/expectation_gap/contracts.ts'
 import type { ThesisFormalizeInput, FormalizedThesisResult } from '../../skills/thesis_formalize/contracts.ts'
 import type { ThesisRefreshInput, ThesisRefreshResult } from '../../skills/thesis_refresh/contracts.ts'
+import type { ResearchQualityGateResult } from '../research-quality-gate.ts'
 
 export type ThesisLifecycleMode = 'CREATE' | 'REFRESH'
 
@@ -28,4 +29,5 @@ export interface ThesisLifecycleResult {
   readonly catalystMap?: CatalystMapResult
   readonly refresh?: ThesisRefreshResult
   readonly diagnostics: readonly string[]
+  readonly qualityGate?: ResearchQualityGateResult
 }
