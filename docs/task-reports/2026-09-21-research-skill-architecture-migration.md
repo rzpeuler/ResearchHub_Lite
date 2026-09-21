@@ -8,9 +8,9 @@ task_id: RHL-SKILL-ARCH-001
 status: READY_FOR_SOL_REVIEW
 baseline: 0b53e462cf5da00b568a7af52dec4375c7dfb5b9
 branch: codex/skill-arch-001-single-level-research-skills
-implementation_commit: pending
-verified_remote_tip: pending
-sync_status: READY_TO_SYNC
+implementation_commit: 3dadadd544afde9508b16379e8d971d6832d18c2
+verified_remote_tip: 3dadadd544afde9508b16379e8d971d6832d18c2
+sync_status: SYNCED
 summary: Implemented the flat canonical Research Skill catalog, metadata validation, Workflow composition mappings, collision-aware dispatch, canonical SKILL.md contracts, compatibility boundaries, tests, and governance documentation.
 tests: npm run typecheck; npm test; npm run client:typecheck; npm run client:build; focused Workflow/E2E suite; architecture suite
 acceptance_criteria: 29 canonical IDs; 12 IMPLEMENTED, 11 PARTIAL, 6 PLANNED; runtime registry excludes PARTIAL/PLANNED; required SKILL.md sections validated; Workflow mappings and routing collision cases covered; no Knowledge schema/storage mutation
