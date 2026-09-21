@@ -200,6 +200,8 @@ function assertSemanticDecision(request: ResearchRequest, decision: ResearchDisp
   if (explicitWorkflowId !== undefined && (decision.mode !== 'workflow' || decision.workflow?.id !== explicitWorkflowId)) throw new ApplicationServiceError('conflict', 'Semantic dispatch output cannot replace the explicit Workflow')
   if (decision.mode === 'workflow') {
     if (!decision.workflow || workflowRegistry.get(decision.workflow.id) === undefined) throw new ApplicationServiceError('not_found', `Semantic dispatch selected an unknown Workflow: ${decision.workflow?.id ?? 'missing'}`)
+    const allowed = new Set(workflowRegistry.get(decision.workflow.id)!.skillIds)
+    if (decision.skills.some((skill) => !allowed.has(skill.id))) throw new ApplicationServiceError('invalid_input', `Semantic dispatch selected a Skill that is not mapped to Workflow ${decision.workflow.id}`)
   }
   if (decision.mode === 'skill_plan' && (decision.skills.length === 0 || decision.skills.some((skill) => skillRegistry.get(skill.id)?.kind !== 'research' || skillRegistry.get(skill.id)?.enabled !== true))) throw new ApplicationServiceError('invalid_input', 'Semantic dispatch selected an unavailable Research Skill')
   if (decision.mode === 'free_research' && decision.skills.length > 0) throw new ApplicationServiceError('invalid_input', 'Free Research cannot include selected Research Skills')
@@ -357,7 +359,10 @@ export class ResearchDispatchService {
         const definition = decision.workflow === undefined ? undefined : this.workflowRegistry.get(decision.workflow.id)
         const required = definition?.requiredInputs ?? []
         const missing = [...new Set([...decision.missingRequiredInputs, ...required.filter((key) => decision.workflow?.arguments[key] === undefined)])].sort()
-        const normalized = missing.length === decision.missingRequiredInputs.length ? decision : validateResearchDispatchDecision({ ...decision, missingRequiredInputs: missing })
+        const mappedSkills = decision.mode === 'workflow' && decision.workflow !== undefined && decision.skills.length === 0
+          ? selectedSkillIds(this.skillRegistry, this.workflowRegistry.get(decision.workflow.id)!).map((id) => ({ id, purpose: this.skillRegistry.get(id)?.purpose ?? 'selected by the authoritative Workflow definition' }))
+          : decision.skills
+        const normalized = validateResearchDispatchDecision({ ...decision, skills: mappedSkills, ...(missing.length === decision.missingRequiredInputs.length ? {} : { missingRequiredInputs: missing }) })
         return { decision: normalized, resolution: { source: attempt === 1 ? 'reasoning_executor' : 'bounded_repair', attempts: attempt, diagnostics } }
       } catch (error) {
         diagnostics.push(error instanceof Error ? error.message.slice(0, 240) : 'semantic_resolution_invalid')
