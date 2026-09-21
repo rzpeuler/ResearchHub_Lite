@@ -8,13 +8,15 @@ Accepted base: `90d838373f4c25be3f74b5d3aeb0a357a79fbb97`
 
 Branch: `codex/w5-001-fix-001-composed-quality-crosscheck`
 
-Implementation HEAD: pending implementation commit
+Implementation HEAD: `3fdc7f95d083ac0bf2b0e4fba9fca2e7143d4235`
 
-Report finalization HEAD: pending
+Report finalization HEAD: intentionally not self-referenced; finalization commit is the final Git HEAD.
 
-Verified remote tip: pending
+Verified remote tip: `3fdc7f95d083ac0bf2b0e4fba9fca2e7143d4235`
 
-Clean: pending finalization
+Clean: YES before finalization commit; expected clean after finalization commit.
+
+Sync status: SYNCED implementation commit; finalization commit pending.
 
 ## Valuation Crosscheck
 
@@ -151,4 +153,3 @@ COMPS_EXECUTION_CLASS_ALIGNED: YES
 WAVE5_CORE_READY: YES
 
 CAN_CLOSE_WAVE5: NO — SOL acceptance remains pending.
-
