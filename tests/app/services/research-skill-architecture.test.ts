@@ -31,6 +31,8 @@ test('canonical catalog has exactly 29 unique statuses and runtime is a strict i
 test('runtime registration has an explicit execution classification and deterministic binding', () => {
   const registry = createResearchSkillRegistry()
   const runtime = registry.canonicalResearchCandidates()
+  const counts = CANONICAL_RESEARCH_SKILL_CATALOG.reduce<Record<string, number>>((result, item) => { result[item.status] = (result[item.status] ?? 0) + 1; return result }, {})
+  assert.deepEqual(counts, { IMPLEMENTED: 9, PARTIAL: 14, PLANNED: 6 })
   assert.deepEqual(runtime.map((item) => item.id), ['business_model_map', 'consensus_expectations_analysis', 'dcf_valuation', 'earnings_variance_analysis', 'estimate_revision_analysis', 'guidance_analysis', 'reverse_dcf_expectation_decode', 'scenario_valuation', 'thesis_red_team'])
   assert.equal(runtime.every((item) => item.executionClass !== undefined && item.runtimeBinding), true)
   assert.equal(runtime.filter((item) => item.executionClass === 'DETERMINISTIC_EXECUTABLE').every((item) => typeof item.runtimeExecutor === 'function'), true)
@@ -38,6 +40,7 @@ test('runtime registration has an explicit execution classification and determin
   assert.equal(registry.get('business_driver_analysis'), undefined)
   assert.equal(registry.get('unit_economics'), undefined)
   assert.equal(registry.get('valuation_crosscheck'), undefined)
+  for (const id of ['business_driver_analysis', 'unit_economics', 'valuation_crosscheck']) assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === id)?.executionClass, 'NOT_INDEPENDENTLY_EXECUTABLE')
   const input = { fcff: [100, 110, 120], discountRate: 0.09, terminalGrowthRate: 0.03 }
   const direct = calculateForwardDcf(input)
   const bound = registry.get('dcf_valuation')?.runtimeExecutor?.(input) as typeof direct
