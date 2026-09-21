@@ -1,8 +1,10 @@
-import { readFile, stat } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { join, resolve } from 'node:path'
+import { readFile } from 'node:fs/promises'
+import { readFileSync, statSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { canonicalResearchSkillMdPath, CANONICAL_RESEARCH_SKILL_IDS, getCanonicalResearchSkill, REQUIRED_RESEARCH_SKILL_SECTIONS, RUNTIME_CANONICAL_RESEARCH_SKILLS, type ResearchSkillCatalogStatus } from './research-skill-catalog.ts'
 
 export type ResearchHubSkillKind = 'research' | 'knowledge' | 'utility'
+export type ResearchSkillOrigin = 'canonical' | 'external'
 
 export interface ResearchSkillMethodologySource {
   readonly type: 'researchhub_skill'
@@ -13,31 +15,89 @@ export interface ResearchSkillDefinition {
   readonly id: string
   readonly kind: ResearchHubSkillKind
   readonly researchCapability?: string
+  readonly purpose?: string
+  readonly invocationMatch?: string
+  readonly inputs?: readonly string[]
+  readonly produces?: readonly string[]
   readonly intentDescription: string
   readonly whenToUse: string
   readonly inputSchema?: Readonly<Record<string, unknown>>
   readonly outputContract?: string
   readonly methodologySource?: ResearchSkillMethodologySource
+  readonly skillMdPath?: string
+  readonly catalogStatus?: ResearchSkillCatalogStatus
+  readonly origin?: ResearchSkillOrigin
   readonly enabled: boolean
   readonly scope: 'researchhub'
 }
 
-const CORE_SKILL_ROOT = resolve(fileURLToPath(new URL('../../skills/', import.meta.url)))
-function coreMethodology(id: string): ResearchSkillMethodologySource { return { type: 'researchhub_skill', path: join(CORE_SKILL_ROOT, id, 'SKILL.md') } }
+function canonicalDefinition(id: string): ResearchSkillDefinition {
+  const metadata = getCanonicalResearchSkill(id)
+  if (metadata === undefined || !metadata.runtimeRegistered || metadata.status !== 'IMPLEMENTED') throw new Error(`Cannot register non-runtime canonical Research Skill: ${id}`)
+  const skillMdPath = canonicalResearchSkillMdPath(id)
+  return {
+    id,
+    kind: 'research',
+    researchCapability: id,
+    purpose: metadata.purpose,
+    invocationMatch: metadata.invocationMatch,
+    inputs: metadata.inputs,
+    produces: metadata.produces,
+    intentDescription: metadata.purpose,
+    whenToUse: metadata.invocationMatch,
+    outputContract: metadata.produces.join(', '),
+    methodologySource: { type: 'researchhub_skill', path: skillMdPath },
+    skillMdPath,
+    catalogStatus: metadata.status,
+    origin: 'canonical',
+    enabled: true,
+    scope: 'researchhub',
+  }
+}
 
 const CORE_SKILLS: readonly ResearchSkillDefinition[] = [
-  { id: 'company-research', kind: 'research', researchCapability: 'company_research', intentDescription: 'Evidence-backed A-share company research.', whenToUse: 'Use for a bounded company research request.', outputContract: 'Company research sections and proposals', methodologySource: coreMethodology('company-research'), enabled: true, scope: 'researchhub' },
-  { id: 'industry-research', kind: 'research', researchCapability: 'industry_research', intentDescription: 'Eight-module industry research.', whenToUse: 'Use for a bounded industry research request.', outputContract: 'Industry module report and proposals', methodologySource: coreMethodology('industry-research'), enabled: true, scope: 'researchhub' },
-  { id: 'earnings-review', kind: 'research', researchCapability: 'earnings_review', intentDescription: 'Exact-period earnings review.', whenToUse: 'Use for a fiscal-period earnings comparison.', outputContract: 'Earnings review report and proposals', methodologySource: coreMethodology('earnings-review'), enabled: true, scope: 'researchhub' },
-  { id: 'event-research', kind: 'research', researchCapability: 'event_research', intentDescription: 'Company-bound event research.', whenToUse: 'Use when a request names an event anchor.', outputContract: 'Event research report and proposals', methodologySource: coreMethodology('event-research'), enabled: true, scope: 'researchhub' },
-  { id: 'valuation', kind: 'research', researchCapability: 'valuation', intentDescription: 'Bounded valuation analysis.', whenToUse: 'Use when a request asks for valuation scenarios.', outputContract: 'Valuation report and proposals', methodologySource: coreMethodology('valuation'), enabled: true, scope: 'researchhub' },
-  { id: 'thesis-red-team', kind: 'research', researchCapability: 'thesis_red_team', intentDescription: 'Adversarial thesis testing.', whenToUse: 'Use when a request asks to challenge an active thesis.', outputContract: 'Thesis red-team report and proposals', methodologySource: coreMethodology('thesis-red-team'), enabled: true, scope: 'researchhub' },
-  { id: 'daily-intelligence', kind: 'research', researchCapability: 'daily_intelligence', intentDescription: 'Daily public-signal intelligence synthesis.', whenToUse: 'Use for a bounded morning or evening intelligence request.', outputContract: 'Daily Brief report', methodologySource: coreMethodology('daily-intelligence'), enabled: true, scope: 'researchhub' },
+  ...RUNTIME_CANONICAL_RESEARCH_SKILLS.map((item) => canonicalDefinition(item.canonicalSkillId)),
   { id: 'knowledge-curation', kind: 'knowledge', intentDescription: 'Knowledge extraction and semantic resolution.', whenToUse: 'Use only inside governed Knowledge Production.', outputContract: 'Validated Knowledge candidates', enabled: true, scope: 'researchhub' },
 ]
 
 function clone(definition: ResearchSkillDefinition): ResearchSkillDefinition {
-  return { ...definition, ...(definition.inputSchema === undefined ? {} : { inputSchema: JSON.parse(JSON.stringify(definition.inputSchema)) as Readonly<Record<string, unknown>> }) }
+  return { ...definition, ...(definition.inputs === undefined ? {} : { inputs: [...definition.inputs] }), ...(definition.produces === undefined ? {} : { produces: [...definition.produces] }), ...(definition.inputSchema === undefined ? {} : { inputSchema: JSON.parse(JSON.stringify(definition.inputSchema)) as Readonly<Record<string, unknown>> }) }
+}
+
+function normalize(definition: ResearchSkillDefinition): ResearchSkillDefinition {
+  const origin = definition.origin ?? (CANONICAL_RESEARCH_SKILL_IDS.has(definition.id) ? 'canonical' : 'external')
+  const purpose = definition.purpose?.trim() || definition.intentDescription.trim()
+  const invocationMatch = definition.invocationMatch?.trim() || definition.whenToUse.trim()
+  const inputs = definition.inputs === undefined ? Object.keys(definition.inputSchema ?? {}).sort() : [...definition.inputs]
+  const produces = definition.produces === undefined ? [definition.outputContract?.trim() || 'ResearchBundle'] : [...definition.produces]
+  return { ...definition, purpose, invocationMatch, inputs, produces, origin, ...(origin === 'canonical' ? { skillMdPath: definition.skillMdPath ?? definition.methodologySource?.path } : {}) }
+}
+
+function contractDiagnostics(definition: ResearchSkillDefinition): readonly string[] {
+  const errors: string[] = []
+  if (!definition.purpose?.trim()) errors.push('purpose_missing')
+  if (!definition.invocationMatch?.trim()) errors.push('invocation_match_missing')
+  if (definition.inputs === undefined || definition.inputs.length === 0) errors.push('inputs_missing')
+  if (definition.produces === undefined || definition.produces.length === 0) errors.push('produces_missing')
+  if (definition.origin === 'canonical') {
+    if (definition.catalogStatus !== 'IMPLEMENTED') errors.push('canonical_skill_not_implemented')
+    if (definition.skillMdPath === undefined) errors.push('skill_md_path_missing')
+    else {
+      try {
+        const text = readFileSync(definition.skillMdPath, 'utf8')
+        for (const section of REQUIRED_RESEARCH_SKILL_SECTIONS) {
+          const escaped = section.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')
+          if (!new RegExp(`^##\\s+${escaped}\\s*$`, 'mi').test(text)) errors.push(`skill_md_section_missing:${section}`)
+        }
+      } catch { errors.push('skill_md_unreadable') }
+    }
+  }
+  return errors
+}
+
+export function validateResearchSkillDefinition(definition: ResearchSkillDefinition): void {
+  const errors = contractDiagnostics(normalize(definition))
+  if (errors.length > 0) throw new Error(`Invalid Research Skill definition ${definition.id}: ${errors.join(', ')}`)
 }
 
 export interface LoadedResearchSkill extends ResearchSkillDefinition {
@@ -45,13 +105,14 @@ export interface LoadedResearchSkill extends ResearchSkillDefinition {
 }
 
 export async function loadResearchSkillMethodology(definition: ResearchSkillDefinition, maxBytes = 64_000): Promise<LoadedResearchSkill> {
-  if (definition.kind !== 'research' || definition.methodologySource?.type !== 'researchhub_skill') throw new Error(`Research Skill methodology source is unavailable: ${definition.id}`)
-  const sourcePath = resolve(definition.methodologySource.path)
-  const metadata = await stat(sourcePath)
+  const normalized = normalize(definition)
+  if (normalized.kind !== 'research' || normalized.methodologySource?.type !== 'researchhub_skill') throw new Error(`Research Skill methodology source is unavailable: ${definition.id}`)
+  const sourcePath = resolve(normalized.methodologySource.path)
+  const metadata = await statSync(sourcePath)
   if (!metadata.isFile() || metadata.size === 0 || metadata.size > maxBytes) throw new Error(`Research Skill methodology is missing or exceeds ${maxBytes} bytes: ${definition.id}`)
   const methodology = (await readFile(sourcePath, 'utf8')).trim()
   if (methodology === '') throw new Error(`Research Skill methodology is empty: ${definition.id}`)
-  return { ...clone(definition), methodology }
+  return { ...clone(normalized), methodology }
 }
 
 export class ResearchSkillRegistry {
@@ -61,11 +122,13 @@ export class ResearchSkillRegistry {
     for (const definition of definitions) this.register(definition)
   }
 
-  register(definition: ResearchSkillDefinition): void {
+  register(input: ResearchSkillDefinition): void {
+    const definition = normalize(input)
     if (definition.scope !== 'researchhub') throw new Error(`Only ResearchHub skills may enter this registry: ${definition.id}`)
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(definition.id)) throw new Error(`Unsafe Skill definition ID: ${definition.id}`)
     if (this.definitions.has(definition.id)) throw new Error(`Duplicate Skill definition: ${definition.id}`)
     if (!definition.intentDescription.trim() || !definition.whenToUse.trim()) throw new Error(`Incomplete Skill definition: ${definition.id}`)
+    if (definition.origin === 'canonical') validateResearchSkillDefinition(definition)
     this.definitions.set(definition.id, clone(definition))
   }
 
@@ -80,6 +143,10 @@ export class ResearchSkillRegistry {
 
   researchCandidates(): readonly ResearchSkillDefinition[] {
     return this.list().filter((definition) => definition.enabled && definition.kind === 'research')
+  }
+
+  canonicalResearchCandidates(): readonly ResearchSkillDefinition[] {
+    return this.researchCandidates().filter((definition) => definition.origin === 'canonical')
   }
 }
 

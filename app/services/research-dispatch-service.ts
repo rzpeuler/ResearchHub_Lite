@@ -169,8 +169,11 @@ function scoreWorkflow(definition: WorkflowDefinition, query: string): number {
   return keywordScore
 }
 
-function selectedSkillIds(registry: ResearchSkillRegistry, workflowId: string): readonly string[] {
-  return registry.researchCandidates().filter((skill) => skill.researchCapability === workflowId).map((skill) => skill.id)
+function selectedSkillIds(registry: ResearchSkillRegistry, definition: WorkflowDefinition): readonly string[] {
+  return definition.skillIds.filter((id) => {
+    const skill = registry.get(id)
+    return skill?.kind === 'research' && skill.enabled === true
+  })
 }
 
 const dispatchOutputContract = {
@@ -232,18 +235,22 @@ export class ResearchDispatchService {
   resolve(input: unknown): { readonly request: ResearchRequest; readonly decision: ResearchDispatchDecision; readonly summary: ResearchExecutionSummary } {
     const request = normalizeResearchRequest(input)
     const explicit = request.mode.type === 'workflow'
-    const definition = explicit ? this.workflowRegistry.get(request.mode.workflowId) : this.bestWorkflow(request.query)
-    if (definition !== undefined) {
-      const extracted = extractWorkflowArguments(definition, request.query)
-      const decision = validateResearchDispatchDecision({ mode: 'workflow', workflow: { id: definition.id, confidence: explicit ? 1 : Math.min(1, 0.5 + scoreWorkflow(definition, request.query) / 10), arguments: extracted.arguments }, skills: selectedSkillIds(this.skillRegistry, definition.id).map((id) => ({ id, purpose: 'selected by the authoritative Workflow definition' })), entities: this.entities(request.query), missingRequiredInputs: extracted.missingRequiredInputs, contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: explicit ? 'User-selected Workflow has precedence over automatic routing.' : `Matched existing Workflow definition ${definition.id}.` })
-      return { request, decision, summary: this.summary(request, decision, definition) }
+    const definition = explicit ? this.workflowRegistry.get(request.mode.workflowId) : undefined
+    if (explicit && definition === undefined) throw new ApplicationServiceError('not_found', `Workflow definition not found: ${request.mode.workflowId}`)
+    if (!explicit) {
+      const directSkill = this.bestSkill(request.query)
+      if (directSkill !== undefined) {
+        const decision = validateResearchDispatchDecision({ mode: 'skill_plan', skills: [{ id: directSkill.id, purpose: directSkill.purpose ?? directSkill.whenToUse }], entities: this.entities(request.query), missingRequiredInputs: [], contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: `Matched one narrow Research Skill by semantic intent: ${directSkill.id}.` })
+        return { request, decision, summary: this.summary(request, decision) }
+      }
+    }
+    const routedDefinition = definition ?? this.bestWorkflow(request.query)
+    if (routedDefinition !== undefined) {
+      const extracted = extractWorkflowArguments(routedDefinition, request.query)
+      const decision = validateResearchDispatchDecision({ mode: 'workflow', workflow: { id: routedDefinition.id, confidence: explicit ? 1 : Math.min(1, 0.5 + scoreWorkflow(routedDefinition, request.query) / 10), arguments: extracted.arguments }, skills: selectedSkillIds(this.skillRegistry, routedDefinition).map((id) => ({ id, purpose: this.skillRegistry.get(id)?.purpose ?? 'selected by the authoritative Workflow definition' })), entities: this.entities(request.query), missingRequiredInputs: extracted.missingRequiredInputs, contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: explicit ? 'User-selected Workflow has precedence over automatic routing.' : `Matched existing Workflow definition ${routedDefinition.id}.` })
+      return { request, decision, summary: this.summary(request, decision, routedDefinition) }
     }
     if (explicit) throw new ApplicationServiceError('not_found', `Workflow definition not found: ${request.mode.workflowId}`)
-    const skill = this.bestSkill(request.query)
-    if (skill !== undefined) {
-      const decision = validateResearchDispatchDecision({ mode: 'skill_plan', skills: [{ id: skill.id, purpose: skill.whenToUse }], entities: this.entities(request.query), missingRequiredInputs: [], contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: `No suitable Workflow matched; selected Research Skill ${skill.id}.` })
-      return { request, decision, summary: this.summary(request, decision) }
-    }
     const decision = validateResearchDispatchDecision({ mode: 'free_research', skills: [], entities: this.entities(request.query), missingRequiredInputs: [], contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: 'No suitable Workflow or enabled Research Skill matched; continue as Free Research.' })
     return { request, decision, summary: this.summary(request, decision) }
   }
@@ -380,7 +387,24 @@ export class ResearchDispatchService {
 
   private bestSkill(query: string): ResearchSkillDefinition | undefined {
     const text = safeQuery(query)
-    return this.skillRegistry.researchCandidates().map((skill) => {
+    const canonical = this.skillRegistry.canonicalResearchCandidates()
+    const intentMatches: readonly { readonly id: string; readonly include: readonly RegExp[]; readonly exclude?: readonly RegExp[] }[] = [
+      { id: 'reverse_dcf_expectation_decode', include: [/(?:price|priced|price.?in|隐含|股价|当前价格)/i, /(?:growth|revenue|margin|增长|收入|利润|假设)/i], exclude: [/(?:my|按我的|forecast|预测|build|做).*(?:dcf|discounted|DCF)/i] },
+      { id: 'dcf_valuation', include: [/(?:DCF|discounted cash flow|内在价值|intrinsic value)/i, /(?:forecast|预测|revenue|收入|profit|利润|FCFF|现金流|assumption|假设)/i] },
+      { id: 'earnings_variance_analysis', include: [/(?:beat|miss|surprise|超预期|低于预期|为什么|原因)/i, /(?:revenue|sales|profit|income|营收|收入|利润)/i], exclude: [/(?:guidance|指引|展望)/i] },
+      { id: 'guidance_analysis', include: [/(?:guidance|指引|展望)/i, /(?:change|changed|prior|last|变化|上次|相比)/i] },
+      { id: 'estimate_revision_analysis', include: [/(?:estimate|estimates|revision|revised|预测|估计|预期).*(?:revision|change|上调|下调|调整)|(?:上调|下调|调整).*(?:预测|预期|estimate)/i] },
+      { id: 'consensus_expectations_analysis', include: [/(?:consensus|一致预期|市场预期)/i], exclude: [/(?:beat|miss|guidance|revision|修订|指引)/i] },
+      { id: 'business_model_map', include: [/(?:business model|makes money|how.*make|商业模式|靠什么赚钱|怎么赚钱|客户.*产品)/i] },
+      { id: 'business_driver_analysis', include: [/(?:volume|price|mix|segment|driver|销量|价格|mix|分部|驱动)/i, /(?:revenue|sales|profit|营收|收入|利润|增长)/i] },
+      { id: 'unit_economics', include: [/(?:unit economics|economic unit|per customer|per shipment|每客|每单|每个客户|经济单位)/i] },
+      { id: 'thesis_red_team', include: [/(?:red.?team|falsif|反驳|反向验证|最容易错|哪里.*错|投资逻辑)/i] },
+    ]
+    for (const match of intentMatches) {
+      const skill = canonical.find((item) => item.id === match.id)
+      if (skill !== undefined && match.include.every((pattern) => pattern.test(text)) && (match.exclude === undefined || match.exclude.every((pattern) => !pattern.test(text)))) return skill
+    }
+    return this.skillRegistry.researchCandidates().filter((skill) => skill.origin !== 'canonical').map((skill) => {
       const workflowScore = WORKFLOW_KEYWORDS[skill.researchCapability ?? '']?.reduce((score, term) => score + (containsTerm(text, term) ? 1 : 0), 0) ?? 0
       const explicitSkillScore = containsTerm(text, skill.id) ? 2 : 0
       const usageScore = containsTerm(text, skill.whenToUse) ? 1 : 0
