@@ -19,10 +19,32 @@ test('capital metrics use explicit denominators and preserve action provenance',
 })
 
 test('explicit return and hurdle are the only route to value assessment', () => {
-  const supported = assessCapitalAllocation({ ...base, actions: [{ id: 'acq', actionType: 'acquisition', date: '2026-06-01T00:00:00.000Z', period: '2026-FY', amount: 500, unit: 'CNY', sourceRefs: refs('acq'), returnOnIncrementalCapital: 0.18, hurdleRate: 0.12, subsequentOutcome: { metric: 'operating_profit', value: 100, unit: 'CNY', sourceRefs: refs('outcome') } }] })
+  const supported = assessCapitalAllocation({ ...base, actions: [{ id: 'acq', actionType: 'acquisition', date: '2026-06-01T00:00:00.000Z', period: '2026-FY', amount: 500, unit: 'CNY', sourceRefs: refs('acq'), returnOnIncrementalCapital: 0.18, returnSourceRefs: refs('return'), hurdleRate: 0.12, hurdleSourceRefs: refs('hurdle'), subsequentOutcome: { metric: 'operating_profit', value: 100, unit: 'CNY', sourceRefs: refs('outcome') } }] })
   assert.equal(supported.actions[0]?.valueAssessment, 'value_supported')
-  const destroyed = assessCapitalAllocation({ ...base, actions: [{ id: 'acq', actionType: 'acquisition', date: '2026-06-01T00:00:00.000Z', period: '2026-FY', amount: 500, unit: 'CNY', sourceRefs: refs('acq'), returnOnIncrementalCapital: 0.04, hurdleRate: 0.12, subsequentOutcome: { metric: 'operating_profit', value: 10, unit: 'CNY', sourceRefs: refs('outcome') } }] })
+  const destroyed = assessCapitalAllocation({ ...base, actions: [{ id: 'acq', actionType: 'acquisition', date: '2026-06-01T00:00:00.000Z', period: '2026-FY', amount: 500, unit: 'CNY', sourceRefs: refs('acq'), returnOnIncrementalCapital: 0.04, returnSourceRefs: refs('return'), hurdleRate: 0.12, hurdleSourceRefs: refs('hurdle'), subsequentOutcome: { metric: 'operating_profit', value: 10, unit: 'CNY', sourceRefs: refs('outcome') } }] })
   assert.equal(destroyed.actions[0]?.valueAssessment, 'value_destroyed')
+  assert.deepEqual(supported.actions[0]?.valueEvidence, { actionAmountSourceRefs: refs('acq'), returnSourceRefs: refs('return'), hurdleSourceRefs: refs('hurdle'), subsequentOutcomeSourceRefs: refs('outcome') })
+})
+
+test('acquisition without subsequent outcome remains inconclusive', () => {
+  const result = assessCapitalAllocation({ ...base, actions: [{ id: 'acq', actionType: 'acquisition', date: '2026-06-01T00:00:00.000Z', period: '2026-FY', amount: 500, unit: 'CNY', sourceRefs: refs('acq'), returnOnIncrementalCapital: 0.18, returnSourceRefs: refs('return'), hurdleRate: 0.12, hurdleSourceRefs: refs('hurdle') }] })
+  assert.equal(result.actions[0]?.valueAssessment, 'inconclusive')
+  assert.ok(result.actions[0]?.diagnostics.some((item) => item.includes('subsequent')))
+})
+
+test('buyback and dividend do not inherit an arbitrary ROIIC value framework', () => {
+  const result = assessCapitalAllocation({ ...base, actions: [
+    { id: 'buyback', actionType: 'buyback', date: '2026-06-01T00:00:00.000Z', period: '2026-FY', amount: 100, unit: 'CNY', sourceRefs: refs('buyback'), returnOnIncrementalCapital: 0.3, returnSourceRefs: refs('return'), hurdleRate: 0.1, hurdleSourceRefs: refs('hurdle'), subsequentOutcome: { metric: 'eps', value: 1, unit: 'CNY', sourceRefs: refs('eps') } },
+    { id: 'dividend', actionType: 'dividend', date: '2026-06-01T00:00:00.000Z', period: '2026-FY', amount: 100, unit: 'CNY', sourceRefs: refs('dividend'), returnOnIncrementalCapital: 0.3, returnSourceRefs: refs('return'), hurdleRate: 0.1, hurdleSourceRefs: refs('hurdle'), subsequentOutcome: { metric: 'eps', value: 1, unit: 'CNY', sourceRefs: refs('eps') } },
+  ] })
+  assert.equal(result.actions[0]?.valueAssessment, 'inconclusive')
+  assert.equal(result.actions[1]?.valueAssessment, 'inconclusive')
+})
+
+test('missing hurdle or value attribution fails closed', () => {
+  const result = assessCapitalAllocation({ ...base, actions: [{ id: 'acq', actionType: 'acquisition', date: '2026-06-01T00:00:00.000Z', period: '2026-FY', amount: 500, unit: 'CNY', sourceRefs: [], returnOnIncrementalCapital: 0.18, returnSourceRefs: [], hurdleRate: 0.12, subsequentOutcome: { metric: 'operating_profit', value: 100, unit: 'CNY', sourceRefs: refs('outcome') } }] })
+  assert.equal(result.actions[0]?.valueAssessment, 'inconclusive')
+  assert.ok(result.actions[0]?.diagnostics.some((item) => item.includes('hurdle') || item.includes('return') || item.includes('capital action')))
 })
 
 test('missing denominator and future action are unavailable without synthetic ratios', () => {

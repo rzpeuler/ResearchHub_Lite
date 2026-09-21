@@ -23,14 +23,17 @@ result, and source references.
 
 ## Produces
 
-Evidence-linked assessments: `met`, `partially_met`, `not_met`,
-`not_yet_observable`, or `inconclusive`.
+Evidence-linked numeric assessments: `met`, `not_met`,
+`not_yet_observable`, or `inconclusive`. Qualitative commitments are retained
+as evidence but fail closed as `inconclusive` until a deterministic observable
+predicate exists.
 
 ## Methodology
 
 Match outcomes to the exact commitment period and compare numeric values with
-code-owned bounds. Qualitative outcomes must carry an explicit evidence-based
-result; absence of an outcome is not a miss.
+code-owned bounds. A caller- or model-supplied qualitative label is not a
+deterministic predicate and cannot become a final assessment; absence of an
+outcome is not a miss.
 
 ## Evidence Requirements
 
@@ -40,8 +43,9 @@ fall within the as-of boundary.
 ## Deterministic / Model Boundary
 
 Code owns date boundaries, period matching, numeric comparisons, and status
-vocabulary. A model may extract a candidate commitment from evidence but may
-not invent target values or assessments.
+vocabulary for numeric commitments. A model may extract a candidate
+commitment or narrative outcome, but may not author a qualitative final label
+or invent target values or assessments.
 
 ## Missing Data
 

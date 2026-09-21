@@ -19,8 +19,21 @@ test('missing future outcome is not treated as a miss', () => {
 test('qualitative execution uses an explicit evidence result and never a personality score', () => {
   const result = assessManagementExecution({ companyRef: 'entity:company', asOf: '2027-01-01T00:00:00.000Z', commitments: [commitment({ id: 'launch', targetMetric: 'product_launch', targetPeriod: '2026-FY', targetType: 'qualitative', targetLow: undefined, qualitativeCondition: 'Product launch completed by year end.' })], outcomes: [{ commitmentId: 'launch', period: '2026-FY', observedAt: '2026-12-20T00:00:00.000Z', qualitativeResult: 'partially_met', statement: 'Launch occurred late in the target period.', sourceRefs: refs('launch-outcome') }] })
   const serialized = JSON.stringify(result)
-  assert.equal(result.assessments[0]?.assessment, 'partially_met')
+  assert.equal(result.assessments[0]?.assessment, 'inconclusive')
+  assert.ok(result.assessments[0]?.diagnostics.some((item) => item.includes('non-authoritative')))
   assert.doesNotMatch(serialized, /honesty|personality|score/i)
+})
+
+test('numeric range and maximum commitments remain deterministic', () => {
+  const result = assessManagementExecution({ companyRef: 'entity:company', asOf: '2027-01-01T00:00:00.000Z', commitments: [commitment({ id: 'range', targetType: 'numeric_range', targetLow: 10, targetHigh: 20 }), commitment({ id: 'max', targetType: 'numeric_at_most', targetHigh: 5 })], outcomes: [{ commitmentId: 'range', period: '2026-FY', observedAt: '2027-01-01T00:00:00.000Z', value: 15, unit: 'percent', sourceRefs: refs('range-outcome') }, { commitmentId: 'max', period: '2026-FY', observedAt: '2027-01-01T00:00:00.000Z', value: 7, unit: 'percent', sourceRefs: refs('max-outcome') }] })
+  assert.equal(result.assessments.find((item) => item.commitmentId === 'range')?.assessment, 'met')
+  assert.equal(result.assessments.find((item) => item.commitmentId === 'max')?.assessment, 'not_met')
+})
+
+test('qualitative narrative without a deterministic predicate is inconclusive', () => {
+  const result = assessManagementExecution({ companyRef: 'entity:company', asOf: '2027-01-01T00:00:00.000Z', commitments: [commitment({ id: 'quality', targetMetric: 'customer_experience', targetPeriod: '2026-FY', targetType: 'qualitative', targetLow: undefined, qualitativeCondition: 'Improve customer experience.' })], outcomes: [{ commitmentId: 'quality', period: '2026-FY', observedAt: '2027-01-01T00:00:00.000Z', statement: 'Customer experience improved.', sourceRefs: refs('quality-outcome') }] })
+  assert.equal(result.assessments[0]?.assessment, 'inconclusive')
+  assert.ok(result.assessments[0]?.diagnostics.some((item) => item.includes('deterministic predicate')))
 })
 
 test('unit mismatch and missing source refs fail closed', () => {

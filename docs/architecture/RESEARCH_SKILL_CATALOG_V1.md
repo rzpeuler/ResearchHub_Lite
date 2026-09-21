@@ -59,3 +59,11 @@ The existing composite Workflows remain the product execution boundary while
 their canonical skill metadata is introduced. Their mapped skill IDs are
 documented in the migration matrix and are not evidence that an unimplemented
 Skill is runtime available.
+
+FIX-002 semantic closure preserves the catalog statuses and runtime set while
+narrowing deterministic authority. The industry cycle keeps utilization level
+separate from direction and requires comparable transitions for confirmed
+inflection; management execution treats qualitative labels as non-authoritative
+and fails closed without deterministic predicates; and capital allocation gates
+value assessment to applicable action types, attributable return/hurdle
+evidence, and subsequent outcomes.

@@ -7,6 +7,9 @@ export interface DemandIndicator {
   readonly kind: 'end_demand' | 'penetration' | 'replacement' | 'orders' | 'bookings' | 'backlog' | 'channel_restocking' | 'regulatory_demand' | 'technology_transition'
   readonly direction: IndicatorDirection
   readonly period: string
+  readonly priorDirection?: IndicatorDirection
+  readonly priorPeriod?: string
+  readonly priorSourceRefs?: readonly string[]
   readonly sourceRefs: readonly string[]
   readonly confidence: 'high' | 'medium' | 'low' | 'unknown'
   readonly availability: 'reported' | 'unavailable'
@@ -19,6 +22,9 @@ export interface CapacityObservation {
   readonly value?: number
   readonly unit: string
   readonly period: string
+  readonly priorValue?: number
+  readonly priorPeriod?: string
+  readonly priorSourceRefs?: readonly string[]
   readonly sourceRefs: readonly string[]
   readonly adjustments?: { readonly closure?: number; readonly maintenance?: number; readonly yield?: number; readonly qualification?: number; readonly ramp?: number }
 }
@@ -26,6 +32,10 @@ export interface CapacityObservation {
 export interface UtilizationObservation {
   readonly period: string
   readonly reportedValue?: number
+  readonly priorReportedValue?: number
+  readonly priorPeriod?: string
+  readonly priorSourceRefs?: readonly string[]
+  readonly direction?: IndicatorDirection
   readonly outputValue?: number
   readonly capacityValue?: number
   readonly unit: string
@@ -40,6 +50,9 @@ export interface InventoryObservation {
   readonly days?: number
   readonly unit: string
   readonly period: string
+  readonly priorDirection?: IndicatorDirection
+  readonly priorPeriod?: string
+  readonly priorSourceRefs?: readonly string[]
   readonly hasHistory: boolean
   readonly sourceRefs: readonly string[]
 }
@@ -84,7 +97,7 @@ export interface IndustrySupplyDemandCycleResult {
   readonly contradictingIndicators: readonly CycleEvidence[]
   readonly missingIndicators: readonly string[]
   readonly effectiveCapacity?: { readonly value: number; readonly unit: string; readonly sourceRefs: readonly string[] }
-  readonly utilization?: { readonly value: number; readonly unit: string; readonly method: 'reported' | 'output_divided_by_capacity'; readonly sourceRefs: readonly string[] }
+  readonly utilization?: { readonly value: number; readonly unit: string; readonly method: 'reported' | 'output_divided_by_capacity'; readonly direction?: IndicatorDirection; readonly priorValue?: number; readonly priorPeriod?: string; readonly sourceRefs: readonly string[]; readonly priorSourceRefs?: readonly string[] }
   readonly priceDeltas: readonly { readonly id: string; readonly delta?: number; readonly unit: string; readonly sourceRefs: readonly string[] }[]
   readonly diagnostics: readonly string[]
   readonly asOf: string

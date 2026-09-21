@@ -23,6 +23,7 @@ export interface ManagementOutcome {
   readonly observedAt: string
   readonly value?: number
   readonly unit?: string
+  /** Retained for input compatibility; deterministic code never treats this caller-supplied label as authoritative. */
   readonly qualitativeResult?: 'met' | 'partially_met' | 'not_met'
   readonly statement?: string
   readonly sourceRefs: readonly string[]

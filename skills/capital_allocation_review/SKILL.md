@@ -25,28 +25,33 @@ and source references.
 ## Produces
 
 Deterministic capital metrics plus `value_supported`, `value_destroyed`, or
-`inconclusive` when an explicit incremental-return/hurdle comparison exists.
+`inconclusive`. Value assessment is limited to organic CapEx, acquisitions, and
+R&D/reinvestment, and requires attributable return, hurdle, action amount, and
+subsequent outcome evidence.
 
 ## Methodology
 
 Calculate only ratios supported by explicit denominators. Preserve action type,
-period, source references, and unavailable metrics independently.
+period, source references, and unavailable metrics independently. Do not apply
+an incremental-return/hurdle test to dividends, buybacks, debt repayment, cash
+accumulation, or generic actions.
 
 ## Evidence Requirements
 
 Every action and subsequent outcome must be attributable and within the as-of
-boundary. Value creation requires explicit return and hurdle evidence.
+boundary. Value creation requires explicit return, hurdle, action amount, and
+subsequent operating/economic outcome evidence.
 
 ## Deterministic / Model Boundary
 
-Code owns amount validation, ratios, changes, and hurdle comparison. A model
-may summarize strategic rationale but may not invent a return, price paid, or
-economic outcome.
+Code owns amount validation, ratios, changes, action-type applicability, and
+hurdle comparison. A model may summarize strategic rationale but may not invent
+a return, price paid, or economic outcome.
 
 ## Missing Data
 
-Missing denominators or outcomes remain unavailable/inconclusive and are never
-replaced with industry defaults.
+Missing denominators or value-assessment evidence remain unavailable or
+inconclusive and are never replaced with industry defaults.
 
 ## Validation / QC
 

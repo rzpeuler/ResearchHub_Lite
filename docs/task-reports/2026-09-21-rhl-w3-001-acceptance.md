@@ -233,7 +233,14 @@ UNIT_ECONOMICS_READY: YES
 INDUSTRY_STRUCTURE_READY: YES
 INDUSTRY_CYCLE_READY: YES
 COMPANY_INDUSTRY_BRIDGE_READY: YES
-WAVE3_PRODUCT_QUALITY_READY: YES
-CAN_PROCEED_TO_WAVE4: NO — pending SOL acceptance and authenticated external validation.
+WAVE3_CORE_IMPLEMENTATION_READY: YES
+WAVE3_AUTHENTICATED_E2E_READY: NO / PENDING
+WAVE3_PRODUCT_QUALITY_READY: NO / PENDING AUTHENTICATED VALIDATION
+CAN_PROCEED_TO_WAVE4: YES after SOL accepts FIX-002; authenticated external validation remains pending.
 
 Final status: `IMPLEMENTED / SOL ACCEPTANCE PENDING`
+
+## FIX-002 Semantic Integrity Closure
+
+Required base: `87314f57c33886bc2f5b4cec073812e4d1a84bd2`
+The follow-up closure narrows cycle, management-execution, and capital-allocation authority while preserving their numeric/runtime paths. See `2026-09-21-rhl-w3-001-fix-002-report.md` for the authoritative closure validation and synchronization record.

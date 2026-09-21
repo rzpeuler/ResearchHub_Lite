@@ -9,6 +9,8 @@ function metric(action: CapitalAction, name: CapitalMetric['metric'], value: num
   return { actionId: action.id, metric: name, ...(value !== undefined && Number.isFinite(value) ? { value } : {}), unit, sourceRefs: unique(refs), status: value !== undefined && Number.isFinite(value) && diagnostics.length === 0 ? 'available' : 'unavailable', diagnostics: unique(diagnostics) }
 }
 
+const valueEligible = (action: CapitalAction): boolean => action.actionType === 'organic_capex' || action.actionType === 'acquisition' || action.actionType === 'R&D'
+
 function actionAssessment(action: CapitalAction, input: CapitalAllocationInput): CapitalActionAssessment {
   const diagnostics: string[] = []
   const metrics: CapitalMetric[] = []
@@ -22,11 +24,23 @@ function actionAssessment(action: CapitalAction, input: CapitalAllocationInput):
   if (action.netDebtBefore !== undefined || action.netDebtAfter !== undefined) metrics.push(metric(action, 'net_debt_change', finite(action.netDebtAfter) && finite(action.netDebtBefore) ? action.netDebtAfter - action.netDebtBefore : undefined, action.unit, finite(action.netDebtAfter) && finite(action.netDebtBefore) ? [] : ['both net-debt observations are required'], refs))
   if (action.actionType === 'acquisition') metrics.push(metric(action, 'acquisition_spend', action.amount, action.unit, [], action.sourceRefs))
   if (action.sharesBefore !== undefined || action.sharesAfter !== undefined) metrics.push(metric(action, 'share_count_change', finite(action.sharesAfter) && finite(action.sharesBefore) ? action.sharesAfter - action.sharesBefore : undefined, 'shares', finite(action.sharesAfter) && finite(action.sharesBefore) ? [] : ['both share-count observations are required'], refs))
-  const valueAssessment = action.returnOnIncrementalCapital !== undefined && action.hurdleRate !== undefined && finite(action.returnOnIncrementalCapital) && finite(action.hurdleRate)
-    ? action.returnOnIncrementalCapital >= action.hurdleRate ? 'value_supported' : 'value_destroyed'
+  const valueEvidence = {
+    actionAmountSourceRefs: unique(action.sourceRefs),
+    returnSourceRefs: unique(action.returnSourceRefs ?? []),
+    hurdleSourceRefs: unique(action.hurdleSourceRefs ?? []),
+    subsequentOutcomeSourceRefs: unique(action.subsequentOutcome?.sourceRefs ?? []),
+  }
+  const valueDiagnostics: string[] = []
+  if (valueEligible(action)) {
+    if (!finite(action.returnOnIncrementalCapital) || valueEvidence.returnSourceRefs.length === 0) valueDiagnostics.push('value assessment requires an attributable incremental return')
+    if (!finite(action.hurdleRate) || valueEvidence.hurdleSourceRefs.length === 0) valueDiagnostics.push('value assessment requires an attributable hurdle')
+    if (action.subsequentOutcome === undefined) valueDiagnostics.push('value assessment requires a subsequent operating or economic outcome')
+    else if (!text(action.subsequentOutcome.metric) || !text(action.subsequentOutcome.unit) || !finite(action.subsequentOutcome.value) || action.subsequentOutcome.sourceRefs.length === 0) valueDiagnostics.push('subsequent outcome requires a finite value, unit, metric, and source references')
+  }
+  const valueAssessment: CapitalActionAssessment['valueAssessment'] = valueEligible(action) && diagnostics.length === 0 && valueDiagnostics.length === 0
+    ? action.subsequentOutcome!.value < 0 || action.returnOnIncrementalCapital! < action.hurdleRate! ? 'value_destroyed' : 'value_supported'
     : 'inconclusive'
-  if (action.subsequentOutcome !== undefined && action.subsequentOutcome.sourceRefs.length === 0) diagnostics.push('subsequent outcome requires source references')
-  return { actionId: action.id, actionType: action.actionType, valueAssessment, metrics, diagnostics: unique(diagnostics) }
+  return { actionId: action.id, actionType: action.actionType, valueAssessment, valueEvidence, metrics, diagnostics: unique([...diagnostics, ...valueDiagnostics]) }
 }
 
 export function assessCapitalAllocation(input: CapitalAllocationInput): CapitalAllocationResult {
@@ -39,7 +53,8 @@ export function assessCapitalAllocation(input: CapitalAllocationInput): CapitalA
   }
   const actions = input.actions.map((action) => actionAssessment(action, input))
   const allDiagnostics = unique([...diagnostics, ...actions.flatMap((item) => item.diagnostics), ...actions.flatMap((item) => item.metrics.flatMap((metric) => metric.diagnostics))])
+  const operationalDiagnostics = allDiagnostics.filter((item) => !item.startsWith('value assessment requires') && !item.startsWith('subsequent outcome requires'))
   const available = actions.flatMap((item) => item.metrics).filter((item) => item.status === 'available')
-  const status: CapitalAllocationResult['status'] = actions.length === 0 || available.length === 0 ? 'unavailable' : allDiagnostics.length === 0 && actions.every((item) => item.metrics.every((metric) => metric.status === 'available' || metric.metric === 'net_debt_change' || metric.metric === 'share_count_change')) ? 'complete' : 'partial'
+  const status: CapitalAllocationResult['status'] = actions.length === 0 || available.length === 0 ? 'unavailable' : operationalDiagnostics.length === 0 && actions.every((item) => item.metrics.every((metric) => metric.status === 'available' || metric.metric === 'net_debt_change' || metric.metric === 'share_count_change')) ? 'complete' : 'partial'
   return { status, companyRef: input.companyRef, period: input.period, actions, diagnostics: allDiagnostics, asOf: input.asOf }
 }

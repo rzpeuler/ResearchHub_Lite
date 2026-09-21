@@ -18,8 +18,8 @@ for market boundary definition or competitor mapping.
 ## Inputs
 
 Demand indicators, capacity observations with lifecycle state, utilization
-evidence, producer/channel/customer inventory, pricing observations, periods,
-and source references.
+evidence, producer/channel/customer inventory, pricing observations, comparable
+periods where available, and source references.
 
 ## Produces
 
@@ -36,24 +36,28 @@ effective capacity as distinct states.
 ## Evidence Requirements
 
 Inventory direction requires history. Utilization requires reported utilization
-or explicit output divided by capacity. Price deltas require same-unit aligned
-periods.
+or explicit output divided by capacity; a level does not become a direction
+without a comparable prior value or explicit sourced direction. Price deltas
+require same-unit aligned periods.
 
 ## Deterministic / Model Boundary
 
 Code owns state validation, utilization arithmetic, price deltas, and bounded
 cycle classification. A model may explain indicators but may not infer a cycle
-state from news language or create probabilities.
+state from news language, treat missing demand as weak demand, turn a level
+threshold into direction, or create probabilities.
 
 ## Missing Data
 
-Missing utilization, effective capacity, inventory history, or pricing remains
-explicitly missing; it is never treated as zero or normal.
+Missing demand, utilization, effective capacity, inventory history, or pricing
+remains explicitly missing; it is never treated as weak, zero, or normal.
 
 ## Validation / QC
 
 Reject future/unattributed evidence, unit mismatch, announced-as-effective
-substitution, and contradictory evidence deletion. Contradictions stay visible.
+substitution, and contradictory evidence deletion. Confirmed inflection
+requires comparable-period change across at least two attributable indicators;
+single-period evidence is at most possible. Contradictions stay visible.
 
 ## Related Skills
 

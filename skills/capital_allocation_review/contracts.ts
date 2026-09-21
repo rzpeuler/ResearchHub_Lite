@@ -15,6 +15,8 @@ export interface CapitalAction {
   readonly netDebtAfter?: number
   readonly returnOnIncrementalCapital?: number
   readonly hurdleRate?: number
+  readonly returnSourceRefs?: readonly string[]
+  readonly hurdleSourceRefs?: readonly string[]
   readonly subsequentOutcome?: { readonly metric: string; readonly value: number; readonly unit: string; readonly sourceRefs: readonly string[] }
 }
 
@@ -47,6 +49,12 @@ export interface CapitalActionAssessment {
   readonly actionId: string
   readonly actionType: CapitalActionType
   readonly valueAssessment: CapitalValueAssessment
+  readonly valueEvidence: {
+    readonly actionAmountSourceRefs: readonly string[]
+    readonly returnSourceRefs: readonly string[]
+    readonly hurdleSourceRefs: readonly string[]
+    readonly subsequentOutcomeSourceRefs: readonly string[]
+  }
   readonly metrics: readonly CapitalMetric[]
   readonly diagnostics: readonly string[]
 }
