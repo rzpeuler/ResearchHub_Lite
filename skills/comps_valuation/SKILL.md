@@ -46,10 +46,10 @@ and explicit comparability evidence.
 
 ## Deterministic / Model Boundary
 
-The Skill accepts bounded peer candidates. A model may identify or explain
-candidate comparability upstream, but cannot invent identity, metrics, source
-references or peer status. Code owns validation, distributions, and implied
-valuation arithmetic.
+The Skill is a deterministic executable. A Workflow or upstream semantic step
+owns peer discovery and candidate context; this runtime accepts only bounded
+peer candidates and cannot invent identity, metrics, source references or peer
+status. Code owns validation, distributions, and implied valuation arithmetic.
 
 ## Missing Data
 

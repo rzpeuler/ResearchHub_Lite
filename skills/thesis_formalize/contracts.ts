@@ -6,6 +6,7 @@ export type ThesisEvidenceBasis = typeof THESIS_EVIDENCE_BASES[number]
 
 export const THESIS_AVAILABILITY = ['available', 'insufficient_evidence', 'unavailable'] as const
 export type ThesisAvailability = typeof THESIS_AVAILABILITY[number]
+export type ThesisExpectationStatus = 'MATERIAL_GAP' | 'NO_MATERIAL_GAP' | 'UNAVAILABLE'
 
 export interface ThesisResearchGap {
   readonly gapId: string
@@ -28,6 +29,8 @@ export interface ThesisPropositionInput {
   readonly verificationTime?: string
   readonly availability?: ThesisAvailability
   readonly loadBearing?: boolean
+  /** Optional composed expectation result carried through the Workflow boundary. */
+  readonly expectationStatus?: ThesisExpectationStatus
 }
 
 export interface ThesisFormalizeInput {

@@ -37,7 +37,7 @@ test('runtime registration has an explicit execution classification and determin
   assert.deepEqual(runtime.map((item) => item.id), ['business_driver_analysis', 'business_model_map', 'capital_allocation_review', 'catalyst_map', 'competitive_market_map', 'comps_valuation', 'consensus_expectations_analysis', 'dcf_valuation', 'earnings_variance_analysis', 'estimate_revision_analysis', 'expectation_gap', 'financial_quality_analysis', 'guidance_analysis', 'industry_supply_demand_cycle', 'management_execution', 'market_structure_analysis', 'reverse_dcf_expectation_decode', 'scenario_valuation', 'thesis_formalize', 'thesis_red_team', 'thesis_refresh', 'unit_economics'])
   assert.equal(runtime.every((item) => item.executionClass !== undefined && item.runtimeBinding), true)
   assert.equal(runtime.filter((item) => item.executionClass === 'DETERMINISTIC_EXECUTABLE').every((item) => typeof item.runtimeExecutor === 'function'), true)
-  assert.equal(runtime.filter((item) => item.executionClass === 'SEMANTIC_EXECUTABLE').every((item) => item.id === 'comps_valuation' || item.runtimeExecutor === undefined), true)
+  assert.equal(runtime.filter((item) => item.executionClass === 'SEMANTIC_EXECUTABLE').every((item) => item.id !== 'comps_valuation' && item.runtimeExecutor === undefined), true)
   assert.equal(registry.get('valuation_crosscheck'), undefined)
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'business_driver_analysis')?.executionClass, 'DETERMINISTIC_EXECUTABLE')
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'unit_economics')?.executionClass, 'DETERMINISTIC_EXECUTABLE')
@@ -46,7 +46,7 @@ test('runtime registration has an explicit execution classification and determin
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'thesis_refresh')?.executionClass, 'SEMANTIC_EXECUTABLE')
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'expectation_gap')?.executionClass, 'DETERMINISTIC_EXECUTABLE')
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.some((item) => ['research_qc', 'evidence_normalization', 'valuation_crosscheck'].includes(item.canonicalSkillId)), false)
-  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'comps_valuation')?.executionClass, 'SEMANTIC_EXECUTABLE')
+  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'comps_valuation')?.executionClass, 'DETERMINISTIC_EXECUTABLE')
   const input = { fcff: [100, 110, 120], discountRate: 0.09, terminalGrowthRate: 0.03 }
   const direct = calculateForwardDcf(input)
   const bound = registry.get('dcf_valuation')?.runtimeExecutor?.(input) as typeof direct

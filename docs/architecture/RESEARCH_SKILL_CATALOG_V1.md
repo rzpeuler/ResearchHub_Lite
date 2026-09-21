@@ -46,11 +46,11 @@ management execution, capital allocation, and expectation gap bind to
 deterministic contracts. Thesis formalization, catalyst mapping, and thesis
 refresh bind to semantic executors which pass bounded model output into
 deterministic contracts.
-`comps_valuation` is a semantic executable with a deterministic arithmetic
-boundary: the Workflow supplies the attributable peer set and the Skill
-validates identity, point-in-time, comparability, metric availability, and
-source evidence before reusing the shared comparable calculations. It never
-creates synthetic peers. `valuation_crosscheck` remains Workflow-owned
+`comps_valuation` is a deterministic executable: the Workflow or upstream
+semantic step supplies the attributable peer set, and the Skill validates
+identity, point-in-time, comparability, metric availability, and source
+evidence before reusing the shared comparable calculations. It never creates
+synthetic peers. `valuation_crosscheck` remains Workflow-owned
 composition, and cross-domain terminal QC is the reusable Workflow-layer
 `ResearchQualityGate`; neither is a canonical Skill.
 

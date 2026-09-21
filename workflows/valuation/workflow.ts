@@ -14,7 +14,8 @@ import { buildValuationBasis, calculateValuation, methodEligibility, normalizeVa
 import { validateResearchReport, writeResearchReport, type ResearchReport, type ResearchReportSection } from '../../app/services/research-report.ts'
 import { executeCompsValuation, type CompsValuationResult } from '../../skills/comps_valuation/index.ts'
 import { runResearchQualityGate, type ResearchQualityGateResult } from '../research-quality-gate.ts'
-import type { ValuationCrosscheck, ValuationProviderOutcome, ValuationTelemetrySnapshot, ValuationWorkflowInput, ValuationWorkflowResult } from './contracts.ts'
+import type { ValuationProviderOutcome, ValuationTelemetrySnapshot, ValuationWorkflowInput, ValuationWorkflowResult } from './contracts.ts'
+import { buildValuationCrosscheck } from './crosscheck.ts'
 
 const safeId = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 const DEFAULT_EXCHANGE = (symbol: string): string | undefined => symbol.startsWith('6') ? 'SH' : symbol.startsWith('0') || symbol.startsWith('3') ? 'SZ' : symbol.startsWith('4') || symbol.startsWith('8') ? 'BJ' : undefined
@@ -43,7 +44,6 @@ async function acquire(input: ValuationWorkflowInput, company: ResearchCompanyId
   return { marketValue, financialValue, basicValue, sources, providerOutcome: outcome, diagnostics: [...diagnostics, ...market.diagnostics, ...financial.diagnostics, ...selected.diagnostics] }
 }
 function requestedMethods(input: ValuationWorkflowInput, eligible: readonly ValuationMethod[]): readonly ValuationMethod[] { if (input.methods === undefined) return eligible; return [...new Set(input.methods)].filter((method) => eligible.includes(method)) }
-function buildCrosscheck(eligible: readonly ValuationMethod[], plan: ValuationAssumptionPlan | undefined): ValuationCrosscheck { const all: readonly ValuationMethod[] = ['PE', 'PB', 'EV_EBITDA']; return { availableMethods: [...eligible], unavailableMethods: all.filter((method) => !eligible.includes(method)), ...(plan?.primaryMethod === undefined ? {} : { selectedPrimary: plan.primaryMethod }), conflicts: [], automaticAveraging: false } }
 export function validProposal(proposal: ValuationSynthesisProposal, plan: ValuationAssumptionPlan, computation: ValuationComputation, sourceIds: ReadonlySet<string>, claimRefs: ReadonlySet<string>): boolean {
   const proposalSources = proposal.sourceCandidateIds ?? []
   if (proposal.kind !== 'claim' || proposal.subjectKey !== 'company' || (proposal.claimType !== 'assumption' && proposal.claimType !== 'viewpoint') || proposalSources.length === 0 || !proposalSources.every((id) => sourceIds.has(id)) || !proposal.existingKnowledgeRefs.every((ref) => claimRefs.has(ref))) return false
@@ -159,8 +159,13 @@ export async function runValuation(input: ValuationWorkflowInput): Promise<Valua
       }
     }
 
-    const crosscheck = buildCrosscheck(eligible, plan)
-    const qualityGate: ResearchQualityGateResult = runResearchQualityGate({ profile: 'valuation', asOf: valuationDate, sources: acquired.sources, referencedSourceCandidateIds: acquired.sources.map((source) => source.candidate.candidateId), proposalSourceCandidateIds: proposals.flatMap((proposal) => proposal.sourceCandidateIds ?? []), reportSourceCandidateIds: proposals.flatMap((proposal) => proposal.sourceCandidateIds ?? []), optionalUnavailableSections: input.comps === undefined ? ['comps_valuation'] : [], peerQuality: compsResult === undefined ? undefined : { acceptedPeerCount: compsResult.acceptedPeers.length, weakComparabilityCount: 0 } })
+    const crosscheck = buildValuationCrosscheck({ eligibleMethods: eligible, ...(basis === undefined ? {} : { basis }), ...(plan === undefined ? {} : { plan }), ...(computation === undefined ? {} : { computation }), ...(compsResult === undefined ? {} : { compsResult }) })
+    const baseScenario = computation?.scenarios.find((item) => item.scenarioId === 'base')
+    const valuationComparisons = crosscheck.basisCompatibility.map((item) => ({ comparisonRef: item.comparisonRef, kind: 'general' as const, left: item.left, right: item.right }))
+    const acceptedPeerIds = new Set((compsResult?.acceptedPeers ?? []).map((peer) => peer.identity.companyId))
+    const weakComparabilityCount = input.comps?.candidatePeers.filter((peer) => acceptedPeerIds.has(peer.companyId) && peer.comparabilityEvidence.length < 2).length ?? 0
+    const forecastValuationRefs = baseScenario && plan ? [{ forecastRef: 'valuation:base', forecastMetric: plan.primaryMethod, forecastPeriod: `FY${baseScenario.targetFiscalYear}`, valuationMetric: plan.primaryMethod, valuationPeriod: `FY${baseScenario.targetFiscalYear}` }] : []
+    const qualityGate: ResearchQualityGateResult = runResearchQualityGate({ profile: 'valuation', asOf: valuationDate, sources: acquired.sources, referencedSourceCandidateIds: acquired.sources.map((source) => source.candidate.candidateId), proposalSourceCandidateIds: proposals.flatMap((proposal) => proposal.sourceCandidateIds ?? []), reportSourceCandidateIds: proposals.flatMap((proposal) => proposal.sourceCandidateIds ?? []), comparisons: valuationComparisons, forecastValuationRefs, optionalUnavailableSections: input.comps === undefined ? ['comps_valuation'] : [], peerQuality: compsResult === undefined ? undefined : { acceptedPeerCount: compsResult.acceptedPeers.length, weakComparabilityCount } })
     if (!qualityGate.eligibleForGateway) return { workflowRunId: input.workflowRunId, status: 'blocked', knowledgeBaseId: input.handle.knowledgeBaseId, knowledgeBaseRevision: input.handle.revision, proposalIds: proposals.map((proposal) => proposal.proposalId), committedIds: [], sourceIds: [], claimIds: [], errors: qualityGate.diagnostics.filter((item) => item.severity === 'ERROR').map((item) => item.code), diagnostics: [...acquired.diagnostics, ...qualityGate.diagnostics.map((item) => item.code)], providerOutcome, basis, plan, computation, synthesis: synthesisOutput, telemetry, ...(compsResult === undefined ? {} : { compsResult }), qualityGate, crosscheck }
 
     const gateway = new KnowledgeProductionGateway(new KnowledgeBaseRegistry())

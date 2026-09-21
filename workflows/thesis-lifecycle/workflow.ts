@@ -3,10 +3,36 @@ import { analyzeExpectationGap } from '../../skills/expectation_gap/calculations
 import { formalizeThesis } from '../../skills/thesis_formalize/calculations.ts'
 import { refreshThesis } from '../../skills/thesis_refresh/calculations.ts'
 import type { ThesisLifecycleInput, ThesisLifecycleResult } from './contracts.ts'
-import { runResearchQualityGate } from '../research-quality-gate.ts'
+import { runResearchQualityGate, type ResearchQualityGateInput } from '../research-quality-gate.ts'
 
 function blocked(input: ThesisLifecycleInput | undefined, diagnostics: readonly string[]): ThesisLifecycleResult {
   return { status: 'blocked', mode: input?.mode === 'REFRESH' ? 'REFRESH' : 'CREATE', steps: [], diagnostics }
+}
+
+export function buildThesisLifecycleQualityGateInput(input: ThesisLifecycleInput, outputs: Pick<ThesisLifecycleResult, 'formalization' | 'expectationGap' | 'catalystMap' | 'refresh'>): ResearchQualityGateInput {
+  const expectationGap = outputs.expectationGap
+  const expectation = expectationGap === undefined ? undefined : {
+    status: expectationGap.noMaterialExpectationGap === true ? 'NO_MATERIAL_GAP' as const : expectationGap.noMaterialExpectationGap === false ? 'MATERIAL_GAP' as const : 'UNAVAILABLE' as const,
+    propositionRefs: expectationGap.gapPropositions.map((item) => item.propositionId),
+  }
+  const thesisStates = (outputs.formalization?.propositions ?? []).filter((item) => item.expectationStatus !== undefined).map((item) => ({ claimRef: item.propositionId, expectationStatus: item.expectationStatus! }))
+  const validPropositionRefs = [
+    ...(outputs.formalization?.propositions.map((item) => item.propositionId) ?? []),
+    ...(outputs.refresh?.propositionDeltas.map((item) => item.propositionRef) ?? []),
+    ...(outputs.refresh?.unchangedPropositionRefs ?? []),
+  ]
+  const catalysts = outputs.catalystMap?.catalysts.map((item) => ({ catalystRef: item.catalystId, targetPropositionRefs: item.targetPropositionRefs }))
+  const asOf = input.expectationGap?.asOf ?? input.refresh?.currentAsOf ?? outputs.formalization?.asOf ?? outputs.refresh?.currentAsOf ?? new Date().toISOString()
+  return {
+    profile: 'thesis_lifecycle',
+    asOf,
+    sources: [],
+    ...(expectation === undefined ? {} : { expectation }),
+    ...(thesisStates.length === 0 ? {} : { thesisStates }),
+    ...(catalysts === undefined ? {} : { catalysts }),
+    ...(validPropositionRefs.length === 0 ? {} : { validPropositionRefs: [...new Set(validPropositionRefs)] }),
+    optionalUnavailableSections: [expectationGap === undefined ? 'expectation_gap' : '', outputs.catalystMap === undefined ? 'catalyst_map' : ''].filter(Boolean),
+  }
 }
 
 export function runThesisLifecycle(input: ThesisLifecycleInput | undefined): ThesisLifecycleResult {
@@ -37,7 +63,7 @@ export function runThesisLifecycle(input: ThesisLifecycleInput | undefined): The
     diagnostics.push(error instanceof Error ? error.message : String(error))
     return { status: 'blocked', mode: input.mode, steps, ...(formalization === undefined ? {} : { formalization }), ...(expectationGap === undefined ? {} : { expectationGap }), ...(catalystMap === undefined ? {} : { catalystMap }), ...(refresh === undefined ? {} : { refresh }), diagnostics }
   }
-  const qualityGate = runResearchQualityGate({ profile: 'thesis_lifecycle', asOf: new Date().toISOString(), sources: [], optionalUnavailableSections: [expectationGap === undefined ? 'expectation_gap' : '', catalystMap === undefined ? 'catalyst_map' : ''].filter(Boolean) })
+  const qualityGate = runResearchQualityGate(buildThesisLifecycleQualityGateInput(input, { formalization, expectationGap, catalystMap, refresh }))
   const resultStatus = [formalization?.status, expectationGap?.status, catalystMap?.status, refresh?.status].some((status) => status === 'blocked' || status === 'unavailable') || !qualityGate.eligibleForGateway ? 'blocked' : 'completed'
   return { status: resultStatus, mode: input.mode, steps, ...(formalization === undefined ? {} : { formalization }), ...(expectationGap === undefined ? {} : { expectationGap }), ...(catalystMap === undefined ? {} : { catalystMap }), ...(refresh === undefined ? {} : { refresh }), diagnostics: [...diagnostics, ...qualityGate.diagnostics.map((item) => item.code)], qualityGate }
 }

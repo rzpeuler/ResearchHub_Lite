@@ -61,11 +61,48 @@ export interface ValuationWorkflowResult {
   readonly crosscheck?: ValuationCrosscheck
 }
 
+export type ValuationCrosscheckMethod = 'scenario_base' | 'comps_valuation'
+
+export interface ValuationMethodResult {
+  readonly method: ValuationCrosscheckMethod
+  readonly sourceMethod?: ValuationMethod
+  readonly value?: number
+  readonly unit: 'CNY/share'
+  readonly valuationDate: string
+  readonly period: string
+  readonly currency: string
+  readonly basis: 'equity_per_share' | 'enterprise_value'
+  readonly scenario?: 'base'
+  readonly sourceRefs: readonly string[]
+  readonly diagnostics: readonly string[]
+}
+
+export interface ValuationBasisCompatibility {
+  readonly comparisonRef: string
+  readonly leftMethod: ValuationCrosscheckMethod
+  readonly rightMethod: ValuationCrosscheckMethod
+  readonly compatible: boolean
+  readonly left: Readonly<Record<'valuationDate' | 'period' | 'unit' | 'currency' | 'basis', string>>
+  readonly right: Readonly<Record<'valuationDate' | 'period' | 'unit' | 'currency' | 'basis', string>>
+  readonly diagnostics: readonly string[]
+}
+
+export interface ValuationCrosscheckConflict {
+  readonly code: 'BASIS_INCOMPATIBLE' | 'VALUATION_METHOD_DISAGREEMENT'
+  readonly methods: readonly ValuationCrosscheckMethod[]
+  readonly message: string
+  readonly absoluteSpread?: number
+  readonly relativeSpread?: number
+  readonly diagnostics: readonly string[]
+}
+
 export interface ValuationCrosscheck {
-  readonly availableMethods: readonly ValuationMethod[]
-  readonly unavailableMethods: readonly ValuationMethod[]
+  readonly availableMethods: readonly ValuationCrosscheckMethod[]
+  readonly unavailableMethods: readonly ValuationCrosscheckMethod[]
+  readonly methodResults: readonly ValuationMethodResult[]
+  readonly basisCompatibility: readonly ValuationBasisCompatibility[]
   readonly selectedPrimary?: ValuationMethod
-  readonly conflicts: readonly string[]
+  readonly conflicts: readonly ValuationCrosscheckConflict[]
   readonly automaticAveraging: false
 }
 

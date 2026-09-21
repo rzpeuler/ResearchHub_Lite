@@ -54,7 +54,7 @@ const EXECUTION_CLASS_BY_ID: Readonly<Partial<Record<string, ResearchSkillExecut
   estimate_revision_analysis: 'DETERMINISTIC_EXECUTABLE',
   dcf_valuation: 'DETERMINISTIC_EXECUTABLE',
   reverse_dcf_expectation_decode: 'DETERMINISTIC_EXECUTABLE',
-  comps_valuation: 'SEMANTIC_EXECUTABLE',
+  comps_valuation: 'DETERMINISTIC_EXECUTABLE',
   scenario_valuation: 'DETERMINISTIC_EXECUTABLE',
   thesis_red_team: 'SEMANTIC_EXECUTABLE',
   thesis_formalize: 'SEMANTIC_EXECUTABLE',
