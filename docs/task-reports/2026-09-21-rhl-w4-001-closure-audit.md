@@ -2,9 +2,9 @@ task_id: RHL-W4-001
 status: READY_FOR_SOL_REVIEW
 baseline: 6065a8d2d4b5a395030004e592abaa4937592570
 branch: codex/w4-001-thesis-expectation-lifecycle
-implementation_commit: pending
-verified_remote_tip: pending
-sync_status: READY_TO_SYNC
+implementation_commit: 5549aed7aca63049fefaf6a5a0983ab0cdf6b85e
+verified_remote_tip: 5549aed7aca63049fefaf6a5a0983ab0cdf6b85e
+sync_status: SYNCED
 summary: Closure audit and E2E evidence expansion for W4 thesis lifecycle; refresh ordering now follows expectation gap, red-team peer, targeted refresh, and catalyst update semantics.
 tests: Full npm test 1289 total with 1288 pass and one known VAL-HTTP-001 timing failure; isolated VAL-HTTP-001 passed; client/typecheck/build and focused tests passed.
 acceptance_criteria: W4 core implementation and deterministic E2E are ready; SOL acceptance and authenticated Provider/Model E2E remain pending.
