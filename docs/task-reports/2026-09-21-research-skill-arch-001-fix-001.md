@@ -6,9 +6,9 @@ task_id: RHL-SKILL-ARCH-001-FIX-001
 status: READY_FOR_SOL_REVIEW
 baseline: a2aa726977e0c5ae424a6ec6b40be8734ed3b221
 branch: codex/skill-arch-001-fix-001-runtime-skill-integrity
-implementation_commit: pending
-verified_remote_tip: pending
-sync_status: READY_TO_SYNC
+implementation_commit: 03a3546ccecdff15bec30575ead4e5202857fede
+verified_remote_tip: 03a3546ccecdff15bec30575ead4e5202857fede
+sync_status: SYNCED
 summary: Closed runtime Research Skill integrity gaps by enforcing semantic Workflow availability, classifying executable boundaries, binding deterministic canonical Skills to existing implementations, downgrading unsupported direct entries, and adding actual-result fixture E2E coverage.
 tests: architecture/dispatch 18 passed; focused Workflow/Knowledge E2E 222 passed; npm test client 28 passed and Node 1,213 passed; npm run typecheck, npm run client:typecheck, npm run client:build, and git diff --check pass.
 acceptance_criteria: Semantic Workflow decisions require Workflow mapping plus registered research kind, enabled state, and IMPLEMENTED canonical status; deterministic runtime Skills expose callable authoritative bindings; unavailable entries are not advertised; direct semantic and deterministic result paths are fixture-tested; architecture boundaries remain unchanged.
