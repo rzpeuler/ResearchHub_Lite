@@ -1,16 +1,28 @@
 # RHL-W3-001 ACCEPTANCE REPORT
 
-Status: `IMPLEMENTED / SOL ACCEPTANCE PENDING`
+task_id: RHL-W3-001
+status: READY_FOR_SOL_REVIEW
+baseline: 72ff9a2c2d672c16df91af4c0fed3b031fb7b0a0
+branch: codex/w3-001-company-industry-research-depth
+implementation_commit: pending
+verified_remote_tip: pending
+sync_status: READY_TO_SYNC
+summary: Wave 3 company and industry research depth is implemented with deterministic evidence-gated Skills, Workflow-owned company-industry bridging, focused tests, and one unrelated pre-existing full-suite timing failure.
+tests: Focused Wave 3 tests pass; client 28/28; Node 1264/1265; typecheck, client typecheck, build, and diff check pass.
+acceptance_criteria: Company and industry depth contracts, runtime registration, routing, bridge, docs, and fixture-backed Target A/B evidence are complete; authenticated provider/model E2E remains pending.
+governance_status: Architecture boundaries preserved; no Agent, Planner, Capability layer, Skill-to-Skill calls, or Knowledge Schema change.
+blockers: SOL acceptance and authenticated external validation remain pending; one pre-existing valuation-route timing failure is recorded as non-Wave-3 residual risk.
+
+Outcome: `IMPLEMENTED / SOL ACCEPTANCE PENDING`
 
 ## 1. Baseline
 
 Required accepted ancestor: `72ff9a2c2d672c16df91af4c0fed3b031fb7b0a0`
 Observed ancestor: `72ff9a2c2d672c16df91af4c0fed3b031fb7b0a0`
 Origin main at start: `0b53e462cf5da00b568a7af52dec4375c7dfb5b9`
-Branch: `codex/w3-001-company-industry-research-depth`
-Final HEAD: `PENDING_FINAL_SYNC`
-Remote HEAD: `PENDING_FINAL_SYNC`
-Clean worktree: `PENDING_FINAL_SYNC`
+Final HEAD: `21d2fc9` implementation checkpoint; final sync commit pending
+Remote HEAD: target branch not yet synchronized
+Clean worktree: `YES` before final report-only sync
 
 ## 2. Starting Skill State
 
@@ -110,12 +122,12 @@ Earnings: `PENDING_FULL_VALIDATION`.
 Valuation: `PENDING_FULL_VALIDATION`.
 Thesis: `PENDING_FULL_VALIDATION`.
 Knowledge: `PENDING_FULL_VALIDATION`.
-Node total: `PENDING_FULL_VALIDATION`.
-Client: `PENDING_FULL_VALIDATION`.
+Node total: `1264/1265 PASS`; one pre-existing timing-sensitive valuation-route failure.
+Client: `28/28 PASS`.
 Typecheck: PASS, `npm run typecheck`.
-Client typecheck: `PENDING_FULL_VALIDATION`.
-Build: `PENDING_FULL_VALIDATION`.
-Diff check: `PENDING_FULL_VALIDATION`.
+Client typecheck: PASS.
+Build: PASS, 176 modules.
+Diff check: PASS.
 
 ## 9. Real E2E — Target A
 
@@ -191,11 +203,11 @@ P2: `2ecd8db`
 P3: `57d9a4e`
 P4: `e42f2d7`
 P5: `56b9e79`
-P6: `PENDING_IMPLEMENTATION_COMMIT`
-P7: `PENDING_IMPLEMENTATION_COMMIT`
-P8: `PENDING_IMPLEMENTATION_COMMIT`
-P9: `PENDING_IMPLEMENTATION_COMMIT`
-P10: `PENDING_IMPLEMENTATION_COMMIT`
+P6: `21d2fc9`
+P7: `21d2fc9`
+P8: `21d2fc9`
+P9: `21d2fc9`
+P10: `21d2fc9`
 
 ## 15. Deferred Items
 
@@ -208,11 +220,11 @@ Recommended next Wave: Wave 4 should close the next explicitly approved catalog 
 
 ## 16. Known Issues
 
-Implementation: no known failing focused test; full-suite results are recorded after final validation.
+Implementation: no known failing focused test; all Wave 3 focused tests pass.
 External data: live provider coverage is not claimed.
 Model: no model-backed quality claim is made by fixture tests.
 Provider: authenticated provider/model execution remains pending.
-Pre-existing: npm reports two moderate audit findings from the installed dependency tree; no forced audit fix was applied.
+Pre-existing: `tests/app/runtime/valuation-route.test.ts` failed once with actual `running` versus expected `blocked`; this is outside Wave 3 files and matches the known environment-sensitive baseline issue. npm reports two moderate audit findings from the installed dependency tree; no forced audit fix was applied.
 
 ## 17. Final Classification
 
