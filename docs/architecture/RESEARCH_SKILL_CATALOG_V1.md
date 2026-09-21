@@ -9,7 +9,7 @@ entries are intentionally not runtime registered.
 | `evidence_normalization` | Evidence | How should supplied evidence be normalized and bounded? | PARTIAL | No | Existing provider/workflow normalization | Keep as Workflow/helper responsibility until independent contract is extracted |
 | `document_change_analysis` | Evidence | What changed between two attributable documents? | PLANNED | No | No stable implementation | Future document-diff wave |
 | `business_model_map` | Company Economics | How does the company make money? | IMPLEMENTED | Yes | Company Research Business Model section | Evidence-gated standalone methodology |
-| `business_driver_analysis` | Company Economics | What drives consolidated revenue/profit? | PARTIAL | No | Company Research Revenue / Profit Drivers section | Promote after an independently callable deterministic driver binding exists |
+| `business_driver_analysis` | Company Economics | What drives consolidated revenue/profit? | IMPLEMENTED | Yes | `skills/business_driver_analysis/calculations.ts` | Direct period-aligned driver decomposition with explicit residuals |
 | `unit_economics` | Company Economics | What measurable economic unit explains the business? | PARTIAL | No | Bounded Company Economics methodology | Promote after an independently callable deterministic unit-economics binding exists |
 | `management_execution` | Company Economics | How has management executed against commitments? | PLANNED | No | Narrative Management section only | Require historical commitment/result evidence |
 | `capital_allocation_review` | Company Economics | How has capital been allocated and with what result? | PARTIAL | No | Company Management / Capital Allocation section | Extract after stable source/period contract |
@@ -38,15 +38,15 @@ entries are intentionally not runtime registered.
 
 ## Runtime registration policy
 
-The runtime set is the nine `IMPLEMENTED` entries with an independently
+The runtime set is the ten `IMPLEMENTED` entries with an independently
 executable boundary. `business_model_map` and `thesis_red_team` are
 `SEMANTIC_EXECUTABLE` through the existing bounded session/Workflow reasoning
 boundaries. Consensus expectations, earnings variance, guidance, estimate
 revisions, forward DCF, reverse DCF, and scenario valuation are
 `DETERMINISTIC_EXECUTABLE` and bind directly to the existing authoritative
-calculation functions. `business_driver_analysis`, `unit_economics`, and
-`valuation_crosscheck` are `PARTIAL` because their SKILL.md contracts declare
-code-owned work but no direct canonical execution binding exists. `comps_valuation`
+calculation functions. `unit_economics` and `valuation_crosscheck` are
+`PARTIAL` because their SKILL.md contracts declare code-owned work but no direct
+canonical execution binding exists. `comps_valuation`
 and `financial_quality_analysis` remain `PARTIAL` for their previously recorded
 evidence/ownership gaps.
 

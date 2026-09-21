@@ -7,6 +7,7 @@ import { createResearchSkillRegistry } from '../../../app/services/skill-registr
 import { createWorkflowDefinitionRegistry } from '../../../app/services/workflow-registry.ts'
 import { ResearchDispatchService } from '../../../app/services/research-dispatch-service.ts'
 import { calculateForwardDcf } from '../../../skills/valuation/calculations/dcf.ts'
+import { calculateBusinessDriverAnalysis } from '../../../skills/business_driver_analysis/calculations.ts'
 
 test('canonical catalog has exactly 29 unique statuses and runtime is a strict implemented subset', () => {
   assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.length, 29)
@@ -32,19 +33,21 @@ test('runtime registration has an explicit execution classification and determin
   const registry = createResearchSkillRegistry()
   const runtime = registry.canonicalResearchCandidates()
   const counts = CANONICAL_RESEARCH_SKILL_CATALOG.reduce<Record<string, number>>((result, item) => { result[item.status] = (result[item.status] ?? 0) + 1; return result }, {})
-  assert.deepEqual(counts, { IMPLEMENTED: 9, PARTIAL: 14, PLANNED: 6 })
-  assert.deepEqual(runtime.map((item) => item.id), ['business_model_map', 'consensus_expectations_analysis', 'dcf_valuation', 'earnings_variance_analysis', 'estimate_revision_analysis', 'guidance_analysis', 'reverse_dcf_expectation_decode', 'scenario_valuation', 'thesis_red_team'])
+  assert.deepEqual(counts, { IMPLEMENTED: 10, PARTIAL: 13, PLANNED: 6 })
+  assert.deepEqual(runtime.map((item) => item.id), ['business_driver_analysis', 'business_model_map', 'consensus_expectations_analysis', 'dcf_valuation', 'earnings_variance_analysis', 'estimate_revision_analysis', 'guidance_analysis', 'reverse_dcf_expectation_decode', 'scenario_valuation', 'thesis_red_team'])
   assert.equal(runtime.every((item) => item.executionClass !== undefined && item.runtimeBinding), true)
   assert.equal(runtime.filter((item) => item.executionClass === 'DETERMINISTIC_EXECUTABLE').every((item) => typeof item.runtimeExecutor === 'function'), true)
   assert.equal(runtime.filter((item) => item.executionClass === 'SEMANTIC_EXECUTABLE').every((item) => item.runtimeExecutor === undefined), true)
-  assert.equal(registry.get('business_driver_analysis'), undefined)
   assert.equal(registry.get('unit_economics'), undefined)
   assert.equal(registry.get('valuation_crosscheck'), undefined)
-  for (const id of ['business_driver_analysis', 'unit_economics', 'valuation_crosscheck']) assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === id)?.executionClass, 'NOT_INDEPENDENTLY_EXECUTABLE')
+  assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === 'business_driver_analysis')?.executionClass, 'DETERMINISTIC_EXECUTABLE')
+  for (const id of ['unit_economics', 'valuation_crosscheck']) assert.equal(CANONICAL_RESEARCH_SKILL_CATALOG.find((item) => item.canonicalSkillId === id)?.executionClass, 'NOT_INDEPENDENTLY_EXECUTABLE')
   const input = { fcff: [100, 110, 120], discountRate: 0.09, terminalGrowthRate: 0.03 }
   const direct = calculateForwardDcf(input)
   const bound = registry.get('dcf_valuation')?.runtimeExecutor?.(input) as typeof direct
   assert.deepEqual(bound, direct)
+  const driverInput = { companyRef: 'company', currentPeriod: '2026-H1', priorPeriod: '2025-H1', asOf: '2026-09-21T00:00:00.000Z', segments: [{ id: 'main', name: 'Main', outcomes: [{ metric: 'revenue' as const, unit: 'CNY', currentValue: 132, priorValue: 100, currentSourceRefs: ['source:current'], priorSourceRefs: ['source:prior'] }], drivers: [] }] }
+  assert.deepEqual(registry.get('business_driver_analysis')?.runtimeExecutor?.(driverInput), calculateBusinessDriverAnalysis(driverInput))
 })
 
 test('every runtime canonical methodology contains the required contract sections', async () => {
@@ -95,7 +98,8 @@ test('narrow semantic routing selects the intended canonical Skill and composite
     assert.equal(result.decision.mode, 'skill_plan', query)
     assert.deepEqual(result.decision.skills.map((skill) => skill.id), [expected], query)
   }
-  assert.equal(service.resolve({ query: '收入增长到底是销量、价格还是mix驱动？', mode: { type: 'free_research' } }).decision.mode, 'free_research')
+  assert.equal(service.resolve({ query: '收入增长到底是销量、价格还是mix驱动？', mode: { type: 'free_research' } }).decision.mode, 'skill_plan')
+  assert.deepEqual(service.resolve({ query: '收入增长到底是销量、价格还是mix驱动？', mode: { type: 'free_research' } }).decision.skills.map((skill) => skill.id), ['business_driver_analysis'])
   assert.equal(service.resolve({ query: '当前最合理的经济单位是什么？', mode: { type: 'free_research' } }).decision.mode, 'free_research')
   const composite = service.resolve({ query: '完整研究这家公司。', mode: { type: 'free_research' } })
   assert.equal(composite.decision.mode, 'workflow')

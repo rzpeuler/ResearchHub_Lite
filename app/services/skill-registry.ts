@@ -6,6 +6,7 @@ import { compareActualToExpectation, buildEstimateRevisionBridge } from '../../s
 import { buildGuidanceRevisionBridge } from '../../skills/earnings-review/expectations/guidance.ts'
 import { calculateForwardDcf, calculateReverseDcf } from '../../skills/valuation/calculations/dcf.ts'
 import { calculateValuation } from '../../skills/valuation/financials.ts'
+import { calculateBusinessDriverAnalysis } from '../../skills/business_driver_analysis/calculations.ts'
 import { canonicalResearchSkillMdPath, CANONICAL_RESEARCH_SKILL_IDS, getCanonicalResearchSkill, REQUIRED_RESEARCH_SKILL_SECTIONS, RUNTIME_CANONICAL_RESEARCH_SKILLS, type ResearchSkillCatalogStatus, type ResearchSkillExecutionClass } from './research-skill-catalog.ts'
 
 export type ResearchHubSkillKind = 'research' | 'knowledge' | 'utility'
@@ -69,6 +70,7 @@ function canonicalDefinition(id: string): ResearchSkillDefinition {
 }
 
 const CANONICAL_RUNTIME_EXECUTORS: Readonly<Partial<Record<string, ResearchSkillRuntimeExecutor>>> = {
+  business_driver_analysis: (input) => calculateBusinessDriverAnalysis(input as Parameters<typeof calculateBusinessDriverAnalysis>[0]),
   consensus_expectations_analysis: (input) => buildConsensusSnapshot(input as Parameters<typeof buildConsensusSnapshot>[0]),
   earnings_variance_analysis: (input) => {
     const value = input as Parameters<typeof compareActualToExpectation>[0]

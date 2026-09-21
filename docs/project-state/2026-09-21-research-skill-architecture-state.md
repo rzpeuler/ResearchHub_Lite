@@ -9,10 +9,10 @@ Date: 2026-09-21
   `docs/architecture/RESEARCH_SKILL_CATALOG_V1.md`.
 - The existing Research Skill Registry now validates canonical descriptor
   metadata and required SKILL.md sections at registration time.
-- Nine independently executable methods are runtime registered: business model
-  map, consensus expectations, earnings variance, guidance, estimate revisions,
-  DCF, reverse DCF, scenario valuation, and thesis red team. Business driver
-  analysis, unit economics, and valuation cross-check are now explicitly
+- Ten independently executable methods are runtime registered: business model
+  map, business driver analysis, consensus expectations, earnings variance,
+  guidance, estimate revisions, DCF, reverse DCF, scenario valuation, and
+  thesis red team. Unit economics and valuation cross-check remain explicitly
   `PARTIAL` until direct canonical execution bindings exist.
 - Runtime entries carry an execution class and binding. Deterministic entries
   expose callable bindings to the existing expectation/valuation functions;
@@ -31,8 +31,8 @@ Date: 2026-09-21
 
 | State | Count | Runtime |
 | --- | ---: | --- |
-| IMPLEMENTED | 9 | yes |
-| PARTIAL | 14 | no |
+| IMPLEMENTED | 10 | yes |
+| PARTIAL | 13 | no |
 | PLANNED | 6 | no |
 
 ## Boundaries preserved
