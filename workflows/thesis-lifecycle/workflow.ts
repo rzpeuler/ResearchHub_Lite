@@ -26,10 +26,10 @@ export function runThesisLifecycle(input: ThesisLifecycleInput | undefined): The
       if (input.catalystMap) { catalystMap = mapCatalysts(input.catalystMap); steps.push({ skillId: 'catalyst_map', status: 'completed', result: catalystMap }) } else steps.push({ skillId: 'catalyst_map', status: 'skipped' })
     } else {
       if (!input.refresh) return blocked(input, ['THESIS_LIFECYCLE_REFRESH_REQUIRED'])
-      refresh = refreshThesis(input.refresh)
-      steps.push({ skillId: 'thesis_refresh', status: refresh.status === 'blocked' ? 'blocked' : 'completed', result: refresh })
       if (input.expectationGap) { expectationGap = analyzeExpectationGap(input.expectationGap); steps.push({ skillId: 'expectation_gap', status: 'completed', result: expectationGap }) } else steps.push({ skillId: 'expectation_gap', status: 'skipped' })
       if (input.redTeamResult === undefined) steps.push({ skillId: 'thesis_red_team', status: 'skipped' }); else steps.push({ skillId: 'thesis_red_team', status: 'completed', result: input.redTeamResult })
+      refresh = refreshThesis(input.refresh)
+      steps.push({ skillId: 'thesis_refresh', status: refresh.status === 'blocked' ? 'blocked' : 'completed', result: refresh })
       if (input.catalystMap) { catalystMap = mapCatalysts(input.catalystMap); steps.push({ skillId: 'catalyst_map', status: 'completed', result: catalystMap }) } else steps.push({ skillId: 'catalyst_map', status: 'skipped' })
     }
   } catch (error) {

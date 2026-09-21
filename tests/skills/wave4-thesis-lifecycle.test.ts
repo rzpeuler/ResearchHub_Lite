@@ -55,9 +55,11 @@ test('expectation gap excludes post-as-of surfaces and rejects untraceable own r
 })
 
 test('catalyst map requires proposition linkage and attributable timing', () => {
-  const result = mapCatalysts({ thesisRef: 'thesis:demo', propositionRefs: ['p-demand'], asOf: '2026-09-21T00:00:00.000Z', catalysts: [{ catalystId: 'earnings-1', eventType: 'earnings', description: 'FY2027 earnings release', targetPropositionRefs: ['p-demand'], eventDate: '2026-10-30', status: 'scheduled', observable: 'reported revenue', sourceRefs: ['source:calendar'] }] })
+  const result = mapCatalysts({ thesisRef: 'thesis:demo', propositionRefs: ['p-demand'], expectationGapRefs: ['gap:1'], asOf: '2026-09-21T00:00:00.000Z', catalysts: [{ catalystId: 'earnings-1', eventType: 'earnings', description: 'FY2027 earnings release', targetPropositionRefs: ['p-demand'], targetExpectationGapRefs: ['gap:1'], eventDate: '2026-10-30', status: 'scheduled', observable: 'reported revenue', resolutionMechanism: 'reported revenue updates the earnings expectation gap', sourceRefs: ['source:calendar'] }] })
   assert.equal(result.status, 'complete')
   assert.equal(result.catalysts[0]?.status, 'scheduled')
+  assert.deepEqual(result.catalysts[0]?.targetExpectationGapRefs, ['gap:1'])
+  assert.match(result.catalysts[0]?.resolutionMechanism ?? '', /expectation gap/)
   const invalid = mapCatalysts({ thesisRef: 'thesis:demo', propositionRefs: ['p-demand'], asOf: '2026-09-21T00:00:00.000Z', catalysts: [{ catalystId: 'bad', eventType: 'product_launch', description: 'unsupported date', targetPropositionRefs: ['missing'], eventDate: '2027-01-01', status: 'scheduled', observable: 'launch', sourceRefs: [] }] })
   assert.equal(invalid.status, 'unavailable')
 })
@@ -76,6 +78,12 @@ test('thesis refresh requires a prior snapshot and evaluates sourced kill criter
   const result = refreshThesis({ priorSnapshot: { thesisId: 'thesis:demo', priorAsOf: '2026-09-01T00:00:00.000Z', propositions: [{ propositionId: 'p-demand', statement: 'Demand grows.' }] }, currentAsOf: '2026-09-21T00:00:00.000Z', evidence: [{ evidenceId: 'e1', publishedAt: '2026-09-10T00:00:00.000Z', relation: 'contradicts', targetPropositionRefs: ['p-demand'], sourceRefs: ['source:e1'], basis: 'verified_evidence', metric: 'revenue_growth', period: 'FY2027', value: -0.2 }], killCriteria: [{ conditionId: 'kill-demand', targetPropositionRefs: ['p-demand'], observableMetric: 'revenue_growth', operator: 'lt', threshold: 0, period: 'FY2027', thresholdSourceRefs: ['source:threshold'] }] })
   assert.equal(result.killCriterionAssessments[0]?.status, 'met')
   assert.equal(result.candidateTransition, 'invalidation_condition_met')
+})
+
+test('thesis refresh keeps a sourced kill criterion not_met when the observation stays above threshold', () => {
+  const result = refreshThesis({ priorSnapshot: { thesisId: 'thesis:demo', priorAsOf: '2026-09-01T00:00:00.000Z', propositions: [{ propositionId: 'p-demand', statement: 'Demand grows.' }] }, currentAsOf: '2026-09-21T00:00:00.000Z', evidence: [{ evidenceId: 'e1', publishedAt: '2026-09-10T00:00:00.000Z', relation: 'context', targetPropositionRefs: ['p-demand'], sourceRefs: ['source:e1'], basis: 'verified_evidence', metric: 'revenue_growth', period: 'FY2027', value: 0.2 }], killCriteria: [{ conditionId: 'kill-demand', targetPropositionRefs: ['p-demand'], observableMetric: 'revenue_growth', operator: 'lt', threshold: 0, period: 'FY2027', thresholdSourceRefs: ['source:threshold'] }] })
+  assert.equal(result.killCriterionAssessments[0]?.status, 'not_met')
+  assert.equal(result.candidateTransition, 'unchanged')
 })
 
 test('red-team fragility is categorical and kill criteria require threshold provenance', () => {
@@ -101,11 +109,12 @@ test('thesis lifecycle CREATE composes peer Skills without Skill-to-Skill invoca
     formalization: { thesisId: 'thesis:lifecycle', summary: 'Demand supports earnings.', propositions: basePropositions },
     expectationGap: { asOf: '2026-09-21T00:00:00.000Z', surfaces: [surface('consensus', 100), surface('own_research', 120)] },
     catalystMap: { thesisRef: 'thesis:lifecycle', propositionRefs: ['p-demand'], asOf: '2026-09-21T00:00:00.000Z', catalysts: [{ catalystId: 'earnings-1', eventType: 'earnings', description: 'FY2027 earnings release', targetPropositionRefs: ['p-demand'], eventDate: '2026-10-30', status: 'scheduled', observable: 'reported revenue', sourceRefs: ['source:calendar'] }] },
-    redTeamResult: { status: 'completed', fragilityAssessments: [] },
+    redTeamResult: { status: 'completed', fragilityAssessments: [{ assumptionRef: 'p-demand', level: 'critical', downstreamClaimCount: 2, evidenceStrength: 'low', rationale: 'load-bearing and weakly evidenced' }], invalidationConditions: [{ conditionId: 'kill-demand' }] },
   })
   assert.equal(result.status, 'completed')
   assert.deepEqual(result.steps.map((step) => step.skillId), ['thesis_formalize', 'expectation_gap', 'thesis_red_team', 'catalyst_map'])
   assert.equal(result.catalystMap?.catalysts[0]?.status, 'scheduled')
+  assert.equal((result.steps.find((step) => step.skillId === 'thesis_red_team')?.result as { invalidationConditions?: readonly { conditionId: string }[] }).invalidationConditions?.[0]?.conditionId, 'kill-demand')
 })
 
 test('thesis lifecycle REFRESH preserves irrelevant propositions and surfaces a sourced kill event', () => {
@@ -115,7 +124,7 @@ test('thesis lifecycle REFRESH preserves irrelevant propositions and surfaces a 
       priorSnapshot: { thesisId: 'thesis:lifecycle', priorAsOf: '2026-09-01T00:00:00.000Z', propositions: [{ propositionId: 'p-demand', statement: 'Demand grows.', status: 'active' }, { propositionId: 'p-margin', statement: 'Margins expand.', status: 'active' }] },
       currentAsOf: '2026-09-21T00:00:00.000Z',
       evidence: [
-        { evidenceId: 'e-irrelevant', publishedAt: '2026-09-10T00:00:00.000Z', relation: 'context', targetPropositionRefs: [], sourceRefs: ['source:context'], basis: 'verified_evidence' },
+        { evidenceId: 'e-irrelevant', publishedAt: '2026-09-10T00:00:00.000Z', relation: 'irrelevant', targetPropositionRefs: ['p-margin'], sourceRefs: ['source:context'], basis: 'verified_evidence' },
         { evidenceId: 'e-kill', publishedAt: '2026-09-12T00:00:00.000Z', relation: 'contradicts', targetPropositionRefs: ['p-demand'], sourceRefs: ['source:actuals'], basis: 'verified_evidence', metric: 'revenue_growth', period: 'FY2027', value: -0.2 },
       ],
       killCriteria: [{ conditionId: 'kill-demand', targetPropositionRefs: ['p-demand'], observableMetric: 'revenue_growth', operator: 'lt', threshold: 0, period: 'FY2027', thresholdSourceRefs: ['source:threshold'] }],
@@ -126,4 +135,17 @@ test('thesis lifecycle REFRESH preserves irrelevant propositions and surfaces a 
   assert.equal(result.refresh?.candidateTransition, 'invalidation_condition_met')
   assert.deepEqual(result.refresh?.unchangedPropositionRefs, ['p-margin'])
   assert.equal(result.refresh?.propositionDeltas.length, 1)
+})
+
+test('thesis lifecycle REFRESH applies expectation-gap evidence before targeted refresh and does not create a false catalyst', () => {
+  const result = runThesisLifecycle({
+    mode: 'REFRESH',
+    expectationGap: { asOf: '2026-09-21T00:00:00.000Z', surfaces: [surface('consensus', 100), surface('own_research', 125)] },
+    refresh: { priorSnapshot: { thesisId: 'thesis:lifecycle', priorAsOf: '2026-09-01T00:00:00.000Z', propositions: [{ propositionId: 'p-demand', statement: 'Demand grows.', status: 'active' }] }, currentAsOf: '2026-09-21T00:00:00.000Z', evidence: [{ evidenceId: 'e-actual', publishedAt: '2026-09-10T00:00:00.000Z', relation: 'supports', targetPropositionRefs: ['p-demand'], sourceRefs: ['source:actual'], basis: 'verified_evidence', metric: 'revenue', period: 'FY2027', value: 110 }, { evidenceId: 'e-guidance', publishedAt: '2026-09-11T00:00:00.000Z', relation: 'supports', targetPropositionRefs: ['p-demand'], sourceRefs: ['source:guidance'], basis: 'verified_evidence', metric: 'revenue', period: 'FY2027', value: 120 }, { evidenceId: 'e-consensus-revision', publishedAt: '2026-09-12T00:00:00.000Z', relation: 'context', targetPropositionRefs: ['p-demand'], sourceRefs: ['source:consensus-revision'], basis: 'verified_evidence', metric: 'revenue', period: 'FY2027', value: 100 }] },
+  })
+  assert.equal(result.status, 'completed')
+  assert.deepEqual(result.steps.map((step) => step.skillId), ['expectation_gap', 'thesis_red_team', 'thesis_refresh', 'catalyst_map'])
+  assert.equal(result.expectationGap?.gapPropositions.length, 1)
+  assert.equal(result.refresh?.propositionDeltas[0]?.candidateStatus, 'strengthened')
+  assert.equal(result.catalystMap, undefined)
 })
