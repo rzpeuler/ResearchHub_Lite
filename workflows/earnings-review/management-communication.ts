@@ -1,12 +1,13 @@
 import { createHash } from 'node:crypto'
 import { runExchangeQa, runManagementCommunicationDocuments, type ExchangeQAPair, type ManagementCommunicationAcquisitionSources, type ManagementCommunicationDocument } from '../management-communication-acquisition/index.ts'
 import { runManagementCommunicationExtraction, type ManagementCommunicationExtractionResult } from '../management-communication-extraction/index.ts'
-import type { ManagementOutlookCandidate, StructuredQAEvidence } from '../../skills/management-communication-extraction/contracts.ts'
+import type { KpiCandidate, ManagementOutlookCandidate, StructuredQAEvidence } from '../../skills/management-communication-extraction/contracts.ts'
 import type { GuidanceRange, SegmentKpiDeltaInput, SegmentKpiPoint } from '../../skills/earnings-review/expectations/contracts.ts'
 import type { EarningsReviewSection } from '../../skills/earnings-review/contracts.ts'
 import type { NormalizedResearchSource, ResearchCompanyIdentity } from '../../plugins/research-acquisition/contracts.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import { assessManagementExecution, type ManagementCommitment, type ManagementExecutionResult, type ManagementOutcome } from '../../skills/management_execution/index.ts'
+import { comparableFiscalPeriod } from '../../skills/earnings-review/expectations/segment-kpi.ts'
 import type { EarningsPeriod } from '../../skills/earnings-review/index.ts'
 import { parseNumericRange, parseNumericToken } from '../management-communication-extraction/numeric-parsing.ts'
 import { resolveUnit } from '../management-communication-extraction/unit-normalization.ts'
@@ -43,7 +44,7 @@ export interface ManagementCommunicationTelemetry {
   readonly executionAssessmentCount: number
 }
 
-export type ManagementCommentaryDeltaStatus = 'new' | 'unchanged' | 'strengthened' | 'reversed' | 'inconclusive'
+export type ManagementCommentaryDeltaStatus = 'new' | 'unchanged' | 'strengthened' | 'weakened' | 'reversed' | 'inconclusive'
 
 export interface ManagementCommentaryDelta {
   readonly key: string
@@ -179,23 +180,35 @@ function outlookKey(candidate: ManagementOutlookCandidate): string { return [nor
 function directionSign(value: string | undefined): -1 | 0 | 1 | undefined { if (value === 'increase' || value === 'improve') return 1; if (value === 'decrease' || value === 'deteriorate') return -1; if (value === 'stable') return 0; return undefined }
 function outlookNumber(candidate: ManagementOutlookCandidate): { readonly value?: number; readonly unit?: string } { const unit = resolveUnit(candidate.rawUnit, candidate.evidenceSpan.exactText ?? ''); const range = parseNumericRange(candidate.rawNumericRange); const token = range === undefined ? parseNumericToken(candidate.rawNumericValue) : undefined; return token === undefined || unit === undefined ? {} : { value: token.value * unit.factor, unit: unit.canonical } }
 
-function buildCommentary(outlooks: readonly ManagementOutlookCandidate[]): readonly ManagementCommentaryDelta[] {
+function absoluteTargetLevel(candidate: ManagementOutlookCandidate): boolean {
+  if (candidate.rawNumericRange !== undefined) return true
+  const evidence = candidate.evidenceSpan.exactText ?? ''
+  if (/%|增长率|增速|同比|环比|margin|margin rate|growth|decline|下降幅度/iu.test(evidence)) return false
+  return /达到|目标|不低于|不少于|至少|不超过|至多|target|reach|at least|at most/iu.test(evidence)
+}
+
+function buildCommentary(outlooks: readonly ManagementOutlookCandidate[], analysisAsOf: string): readonly ManagementCommentaryDelta[] {
+  const cutoff = Date.parse(analysisAsOf)
+  const eligible = outlooks.filter((candidate) => Number.isFinite(Date.parse(candidate.publishedAt)) && Date.parse(candidate.publishedAt) <= cutoff)
   const groups = new Map<string, ManagementOutlookCandidate[]>()
-  for (const candidate of outlooks) groups.set(outlookKey(candidate), [...(groups.get(outlookKey(candidate)) ?? []), candidate])
+  for (const candidate of eligible) groups.set(outlookKey(candidate), [...(groups.get(outlookKey(candidate)) ?? []), candidate])
   const output: ManagementCommentaryDelta[] = []
   for (const [key, values] of [...groups.entries()].sort(([left], [right]) => left.localeCompare(right))) {
-    const ordered = values.slice().sort((left, right) => right.publishedAt.localeCompare(left.publishedAt) || right.candidateId.localeCompare(left.candidateId)); const current = ordered[0]!; const prior = ordered[1]
+    const ordered = values.slice().sort((left, right) => Date.parse(right.publishedAt) - Date.parse(left.publishedAt) || right.candidateId.localeCompare(left.candidateId)); const current = ordered[0]!; const prior = ordered[1]
     const currentNumber = outlookNumber(current); const priorNumber = prior === undefined ? {} : outlookNumber(prior); const currentSign = directionSign(current.direction); const priorSign = directionSign(prior?.direction); const diagnostics: string[] = []; let status: ManagementCommentaryDeltaStatus = 'new'
+    const comparableNumeric = finite(currentNumber.value) && finite(priorNumber.value) && currentNumber.unit === priorNumber.unit
+    const numericChange = comparableNumeric ? { current: currentNumber.value, prior: priorNumber.value, absoluteDelta: currentNumber.value - priorNumber.value, unit: currentNumber.unit } : undefined
     if (prior !== undefined) {
-      const comparableNumeric = finite(currentNumber.value) && finite(priorNumber.value) && currentNumber.unit === priorNumber.unit
       if (currentSign !== undefined && priorSign !== undefined && currentSign !== 0 && priorSign !== 0 && currentSign !== priorSign) status = 'reversed'
-      else if (current.direction === prior.direction && (!comparableNumeric || currentNumber.value === priorNumber.value)) status = 'unchanged'
-      else if (current.direction === prior.direction && comparableNumeric) status = 'strengthened'
-      else status = 'inconclusive'
-      if (finite(currentNumber.value) !== finite(priorNumber.value) || (finite(currentNumber.value) && finite(priorNumber.value) && currentNumber.unit !== priorNumber.unit)) diagnostics.push('COMMENTARY_NUMERIC_COMPARISON_INCOMPATIBLE')
+      else if (current.direction === prior.direction && comparableNumeric && currentNumber.value === priorNumber.value) status = 'unchanged'
+      else if (current.direction === prior.direction && comparableNumeric && absoluteTargetLevel(current) && absoluteTargetLevel(prior)) {
+        const currentValue = currentNumber.value!; const priorValue = priorNumber.value!; const increasingTarget = currentSign === 1
+        status = increasingTarget ? currentValue > priorValue ? 'strengthened' : 'weakened' : currentValue < priorValue ? 'strengthened' : 'weakened'
+      } else status = 'inconclusive'
+      if (!comparableNumeric && (finite(currentNumber.value) || finite(priorNumber.value))) diagnostics.push('COMMENTARY_NUMERIC_COMPARISON_INCOMPATIBLE')
+      if (comparableNumeric && status === 'inconclusive') diagnostics.push('COMMENTARY_NUMERIC_SEMANTICS_AMBIGUOUS')
     }
-    output.push({ key, topic: current.topic, ...(current.metric === undefined ? {} : { metric: current.metric }), ...(current.timeHorizon === undefined ? {} : { timeHorizon: current.timeHorizon }), status, currentCandidateId: current.candidateId, ...(prior === undefined ? {} : { priorCandidateId: prior.candidateId }), ...(current.direction === undefined ? {} : { currentDirection: current.direction }), ...(prior?.direction === undefined ? {} : { priorDirection: prior.direction }), ...(finite(currentNumber.value) && finite(priorNumber.value) && currentNumber.unit === priorNumber.unit ? { numericChange: { current: currentNumber.value, prior: priorNumber.value, absoluteDelta: currentNumber.value - priorNumber.value, unit: currentNumber.unit } } : {}), sourceCandidateIds: unique([current.sourceObjectId, ...(prior === undefined ? [] : [prior.sourceObjectId])]), diagnostics })
-    void priorSign
+    output.push({ key, topic: current.topic, ...(current.metric === undefined ? {} : { metric: current.metric }), ...(current.timeHorizon === undefined ? {} : { timeHorizon: current.timeHorizon }), status, currentCandidateId: current.candidateId, ...(prior === undefined ? {} : { priorCandidateId: prior.candidateId }), ...(current.direction === undefined ? {} : { currentDirection: current.direction }), ...(prior?.direction === undefined ? {} : { priorDirection: prior.direction }), ...(numericChange === undefined ? {} : { numericChange }), sourceCandidateIds: unique([current.sourceObjectId, ...(prior === undefined ? [] : [prior.sourceObjectId])]), diagnostics })
   }
   return output
 }
@@ -203,9 +216,12 @@ function buildCommentary(outlooks: readonly ManagementOutlookCandidate[]): reado
 function assessResponse(item: StructuredQAEvidence): QAResponseAssessment {
   const answer = item.answer.trim(); const sourceCandidateIds = unique([item.sourceObjectId, ...item.claimSpans.map((span) => span.sourceObjectId), ...item.managementStatementSpans.map((span) => span.sourceObjectId)])
   if (!answer || /^(不便透露|无法回答|暂无|无可奉告|n\/a|na)$/iu.test(answer)) return { status: 'non_answer', diagnostics: ['QA_RESPONSE_NON_ANSWER'], sourceCandidateIds }
-  const questionTokens = normalized(item.question).split(/[，。！？、；：\s]+/u).filter((token) => token.length >= 2); const direct = item.explicitlyStatedMetrics.length > 0 || item.managementStatementSpans.length > 0 || questionTokens.some((token) => normalized(answer).includes(token))
+  const questionTokens = item.question.normalize('NFKC').toLocaleLowerCase().split(/[，。！？、；：,!?;:\s]+/u).map((token) => token.trim()).filter((token) => token.length >= 2 && !/^(what|which|when|where|why|how|is|are|the|请问|公司|是否|关于)$/iu.test(token))
+  const normalizedQuestion = normalized(item.question); const normalizedAnswer = normalized(answer)
+  const sharedMetric = item.explicitlyStatedMetrics.some((metric) => { const value = normalized(metric); return value.length >= 2 && normalizedQuestion.includes(value) && normalizedAnswer.includes(value) })
+  const direct = sharedMetric || questionTokens.some((token) => normalizedAnswer.includes(normalized(token)))
   if (direct) return { status: 'direct', diagnostics: [], sourceCandidateIds }
-  if (item.claimSpans.length > 0 || answer.length > 0) return { status: 'partial', diagnostics: ['QA_RESPONSE_PARTIAL_COVERAGE'], sourceCandidateIds }
+  if (/[\p{L}\p{N}\p{Script=Han}]{2,}/u.test(answer)) return { status: 'partial', diagnostics: ['QA_RESPONSE_PARTIAL_COVERAGE'], sourceCandidateIds }
   return { status: 'inconclusive', diagnostics: ['QA_RESPONSE_EVIDENCE_INSUFFICIENT'], sourceCandidateIds }
 }
 
@@ -216,18 +232,48 @@ function buildQaClusters(values: readonly StructuredQAEvidence[]): readonly QAQu
 }
 
 function periodEnd(period: string | undefined): string | undefined { const match = /^(\d{4})-(FY|Q1|H1|Q3)$/u.exec(period ?? ''); if (!match) return undefined; const month = match[2] === 'Q1' ? '03-31' : match[2] === 'H1' ? '06-30' : match[2] === 'Q3' ? '09-30' : '12-31'; return `${match[1]}-${month}` }
-function buildExecution(company: ResearchCompanyIdentity, asOf: string, outlooks: readonly ManagementOutlookCandidate[], kpis: readonly SegmentKpiPoint[], suppliedOutcomes: readonly ManagementOutcome[]): ManagementExecutionResult {
-  const commitments: ManagementCommitment[] = outlooks.flatMap((candidate): readonly ManagementCommitment[] => { const unit = resolveUnit(candidate.rawUnit, candidate.evidenceSpan.exactText ?? ''); const range = parseNumericRange(candidate.rawNumericRange); const token = range === undefined ? parseNumericToken(candidate.rawNumericValue) : undefined; const period = resolveFiscalPeriod(candidate.rawFiscalPeriodText).fiscalPeriod; if (unit === undefined || period === undefined || !text(candidate.evidenceSpan.exactText)) return []; if (range !== undefined) return [{ id: candidate.candidateId, statement: candidate.evidenceSpan.exactText, speaker: 'management', publishedAt: candidate.publishedAt, targetMetric: candidate.metric ?? candidate.topic, targetPeriod: period, targetEndDate: periodEnd(period), targetType: 'numeric_range', targetUnit: unit.canonical, targetLow: range[0].value * unit.factor, targetHigh: range[1].value * unit.factor, sourceRefs: [candidate.sourceObjectId] }]; if (token === undefined || !['increase', 'improve', 'decrease', 'deteriorate'].includes(candidate.direction ?? '')) return []; const value = token.value * unit.factor; return [{ id: candidate.candidateId, statement: candidate.evidenceSpan.exactText, speaker: 'management', publishedAt: candidate.publishedAt, targetMetric: candidate.metric ?? candidate.topic, targetPeriod: period, targetEndDate: periodEnd(period), targetType: candidate.direction === 'increase' || candidate.direction === 'improve' ? 'numeric_at_least' : 'numeric_at_most', targetUnit: unit.canonical, ...(candidate.direction === 'increase' || candidate.direction === 'improve' ? { targetLow: value } : { targetHigh: value }), sourceRefs: [candidate.sourceObjectId] }] })
-  const derivedOutcomes: ManagementOutcome[] = kpis.flatMap((point) => commitments.filter((commitment) => commitment.targetMetric === point.metric && commitment.targetPeriod === point.fiscalPeriod && commitment.targetUnit === point.unit).map((commitment) => ({ commitmentId: commitment.id, period: point.fiscalPeriod, observedAt: asOf, value: point.value, unit: point.unit, statement: `Observed ${point.metric} for ${point.segmentKey}`, sourceRefs: [...point.sourceCandidateIds] })))
-  return assessManagementExecution({ companyRef: company.symbol, commitments, outcomes: [...suppliedOutcomes, ...derivedOutcomes], asOf })
+function dateValue(value: string | undefined): number | undefined { if (!text(value)) return undefined; const parsed = Date.parse(value); return Number.isFinite(parsed) ? parsed : undefined }
+function kpiCandidatePoint(candidate: KpiCandidate): SegmentKpiPoint | undefined {
+  const period = candidate.fiscalPeriod ?? resolveFiscalPeriod(candidate.rawFiscalPeriodText).fiscalPeriod; const unit = resolveUnit(candidate.rawUnit, candidate.evidenceSpan.exactText ?? ''); const numeric = parseNumericToken(candidate.rawValue)
+  if (period === undefined || unit === undefined || numeric === undefined) return undefined
+  return { segmentKey: candidate.rawSegmentLabel ?? candidate.rawProductLabel ?? 'company', metric: candidate.metric, fiscalPeriod: period, value: numeric.value * unit.factor, unit: unit.canonical, sourceCandidateIds: [candidate.sourceObjectId] }
 }
 
-function expectationInputs(extraction: ManagementCommunicationExtractionResult | undefined, fiscalYear: number, period: EarningsPeriod): Pick<ManagementCommunicationResearchResult, 'guidance' | 'currentGuidanceIds' | 'segmentKpiComparisons'> {
-  if (extraction === undefined) return {}; const targetPeriod = `${fiscalYear}-${period}`; const guidances = extraction.guidance.filter((item) => item.fiscalPeriod === targetPeriod); const latestByKey = new Map<string, GuidanceRange>(); for (const item of guidances) { const key = `${item.metric}|${item.fiscalPeriod}`; const prior = latestByKey.get(key); if (prior === undefined || item.publishedAt > prior.publishedAt) latestByKey.set(key, item) }; const current = [...latestByKey.values()].sort((left, right) => left.guidanceId.localeCompare(right.guidanceId)); const kpis = extraction.segmentKpis.filter((item) => item.fiscalPeriod === targetPeriod); const segmentKpiComparisons: SegmentKpiDeltaInput[] = kpis.map((currentPoint) => { const prior = extraction.segmentKpis.filter((item) => item.segmentKey === currentPoint.segmentKey && item.metric === currentPoint.metric && item.unit === currentPoint.unit && item.fiscalPeriod !== currentPoint.fiscalPeriod).sort((left, right) => right.fiscalPeriod.localeCompare(left.fiscalPeriod))[0]; return prior === undefined ? { current: currentPoint } : { current: currentPoint, priorComparable: prior } }); return { guidance: extraction.guidance, currentGuidanceIds: current.map((item) => item.guidanceId), segmentKpiComparisons }
+function buildExecution(company: ResearchCompanyIdentity, asOf: string, outlooks: readonly ManagementOutlookCandidate[], kpiCandidates: readonly KpiCandidate[], suppliedOutcomes: readonly ManagementOutcome[]): ManagementExecutionResult {
+  const commitments: ManagementCommitment[] = outlooks.flatMap((candidate): readonly ManagementCommitment[] => { const unit = resolveUnit(candidate.rawUnit, candidate.evidenceSpan.exactText ?? ''); const range = parseNumericRange(candidate.rawNumericRange); const token = range === undefined ? parseNumericToken(candidate.rawNumericValue) : undefined; const period = resolveFiscalPeriod(candidate.rawFiscalPeriodText).fiscalPeriod; if (unit === undefined || period === undefined || !text(candidate.evidenceSpan.exactText)) return []; if (range !== undefined) return [{ id: candidate.candidateId, statement: candidate.evidenceSpan.exactText, speaker: 'management', publishedAt: candidate.publishedAt, targetMetric: candidate.metric ?? candidate.topic, targetPeriod: period, targetEndDate: periodEnd(period), targetType: 'numeric_range', targetUnit: unit.canonical, targetLow: range[0].value * unit.factor, targetHigh: range[1].value * unit.factor, sourceRefs: [candidate.sourceObjectId] }]; if (token === undefined || !['increase', 'improve', 'decrease', 'deteriorate'].includes(candidate.direction ?? '')) return []; const value = token.value * unit.factor; return [{ id: candidate.candidateId, statement: candidate.evidenceSpan.exactText, speaker: 'management', publishedAt: candidate.publishedAt, targetMetric: candidate.metric ?? candidate.topic, targetPeriod: period, targetEndDate: periodEnd(period), targetType: candidate.direction === 'increase' || candidate.direction === 'improve' ? 'numeric_at_least' : 'numeric_at_most', targetUnit: unit.canonical, ...(candidate.direction === 'increase' || candidate.direction === 'improve' ? { targetLow: value } : { targetHigh: value }), sourceRefs: [candidate.sourceObjectId] }] })
+  const diagnostics: string[] = []
+  const automaticOutcomes: ManagementOutcome[] = []
+  for (const candidate of kpiCandidates) {
+    const point = kpiCandidatePoint(candidate); if (point === undefined) continue
+    for (const commitment of commitments) {
+      const targetEnd = dateValue(commitment.targetEndDate); const published = dateValue(candidate.publishedAt); const commitmentPublished = dateValue(commitment.publishedAt)
+      const compatible = commitment.targetMetric === point.metric && commitment.targetPeriod === point.fiscalPeriod && commitment.targetUnit === point.unit
+      const later = published !== undefined && commitmentPublished !== undefined && published > commitmentPublished
+      const asOfValue = dateValue(asOf); const due = targetEnd !== undefined && published !== undefined && asOfValue !== undefined && published <= asOfValue && asOfValue >= targetEnd && published >= targetEnd
+      const independent = !commitment.sourceRefs.includes(candidate.sourceObjectId)
+      if (compatible && later && due && independent) automaticOutcomes.push({ commitmentId: commitment.id, period: point.fiscalPeriod, observedAt: candidate.publishedAt, value: point.value, unit: point.unit, statement: `Observed ${point.metric} for ${point.segmentKey}`, sourceRefs: [...point.sourceCandidateIds] })
+      else if (compatible && !independent) diagnostics.push('EXECUTION_OUTCOME_NOT_INDEPENDENT')
+    }
+  }
+  const validatedCallerOutcomes = suppliedOutcomes.flatMap((outcome): readonly ManagementOutcome[] => {
+    const commitment = commitments.find((item) => item.id === outcome.commitmentId); if (commitment === undefined) return []
+    const observed = dateValue(outcome.observedAt); const published = dateValue(commitment.publishedAt); const targetEnd = dateValue(commitment.targetEndDate); const asOfValue = dateValue(asOf)
+    const valid = observed !== undefined && published !== undefined && asOfValue !== undefined && observed <= asOfValue && observed >= published && outcome.sourceRefs.length > 0 && outcome.period === commitment.targetPeriod && (commitment.targetUnit === undefined || outcome.unit === commitment.targetUnit) && (targetEnd === undefined || (observed >= targetEnd && asOfValue >= targetEnd)) && outcome.sourceRefs.some((sourceRef) => !commitment.sourceRefs.includes(sourceRef))
+    if (valid) return [outcome]
+    if (outcome.sourceRefs.length > 0 && outcome.sourceRefs.every((sourceRef) => commitment.sourceRefs.includes(sourceRef))) diagnostics.push('EXECUTION_OUTCOME_NOT_INDEPENDENT')
+    if (targetEnd !== undefined && (asOfValue === undefined || asOfValue < targetEnd || observed === undefined || observed < targetEnd)) diagnostics.push('EXECUTION_OUTCOME_NOT_DUE')
+    return []
+  })
+  const assessed = assessManagementExecution({ companyRef: company.symbol, commitments, outcomes: [...validatedCallerOutcomes, ...automaticOutcomes], asOf })
+  return { ...assessed, status: assessed.assessments.some((item) => item.assessment !== 'inconclusive') ? assessed.status : 'unavailable', diagnostics: unique([...diagnostics, ...assessed.diagnostics]) }
+}
+
+function expectationInputs(extraction: ManagementCommunicationExtractionResult | undefined, fiscalYear: number, period: EarningsPeriod): Pick<ManagementCommunicationResearchResult, 'guidance' | 'currentGuidanceIds' | 'segmentKpiComparisons'> & { readonly diagnostics: readonly string[] } {
+  if (extraction === undefined) return { diagnostics: [] }; const targetPeriod = `${fiscalYear}-${period}`; const guidances = extraction.guidance.filter((item) => item.fiscalPeriod === targetPeriod); const latestByKey = new Map<string, GuidanceRange>(); for (const item of guidances) { const key = `${item.metric}|${item.fiscalPeriod}`; const prior = latestByKey.get(key); if (prior === undefined || item.publishedAt > prior.publishedAt) latestByKey.set(key, item) }; const current = [...latestByKey.values()].sort((left, right) => left.guidanceId.localeCompare(right.guidanceId)); const kpis = extraction.segmentKpis.filter((item) => item.fiscalPeriod === targetPeriod); const diagnostics: string[] = []; const segmentKpiComparisons: SegmentKpiDeltaInput[] = kpis.map((currentPoint) => { const expectedPriorPeriod = comparableFiscalPeriod(currentPoint.fiscalPeriod); const prior = expectedPriorPeriod === undefined ? undefined : extraction.segmentKpis.filter((item) => item.segmentKey === currentPoint.segmentKey && item.metric === currentPoint.metric && item.unit === currentPoint.unit && item.fiscalPeriod === expectedPriorPeriod).sort((left, right) => right.sourceCandidateIds.join('|').localeCompare(left.sourceCandidateIds.join('|')))[0]; if (prior === undefined) diagnostics.push(`KPI_NO_COMPARABLE_PRIOR:${currentPoint.segmentKey}:${currentPoint.metric}:${currentPoint.fiscalPeriod}`); return prior === undefined ? { current: currentPoint } : { current: currentPoint, priorComparable: prior } }); return { guidance: extraction.guidance, currentGuidanceIds: current.map((item) => item.guidanceId), segmentKpiComparisons, diagnostics: unique(diagnostics) }
 }
 
 export async function resolveManagementCommunication(input: ResolveManagementCommunicationInput): Promise<ManagementCommunicationResearchResult> {
-  const diagnostics: string[] = []; const callerExtraction = input.caller?.extraction; const automatic = callerExtraction === undefined ? await automaticallyExtract(input, diagnostics) : { extraction: undefined, sources: [], documentCount: 0, qaCount: 0, attempted: false }; const extraction = callerExtraction ?? automatic.extraction; if (extraction === undefined) diagnostics.push(input.sources === undefined ? 'MANAGEMENT_COMMUNICATION_INPUT_UNAVAILABLE' : 'MANAGEMENT_COMMUNICATION_EXTRACTION_UNAVAILABLE'); const comments = buildCommentary(extraction?.managementOutlookCandidates ?? []); const qaClusters = buildQaClusters(extraction?.structuredQaCandidates ?? []); const execution = buildExecution(input.company, input.analysisAsOf, extraction?.managementOutlookCandidates ?? [], extraction?.segmentKpis ?? [], input.caller?.executionOutcomes ?? []); const expectations = expectationInputs(extraction, input.fiscalYear, input.period); if (extraction?.diagnostics) diagnostics.push(...extraction.diagnostics); const status: ManagementCommunicationResearchResult['status'] = extraction === undefined ? automatic.attempted ? 'partial' : 'unavailable' : extraction.status === 'COMPLETE' && diagnostics.length === 0 ? 'available' : 'partial'; return { status, ...(extraction === undefined ? {} : { extraction }), sourceObjects: callerExtraction === undefined ? automatic.sources : sourceObjectsFromExtraction(callerExtraction), ...expectations, commentaryDeltas: comments, qaClusters, execution, diagnostics: unique(diagnostics), telemetry: { acquisitionAttempted: automatic.attempted, acquisitionDocumentCount: automatic.documentCount, acquisitionQaCount: automatic.qaCount, extractionCalls: extraction?.telemetry.calls ?? 0, extractedOutlookCount: extraction?.managementOutlookCandidates.length ?? 0, extractedQaCount: extraction?.structuredQaCandidates.length ?? 0, commentaryDeltaCount: comments.length, qaClusterCount: qaClusters.length, executionAssessmentCount: execution.assessments.length } }
+  const diagnostics: string[] = []; const callerExtraction = input.caller?.extraction; const automatic = callerExtraction === undefined ? await automaticallyExtract(input, diagnostics) : { extraction: undefined, sources: [], documentCount: 0, qaCount: 0, attempted: false }; const extraction = callerExtraction ?? automatic.extraction; if (extraction === undefined) diagnostics.push(input.sources === undefined ? 'MANAGEMENT_COMMUNICATION_INPUT_UNAVAILABLE' : 'MANAGEMENT_COMMUNICATION_EXTRACTION_UNAVAILABLE'); const comments = buildCommentary(extraction?.managementOutlookCandidates ?? [], input.analysisAsOf); const qaClusters = buildQaClusters(extraction?.structuredQaCandidates ?? []); const execution = buildExecution(input.company, input.analysisAsOf, extraction?.managementOutlookCandidates ?? [], extraction?.kpiCandidates ?? [], input.caller?.executionOutcomes ?? []); const expectations = expectationInputs(extraction, input.fiscalYear, input.period); diagnostics.push(...expectations.diagnostics, ...execution.diagnostics); if (extraction?.diagnostics) diagnostics.push(...extraction.diagnostics); const status: ManagementCommunicationResearchResult['status'] = extraction === undefined ? automatic.attempted ? 'partial' : 'unavailable' : extraction.status === 'COMPLETE' && diagnostics.length === 0 ? 'available' : 'partial'; return { status, ...(extraction === undefined ? {} : { extraction }), sourceObjects: callerExtraction === undefined ? automatic.sources : sourceObjectsFromExtraction(callerExtraction), guidance: expectations.guidance, currentGuidanceIds: expectations.currentGuidanceIds, segmentKpiComparisons: expectations.segmentKpiComparisons, commentaryDeltas: comments, qaClusters, execution, diagnostics: unique(diagnostics), telemetry: { acquisitionAttempted: automatic.attempted, acquisitionDocumentCount: automatic.documentCount, acquisitionQaCount: automatic.qaCount, extractionCalls: extraction?.telemetry.calls ?? 0, extractedOutlookCount: extraction?.managementOutlookCandidates.length ?? 0, extractedQaCount: extraction?.structuredQaCandidates.length ?? 0, commentaryDeltaCount: comments.length, qaClusterCount: qaClusters.length, executionAssessmentCount: execution.assessments.length } }
 }
 
 function append(section: EarningsReviewSection, markdown: string, sourceCandidateIds: readonly string[]): EarningsReviewSection { return { ...section, markdown: `${section.markdown}${section.markdown.endsWith('\n') ? '' : '\n\n'}${markdown}`, sourceCandidateIds: unique([...section.sourceCandidateIds, ...sourceCandidateIds]) } }

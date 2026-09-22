@@ -4,6 +4,13 @@ const text = (value: unknown): value is string => typeof value === 'string' && v
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 const uniqueSorted = (values: readonly string[]): readonly string[] => [...new Set(values)].sort()
 
+/** Return the exact prior fiscal period for the repository's Earnings period convention. */
+export function comparableFiscalPeriod(period: string): string | undefined {
+  const match = /^(\d{4})-(FY|H1|Q1|Q3)$/u.exec(period.trim())
+  if (match === null) return undefined
+  return `${Number(match[1]) - 1}-${match[2]}`
+}
+
 export function validateSegmentKpiPoint(point: SegmentKpiPoint): readonly string[] {
   const diagnostics: string[] = []
   if (!text(point.segmentKey)) diagnostics.push('segmentKey_required')
@@ -38,7 +45,7 @@ export function compareSegmentKpi(input: SegmentKpiDeltaInput): SegmentKpiDeltaR
   const prior = input.priorComparable === undefined ? undefined : normalizeSegmentKpiPoint(input.priorComparable)
   const expectation = input.expectation === undefined ? undefined : normalizeSegmentKpiPoint(input.expectation)
   if (current === undefined || (priorSupplied && prior === undefined) || (expectationSupplied && expectation === undefined) || (prior === undefined && expectation === undefined)) return undefined
-  if (prior !== undefined && (prior.segmentKey !== current.segmentKey || prior.metric !== current.metric || prior.unit !== current.unit || prior.fiscalPeriod === current.fiscalPeriod)) return undefined
+  if (prior !== undefined && (prior.segmentKey !== current.segmentKey || prior.metric !== current.metric || prior.unit !== current.unit || comparableFiscalPeriod(current.fiscalPeriod) !== prior.fiscalPeriod)) return undefined
   if (expectation !== undefined && (expectation.segmentKey !== current.segmentKey || expectation.metric !== current.metric || expectation.unit !== current.unit || expectation.fiscalPeriod !== current.fiscalPeriod)) return undefined
   const priorComparison = prior === undefined ? undefined : delta(prior.value, current.value)
   const expectationComparison = expectation === undefined ? undefined : delta(expectation.value, current.value)

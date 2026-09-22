@@ -83,41 +83,63 @@ are frozen.
 
 ### Segment KPI
 
-Only points with identical normalized segment key, metric, unit, and distinct
-compatible fiscal periods are comparable. No segment identity is invented;
-unmapped D2-002 KPI candidates remain diagnostics. The existing
-`compareSegmentKpi` implementation owns arithmetic and direction labels.
+Only points with identical normalized segment key, metric, and unit are
+comparable when the prior period is the exact prior fiscal shape under the
+Earnings convention: `2026-FY` maps to `2025-FY`, `2026-H1` to `2025-H1`,
+`2026-Q1` to `2025-Q1`, and `2026-Q3` to `2025-Q3`. A current point is
+retained without `priorComparable` when no exact prior exists, with
+`KPI_NO_COMPARABLE_PRIOR` recorded. A same-year different-shape point is not
+a comparable prior. No segment identity is invented; unmapped D2-002 KPI
+candidates remain diagnostics. The existing `compareSegmentKpi`
+implementation owns arithmetic and direction labels after this period guard.
 
 ### Commentary
 
 Outlook records match on normalized topic, metric (when present), and
-time-horizon. A numeric change is calculated only when both records have
+time-horizon. Both candidates must be published at or before `analysisAsOf`.
+The latest eligible candidate is current and the latest eligible candidate
+before it is prior. A numeric change is calculated only when both records have
 compatible canonical units and comparable numeric shape. Direction changes are
 ordered only for the explicit pairs `increase`/`improve` and
 `decrease`/`deteriorate`; `stable` and `uncertain` do not create a directional
-claim. Incompatible or conflicting records produce `inconclusive` with source
-refs and diagnostics.
+claim. Identical same-direction values are `unchanged`. `strengthened` or
+`weakened` requires an explicitly identifiable absolute target-level meaning;
+otherwise a different same-direction value is `inconclusive` with
+`COMMENTARY_NUMERIC_SEMANTICS_AMBIGUOUS`. Opposite directional pairs are
+`reversed`. Incompatible or conflicting records retain source refs and
+diagnostics.
 
 ### Q&A
 
 Q&A clusters use normalized validated tags and bounded question/product
 identity. Each member keeps its D2-002 evidence span and source object ID.
-Response quality is qualitative and evidence-local: an answer that directly
-addresses the question and contains a bounded claim/metric is `direct`; an
-answer with only partial coverage is `partial`; an explicit refusal,
-non-answer, or empty answer is `non_answer`; otherwise it is `inconclusive`.
-The result never asserts that management's answer is true.
+Response quality is qualitative and evidence-local. `direct` requires bounded
+coverage evidence: a meaningful normalized question term/phrase appears in
+the answer, or an explicitly stated metric appears in both question and
+answer. A substantive answer that cannot establish coverage is `partial`; an
+explicit refusal, non-answer, or empty answer is `non_answer`; otherwise it is
+`inconclusive`. The existence of a management statement span or an
+answer-only metric is not sufficient for `direct`. The result never asserts
+that management's answer is true.
 
 ### Execution
 
 Only explicit numeric outlooks with attributable publication, concrete target
 period, canonical unit, and numeric bound/value are adapted to existing
 `ManagementCommitment`. Candidate ID/source object ID is preserved as the
-source ref and the evidence text is the statement. Numeric KPI outcomes are
-adapted only when they match commitment metric/period/unit and have source
-refs. The existing execution Skill determines `met`, `not_met`,
-`not_yet_observable`, and `inconclusive`; qualitative targets remain
-non-authoritative.
+source ref and the evidence text is the statement. A commitment source never
+serves as its own outcome. Automatic outcomes use validated D2-002
+`KpiCandidate` evidence and require compatible metric/period/unit, a later
+publication than the commitment, an independent source object, and a
+published observation at or after the target end date. SegmentKpiPoint alone
+cannot create an automatic outcome. Caller-supplied outcomes are filtered
+before assessment unless they have non-empty independent source refs, a
+compatible period/unit, `commitment.publishedAt <= observedAt <= analysisAsOf`,
+and an observed date at or after the target end date. Premature outcomes
+therefore resolve to `not_yet_observable`; missing later evidence remains
+`inconclusive` after the due date. The existing execution Skill determines
+`met`, `not_met`, `not_yet_observable`, and `inconclusive`; qualitative targets
+remain non-authoritative.
 
 ## 5. Contracts and report integration
 
@@ -195,4 +217,3 @@ The implementation must include:
 - a gated real harness that is skipped unless explicitly enabled and reports
   provider/model/auth/network state without exposing secrets;
 - full repository validation and a clean worktree before delivery.
-
