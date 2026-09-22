@@ -64,20 +64,39 @@ existing statutory-disclosure path and are not silently reclassified as IR.
 `ManagementCommunicationDocument` contains a stable `id`, `ticker`, bounded
 `documentType` (`INVESTOR_RELATIONS_RECORD`, `EARNINGS_BRIEFING`, `ROADSHOW`,
 `ANALYST_MEETING`, or `COMPANY_IR_DOCUMENT`), optional `eventDate`, required
-`publishedAt`, optional title and participant lists, content, and provenance.
+`publishedAt`, required `retrievedAt`, optional title and participant lists,
+required `content`, and provenance.
 
 `ExchangeQAPair` contains a stable `id`, `ticker`, `question`, optional
-`questionAt`, `answer`, `answeredAt`, platform (`SZSE_HUDONGYI` or
-`SSE_EINTERACTION`), and provenance.
+`questionAt`, required `answer`, required `answeredAt`, required `publishedAt`,
+required `retrievedAt`, platform (`SZSE_HUDONGYI` or `SSE_EINTERACTION`), and
+provenance. `answeredAt` is not an implicit substitute for `publishedAt`.
+When a concrete exchange source proves that answer time is public-availability
+time, normalization may set `publishedAt = answeredAt`; both fields remain
+independently represented.
 
 Question and answer are one attributable evidence item. An answer cannot be
 stored without its question and is not automatically converted into a Company
 Fact. The acquisition layer records documents and pairs; it does not decide
 whether content is Formal Guidance or Management Outlook.
 
+`documentType` is assigned only through deterministic source-native category
+mapping, a bounded title allowlist, or an explicit endpoint mapping. For
+example, a source-native `投资者关系活动记录` maps to
+`INVESTOR_RELATIONS_RECORD`, and `业绩说明会` maps to `EARNINGS_BRIEFING`.
+An unresolved or ambiguous category is excluded and recorded as a diagnostic;
+it does not receive a universal `COMPANY_IR_DOCUMENT` fallback and is never
+classified by an LLM. This is deterministic metadata normalization, not
+document semantic classification.
+
 ## 5. Separate source ladders
 
-For `ManagementCommunicationDocument`:
+The design document records both a logical long-term ladder and the executable
+v0.1 policy. The logical ladder may mention deferred acquisition families, but
+`SourcePolicy.candidates` contains only sources with a concrete executor in
+the current implementation.
+
+Logical ladder for `ManagementCommunicationDocument`:
 
 ```text
 PRIMARY: CNINFO official IR record
@@ -86,19 +105,39 @@ F2:      EastMoney institutional research
 LLM_WEB: official/public document discovery only
 ```
 
-If no reusable company-IR path exists, F1 is represented in policy metadata but
-is not implemented through a new generic crawler.
+Executable v0.1 IR policy:
+
+```text
+PRIMARY: CNINFO official IR record
+F1:      existing reusable company official IR capability, only if present
+F2:      EastMoney institutional research
+```
+
+If no reusable company-IR capability exists, F1 is omitted from
+`SourcePolicy.candidates`; the policy does not contain a known
+non-executable placeholder. `LLM_WEB` is deferred documentation only and is
+not a runtime candidate in D2-001.
 
 For `ExchangeQAPair`:
 
 ```text
 SZSE: AKShare stock_irm_cninfo / stock_irm_ans_cninfo
 SSE:  AKShare stock_sns_sseinfo
-LLM_WEB: official-page discovery only
 ```
 
-EastMoney institutional research is never an Exchange Q&A fallback. A failed
-Q&A request remains a bounded Q&A acquisition outcome.
+The Q&A logical ladder is exchange-routed and has no EastMoney fallback.
+Before creating the D0 requirement, D2 uses the existing deterministic market
+or exchange resolution. It then creates one of two concrete operations:
+
+```text
+SZSE → capability/operation exchange_qa_szse → SZSE Hudongyi PRIMARY
+SSE  → capability/operation exchange_qa_sse  → SSE e-interaction PRIMARY
+unsupported or unresolved → explicit UNAVAILABLE
+```
+
+The two policies have no cross-exchange candidate. EastMoney institutional
+research is never an Exchange Q&A fallback, and a failed Q&A request remains
+a bounded Q&A acquisition outcome.
 
 | Source | Authority | Disclosure class |
 | --- | --- | --- |
@@ -112,9 +151,17 @@ Q&A request remains a bounded Q&A acquisition outcome.
 ## 6. D0 SourcePolicy integration
 
 The Workflow creates D0 `DataRequirement` values with `dataKind` `document` or
-`evidence`, ticker/exchange subject, `asOf`, and the appropriate determinism
-class. It resolves an explicit `SourcePolicy` and invokes
-`runResearchDataAcquisition` through an injected executor.
+`evidence`, ticker subject, `asOf`, and the appropriate determinism class. D2
+does not add an `exchange` field to `DataRequirement` or exchange matching to
+D0. Exchange resolution occurs before the Q&A requirement is created and
+selects the explicit `exchange_qa_szse` or `exchange_qa_sse` operation; an
+unsupported or unresolved exchange returns `UNAVAILABLE` without trying the
+wrong exchange source. The Workflow resolves an explicit `SourcePolicy` and
+invokes `runResearchDataAcquisition` through an injected executor.
+
+Only currently executable sources may appear in `SourcePolicy.candidates`.
+Deferred or discovery-only ladder entries remain documentation metadata and
+are not passed to D0 execution.
 
 `operationId` is dispatch metadata only. The executor uses a closed,
 code-owned switch for concrete operations; there is no dynamic registry,
@@ -128,15 +175,21 @@ values are averaged and no failed source is reported as successful.
 
 The three time fields remain distinct: `eventDate` is when activity occurred,
 `publishedAt` is when the public record became available, and `retrievedAt` is
-when acquisition obtained it.
+when acquisition obtained it. Both D2 contracts must carry `publishedAt` and
+`retrievedAt`; Q&A `answeredAt` remains a separate source event time.
 
 Historical eligibility is governed only by `publishedAt <= analysisAsOf`.
 `eventDate` or `questionAt` cannot substitute for missing or unreliable
-`publishedAt`. Future, malformed, or absent publication timestamps produce a
-bounded exclusion/validation outcome rather than being treated as current.
+`publishedAt`. D2 normalization/execution is stricter than generic D0: a
+missing, malformed, or otherwise invalid `publishedAt` returns
+`VALIDATION_ERROR` or `NO_DATA` before the attempt can be reported as
+`SUCCESS`. D2 must not rely on D0's optional future-date check, and workflow
+completion time must not silently substitute for the source's actual
+`retrievedAt`.
 
 Normalization preserves question/answer pairing, rejects empty or malformed
-rows, preserves all five provenance concepts, derives stable IDs from source
+rows, preserves all five provenance concepts, applies only the deterministic
+`documentType` mappings defined in Section 4, derives stable IDs from source
 identity and normalized content, remains invariant to row order, and dedupes
 deterministically without merging distinct provenance contexts.
 
@@ -160,12 +213,13 @@ or existing research-workflow behavior is changed.
 ## 9. Offline fixtures and gated live probes
 
 Offline tests must prove product-specific routing, authority versus host and
-retrieval provider, IR-only fallback order, strict separation between IR and
-exchange-Q&A ladders, question/answer pairing, independent event/publication/
-retrieval times, future and malformed publication handling, stable IDs,
-order-independent deduplication, bounded provider failures, and exactly one D0
-attempt record per attempted source. Tests must perform zero external network
-access.
+retrieval provider, executable-candidate-only policies, IR-only fallback order,
+strict SZSE/SSE routing and separation from the IR ladder, question/answer
+pairing, independent event/publication/answer/retrieval times, missing/future/
+malformed publication handling before success, deterministic document-type
+mapping and exclusion diagnostics, stable IDs, order-independent
+deduplication, bounded provider failures, and exactly one D0 attempt record
+per attempted source. Tests must perform zero external network access.
 
 A real-probe script may be added only behind an explicit environment gate. It
 must use bounded requests, emit privacy-safe structural evidence, and report
