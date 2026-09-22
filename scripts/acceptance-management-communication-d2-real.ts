@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { AkshareDataAdapter } from '../plugins/research-acquisition/akshare.ts'
-import { CninfoOfficialDisclosureClient } from '../plugins/research-acquisition/official.ts'
+import { CninfoOfficialDisclosureClient, cninfoShanghaiLookbackDate } from '../plugins/research-acquisition/official.ts'
 import { createManagementCommunicationSourceOperations } from '../plugins/research-acquisition/management-communication.ts'
 import { mapDocumentType, runExchangeQa, runManagementCommunicationDocuments, type ManagementCommunicationAcquisitionSources } from '../workflows/management-communication-acquisition/index.ts'
 
@@ -13,13 +13,30 @@ if (gate !== '1') {
 }
 
 const asOf = process.env.RESEARCHHUB_D2_AS_OF ?? new Date().toISOString()
-const asOfDate = new Date(asOf)
-const lookbackStartDate = new Date(asOfDate.getTime() - 7 * 86_400_000).toISOString().slice(0, 10)
-const cninfo = new CninfoOfficialDisclosureClient({ pageSize: 20, timeoutMs: 15_000 })
+const lookbackStartDate = cninfoShanghaiLookbackDate(asOf, 7)
+const cninfoRequests: URLSearchParams[] = []
+const cninfoResponses: Array<{ readonly endpoint: string; readonly rawAnnouncementCount: number }> = []
+const cninfo = new CninfoOfficialDisclosureClient({ pageSize: 20, timeoutMs: 15_000, fetchImpl: async (input, init) => {
+  const endpoint = String(input)
+  const body = new URLSearchParams(String(init?.body ?? ''))
+  const response = await fetch(input, init)
+  if (endpoint.includes('/new/information/topSearch/query') || endpoint.includes('/new/hisAnnouncement/query')) {
+    cninfoRequests.push(body)
+    try {
+      const payload = await response.clone().json() as Record<string, unknown> | readonly unknown[]
+      const rawAnnouncementCount = Array.isArray(payload) ? 0 : Array.isArray(payload.announcements) ? payload.announcements.length : 0
+      cninfoResponses.push({ endpoint, rawAnnouncementCount })
+    } catch {
+      cninfoResponses.push({ endpoint, rawAnnouncementCount: 0 })
+    }
+  }
+  return response
+} })
 const akshare = new AkshareDataAdapter({ timeoutMs: 60_000 })
 const real = createManagementCommunicationSourceOperations(cninfo, akshare)
 const captures: { cninfo?: unknown; szse?: unknown; sse?: unknown; eastmoney?: unknown } = {}
 const errors: Record<string, string> = {}
+const cninfoLive: { ticker: string; resolvedOrgId?: string; stock?: string; seDates?: readonly string[]; pagesRequested?: readonly number[]; rawMatchingAnnouncementCount?: number; acceptedTitleCount?: number; documentFetchStatus?: string; documentFetchError?: string } = { ticker: '600519' }
 
 const company = (ticker: string, exchange: 'SSE' | 'SZSE', name: string) => ({ company: { symbol: ticker, exchange, name }, asOf, lookbackStartDate })
 const sources: ManagementCommunicationAcquisitionSources = {
@@ -51,7 +68,29 @@ async function probe(name: string, operation: () => Promise<unknown>): Promise<{
 }
 
 const probes = [
-  await probe('CNINFO_IR_LIVE', async () => { if (captures.cninfo === undefined) captures.cninfo = await real.cninfoIr(company('600519', 'SSE', '贵州茅台')); return captures.cninfo }),
+  await probe('CNINFO_IR_DISCOVERY_LIVE', async () => {
+    const request = company('600519', 'SSE', '贵州茅台')
+    cninfoLive.resolvedOrgId = await cninfo.resolveOrganizationId('600519')
+    const records = await cninfo.listManagementCommunication(request)
+    const announcementRequests = cninfoRequests.filter((body) => body.get('stock') !== null)
+    cninfoLive.stock = announcementRequests[0]?.get('stock') ?? undefined
+    cninfoLive.seDates = [...new Set(announcementRequests.map((body) => body.get('seDate') ?? '').filter(Boolean))]
+    cninfoLive.pagesRequested = [...new Set(announcementRequests.map((body) => Number(body.get('pageNum'))).filter((page) => Number.isFinite(page)))].sort((left, right) => left - right)
+    cninfoLive.rawMatchingAnnouncementCount = cninfoResponses.filter((item) => item.endpoint.includes('/new/hisAnnouncement/query')).reduce((total, item) => total + item.rawAnnouncementCount, 0)
+    cninfoLive.acceptedTitleCount = records.filter((record) => mapDocumentType(record.title) !== undefined).length
+    if (records[0] === undefined) {
+      cninfoLive.documentFetchStatus = 'NOT_ATTEMPTED_NO_RECORD'
+    } else {
+      try {
+        await cninfo.fetchDocument(records[0])
+        cninfoLive.documentFetchStatus = 'SUCCESS'
+      } catch (error) {
+        cninfoLive.documentFetchStatus = 'CONTENT_RUNTIME_LIMITATION'
+        cninfoLive.documentFetchError = error instanceof Error ? error.message.slice(0, 240) : String(error).slice(0, 240)
+      }
+    }
+    return records
+  }),
   await probe('SZSE_QA_LIVE', async () => { if (captures.szse === undefined) captures.szse = await real.exchangeQaSzse(company('000001', 'SZSE', '平安银行')); return captures.szse }),
   await probe('SSE_QA_LIVE', async () => { if (captures.sse === undefined) captures.sse = await real.exchangeQaSse(company('600519', 'SSE', '贵州茅台')); return captures.sse }),
   await probe('EASTMONEY_METADATA_LIVE', async () => { if (captures.eastmoney === undefined) captures.eastmoney = await real.eastmoneyInstitutionalResearch(company('600519', 'SSE', '贵州茅台')); return captures.eastmoney }),
@@ -89,10 +128,11 @@ const successfulProbeCount = probes.filter((probe) => probe.ok).length
 const workflowAttempted = workflowRuns.length === 3
 const output = {
   status: Object.keys(errors).length === 0 && successfulProbeCount === probes.length && workflowAttempted ? 'D2_ACQUISITION_PATH_VERIFIED' : 'LIVE_PROVIDER_LIMITATION_RECORDED',
-  labels: probes.filter((probe) => probe.ok && probe.name !== 'EASTMONEY_METADATA_LIVE').map((probe) => probe.name === 'CNINFO_IR_LIVE' ? 'CNINFO_IR_LIVE_VERIFIED' : probe.name === 'SZSE_QA_LIVE' ? 'SZSE_QA_LIVE_VERIFIED' : 'SSE_QA_LIVE_VERIFIED'),
+  labels: probes.filter((probe) => probe.ok && probe.name !== 'EASTMONEY_METADATA_LIVE').map((probe) => probe.name === 'CNINFO_IR_DISCOVERY_LIVE' ? 'CNINFO_IR_DISCOVERY_LIVE_VERIFIED' : probe.name === 'SZSE_QA_LIVE' ? 'SZSE_QA_LIVE_VERIFIED' : 'SSE_QA_LIVE_VERIFIED'),
   runtime: { node: process.version, python: pythonRuntime, akshare: akshareVersion },
   asOf,
   lookbackStartDate,
+  cninfo: cninfoLive,
   probes,
   workflows: workflowRuns.map(summarizeWorkflow),
   errors,

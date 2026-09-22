@@ -150,6 +150,17 @@ test('source-aware China timestamps use Asia/Shanghai and preserve explicit zone
   assert.equal(normalizeSourceTimestamp(1785632400000, 'SZSE_HUDONGYI', 'event'), '2026-08-02T01:00:00.000Z')
 })
 
+test('management communication lookback follows the Shanghai calendar', async () => {
+  let observedLookback: string | undefined
+  const result = await runManagementCommunicationDocuments({
+    request: { ticker: '600519', asOf: '2026-09-22T00:30:00+08:00', lookbackDays: 1 },
+    sources: sources({ cninfoIr: async (request) => { observedLookback = request.lookbackStartDate; return [] } }),
+    now: () => RETRIEVED,
+  })
+  assert.equal(result.status, 'UNAVAILABLE')
+  assert.equal(observedLookback, '2026-09-21')
+})
+
 test('date-only publication uses Shanghai end-of-day and enforces the PIT boundary', () => {
   assert.equal(normalizeSourceTimestamp('2026-08-02', 'EastMoney', 'publication'), '2026-08-02T15:59:59.999Z')
   const row = { ...qaRow(), publishedAt: '2026-08-02' }

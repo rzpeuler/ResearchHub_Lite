@@ -246,10 +246,24 @@ The bounded probe runtime used Node `v24.16.0`, Python `3.12.10`, and AKShare
 The existing `CninfoOfficialDisclosureClient` remains the CNINFO path. Its
 observed list contract is `title`, `url`, `publishedAt`, and `issuer`; the D2
 operation reuses its list/fetch and applies the bounded IR title mapping before
-normalization. A live CNINFO IR fetch in the acceptance environment was
-blocked by the existing `DocumentInputResolver` managed-Python runtime not
-being ready; this is reported as a provider/runtime limitation, not as
-fabricated live success.
+normalization. Company queries first call CNINFO `topSearch/query` with
+`keyWord=<ticker>` and `maxNum=10`, accept only an exact `code` match with a
+non-empty `orgId`, and then use `stock=<ticker>,<orgId>`. There is no orgId
+synthesis and no bare-ticker fallback. The D2 IR path uses at most 30 records
+per page and at most 10 pages, stopping on an empty raw page, `hasMore=false`,
+or the explicit page bound; records are deduplicated by URL across pages and
+search terms. A live CNINFO IR fetch in the acceptance environment was blocked
+by the existing `DocumentInputResolver` managed-Python runtime not being ready;
+this is reported as a provider/runtime limitation, not as fabricated live
+success.
+
+The bounded live `topSearch` schema was verified as an array of rows containing
+`code`, `orgId`, and `zwjc`; the announcement response exposes `hasMore`,
+`totalpages`, and `announcements`. CNINFO `seDate` uses the Asia/Shanghai
+calendar date derived from the absolute `asOf` instant, and the Workflow's
+lookback date is subtracted in Shanghai calendar days. Equivalent instants
+`2026-09-21T16:30:00Z` and `2026-09-22T00:30:00+08:00` therefore use the same
+CNINFO end date `2026-09-22`. `announcementTime` remains an absolute instant.
 
 The existing AKShare bridge now exposes only these explicit D2 operations:
 

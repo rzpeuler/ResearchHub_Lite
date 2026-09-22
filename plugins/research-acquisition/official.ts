@@ -2,6 +2,10 @@ import type { ResearchAcquisitionPlugin, ResearchAcquisitionRequest, ResearchCom
 import { sha256 } from './hash.ts'
 import { DocumentInputResolver } from '../document/input-resolver.ts'
 
+const CNINFO_TOP_SEARCH_ENDPOINT = 'https://www.cninfo.com.cn/new/information/topSearch/query'
+const MAX_MANAGEMENT_COMMUNICATION_PAGES = 10
+const MAX_MANAGEMENT_COMMUNICATION_PAGE_SIZE = 30
+
 export interface OfficialDisclosureRecord { readonly title: string; readonly url: string; readonly publishedAt: string; readonly issuer?: string; readonly content?: string }
 export interface OfficialDisclosureDocument { readonly content: string; readonly bytes: Uint8Array; readonly mediaType: string }
 export interface OfficialDisclosureClient { list(request: ResearchAcquisitionRequest): Promise<readonly OfficialDisclosureRecord[]>; listManagementCommunication?(request: { readonly company: ResearchCompanyIdentity; readonly lookbackStartDate: string; readonly asOf: string }): Promise<readonly OfficialDisclosureRecord[]>; listIndustry?(request: Extract<ResearchAcquisitionRequest, { industry: unknown }>): Promise<readonly OfficialDisclosureRecord[]>; fetch(record: OfficialDisclosureRecord): Promise<string>; fetchDocument?(record: OfficialDisclosureRecord): Promise<OfficialDisclosureDocument> }
@@ -10,28 +14,47 @@ export class CninfoOfficialDisclosureClient implements OfficialDisclosureClient 
   private readonly fetchImpl: typeof fetch
   private readonly endpoint: string
   private readonly pageSize: number
+  private readonly managementCommunicationPageSize: number
   private readonly industryPageSize: number
   private readonly timeoutMs: number
   private readonly documentResolver: Pick<DocumentInputResolver, 'parse'>
-  constructor(options: CninfoOfficialDisclosureClientOptions = {}) { this.fetchImpl = options.fetchImpl ?? fetch; this.endpoint = options.endpoint ?? 'https://www.cninfo.com.cn/new/hisAnnouncement/query'; this.pageSize = Math.min(100, Math.max(1, options.pageSize ?? 20)); this.industryPageSize = Math.min(30, Math.max(1, options.industryPageSize ?? 10)); this.timeoutMs = Math.min(20_000, Math.max(1, options.timeoutMs ?? 15_000)); this.documentResolver = options.documentResolver ?? new DocumentInputResolver() }
+  constructor(options: CninfoOfficialDisclosureClientOptions = {}) { this.fetchImpl = options.fetchImpl ?? fetch; this.endpoint = options.endpoint ?? 'https://www.cninfo.com.cn/new/hisAnnouncement/query'; this.pageSize = Math.min(100, Math.max(1, options.pageSize ?? 20)); this.managementCommunicationPageSize = Math.min(MAX_MANAGEMENT_COMMUNICATION_PAGE_SIZE, this.pageSize); this.industryPageSize = Math.min(30, Math.max(1, options.industryPageSize ?? 10)); this.timeoutMs = Math.min(20_000, Math.max(1, options.timeoutMs ?? 15_000)); this.documentResolver = options.documentResolver ?? new DocumentInputResolver() }
   private async request(input: string, init: RequestInit = {}): Promise<Response> { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), this.timeoutMs); try { return await this.fetchImpl(input, { ...init, signal: controller.signal }) } finally { clearTimeout(timer) } }
   private static record(row: unknown): OfficialDisclosureRecord | undefined { if (!row || typeof row !== 'object') return undefined; const value = row as Record<string, unknown>; const title = typeof value.announcementTitle === 'string' ? value.announcementTitle.replace(/<[^>]+>/g, '').trim() : typeof value.title === 'string' ? value.title.trim() : ''; const adjunctUrl = typeof value.adjunctUrl === 'string' ? value.adjunctUrl : ''; const url = adjunctUrl.startsWith('http') ? adjunctUrl : adjunctUrl ? `https://static.cninfo.com.cn/${adjunctUrl.replace(/^\/+/, '')}` : ''; const rawDate = value.announcementTime; let date: Date | undefined; if (typeof rawDate === 'number' || (typeof rawDate === 'string' && /^\d{10,13}$/.test(rawDate))) { const timestamp = Number(rawDate); if (Number.isFinite(timestamp)) date = new Date(timestamp) } else if (typeof rawDate === 'string' && !Number.isNaN(Date.parse(rawDate))) date = new Date(rawDate); const parsedDate = date && !Number.isNaN(date.getTime()) ? date.toISOString() : ''; if (!title || !url || !parsedDate || !validCninfoUrl(url)) return undefined; return { title, url, publishedAt: parsedDate, issuer: typeof value.secName === 'string' ? value.secName : undefined } }
+  async resolveOrganizationId(secCode: string): Promise<string> {
+    if (!/^\d{6}$/.test(secCode)) throw new Error(`CNINFO_INVALID_SECURITY_CODE:${secCode}`)
+    const form = new URLSearchParams({ keyWord: secCode, maxNum: '10' })
+    const response = await this.request(CNINFO_TOP_SEARCH_ENDPOINT, { method: 'POST', headers: cninfoHeaders(), body: form })
+    if (!response.ok) throw new Error(`CNINFO topSearch request failed with HTTP ${response.status}`)
+    const payload = await response.json() as unknown
+    const rows = Array.isArray(payload) ? payload : []
+    const exact = rows.find((row) => isExactSecurityMatch(row, secCode))
+    const orgId = exact === undefined ? undefined : textValue((exact as Record<string, unknown>).orgId)
+    if (orgId === undefined) throw new Error(`CNINFO_ORG_ID_NOT_FOUND:${secCode}`)
+    return orgId
+  }
   async list(request: ResearchAcquisitionRequest): Promise<readonly OfficialDisclosureRecord[]> {
     if ('industry' in request) return []
     const exchange = request.company.exchange?.toLowerCase(); const column = exchange === 'sse' || exchange === 'szse' ? exchange : request.company.symbol.startsWith('6') ? 'sse' : 'szse'
-    const exact = await this.queryAnnouncements({ stock: request.company.symbol, searchkey: '', pageNum: '1', pageSize: String(this.pageSize), tabName: 'fulltext', column }, request.asOf)
+    const stock = await this.companyStock(request.company.symbol)
+    const exact = await this.queryAnnouncements({ stock, searchkey: '', pageNum: '1', pageSize: String(this.pageSize), tabName: 'fulltext', column }, request.asOf)
     if (exact.length > 0 || !request.company.name) return exact
-    return this.queryAnnouncements({ stock: '', searchkey: request.company.name, pageNum: '1', pageSize: String(this.pageSize), tabName: 'fulltext', column }, request.asOf)
+    return this.queryAnnouncements({ stock, searchkey: request.company.name, pageNum: '1', pageSize: String(this.pageSize), tabName: 'fulltext', column }, request.asOf)
   }
   async listManagementCommunication(request: { readonly company: ResearchCompanyIdentity; readonly lookbackStartDate: string; readonly asOf: string }): Promise<readonly OfficialDisclosureRecord[]> {
     const exchange = request.company.exchange?.toLowerCase(); const column = exchange === 'sse' || exchange === 'szse' ? exchange : request.company.symbol.startsWith('6') ? 'sse' : 'szse'
+    const stock = await this.companyStock(request.company.symbol)
+    const seDate = `${cninfoShanghaiCalendarDate(request.lookbackStartDate)}~${cninfoShanghaiCalendarDate(request.asOf)}`
     const terms = ['投资者关系活动记录', '业绩说明会召开情况', '业绩说明会活动记录', '业绩说明会投资者问答']
     const records = new Map<string, OfficialDisclosureRecord>()
     for (const searchkey of terms) {
-      const matches = await this.queryAnnouncements({ stock: request.company.symbol, searchkey, pageNum: '1', pageSize: String(this.pageSize), tabName: 'fulltext', column, seDate: `${request.lookbackStartDate}~${request.asOf.slice(0, 10)}` }, request.asOf)
+      const matches = await this.queryAnnouncements({ stock, searchkey, pageNum: '1', pageSize: String(this.managementCommunicationPageSize), tabName: 'fulltext', column, seDate }, request.asOf, MAX_MANAGEMENT_COMMUNICATION_PAGES)
       for (const record of matches) records.set(record.url, record)
     }
     return [...records.values()].sort((left, right) => left.publishedAt.localeCompare(right.publishedAt) || left.url.localeCompare(right.url))
+  }
+  private async companyStock(secCode: string): Promise<string> {
+    return `${secCode},${await this.resolveOrganizationId(secCode)}`
   }
   async listIndustry(request: Extract<ResearchAcquisitionRequest, { industry: unknown }>): Promise<readonly OfficialDisclosureRecord[]> {
     const terms = [...new Set([request.industry.name, ...(request.industry.aliases ?? []), ...request.industry.searchTerms].map((term) => term.normalize('NFKC').replace(/\s+/g, ' ').trim()).filter((term) => term.length >= 2))].slice(0, 4)
@@ -57,17 +80,55 @@ export class CninfoOfficialDisclosureClient implements OfficialDisclosureClient 
     const document = await this.documentResolver.parse({ bytes, filename, mediaType })
     return { content: document.normalizedText, bytes, mediaType }
   }
-  private async queryAnnouncements(parameters: Record<string, string>, asOf?: string): Promise<readonly OfficialDisclosureRecord[]> {
+  private async queryAnnouncements(parameters: Record<string, string>, asOf?: string, maxPages = 1): Promise<readonly OfficialDisclosureRecord[]> {
+    const records = new Map<string, OfficialDisclosureRecord>()
+    for (let pageNum = 1; pageNum <= maxPages; pageNum += 1) {
+      const page = await this.queryAnnouncementPage({ ...parameters, pageNum: String(pageNum) }, asOf)
+      for (const record of page.records) records.set(record.url, record)
+      if (page.rawCount === 0 || !page.hasMore) break
+    }
+    return [...records.values()]
+  }
+  private async queryAnnouncementPage(parameters: Record<string, string>, asOf?: string): Promise<{ readonly records: readonly OfficialDisclosureRecord[]; readonly rawCount: number; readonly hasMore: boolean }> {
     const form = new URLSearchParams(parameters)
-    const response = await this.request(this.endpoint, { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'ResearchHub/PersonalResearchV1' }, body: form })
+    const response = await this.request(this.endpoint, { method: 'POST', headers: cninfoHeaders(), body: form })
     if (!response.ok) throw new Error(`CNINFO request failed with HTTP ${response.status}`)
     const payload = await response.json() as Record<string, unknown>
     const rows = Array.isArray(payload.announcements) ? payload.announcements : []
-    return rows.flatMap((row) => {
+    const records = rows.flatMap((row) => {
       const record = CninfoOfficialDisclosureClient.record(row)
       return record && (asOf === undefined || Date.parse(record.publishedAt) <= Date.parse(asOf)) ? [record] : []
     })
+    const hasMoreValue = payload.hasMore
+    const hasMore = typeof hasMoreValue === 'boolean'
+      ? hasMoreValue
+      : typeof hasMoreValue === 'string'
+        ? hasMoreValue.toLowerCase() === 'true'
+        : numberValue(payload.totalpages) > Number(parameters.pageNum)
+    return { records, rawCount: rows.length, hasMore }
   }
+}
+function cninfoHeaders(): HeadersInit { return { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'ResearchHub/PersonalResearchV1' } }
+function isExactSecurityMatch(value: unknown, secCode: string): value is Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) return false; const row = value as Record<string, unknown>; return textValue(row.code) === secCode || textValue(row.secCode) === secCode }
+function textValue(value: unknown): string | undefined { if (typeof value === 'string' && value.trim() !== '') return value.trim(); if (typeof value === 'number' && Number.isFinite(value)) return String(value); return undefined }
+function numberValue(value: unknown): number { const number = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : Number.NaN; return Number.isFinite(number) ? number : Number.NaN }
+export function cninfoShanghaiCalendarDate(value: string): string {
+  const dateOnly = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value)
+  if (dateOnly) return `${dateOnly[1]}-${dateOnly[2].padStart(2, '0')}-${dateOnly[3].padStart(2, '0')}`
+  const instant = Date.parse(value)
+  if (Number.isNaN(instant)) throw new Error('CNINFO_INVALID_CALENDAR_DATE')
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(instant))
+  const year = parts.find((part) => part.type === 'year')?.value
+  const month = parts.find((part) => part.type === 'month')?.value
+  const day = parts.find((part) => part.type === 'day')?.value
+  if (year === undefined || month === undefined || day === undefined) throw new Error('CNINFO_INVALID_CALENDAR_DATE')
+  return `${year}-${month}-${day}`
+}
+export function cninfoShanghaiLookbackDate(asOf: string, lookbackDays: number): string {
+  const calendarDate = cninfoShanghaiCalendarDate(asOf)
+  const date = new Date(`${calendarDate}T00:00:00.000Z`)
+  date.setUTCDate(date.getUTCDate() - lookbackDays)
+  return date.toISOString().slice(0, 10)
 }
 const validCninfoUrl = (value: unknown): value is string => { try { const url = new URL(String(value)); return url.protocol === 'https:' && (url.hostname === 'www.cninfo.com.cn' || url.hostname === 'static.cninfo.com.cn') } catch { return false } }
 export class OfficialDisclosureResearchPlugin implements ResearchAcquisitionPlugin {

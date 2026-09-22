@@ -10,7 +10,8 @@ test('AKShare expectations adapter exposes observed THS and EastMoney routes', a
 
 test('CNINFO management communication query sends bounded historical seDate and finds older IR records', async () => {
   const requests: URLSearchParams[] = []
-  const client = new CninfoOfficialDisclosureClient({ fetchImpl: async (_input, init) => {
+  const client = new CninfoOfficialDisclosureClient({ fetchImpl: async (input, init) => {
+    if (String(input).includes('/topSearch/')) return new Response(JSON.stringify([{ code: '600519', orgId: 'gssh0600519', zwjc: '贵州茅台' }]))
     requests.push(new URLSearchParams(String(init?.body ?? '')))
     return new Response(JSON.stringify({ announcements: [
       { announcementTitle: '关于召开2026年半年度业绩说明会的公告', adjunctUrl: '/finalpage/2026-09-01/999.PDF', announcementTime: '2026-09-01T00:00:00.000Z', secName: 'Fixture' },
@@ -19,7 +20,7 @@ test('CNINFO management communication query sends bounded historical seDate and 
   }, pageSize: 5 })
   const records = await client.listManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, lookbackStartDate: '2026-07-01', asOf: '2026-08-31T23:59:59.999Z' })
   assert.equal(requests.length, 4)
-  assert.ok(requests.every((request) => request.get('seDate') === '2026-07-01~2026-08-31'))
+  assert.ok(requests.every((request) => request.get('seDate') === '2026-07-01~2026-09-01'))
   assert.ok(requests.every((request) => request.get('pageSize') === '5'))
   assert.equal(records.length, 1)
   assert.equal(records[0]?.title, '投资者关系活动记录表')

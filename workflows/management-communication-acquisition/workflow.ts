@@ -2,7 +2,7 @@ import type { AcquisitionResult, DataRequirement, SourceCandidate, SourceExecuti
 import { runResearchDataAcquisition } from '../research-data-acquisition/workflow.ts'
 import { createManagementCommunicationSourceOperations } from '../../plugins/research-acquisition/management-communication.ts'
 import type { ManagementCommunicationSourceRequest } from '../../plugins/research-acquisition/management-communication.ts'
-import type { CninfoOfficialDisclosureClient } from '../../plugins/research-acquisition/official.ts'
+import { cninfoShanghaiLookbackDate, type CninfoOfficialDisclosureClient } from '../../plugins/research-acquisition/official.ts'
 import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
 import type { ExchangeQAPair, ManagementCommunicationAcquisitionRequest, ManagementCommunicationAcquisitionSources, ManagementCommunicationDocument, ManagementCommunicationExchange, ManagementCommunicationWorkflowResult } from './contracts.ts'
 import { dedupeDocuments, dedupeExchangeQa } from './dedupe.ts'
@@ -180,8 +180,7 @@ function validateRequest(request: ManagementCommunicationAcquisitionRequest): Ma
 
 function makeSourceRequest(request: ManagementCommunicationAcquisitionRequest, exchange = resolveExchange(request)): ManagementCommunicationSourceRequest {
   const lookbackDays = Math.min(730, Math.max(1, request.lookbackDays ?? 365))
-  const start = new Date(Date.parse(request.asOf) - lookbackDays * 86_400_000)
-  return { company: { symbol: request.ticker, ...(request.companyName === undefined ? {} : { name: request.companyName }), ...(exchange === undefined ? {} : { exchange }) }, asOf: request.asOf, lookbackStartDate: start.toISOString().slice(0, 10) }
+  return { company: { symbol: request.ticker, ...(request.companyName === undefined ? {} : { name: request.companyName }), ...(exchange === undefined ? {} : { exchange }) }, asOf: request.asOf, lookbackStartDate: cninfoShanghaiLookbackDate(request.asOf, lookbackDays) }
 }
 
 function diagnosticsForExchange(exchange: ManagementCommunicationExchange | undefined): readonly string[] {
