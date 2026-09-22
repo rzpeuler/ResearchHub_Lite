@@ -1,34 +1,35 @@
-# D3 v0.1 — Valuation Basis Evidence Design
+# D3 v0.1 — Valuation Basis Evidence Design Correction
 
-- Task: `RHL-D3-001-DESIGN`
-- Status: `DESIGN READY / SOURCE FEASIBILITY PROBED / SOL REVIEW PENDING`
+- Task: `RHL-D3-001-DESIGN-FIX-001`
+- Status: `DESIGN REVISED / SOL REVIEW PENDING`
 - Checked: 2026-09-23
 - Branch: `codex/d3-001-valuation-basis-evidence-design`
-- Baseline: `2d8e2d4cc335f6478a73a039793bbb94e63524fc`
+- Starting HEAD: `a85788fd1eda96984ce15239e0bcc43c3cee5e1c`
+- Required baseline: `a85788f`
 
 ## 1. Decision summary
 
-The forcing function is frozen:
+The revised forcing function is frozen:
 
-> Given `valuationDate`, `analysisAsOf`, issuer, and method (`PE`, `PB`, or
-> `EV_EBITDA`), produce a deterministic valuation basis with a market price,
-> an annual financial period, a publication/availability proof, and the
-> method-required financial inputs. Reject any input that was not available by
-> `analysisAsOf`; never substitute an LLM-generated number.
+> For a selected A-share issuer and current/fixed `analysisAsOf`, can the normal
+> Valuation product automatically build a provenance-correct PE/PB basis from
+> free public data, while distinguishing official report publication from
+> numeric-value-version PIT and refusing to claim historical PIT verification it
+> cannot prove?
 
-The probe supports a narrow D3 implementation plan:
+The probe supports a narrow PE/PB evidence-closure plan:
 
-1. Reuse the existing price and financial adapter seams, but separate the
-   original publisher from AKShare as the retrieval provider.
+1. Reuse and harden the existing price path, but separate the original
+   publisher from AKShare as the retrieval provider.
 2. Add a bounded official CNINFO publication crosswalk for annual reports.
 3. Treat EastMoney `NOTICE_DATE` as aggregator availability metadata, not as
    statutory publication authority.
-4. Support PE and PB subject to source-authority and point-in-time checks.
-5. Support cash/debt/shares only through an explicit issuer/accounting field
-   registry; do not use total liabilities or a generic bank formula.
-6. Leave EV/EBITDA unsupported in v0.1. The live probe found no direct EBITDA
-   amount or defensible source-native EBIT plus depreciation-and-amortisation
-   derivation.
+4. Normalize annual EPS/BVPS with explicit units, authority, provenance, and
+   separate publication/value-version PIT status.
+5. Make PB closure the principal new method gain; PE receives provenance and
+   PIT hardening on its existing EPS path.
+6. Defer cash, debt, net debt, historical shares, and all EV/EBITDA supporting
+   fields. The live probe found no defensible EBITDA amount or formula.
 
 This document is design-only. It does not modify runtime, Skill, Workflow,
 Plugin, Knowledge, schema, tests, application services, or valuation arithmetic.
@@ -38,15 +39,18 @@ Plugin, Knowledge, schema, tests, application services, or valuation arithmetic.
 ### In scope
 
 - Temporal and point-in-time rules for the existing valuation basis.
-- Source and provenance design for price, annual EPS/BVPS, cash, debt, shares,
-  and publication evidence.
+- Source and provenance design for price, annual EPS/BVPS, and publication/
+  value-version evidence.
 - Live feasibility results for `600519`, `000333`, `300750`, and `601398`.
-- A bounded acceptance plan for the later implementation task.
+- A bounded current and historical acceptance plan for the later implementation
+  task.
 
 ### Out of scope
 
 - Implementation of adapters, source policies, or CNINFO pagination.
 - Changes to `ValuationBasis`, `ValuationFinancialRow`, or arithmetic.
+- Cash/debt/net-debt and share-history implementation; those remain deferred
+  EV/EBITDA design assets.
 - Company, peer, DCF, forecast, LLM numeric, or frontend work.
 - New crawler infrastructure, generic provider abstractions, or a custom Agent
   Runtime.
@@ -81,6 +85,17 @@ The current financial row also has optional `publicationDate`, but the final
 selected publication date in the immutable selection proof or extend the basis
 evidence contract. Discarding the date after selection would make later audit
 of the PIT decision impossible.
+
+The existing D0 acquisition contract can already retain the publication-side
+provenance needed by this design: `originPublisher`, `originAuthority`,
+`retrievalProvider`, `sourceUrl`, `publishedAt`, and `retrievedAt` are present in
+`AcquisitionSourceMetadata`. The research-source contract also carries
+`candidate.publishedAt`, `retrievedAt`, and open metadata. It does not provide a
+typed `valueVersionStatus` or a numeric-source version identifier. Therefore the
+future implementation must use an immutable valuation-evidence/source object
+as the PIT ledger, or add a narrowly scoped metadata contract, while leaving
+`ValuationBasis` as the calculation projection. It must not enlarge
+`ValuationBasis` solely to make it an evidence ledger.
 
 Current method gates are unchanged:
 
@@ -122,7 +137,21 @@ diagnostics where the reason is materially different, including:
 - `VALUATION_BASIS_EBITDA_UNSUPPORTED`
 - `VALUATION_BASIS_SHARES_HISTORY_INCOMPLETE`
 
-## 4. Temporal model
+The PIT result itself is a separate design classification:
+
+- `PIT_VERIFIED`: official publication availability and exact numeric-value
+  version availability are both proven by `analysisAsOf`.
+- `PUBLICATION_VERIFIED_VALUE_VERSION_UNVERIFIED`: the official disclosure is
+  proven public, but the current aggregator value has no historical version
+  proof. This is usable as explicitly weaker research evidence only; it is not
+  historical PIT-safe.
+- `CURRENT_VALUE_ONLY`: the value is being used for a genuinely current run,
+  where `analysisAsOf` is approximately retrieval time, subject to period,
+  unit, authority, filing existence, and provenance checks. It is not a
+  reconstructed past state.
+- `UNAVAILABLE`: the required value or evidence cannot be established.
+
+## 4. Temporal and PIT model
 
 The basis has three independent dates plus the analysis cutoff:
 
@@ -130,45 +159,98 @@ The basis has three independent dates plus the analysis cutoff:
 |---|---|---|
 | `valuationDate` | market valuation date | price date must be the latest eligible trading observation on or before this date |
 | `reportDate` / `basisFiscalYear` | financial period end | v0.1 requires the annual report for the requested fiscal year |
-| `publicationDate` | public availability date of that annual report | must be on or before `analysisAsOf` |
-| `analysisAsOf` | information cutoff | no selected numeric or publication evidence may be later than this cutoff |
+| `officialPublishedAt` | official disclosure availability | must be on or before `analysisAsOf` for publication PIT |
+| `numericSourceRetrievedAt` | retrieval time of the numeric observation | records when the current source value was observed; it does not prove an older version existed |
+| `analysisAsOf` | information cutoff | no selected evidence may be described as available after this cutoff |
 
 Availability is separate from period. `REPORT_DATE=2024-12-31` means the
 financial period ended in 2024; it does not prove that the number was public in
 2024. `NOTICE_DATE` is not equivalent to `REPORT_DATE`.
 
-The required temporal matrix is:
+### Publication PIT
+
+Publication PIT asks whether the underlying financial disclosure existed
+publicly:
+
+```text
+officialPublishedAt <= analysisAsOf
+```
+
+CNINFO may establish this for an annual report. It proves disclosure
+availability, not the historical version of every number later exposed by an
+aggregator.
+
+### Numeric value-version PIT
+
+Numeric value-version PIT asks whether the exact numeric value consumed by the
+valuation can be proven to have been available in that form by the cutoff:
+
+```text
+valueAvailableAt <= analysisAsOf
+```
+
+Equivalent source-version evidence is acceptable only if it identifies the
+numeric source, version/snapshot, value, period, and availability timestamp.
+The current design has no such EastMoney version history. Therefore:
+
+```text
+CNINFO annual-report publication timestamp
+does not prove that today's EastMoney EPSJB/BPS value
+equals the value exposed by EastMoney at that historical timestamp.
+```
+
+The historical risk class is:
+
+```text
+original annual report
+  -> later correction / restatement / aggregator normalization
+  -> today's historical row
+```
+
+Today's FY2024 value may differ from the value observable immediately after the
+original publication. The design does not claim that EastMoney definitely
+restates every row; it records that the current design cannot prove that it
+does not. Strict historical numeric use therefore fails closed unless numeric
+value-version evidence is separately established.
+
+The temporal matrix is:
 
 | Matrix | Evidence | Selection rule | Failure |
 |---|---|---|---|
 | A — market state | dated close observation | latest close with `tradeDate <= valuationDate` | `SOURCE_UNAVAILABLE` or no eligible price |
 | B — financial period | annual report row | requested annual period; `reportDate <= valuationDate` | `INCOMPLETE_REQUIRED_FIELDS` or no annual row |
-| C — availability | official publication crosswalk plus source availability | `publicationDate <= analysisAsOf` | `POINT_IN_TIME_PUBLICATION_UNVERIFIED` or `DATA_NOT_PUBLISHED` |
+| C — publication PIT | official publication crosswalk | `officialPublishedAt <= analysisAsOf` | `DATA_NOT_PUBLISHED` or publication unverified |
+| D — numeric value-version PIT | versioned numeric snapshot/evidence | exact value/version available by `analysisAsOf` | `NO_ELIGIBLE_POINT_IN_TIME_DATA` or weaker status |
 
-For historical analysis, every method-required value must satisfy all three
-matrices. A current run without an explicit `analysisAsOf` may retain the
-existing `current_snapshot_unverified` status, but it must not be described as
-historically verified.
+For a historical run, PE/PB numeric basis selection must satisfy A, B, C, and D
+for `PIT_VERIFIED`. A current run where `analysisAsOf` is approximately
+retrieval time may consume the current EastMoney EPS/BPS row after period, unit,
+authority, official-filing-existence, and provenance checks, with status
+`CURRENT_VALUE_ONLY`. It must not be presented as a reconstruction of a past
+state.
 
 Examples from the probe:
 
-- `600519` FY2024 has an EastMoney `NOTICE_DATE` of 2025-04-03 and a CNINFO
-  annual-report publication date of 2025-04-03. With `analysisAsOf=2025-03-01`
-  it must be rejected; with `analysisAsOf=2025-04-10` it is eligible if the
-  official document crosswalk matches the report.
+- `600519` FY2024 has an EastMoney `NOTICE_DATE` and a CNINFO annual-report
+  publication date of 2025-04-03. With `analysisAsOf=2025-03-01` the report is
+  unavailable. With `analysisAsOf=2025-04-10`, publication PIT passes, but the
+  current EM EPSJB/BPS row remains
+  `PUBLICATION_VERIFIED_VALUE_VERSION_UNVERIFIED` unless a numeric version is
+  independently proven.
 - `000333` FY2024 was crosswalked to 2025-03-29; `300750` to 2025-03-15; and
   `601398` to 2025-03-29. Each must be rejected before its respective date.
 - The 2025 year-end rows have aggregator notice dates of 2026-04-17,
-  2026-03-31, 2026-03-10, and 2026-03-28 respectively. They are available by
-  the 2026-09-23 probe cutoff, but remain unavailable to earlier cutoffs.
+  2026-03-31, 2026-03-10, and 2026-03-28 respectively. They are visible in
+  the 2026-09-23 current probe, but their historical numeric versions are not
+  thereby proven for earlier cutoffs.
 
 The future acceptance run must cover these three windows explicitly:
 
 | Window | Required proof |
 |---|---|
-| Current/latest as of 2026-09-23 | current price transport, latest eligible annual row, and current-source limitations |
-| FY2025 / 2026 publication season | reject before each issuer's 2026 notice/publication date; accept after the matched official publication |
-| FY2024 / 2025 publication season | use the four crosswalk dates below; prove both before-publication rejection and after-publication acceptance |
+| Current/latest as of 2026-09-23 | current price transport, latest eligible annual row, and `CURRENT_VALUE_ONLY` limitations |
+| FY2025 / 2026 publication season | reject before each official publication; after publication expose publication PIT separately from numeric-version PIT |
+| FY2024 / 2025 publication season | use the four crosswalk dates below; prove before-publication rejection and the post-publication weaker/strict status |
 
 ## 5. Probe methodology and universe
 
@@ -196,7 +278,7 @@ failure.
 | Endpoint/function | Result on probe | Rows/range | Key raw fields | Origin and retrieval | PIT assessment |
 |---|---|---|---|---|---|
 | `stock_financial_analysis_indicator` | Success for all four | 14 rows each; 2023-03-31 to 2026-06-30 | `日期`, adjusted EPS and BVPS fields, ratios; no publication date | Sina endpoint via AKShare | Has period dates but no publication evidence; candidate cross-check only |
-| `stock_financial_analysis_indicator_em` | Success for all four | `600519` 103, `000333` 79, `300750` 41, `601398` 85; ranges begin 1998/2004/2014/2003 and end 2026-06-30 | `REPORT_DATE`, `NOTICE_DATE`, `EPSJB`, `BPS`, revenue, parent profit, `PER_EBIT` | EastMoney data center via AKShare | `NOTICE_DATE` gives aggregator availability metadata; requires official crosswalk |
+| `stock_financial_analysis_indicator_em` | Success for all four | `600519` 103, `000333` 79, `300750` 41, `601398` 85; ranges begin 1998/2004/2014/2003 and end 2026-06-30 | `REPORT_DATE`, `NOTICE_DATE`, `EPSJB`, `BPS`, revenue, parent profit, `PER_EBIT` | EastMoney data center via AKShare | `NOTICE_DATE` gives aggregator availability metadata; official crosswalk does not version the numeric row |
 | `stock_balance_sheet_by_report_em` | Success for all four | Same row counts as the EM indicator probe | non-bank `MONETARYFUNDS`, debt-like candidates, equity, liabilities, `SHARE_CAPITAL`; bank-specific fields | EastMoney PC HSF10 via AKShare | Period and notice dates present; field semantics and issuer class must be enforced |
 | `stock_zh_a_gbjg_em` | Success for all four | 16/20/20/20 rows for 600519/000333/300750/601398 | `变更日期`, `总股本`, `已上市流通A股`, `已流通股份`, `变动原因` | EastMoney data center via AKShare | Effective-date timeline exists, but wrapper hardcodes page 1/page size 20; historical coverage is not closed |
 | `stock_individual_info_em` | Failed for all four | no rows | source maps `f84` total shares and `f85` float shares | EastMoney `push2` via AKShare | Current snapshot only; live transport blocked and no effective date in the adapter result |
@@ -256,9 +338,13 @@ The EM annual rows contain useful period and notice metadata. Examples:
 | `601398` | 2024-12-31 | 2025-03-29 | 2026-03-28 | 1.00 / 10.83 |
 
 `EPSJB` and `BPS` are direct fields returned by an aggregator. They are not
-independent proof of statutory presentation. The annual rows also expose
-`PER_EBIT`, but that is a price-to-EBIT ratio, not an EBITDA amount and must not
-be used as EBITDA.
+independent proof of statutory presentation, and their current values are not
+historically versioned by the CNINFO crosswalk. They may support a current
+`CURRENT_VALUE_ONLY` run after the remaining period, unit, authority, filing,
+and provenance checks. For a fixed historical cutoff they are only
+`PUBLICATION_VERIFIED_VALUE_VERSION_UNVERIFIED` unless separate numeric
+snapshot evidence exists. The annual rows also expose `PER_EBIT`, but that is a
+price-to-EBIT ratio, not an EBITDA amount and must not be used as EBITDA.
 
 Balance-sheet shapes differ materially:
 
@@ -307,19 +393,28 @@ The primary v0.1 candidate is the EM annual indicator row:
 
 The Sina indicator endpoint is a useful cross-check and exposes adjusted EPS/BVPS
 fields, but it lacks a publication date. It cannot independently establish PIT
-eligibility. The EM `BPS` value should therefore be tagged as an aggregator
-field, and the future source policy should require an official publication
-crosswalk for historical use.
+eligibility. The EM `BPS` value should therefore be tagged as an S3 aggregator
+numeric observation. The future source policy should require an official
+publication crosswalk for publication PIT and separate numeric version evidence
+for strict historical PIT.
+
+This is the principal new D3 method closure: before D3, PE is partially
+executable from the existing EPS path while PB is commonly unavailable because
+BVPS is not normalized. After D3-001, PE evidence/provenance is hardened and PB
+becomes automatically executable for current runs where valid BPS exists. That
+does not make the current aggregator row historically PIT-verified.
 
 If a later source-backed derivation is needed, the deterministic alternative is
 attributable parent equity divided by an explicitly effective share count. This
 is not enabled by this design: both the equity-label mapping and the full
 share-count history must first be closed, and a derived value must not override
-an authoritative source conflict.
+an authoritative source conflict. Direct EM `BPS` is the only BVPS path active
+in D3-001 v0.1; Sina remains a compatible cross-check and values are never
+averaged.
 
-### 7.3 Cash
+### 7.3 Cash — probed and deferred
 
-For non-financial issuers, the smallest v0.1 candidate is the raw
+For future EV/EBITDA evidence, the smallest candidate is the raw
 `MONETARYFUNDS` field, retaining its original label, period, currency, and
 publication evidence. The design does not claim that this field separates
 restricted cash; if the source does not provide that distinction, the limitation
@@ -329,10 +424,10 @@ must be recorded and the field must not be silently adjusted.
 interchangeable with non-financial `MONETARYFUNDS`. Bank cash/debt treatment is a
 separate policy boundary. Generic reuse is forbidden.
 
-### 7.4 Debt
+### 7.4 Debt — probed and deferred
 
-Do not use `TOTAL_LIABILITIES`. For a non-financial issuer, a future explicit
-field registry may consider:
+Do not use `TOTAL_LIABILITIES`. For a future EV/EBITDA implementation, an
+explicit non-financial field registry may consider:
 
 - `BORROW_FUND` when the source exposes it as borrowings;
 - `NONCURRENT_LIAB_1YEAR` only after its accounting mapping is verified;
@@ -345,9 +440,10 @@ and total liabilities are excluded. If the source-to-accounting mapping is not
 closed for the selected issuer class, debt is unavailable rather than guessed.
 Banks require a different registry and are excluded from generic EV/EBITDA.
 
-### 7.5 Net debt
+### 7.5 Net debt — probed and deferred
 
-When and only when every selected component is eligible:
+When and only when every selected component is eligible in a future
+EV/EBITDA-specific policy:
 
 ```text
 netDebt = sum(eligible debt components) - eligible cash
@@ -370,7 +466,7 @@ Therefore `EV_EBITDA` is `NOT_CURRENTLY_SUPPORTABLE` in v0.1 and should return
 diagnostic where that is the established contract). No proxy, ratio inversion,
 net-profit adjustment, or LLM estimate is permitted.
 
-### 7.7 Shares
+### 7.7 Shares — probed and deferred
 
 The current snapshot candidate is `stock_individual_info_em`, where AKShare maps
 EastMoney `f84` to total shares and `f85` to float shares. It is not PIT-safe:
@@ -388,49 +484,52 @@ for `600519`, only recent events for `000333` and `300750`, and an older slice
 for `601398`. Until pagination and coverage are proven, historical shares must
 fail with `VALUATION_BASIS_SHARES_HISTORY_INCOMPLETE`.
 
-For EV/EBITDA market capitalization, the intended rule is the latest total
+For the deferred EV/EBITDA market capitalization path, the intended rule is the latest total
 share-count event effective on or before `valuationDate`, not an EPS weighted-
 average denominator. `SHARE_CAPITAL` from a balance sheet is not a substitute
 for outstanding shares without explicit unit and accounting mapping.
+
+No share pagination, historical reconstruction, or share-based BVPS derivation
+is authorized in D3-001 v0.1. Shares may return only through a separate design
+decision if a future approved deterministic BVPS derivation requires them.
 
 ## 8. Decision register
 
 | # | Decision | v0.1 resolution | State |
 |---:|---|---|---|
-| 1 | Temporal model | Keep `valuationDate`, annual `reportDate`, official `publicationDate`, and `analysisAsOf` separate | resolved |
+| 1 | Temporal model | Keep `valuationDate`, annual `reportDate`, official publication PIT, numeric value-version PIT, and `analysisAsOf` separate | resolved |
 | 2 | Reporting basis | Annual rows only; no interim-to-full-year substitution | resolved |
 | 3 | Publication source | CNINFO bounded official crosswalk; EM notice is S3 availability metadata | resolved |
-| 4 | BVPS strategy | Use EM `BPS` as an aggregator candidate with official PIT crosswalk; no unproven derivation override | resolved with implementation gate |
-| 5 | Cash definition | Non-financial `MONETARYFUNDS`; no restricted-cash inference; bank-specific treatment | resolved with accounting limitation |
-| 6 | Debt definition | Explicit non-financial registry; never total liabilities; bank registry separate | resolved with field-mapping blocker |
-| 7 | Net debt | Eligible debt components minus eligible cash | resolved |
+| 4 | BVPS strategy | Use EM `BPS` as an S3 aggregator observation; official crosswalk proves publication only; strict historical use needs value-version evidence | active D3 scope with PIT gate |
+| 5 | Cash definition | Retain `MONETARYFUNDS` candidate and bank differences as deferred evidence; no D3 runtime implementation | probed / deferred |
+| 6 | Debt definition | Retain explicit non-financial registry candidates; never total liabilities; no D3 runtime implementation | probed / deferred |
+| 7 | Net debt | Retain `eligible debt - eligible cash` as a future formula; no D3 runtime implementation | probed / deferred |
 | 8 | EBITDA | No direct or defensible derived amount found; keep unsupported | blocking for EV/EBITDA |
-| 9 | Shares temporal rule | Latest effective total-share event on or before valuation date | resolved |
-| 10 | Share history source | `stock_zh_a_gbjg_em`, but pagination/coverage must be closed | blocking for historical shares |
-| 11 | Financial-sector boundary | `601398` is a negative control; no generic bank EV formula | resolved |
-| 12 | Units | Explicit CNY, CNY/share, or share-count mappings; no numeric inference | resolved |
-| 13 | D0 source policy | Authority ladder, `FIRST_VALID`/`CROSS_CHECK`, numeric LLM fallback forbidden | resolved |
-| 14 | Failure semantics | Use the diagnostic vocabulary in sections 3 and 9; fail closed on ambiguity | resolved |
-| 15 | Smallest scope | Outcome B: BVPS + cash/debt + shares; leave EBITDA unsupported | resolved for Sol review |
+| 9 | Shares temporal rule | Retain latest effective total-share event rule as a future EV/EBITDA asset; no D3 runtime implementation | probed / deferred |
+| 10 | Share history source | `stock_zh_a_gbjg_em` exists but pagination/coverage is incomplete; do not implement it in D3 | probed / deferred |
+| 11 | Financial-sector boundary | `601398` is a negative/control issuer; bank PE/PB may be allowed when EPS/BVPS gates pass; no bank EV design | resolved |
+| 12 | Units | Explicit CNY/share mappings for market price, EPS, and BVPS; no numeric inference | active D3 scope |
+| 13 | D0 source policy | Active ladders only for market, EPS, BVPS, and publication proof; deferred fields have no D3 runtime policy | resolved |
+| 14 | Failure semantics | Separate publication rejection, value-version weakness, current-only use, and unavailable states; fail closed on ambiguity | resolved |
+| 15 | Smallest scope | Outcome D: PE/PB Evidence Closure; defer EV/EBITDA supporting fields | resolved for Sol review |
 
 Open/blocking items are implementation acceptance gates, not permission to expand
-scope: historical share pagination, exact accounting mapping for selected debt
-fields, and live market transport.
+scope: numeric value-version evidence for strict historical PE/PB, live market
+transport, and the future EV/EBITDA field closures.
 
-## 9. Eligibility matrix
+## 9. Method feasibility
 
-| Method / issuer class | D3 v0.1 status | Reason |
+| Method / analysis mode | D3 v0.1 status | Reason |
 |---|---|---|
-| PE, non-financial | `IMPLEMENTABLE_WITH_LIMITATION` | Annual EPS and publication crosswalk are feasible; price transport and authority cross-check remain acceptance requirements |
-| PB, non-financial | `IMPLEMENTABLE_WITH_LIMITATION` | Annual BPS is available from the aggregator with notice dates; official crosswalk and source-authority policy are required |
-| PE/PB, bank | `IMPLEMENTABLE_WITH_LIMITATION` | EPS/BVPS can be evaluated independently of generic EV cash/debt semantics; bank-specific accounting source policy remains required |
-| EV/EBITDA, non-financial | `NOT_CURRENTLY_SUPPORTABLE` | No defensible EBITDA; share history coverage and debt registry are incomplete |
-| EV/EBITDA, bank | `NOT_CURRENTLY_SUPPORTABLE` | No generic bank cash/debt definition and no EBITDA source |
+| PE current/latest | `IMPLEMENTABLE_WITH_LIMITATION` | Existing EPS path can be hardened; price transport, units, provenance, official filing existence, and current-value checks remain acceptance requirements |
+| PB current/latest | `IMPLEMENTABLE_WITH_LIMITATION` | EM BPS is available as an S3 aggregator observation; current-use gates and provenance remain acceptance requirements |
+| PE/PB strict historical PIT | `NOT_YET_PIT_VERIFIED` | CNINFO proves publication, but current EM/Sina rows have no numeric value-version proof; fail closed or expose the weaker status |
+| PE/PB bank current/latest | `IMPLEMENTABLE_WITH_LIMITATION` | `601398` may use PE/PB if EPS/BVPS gates pass; no generic bank EV treatment is permitted |
+| EV/EBITDA | `NOT_CURRENTLY_SUPPORTABLE` | EBITDA source/formula unavailable; cash/debt and shares are deferred secondary blockers |
 
-No field is marked `READY` by this probe. “Implementable with limitation” means
-that the source path and acceptance proof are sufficiently bounded for a future
-implementation task; it is not a claim that the current runtime already passes
-live source acceptance.
+No field or historical method is marked `READY` or `PIT_VERIFIED` by this probe.
+“Implementable with limitation” applies to the current product path only; it
+must not obscure the strict historical limitation.
 
 ## 10. Source policy and failure semantics
 
@@ -440,40 +539,72 @@ the valuation workflow, use `AUTHORITATIVE_NUMERIC` for numeric inputs, and
 record `originPublisher`, `originAuthority`, `retrievalProvider`, `sourceUrl`,
 `publishedAt`, and `retrievedAt` separately.
 
-The narrow policy shape is:
+The D3-001 active policy ladders are limited to:
 
 - `FIRST_VALID` within the approved authority ladder for a single low-risk
-  field, after period, unit, and PIT checks;
-- `CROSS_CHECK` for BVPS, debt components, and shares when an independent field
-  is available;
+  field among market price, EPS, BVPS, and official publication proof, after
+  period, unit, provenance, and the appropriate PIT checks;
+- `CROSS_CHECK` for EPS/BVPS when the Sina and EastMoney period/unit definitions
+  are compatible;
 - no LLM numeric fallback. D0's numeric synthesis prohibition remains binding;
 - zero or ambiguous official publication matches fail closed;
 - source disagreement is surfaced as `SOURCE_CONFLICT`, not averaged.
 
-AKShare is the retrieval provider, not the original publisher. The current
-adapter's `publisher: "AKShare"` label is insufficient for D3 provenance and
-must be corrected in the later implementation without changing the existing
-provider boundary.
+The authority split is explicit:
+
+| Role | D3 value |
+|---|---|
+| Origin numeric publisher | EastMoney for `EPSJB`/`BPS`; authority `S3_AGGREGATOR` |
+| Retrieval provider | AKShare |
+| Official filing availability | CNINFO; authority `S0_STATUTORY` for the disclosure evidence |
+| Cross-check publisher | Sina; a cross-check source, not a publication-PIT authority |
+
+CNINFO does not upgrade an S3 numeric observation to S0. AKShare is the
+retrieval provider, not the original publisher. The current adapter's
+`publisher: "AKShare"` label is insufficient for D3 provenance and must be
+corrected in the later implementation without changing the existing provider
+boundary. Cash/debt/shares have no active D3 source-policy ladder.
 
 ## 11. Smallest safe implementation scope
 
-Outcome B is selected:
+Outcome D — PE/PB Evidence Closure:
 
-> Implement BVPS + cash/debt + shares with explicit field registries and PIT
-> evidence; leave EBITDA unsupported.
+Implement:
 
-The practical ordering is:
+1. provenance-correct the existing `historicalMarketData()` path and verify
+   transport and date behavior;
+2. add the bounded CNINFO annual-report publication crosswalk and retain the
+   publication proof;
+3. normalize annual EPS/BVPS observations with deterministic unit mapping;
+4. separate EastMoney origin publisher/`S3_AGGREGATOR` from AKShare retrieval
+   provider and CNINFO `S0_STATUTORY` publication evidence;
+5. add publication-PIT gating and the explicit numeric value-version status;
+6. wire the normal Valuation Workflow and existing `methodEligibility` without
+   changing valuation arithmetic;
+7. make `EV_EBITDA` explicitly unavailable.
 
-1. official annual-report crosswalk and retained publication proof;
-2. annual EPS/BVPS selection with EM/Sina cross-check semantics;
-3. non-financial cash/debt registry with fail-closed unmapped fields;
-4. share-event pagination and valuation-date selection;
-5. PE/PB acceptance on the four-issuer probe set;
-6. leave EV/EBITDA gated until an approved EBITDA source and all required
-   financial definitions exist.
+Reuse:
 
-This scope does not authorize arithmetic changes. It only establishes evidence
-needed by the existing method calculations.
+- existing valuation arithmetic;
+- existing `historicalMarketData()`;
+- the AKShare bridge;
+- the existing CNINFO client boundary;
+- D0 contracts for authority, provenance, selection, and numeric-truth policy.
+
+Defer:
+
+- cash, debt, and net debt;
+- historical share pagination and valuation-date share reconstruction;
+- EV/EBITDA and any supporting-field implementation;
+- peers/comps and DCF.
+
+Cash/debt/net-debt and shares remain in this document as `PROBED / DEFERRED`
+design assets. No D0 runtime policy for them is authorized by D3-001 v0.1.
+Shares may return through a separate design decision only if an approved
+deterministic BVPS derivation later requires them.
+
+This scope does not authorize arithmetic changes. It establishes evidence for
+the existing PE/PB method calculations and truthful EV/EBITDA unavailability.
 
 ## 12. Architecture placement
 
@@ -493,23 +624,58 @@ Valuation arithmetic remains in the existing Skill contract.
 
 ## 13. Future acceptance proof
 
-The implementation task must provide machine-readable evidence for at least
-`600519` and `000333` (or `300750`) covering:
+The implementation task must provide machine-readable current product-path
+evidence for at least `600519` and `000333` (or `300750`), plus `601398` as a
+control. The current run must prove:
 
-- a current run with a transport-verified market price;
-- an annual historical run whose publication date is before `analysisAsOf`;
-- a before-publication run that rejects the same report;
-- no financial row or source evidence after the analysis cutoff;
-- report date, publication date, price date, units, source authority, original
-  publisher, retrieval provider, and source URLs;
-- PE and PB eligibility or the exact fail-closed reason;
-- EV/EBITDA rejection with the explicit EBITDA-unavailable reason;
-- `601398` as the negative control for generic bank cash/debt/EV treatment;
-- a proof that no LLM-generated numeric field entered the basis.
+- transport-verified eligible price;
+- annual EPS/BVPS with `reportDate`, units, and positive method gates where
+  applicable;
+- original publisher, authority, retrieval provider, retrieval timestamp, and
+  source URLs;
+- CNINFO filing existence and publication crosswalk;
+- a construction of `ValuationBasis` and normal `methodEligibility` behavior;
+- `CURRENT_VALUE_ONLY` rather than a historical PIT claim when numeric version
+  evidence is not available;
+- explicit `EV_EBITDA` unavailability with no fabricated fields.
+
+### Publication rejection test
+
+For at least one issuer, set `analysisAsOf` before the CNINFO annual-report
+publication:
+
+```text
+analysisAsOf before official annual-report publication -> reject
+```
+
+The financial period is unavailable for that cutoff. This test is mandatory and
+proves publication PIT failure.
+
+### Post-publication numeric-version test
+
+Run again after publication:
+
+```text
+official publication availability passes
+```
+
+Then mark strict historical PIT as `PIT_VERIFIED` only if the exact numeric
+source/version is shown to have been available by `analysisAsOf`. Without that
+proof, return or expose
+`PUBLICATION_VERIFIED_VALUE_VERSION_UNVERIFIED`; strict historical PE/PB
+acceptance must fail. The test must expose this distinction rather than infer
+numeric version from the CNINFO crosswalk.
+
+The acceptance evidence must also prove that no selected financial row or source
+evidence is later than the cutoff, that Sina/EastMoney disagreement produces
+`SOURCE_CONFLICT` with both values preserved, and that no LLM-generated numeric
+field entered the basis.
 
 The acceptance test must distinguish fixture-backed deterministic tests from
-authenticated/live provider acceptance. A fixture can prove selection and
-arithmetic wiring; it cannot prove source availability or publication authority.
+authenticated/live provider acceptance. A fixture can prove selection,
+classification, and arithmetic wiring; it cannot prove source availability or
+publication authority. No cash/debt/share pagination acceptance belongs in
+D3-001 v0.1.
 
 ## 14. External feasibility sources checked
 
@@ -530,5 +696,5 @@ Checked on 2026-09-23:
 This document is ready for Sol review. The live source feasibility probe is
 complete, the current implementation boundary is preserved, EV/EBITDA is
 explicitly blocked, and no implementation should begin until Sol accepts the
-temporal model, publication crosswalk, cash/debt registry, share-history
-coverage requirement, and the Outcome B scope.
+separate publication/value-version PIT model, publication crosswalk, active
+PE/PB scope, and the deferred EV/EBITDA evidence assets.
