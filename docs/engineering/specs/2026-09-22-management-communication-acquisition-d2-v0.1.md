@@ -1,6 +1,6 @@
 # Management Communication Acquisition Foundation v0.1 (D2-001)
 
-Status: DESIGN SPEC — IMPLEMENTATION NOT STARTED  
+Status: IMPLEMENTED — SOL ACCEPTANCE PENDING
 Baseline: `origin/main = 14700808154b4d1a459ad16965797a349cd9ea4d`  
 Stage: Data Source Wave D2
 
@@ -204,7 +204,7 @@ injected runner seams and current provider behavior must remain unchanged.
 
 The Workflow implementation is limited to a
 `workflows/management-communication-acquisition/` module containing contracts,
-policy, workflow, and index files. Concrete external capabilities remain in
+normalization, dedupe, policy, workflow, and index files. Concrete external capabilities remain in
 the existing research-acquisition Plugin area. No root-level `providers/`,
 `drivers/`, `engines/`, `data/`, `common/`, or `capabilities/` architecture is
 authorized. No client, public API, Knowledge schema, Writer, Skill, Scheduler,
@@ -226,7 +226,51 @@ must use bounded requests, emit privacy-safe structural evidence, and report
 provider availability separately from semantic acceptance. It is never part of
 the normal test suite and cannot establish authenticated production E2E.
 
-## 10. Explicit non-goals
+## 10. Implementation facts from the accepted source probes
+
+The bounded probe runtime used Node `v24.16.0`, Python `3.12.10`, and AKShare
+`1.18.64`.
+
+The existing `CninfoOfficialDisclosureClient` remains the CNINFO path. Its
+observed list contract is `title`, `url`, `publishedAt`, and `issuer`; the D2
+operation reuses its list/fetch and applies the bounded IR title mapping before
+normalization. A live CNINFO IR fetch in the acceptance environment was
+blocked by the existing `DocumentInputResolver` managed-Python runtime not
+being ready; this is reported as a provider/runtime limitation, not as
+fabricated live success.
+
+The existing AKShare bridge now exposes only these explicit D2 operations:
+
+```text
+exchange_qa_szse        → stock_irm_cninfo
+exchange_qa_szse_answer → stock_irm_ans_cninfo
+exchange_qa_sse         → stock_sns_sseinfo
+institutional research → stock_jgdy_detail_em(date)
+```
+
+Observed SZSE fields include `股票代码`, `问题`, `提问时间`, `更新时间`,
+`问题编号`, `回答ID`, and `回答内容`. `更新时间` is treated as the concrete
+public answer/update time for this source when no separate publication field is
+present; it is preserved as `answeredAt` and used deterministically as
+`publishedAt`. A live run returned 19 raw rows and 14 accepted Q&A pairs after
+contract, timestamp, and PIT validation.
+
+Observed SSE currently returned an empty result and emitted the provider's
+existing instability warning; no live SSE evidence is claimed.
+
+Observed EastMoney institutional-research fields include `代码`, `名称`,
+`调研机构`, `机构类型`, `调研人员`, `接待方式`, `接待人员`, `接待地点`,
+`调研日期`, and `公告日期`. The D2 normalizer uses the endpoint identity as
+the deterministic `INVESTOR_RELATIONS_RECORD` mapping and serializes the raw
+row structure as evidence content without fabricating a narrative. A bounded
+live run returned 1,971 rows for the requested window but no accepted row for
+the selected ticker.
+
+No company-official-IR F1 capability or LLM runtime candidate is registered in
+D2-001. The executable IR policy is CNINFO primary followed directly by
+EastMoney F2.
+
+## 11. Explicit non-goals
 
 The following are explicitly excluded from D2-001:
 

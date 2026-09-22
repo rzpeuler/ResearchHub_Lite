@@ -4,7 +4,8 @@ import { promisify } from 'node:util'
 const execFileAsync = promisify(execFile)
 export interface AkshareDataRequest { readonly symbol: string; readonly startDate?: string; readonly endDate?: string }
 export interface AkshareForecastRequest extends AkshareDataRequest { readonly indicator?: string }
-export interface AkshareDataClient { companyBasic(request: AkshareDataRequest): Promise<unknown>; financialData(request: AkshareDataRequest): Promise<unknown>; historicalMarketData(request: AkshareDataRequest): Promise<unknown>; profitForecastThs?(request: AkshareForecastRequest): Promise<unknown>; researchReportEm?(request: AkshareDataRequest): Promise<unknown>; profitForecastEm?(request?: AkshareDataRequest): Promise<unknown>; indexDaily?(request: AkshareDataRequest): Promise<unknown>; sectorPerformance?(request: AkshareDataRequest): Promise<unknown>; tradingCalendar?(request: AkshareDataRequest): Promise<unknown> }
+export interface AkshareInstitutionalResearchRequest { readonly date: string }
+export interface AkshareDataClient { companyBasic(request: AkshareDataRequest): Promise<unknown>; financialData(request: AkshareDataRequest): Promise<unknown>; historicalMarketData(request: AkshareDataRequest): Promise<unknown>; profitForecastThs?(request: AkshareForecastRequest): Promise<unknown>; researchReportEm?(request: AkshareDataRequest): Promise<unknown>; profitForecastEm?(request?: AkshareDataRequest): Promise<unknown>; indexDaily?(request: AkshareDataRequest): Promise<unknown>; sectorPerformance?(request: AkshareDataRequest): Promise<unknown>; tradingCalendar?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSzse?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSzseAnswer?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSse?(request: AkshareDataRequest): Promise<unknown>; institutionalResearchDetail?(request: AkshareInstitutionalResearchRequest): Promise<unknown> }
 export interface AkshareClientOptions { readonly pythonCommand?: string; readonly timeoutMs?: number; readonly runner?: (script: string, args: readonly string[]) => Promise<string> }
 
 const BRIDGE = `import json,sys,akshare as ak
@@ -20,6 +21,10 @@ elif kind=='calendar': value=ak.tool_trade_date_hist_sina()
 elif kind=='ths-profit-forecast': value=ak.stock_profit_forecast_ths(symbol=symbol, indicator=indicator)
 elif kind=='em-research-report': value=ak.stock_research_report_em(symbol=symbol)
 elif kind=='em-profit-forecast': value=ak.stock_profit_forecast_em()
+elif kind=='szse-qa': value=ak.stock_irm_cninfo(symbol=symbol)
+elif kind=='szse-qa-answer': value=ak.stock_irm_ans_cninfo(symbol=symbol)
+elif kind=='sse-qa': value=ak.stock_sns_sseinfo(symbol=symbol)
+elif kind=='em-institutional-research': value=ak.stock_jgdy_detail_em(date=start_date)
 else: value=ak.stock_zh_a_hist(symbol=symbol,period='daily',start_date=start_date or None,end_date=end_date or None,adjust='')
 print(value.to_json(orient='records',force_ascii=False))`
 
@@ -32,6 +37,10 @@ export class AkshareDataAdapter implements AkshareDataClient {
   profitForecastThs(request: AkshareForecastRequest): Promise<unknown> { return this.run('ths-profit-forecast', request, request.indicator ?? '') }
   researchReportEm(request: AkshareDataRequest): Promise<unknown> { return this.run('em-research-report', request) }
   profitForecastEm(request: AkshareDataRequest = { symbol: '' }): Promise<unknown> { return this.run('em-profit-forecast', request) }
+  exchangeQaSzse(request: AkshareDataRequest): Promise<unknown> { return this.run('szse-qa', request) }
+  exchangeQaSzseAnswer(request: AkshareDataRequest): Promise<unknown> { return this.run('szse-qa-answer', request) }
+  exchangeQaSse(request: AkshareDataRequest): Promise<unknown> { return this.run('sse-qa', request) }
+  institutionalResearchDetail(request: AkshareInstitutionalResearchRequest): Promise<unknown> { return this.run('em-institutional-research', { symbol: '', startDate: request.date }) }
   indexDaily(request: AkshareDataRequest): Promise<unknown> { return this.run('index', request) }
   sectorPerformance(request: AkshareDataRequest): Promise<unknown> { return this.run('sector', request) }
   tradingCalendar(request: AkshareDataRequest): Promise<unknown> { return this.run('calendar', request) }
