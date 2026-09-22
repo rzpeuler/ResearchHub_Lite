@@ -209,6 +209,12 @@ test('candidate identity canonicalizes qualifier and topic-tag order but changes
   assert.equal(firstFormal.formalGuidanceCandidates[0]?.candidateId, reorderedFormal.formalGuidanceCandidates[0]?.candidateId)
   assert.notEqual(firstFormal.formalGuidanceCandidates[0]?.candidateId, changedFormal.formalGuidanceCandidates[0]?.candidateId)
 
+  const numericText = '收入20亿元或21亿元。'
+  const runNumeric = (rawPoint: string) => runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'statutory_disclosure', source: statutory(numericText) }, reasoningExecutor: new SequenceExecutor([{ formalGuidanceCandidates: [{ metric: 'revenue', guidanceType: 'point', rawPoint, rawUnit: '亿元', qualifiers: [], evidence: { sourceObjectId: 'stat-1', exactText: numericText } }], managementOutlookCandidates: [], kpiCandidates: [], structuredQaCandidates: [] }]) })
+  const firstNumeric = await runNumeric('20')
+  const changedNumeric = await runNumeric('21')
+  assert.notEqual(firstNumeric.formalGuidanceCandidates[0]?.candidateId, changedNumeric.formalGuidanceCandidates[0]?.candidateId)
+
   const source = pair('Q', '订单保持增长。')
   const runQa = (topicTags: readonly string[]) => runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'exchange_qa', sources: [source] }, reasoningExecutor: new SequenceExecutor([{ formalGuidanceCandidates: [], managementOutlookCandidates: [], kpiCandidates: [], structuredQaCandidates: [{ pairId: 'qa-1', topicTags, claimSpans: [{ sourceObjectId: 'qa-1', exactText: source.answer }], managementStatementSpans: [], explicitlyStatedMetrics: ['orders'] }] }]) })
   const firstQa = await runQa(['orders', 'international'])
