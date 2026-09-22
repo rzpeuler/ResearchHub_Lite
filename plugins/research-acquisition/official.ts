@@ -5,11 +5,16 @@ import { DocumentInputResolver } from '../document/input-resolver.ts'
 const CNINFO_TOP_SEARCH_ENDPOINT = 'https://www.cninfo.com.cn/new/information/topSearch/query'
 const MAX_MANAGEMENT_COMMUNICATION_PAGES = 10
 const MAX_MANAGEMENT_COMMUNICATION_PAGE_SIZE = 30
+const MAX_ANNUAL_REPORT_PAGES = 6
+const MAX_ANNUAL_REPORT_PAGE_SIZE = 30
+const CNINFO_ANNUAL_REPORT_CATEGORY = 'category_ndbg_szsh'
 
-export interface OfficialDisclosureRecord { readonly title: string; readonly url: string; readonly publishedAt: string; readonly issuer?: string; readonly content?: string }
+export interface OfficialDisclosureRecord { readonly title: string; readonly url: string; readonly publishedAt: string; readonly rawPublishedAt?: string; readonly announcementId?: string; readonly issuer?: string; readonly content?: string }
 export interface OfficialDisclosureDocument { readonly content: string; readonly bytes: Uint8Array; readonly mediaType: string }
-export interface OfficialDisclosureClient { list(request: ResearchAcquisitionRequest): Promise<readonly OfficialDisclosureRecord[]>; listManagementCommunication?(request: { readonly company: ResearchCompanyIdentity; readonly lookbackStartDate: string; readonly asOf: string }): Promise<readonly OfficialDisclosureRecord[]>; listIndustry?(request: Extract<ResearchAcquisitionRequest, { industry: unknown }>): Promise<readonly OfficialDisclosureRecord[]>; fetch(record: OfficialDisclosureRecord): Promise<string>; fetchDocument?(record: OfficialDisclosureRecord): Promise<OfficialDisclosureDocument> }
-export interface CninfoOfficialDisclosureClientOptions { readonly fetchImpl?: typeof fetch; readonly endpoint?: string; readonly pageSize?: number; readonly industryPageSize?: number; readonly timeoutMs?: number; readonly documentResolver?: Pick<DocumentInputResolver, 'parse'> }
+export interface AnnualReportPublicationRequest { readonly company: ResearchCompanyIdentity; readonly fiscalYear: number; readonly asOf?: string }
+export interface AnnualReportPublicationProof { readonly issuer: string; readonly fiscalYear: number; readonly reportTitle: string; readonly officialPublishedAt: string; readonly rawPublishedAt: string; readonly sourceUrl: string; readonly announcementId?: string; readonly originPublisher: 'CNINFO'; readonly originAuthority: 'S0_STATUTORY'; readonly retrievalProvider: 'CNINFO'; readonly retrievedAt: string }
+export interface OfficialDisclosureClient { list(request: ResearchAcquisitionRequest): Promise<readonly OfficialDisclosureRecord[]>; listManagementCommunication?(request: { readonly company: ResearchCompanyIdentity; readonly lookbackStartDate: string; readonly asOf: string }): Promise<readonly OfficialDisclosureRecord[]>; listIndustry?(request: Extract<ResearchAcquisitionRequest, { industry: unknown }>): Promise<readonly OfficialDisclosureRecord[]>; resolveAnnualReportPublication?(request: AnnualReportPublicationRequest): Promise<AnnualReportPublicationProof | undefined>; fetch(record: OfficialDisclosureRecord): Promise<string>; fetchDocument?(record: OfficialDisclosureRecord): Promise<OfficialDisclosureDocument> }
+export interface CninfoOfficialDisclosureClientOptions { readonly fetchImpl?: typeof fetch; readonly endpoint?: string; readonly pageSize?: number; readonly industryPageSize?: number; readonly timeoutMs?: number; readonly now?: () => string; readonly documentResolver?: Pick<DocumentInputResolver, 'parse'> }
 export class CninfoOfficialDisclosureClient implements OfficialDisclosureClient {
   private readonly fetchImpl: typeof fetch
   private readonly endpoint: string
@@ -17,10 +22,11 @@ export class CninfoOfficialDisclosureClient implements OfficialDisclosureClient 
   private readonly managementCommunicationPageSize: number
   private readonly industryPageSize: number
   private readonly timeoutMs: number
+  private readonly now: () => string
   private readonly documentResolver: Pick<DocumentInputResolver, 'parse'>
-  constructor(options: CninfoOfficialDisclosureClientOptions = {}) { this.fetchImpl = options.fetchImpl ?? fetch; this.endpoint = options.endpoint ?? 'https://www.cninfo.com.cn/new/hisAnnouncement/query'; this.pageSize = Math.min(100, Math.max(1, options.pageSize ?? 20)); this.managementCommunicationPageSize = Math.min(MAX_MANAGEMENT_COMMUNICATION_PAGE_SIZE, this.pageSize); this.industryPageSize = Math.min(30, Math.max(1, options.industryPageSize ?? 10)); this.timeoutMs = Math.min(20_000, Math.max(1, options.timeoutMs ?? 15_000)); this.documentResolver = options.documentResolver ?? new DocumentInputResolver() }
+  constructor(options: CninfoOfficialDisclosureClientOptions = {}) { this.fetchImpl = options.fetchImpl ?? fetch; this.endpoint = options.endpoint ?? 'https://www.cninfo.com.cn/new/hisAnnouncement/query'; this.pageSize = Math.min(100, Math.max(1, options.pageSize ?? 20)); this.managementCommunicationPageSize = Math.min(MAX_MANAGEMENT_COMMUNICATION_PAGE_SIZE, this.pageSize); this.industryPageSize = Math.min(30, Math.max(1, options.industryPageSize ?? 10)); this.timeoutMs = Math.min(20_000, Math.max(1, options.timeoutMs ?? 15_000)); this.now = options.now ?? (() => new Date().toISOString()); this.documentResolver = options.documentResolver ?? new DocumentInputResolver() }
   private async request(input: string, init: RequestInit = {}): Promise<Response> { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), this.timeoutMs); try { return await this.fetchImpl(input, { ...init, signal: controller.signal }) } finally { clearTimeout(timer) } }
-  private static record(row: unknown): OfficialDisclosureRecord | undefined { if (!row || typeof row !== 'object') return undefined; const value = row as Record<string, unknown>; const title = typeof value.announcementTitle === 'string' ? value.announcementTitle.replace(/<[^>]+>/g, '').trim() : typeof value.title === 'string' ? value.title.trim() : ''; const adjunctUrl = typeof value.adjunctUrl === 'string' ? value.adjunctUrl : ''; const url = adjunctUrl.startsWith('http') ? adjunctUrl : adjunctUrl ? `https://static.cninfo.com.cn/${adjunctUrl.replace(/^\/+/, '')}` : ''; const rawDate = value.announcementTime; let date: Date | undefined; if (typeof rawDate === 'number' || (typeof rawDate === 'string' && /^\d{10,13}$/.test(rawDate))) { const timestamp = Number(rawDate); if (Number.isFinite(timestamp)) date = new Date(timestamp) } else if (typeof rawDate === 'string' && !Number.isNaN(Date.parse(rawDate))) date = new Date(rawDate); const parsedDate = date && !Number.isNaN(date.getTime()) ? date.toISOString() : ''; if (!title || !url || !parsedDate || !validCninfoUrl(url)) return undefined; return { title, url, publishedAt: parsedDate, issuer: typeof value.secName === 'string' ? value.secName : undefined } }
+  private static record(row: unknown): OfficialDisclosureRecord | undefined { if (!row || typeof row !== 'object') return undefined; const value = row as Record<string, unknown>; const title = typeof value.announcementTitle === 'string' ? value.announcementTitle.replace(/<[^>]+>/g, '').trim() : typeof value.title === 'string' ? value.title.trim() : ''; const adjunctUrl = typeof value.adjunctUrl === 'string' ? value.adjunctUrl : ''; const url = adjunctUrl.startsWith('http') ? adjunctUrl : adjunctUrl ? `https://static.cninfo.com.cn/${adjunctUrl.replace(/^\/+/, '')}` : ''; const rawValue = value.announcementTime; const rawDate = typeof rawValue === 'number' ? String(rawValue) : typeof rawValue === 'string' ? rawValue : ''; let date: Date | undefined; if (typeof rawValue === 'number' || (typeof rawValue === 'string' && /^\d{10,13}$/.test(rawValue))) { const timestamp = Number(rawValue); if (Number.isFinite(timestamp)) date = new Date(timestamp < 10_000_000_000 ? timestamp * 1000 : timestamp) } else if (typeof rawValue === 'string' && !Number.isNaN(Date.parse(rawValue))) date = new Date(rawValue); const parsedDate = date && !Number.isNaN(date.getTime()) ? date.toISOString() : ''; const announcementId = textValue(value.announcementId) ?? textValue(value.id) ?? textValue(value.adjunctId); if (!title || !url || !parsedDate || !validCninfoUrl(url)) return undefined; return { title, url, publishedAt: parsedDate, rawPublishedAt: rawDate || parsedDate, ...(announcementId === undefined ? {} : { announcementId }), issuer: typeof value.secName === 'string' ? value.secName : undefined } }
   async resolveOrganizationId(secCode: string): Promise<string> {
     if (!/^\d{6}$/.test(secCode)) throw new Error(`CNINFO_INVALID_SECURITY_CODE:${secCode}`)
     const form = new URLSearchParams({ keyWord: secCode, maxNum: '10' })
@@ -55,6 +61,17 @@ export class CninfoOfficialDisclosureClient implements OfficialDisclosureClient 
   }
   private async companyStock(secCode: string): Promise<string> {
     return `${secCode},${await this.resolveOrganizationId(secCode)}`
+  }
+  async resolveAnnualReportPublication(request: AnnualReportPublicationRequest): Promise<AnnualReportPublicationProof | undefined> {
+    if (!Number.isInteger(request.fiscalYear) || request.fiscalYear < 1990 || request.fiscalYear > 2100) throw new Error('CNINFO_INVALID_FISCAL_YEAR')
+    const exchange = request.company.exchange?.toLowerCase(); const column = exchange === 'sse' || exchange === 'szse' ? exchange : request.company.symbol.startsWith('6') ? 'sse' : 'szse'
+    const startDate = `${request.fiscalYear + 1}-01-01`
+    const requestedEnd = request.asOf === undefined ? `${request.fiscalYear + 2}-12-31` : cninfoShanghaiCalendarDate(request.asOf)
+    const endDate = requestedEnd < startDate ? startDate : requestedEnd > `${request.fiscalYear + 2}-12-31` ? `${request.fiscalYear + 2}-12-31` : requestedEnd
+    const records = await this.queryAnnouncements({ stock: await this.companyStock(request.company.symbol), searchkey: String(request.fiscalYear), pageNum: '1', pageSize: String(MAX_ANNUAL_REPORT_PAGE_SIZE), tabName: 'fulltext', column, category: CNINFO_ANNUAL_REPORT_CATEGORY, seDate: `${startDate}~${endDate}` }, request.asOf, MAX_ANNUAL_REPORT_PAGES)
+    const selected = selectCninfoAnnualReportRecord(records, request.fiscalYear)
+    if (selected === undefined) return undefined
+    return { issuer: selected.issuer ?? request.company.name ?? request.company.symbol, fiscalYear: request.fiscalYear, reportTitle: selected.title, officialPublishedAt: selected.publishedAt, rawPublishedAt: selected.rawPublishedAt ?? selected.publishedAt, sourceUrl: selected.url, ...(selected.announcementId === undefined ? {} : { announcementId: selected.announcementId }), originPublisher: 'CNINFO', originAuthority: 'S0_STATUTORY', retrievalProvider: 'CNINFO', retrievedAt: this.now() }
   }
   async listIndustry(request: Extract<ResearchAcquisitionRequest, { industry: unknown }>): Promise<readonly OfficialDisclosureRecord[]> {
     const terms = [...new Set([request.industry.name, ...(request.industry.aliases ?? []), ...request.industry.searchTerms].map((term) => term.normalize('NFKC').replace(/\s+/g, ' ').trim()).filter((term) => term.length >= 2))].slice(0, 4)
@@ -112,6 +129,19 @@ function cninfoHeaders(): HeadersInit { return { accept: 'application/json', 'co
 function isExactSecurityMatch(value: unknown, secCode: string): value is Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) return false; const row = value as Record<string, unknown>; return textValue(row.code) === secCode || textValue(row.secCode) === secCode }
 function textValue(value: unknown): string | undefined { if (typeof value === 'string' && value.trim() !== '') return value.trim(); if (typeof value === 'number' && Number.isFinite(value)) return String(value); return undefined }
 function numberValue(value: unknown): number { const number = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : Number.NaN; return Number.isFinite(number) ? number : Number.NaN }
+export function isCninfoAnnualReportBodyTitle(title: string, fiscalYear: number): boolean {
+  const normalized = title.normalize('NFKC').replace(/\s+/g, '')
+  if (!normalized.includes(`${fiscalYear}年年度报告`)) return false
+  return !/(摘要|英文|审计报告|内控报告|提示性公告|取消公告|更正公告|更正后|修订|补充公告)/u.test(normalized)
+}
+export function selectCninfoAnnualReportRecord(records: readonly OfficialDisclosureRecord[], fiscalYear: number): OfficialDisclosureRecord | undefined {
+  const candidates = records.filter((record) => isCninfoAnnualReportBodyTitle(record.title, fiscalYear)).sort((left, right) => left.publishedAt.localeCompare(right.publishedAt) || left.url.localeCompare(right.url))
+  if (candidates.length === 0) return undefined
+  const earliest = candidates[0]!
+  const samePublication = candidates.filter((record) => record.publishedAt === earliest.publishedAt)
+  if (samePublication.length > 1) throw new Error('ANNUAL_REPORT_PUBLICATION_AMBIGUOUS')
+  return earliest
+}
 export function cninfoShanghaiCalendarDate(value: string): string {
   const dateOnly = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value)
   if (dateOnly) return `${dateOnly[1]}-${dateOnly[2].padStart(2, '0')}-${dateOnly[3].padStart(2, '0')}`

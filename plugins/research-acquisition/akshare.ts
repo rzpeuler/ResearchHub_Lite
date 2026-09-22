@@ -5,7 +5,7 @@ const execFileAsync = promisify(execFile)
 export interface AkshareDataRequest { readonly symbol: string; readonly startDate?: string; readonly endDate?: string }
 export interface AkshareForecastRequest extends AkshareDataRequest { readonly indicator?: string }
 export interface AkshareInstitutionalResearchRequest { readonly date: string }
-export interface AkshareDataClient { companyBasic(request: AkshareDataRequest): Promise<unknown>; financialData(request: AkshareDataRequest): Promise<unknown>; historicalMarketData(request: AkshareDataRequest): Promise<unknown>; profitForecastThs?(request: AkshareForecastRequest): Promise<unknown>; researchReportEm?(request: AkshareDataRequest): Promise<unknown>; profitForecastEm?(request?: AkshareDataRequest): Promise<unknown>; indexDaily?(request: AkshareDataRequest): Promise<unknown>; sectorPerformance?(request: AkshareDataRequest): Promise<unknown>; tradingCalendar?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSzse?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSzseAnswer?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSse?(request: AkshareDataRequest): Promise<unknown>; institutionalResearchDetail?(request: AkshareInstitutionalResearchRequest): Promise<unknown> }
+export interface AkshareDataClient { companyBasic(request: AkshareDataRequest): Promise<unknown>; financialData(request: AkshareDataRequest): Promise<unknown>; valuationFinancialIndicators?(request: AkshareDataRequest): Promise<unknown>; historicalMarketData(request: AkshareDataRequest): Promise<unknown>; profitForecastThs?(request: AkshareForecastRequest): Promise<unknown>; researchReportEm?(request: AkshareDataRequest): Promise<unknown>; profitForecastEm?(request?: AkshareDataRequest): Promise<unknown>; indexDaily?(request: AkshareDataRequest): Promise<unknown>; sectorPerformance?(request: AkshareDataRequest): Promise<unknown>; tradingCalendar?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSzse?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSzseAnswer?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSse?(request: AkshareDataRequest): Promise<unknown>; institutionalResearchDetail?(request: AkshareInstitutionalResearchRequest): Promise<unknown> }
 export interface AkshareClientOptions { readonly pythonCommand?: string; readonly timeoutMs?: number; readonly runner?: (script: string, args: readonly string[]) => Promise<string> }
 
 const BRIDGE = `import json,sys,akshare as ak
@@ -15,6 +15,9 @@ if kind=='basic': value=ak.stock_individual_info_em(symbol=symbol)
 elif kind=='financial':
     market_symbol=symbol if symbol.endswith(('.SH','.SZ')) else symbol + ('.SH' if symbol.startswith('6') else '.SZ')
     value=ak.stock_financial_analysis_indicator_em(symbol=market_symbol).rename(columns={'REPORT_DATE':'report_date','NOTICE_DATE':'publication_date','EPSJB':'basic_eps','TOTALOPERATEREVE':'operating_revenue','PARENTNETPROFIT':'net_profit','XSMLL':'gross_margin'})
+elif kind=='valuation-financial':
+    market_symbol=symbol if symbol.endswith(('.SH','.SZ')) else symbol + ('.SH' if symbol.startswith('6') else '.SZ')
+    value=ak.stock_financial_analysis_indicator_em(symbol=market_symbol).rename(columns={'REPORT_DATE':'report_date','NOTICE_DATE':'aggregator_notice_date','EPSJB':'eps_jb','BPS':'bvps'})
 elif kind=='index': value=ak.stock_zh_index_daily(symbol=symbol)
 elif kind=='sector': value=ak.stock_board_industry_name_em()
 elif kind=='calendar': value=ak.tool_trade_date_hist_sina()
@@ -33,6 +36,7 @@ export class AkshareDataAdapter implements AkshareDataClient {
   constructor(options: AkshareClientOptions = {}) { this.runner = options.runner ?? (async (script, args) => (await execFileAsync(options.pythonCommand ?? 'python', ['-c', script, ...args], { timeout: options.timeoutMs ?? 60_000, maxBuffer: 8_000_000, env: { ...process.env, PYTHONIOENCODING: 'utf-8' } })).stdout) }
   companyBasic(request: AkshareDataRequest): Promise<unknown> { return this.run('basic', request) }
   financialData(request: AkshareDataRequest): Promise<unknown> { return this.run('financial', request) }
+  valuationFinancialIndicators(request: AkshareDataRequest): Promise<unknown> { return this.run('valuation-financial', request) }
   historicalMarketData(request: AkshareDataRequest): Promise<unknown> { return this.run('market', request) }
   profitForecastThs(request: AkshareForecastRequest): Promise<unknown> { return this.run('ths-profit-forecast', request, request.indicator ?? '') }
   researchReportEm(request: AkshareDataRequest): Promise<unknown> { return this.run('em-research-report', request) }

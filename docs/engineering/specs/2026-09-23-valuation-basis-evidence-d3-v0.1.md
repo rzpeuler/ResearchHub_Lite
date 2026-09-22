@@ -1,11 +1,11 @@
 # D3 v0.1 — Valuation Basis Evidence Design Correction
 
 - Task: `RHL-D3-001-DESIGN-FIX-001`
-- Status: `DESIGN REVISED / SOL REVIEW PENDING`
+- Status: `IMPLEMENTATION COMPLETE / SOL REVIEW PENDING`
 - Checked: 2026-09-23
-- Branch: `codex/d3-001-valuation-basis-evidence-design`
-- Starting HEAD: `a85788fd1eda96984ce15239e0bcc43c3cee5e1c`
-- Required baseline: `a85788f`
+- Branch: `codex/d3-001-pe-pb-evidence-closure`
+- Starting HEAD: `f58011638dfa5a3514ec915f1c03699ec61509a6`
+- Required baseline: `f580116`
 
 ## 1. Decision summary
 
@@ -31,8 +31,9 @@ The probe supports a narrow PE/PB evidence-closure plan:
 6. Defer cash, debt, net debt, historical shares, and all EV/EBITDA supporting
    fields. The live probe found no defensible EBITDA amount or formula.
 
-This document is design-only. It does not modify runtime, Skill, Workflow,
-Plugin, Knowledge, schema, tests, application services, or valuation arithmetic.
+The design has now been implemented on the D3-001 branch. The implementation
+does not modify Knowledge schema or valuation arithmetic; the remaining state is
+Sol review pending.
 
 ## 2. Scope and non-goals
 
@@ -691,10 +692,58 @@ Checked on 2026-09-23:
 - [CNINFO announcement query](https://www.cninfo.com.cn/new/hisAnnouncement/query)
 - [CNINFO official site](https://www.cninfo.com.cn/new/index)
 
-## 15. Review gate
+## 15. Implementation closure
 
-This document is ready for Sol review. The live source feasibility probe is
-complete, the current implementation boundary is preserved, EV/EBITDA is
-explicitly blocked, and no implementation should begin until Sol accepts the
+The implementation uses the existing seams described above:
+
+- `AkshareDataAdapter.valuationFinancialIndicators()` calls the existing
+  `stock_financial_analysis_indicator_em` operation and exposes annual
+  `report_date`, `aggregator_notice_date`, `eps_jb`, and `bvps` fields. The
+  existing `financialData()` operation remains source-compatible for other
+  consumers.
+- The existing raw market operation remains `stock_zh_a_hist(..., adjust='')`.
+  Valuation-local evidence identifies EastMoney as origin publisher,
+  `S3_AGGREGATOR` as authority, and AKShare as retrieval provider.
+- `CninfoOfficialDisclosureClient.resolveAnnualReportPublication()` reuses
+  `topSearch/query` and bounded `hisAnnouncement/query` requests with the
+  resolved `<secCode>,<orgId>` stock, annual-report category, bounded
+  `seDate`, page size 30, bounded pagination, body-title classification, and
+  fail-closed same-time ambiguity.
+- `workflows/valuation/basis-evidence.ts` owns annual selection, explicit
+  `CURRENT_VALUE_ONLY` versus fixed-`asOf` classification, publication proof,
+  metric-level provenance, units, and the non-versioned EastMoney limitation.
+  `ValuationBasis` remains the calculation projection; `ValuationWorkflowResult`
+  exposes the additive optional `basisEvidence` seam.
+- Omitted `asOf` is current-run mode. Any supplied `asOf`, including the current
+  calendar date, is fixed-asOf mode. Fixed runs after CNINFO publication remain
+  `PUBLICATION_VERIFIED_VALUE_VERSION_UNVERIFIED` and do not construct an
+  automatic PE/PB basis.
+- The normal Application Runtime passes its existing CNINFO client into
+  `ResearchService` and then the Valuation Workflow. No caller performs manual
+  publication matching.
+- D3 keeps EV/EBITDA unsupported in the normal official-evidence path and does
+  not acquire cash, debt, net debt, share history, or EBITDA fields.
+
+The offline D3 matrix is in
+`tests/workflows/valuation-basis-evidence.test.ts`. The gated real-source
+harness is `scripts/acceptance-valuation-basis-evidence-d3-real.ts`; it is
+disabled unless `RESEARCHHUB_RUN_REAL_VALUATION_BASIS=1` and reports transport, EastMoney,
+CNINFO, and basis-resolution stages independently without fabricating success.
+
+Implementation validation passed `npm run typecheck`, `npm run client:typecheck`,
+`npm run client:build`, `npm test` (1,424 Node tests and 28 client tests), and
+`git diff --check`. The enabled real-source attempt reached EastMoney financial
+rows for all four targets, but market transport was empty or proxy-unavailable
+and no current CNINFO publication proof was returned; every current target
+therefore remained unavailable rather than being accepted as a valuation basis.
+The same run attempted bounded 600519 FY2024 before/after publication windows;
+those historical outcomes are recorded separately from current market failure
+and never promote a current numeric row to strict PIT evidence.
+
+## 16. Review gate
+
+Sol acceptance remains pending. The live source feasibility probe and bounded
+implementation validation are complete, the current implementation boundary
+is preserved, EV/EBITDA is explicitly blocked, and review should confirm the
 separate publication/value-version PIT model, publication crosswalk, active
-PE/PB scope, and the deferred EV/EBITDA evidence assets.
+PE/PB scope, and deferred EV/EBITDA evidence assets.

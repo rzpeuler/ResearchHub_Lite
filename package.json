@@ -26,7 +26,8 @@
     "document-parser:setup": "node scripts/document-parser-runtime.mjs --setup",
     "acceptance:expectation-source-001c": "tsx scripts/acceptance-expectation-source-001c-real.ts",
     "acceptance:earnings-expectations-d1-real": "tsx scripts/acceptance-earnings-expectations-d1-real.ts",
-    "acceptance:management-communication-d2-003-real": "tsx scripts/acceptance-management-communication-d2-003-real.ts"
+    "acceptance:management-communication-d2-003-real": "tsx scripts/acceptance-management-communication-d2-003-real.ts",
+    "acceptance:valuation-basis-d3-real": "tsx scripts/acceptance-valuation-basis-evidence-d3-real.ts"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.0",

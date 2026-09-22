@@ -1,10 +1,12 @@
 import type { KnowledgeBaseHandle } from '../../knowledge/storage/handle.ts'
 import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
+import type { OfficialDisclosureClient } from '../../plugins/research-acquisition/official.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { ResearchCompanyIdentity } from '../../plugins/research-acquisition/contracts.ts'
 import type { ValuationComputation, ValuationAssumptionPlan, ValuationMethod, ValuationReasoningTelemetry, ValuationSynthesisOutput } from '../../skills/valuation/index.ts'
 import type { CompsValuationInput, CompsValuationResult } from '../../skills/comps_valuation/index.ts'
 import type { ResearchQualityGateResult } from '../research-quality-gate.ts'
+import type { ValuationBasisEvidence, ValuationEvidencePitStatus } from './basis-evidence.ts'
 
 export interface ValuationWorkflowInput {
   readonly workflowRunId: string
@@ -15,6 +17,7 @@ export interface ValuationWorkflowInput {
   readonly targetFiscalYear?: number
   readonly reportRoot: string
   readonly akshare?: AkshareDataClient
+  readonly officialDisclosure?: OfficialDisclosureClient
   readonly reasoningExecutor?: ReasoningExecutor
   readonly signal?: AbortSignal
   readonly now?: () => string
@@ -35,6 +38,7 @@ export interface ValuationProviderOutcome {
   readonly pbEligible: boolean
   readonly evEbitdaEligible: boolean
   readonly usableForValuation: boolean
+  readonly basisPitStatus?: ValuationEvidencePitStatus
 }
 
 export interface ValuationWorkflowResult {
@@ -52,6 +56,7 @@ export interface ValuationWorkflowResult {
   readonly diagnostics: readonly string[]
   readonly providerOutcome: ValuationProviderOutcome
   readonly basis?: ValuationComputation['basis']
+  readonly basisEvidence?: ValuationBasisEvidence
   readonly plan?: ValuationAssumptionPlan
   readonly computation?: ValuationComputation
   readonly synthesis?: ValuationSynthesisOutput

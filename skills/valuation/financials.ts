@@ -3,18 +3,19 @@ import type { ValuationBasis, ValuationComputation, ValuationMethod, ValuationMe
 type Dict = Record<string, unknown>
 const METHOD_SET = new Set<ValuationMethod>(['PE', 'PB', 'EV_EBITDA'])
 const SCENARIOS: readonly ValuationScenarioId[] = ['bear', 'base', 'bull']
-const DATE_ALIASES = ['报告期', '报告日期', '报告期末', '日期', 'date', 'end_date', 'report_date', 'period', 'fiscal_period'] as const
+const DATE_ALIASES = ['报告期', '报告日期', '报告期末', '日期', 'date', 'end_date', 'report_date', 'REPORT_DATE', 'period', 'fiscal_period'] as const
 const PUBLICATION_ALIASES = ['公告日期', '公告日', '公告时间', 'publicationDate', 'publication_date', 'announcementDate', 'announcement_date', 'publish_date'] as const
+const AGGREGATOR_NOTICE_ALIASES = ['aggregatorNoticeDate', 'aggregator_notice_date', 'NOTICE_DATE'] as const
 const MARKET_DATE_ALIASES = ['日期', 'date', 'trade_date', '交易日期'] as const
 const CLOSE_ALIASES = ['收盘', '收盘价', 'close', 'Close', '收盘价(元)'] as const
-const EPS_ALIASES = ['基本每股收益', '基本每股收益(元)', 'EPS', 'eps', 'basic_eps'] as const
-const BVPS_ALIASES = ['每股净资产', '每股净资产(元)', 'BVPS', 'bvps', 'book_value_per_share'] as const
+const EPS_ALIASES = ['基本每股收益', '基本每股收益(元)', 'EPS', 'eps', 'basic_eps', 'eps_jb', 'EPSJB'] as const
+const BVPS_ALIASES = ['每股净资产', '每股净资产(元)', 'BVPS', 'bvps', 'book_value_per_share', 'BPS'] as const
 const EBITDA_ALIASES = ['EBITDA', 'ebitda', '息税折旧摊销前利润', '息税折旧摊销前利润(EBITDA)'] as const
 const NET_DEBT_ALIASES = ['净负债', '净负债(元)', 'net_debt', 'netDebt', 'net debt'] as const
 const SHARES_ALIASES = ['总股本', '股本', 'shares', 'shares_outstanding', 'sharesOutstanding'] as const
 
 export interface ValuationMarketObservation { readonly priceDate: string; readonly close: number }
-export interface ValuationFinancialRow { readonly basisFiscalYear: number; readonly reportDate: string; readonly publicationDate?: string; readonly eps?: number; readonly bvps?: number; readonly ebitda?: number; readonly netDebt?: number; readonly shares?: number }
+export interface ValuationFinancialRow { readonly basisFiscalYear: number; readonly reportDate: string; readonly publicationDate?: string; readonly aggregatorNoticeDate?: string; readonly eps?: number; readonly bvps?: number; readonly ebitda?: number; readonly netDebt?: number; readonly shares?: number }
 export interface NormalizedValuationData { readonly market?: ValuationMarketObservation; readonly financialRows: readonly ValuationFinancialRow[]; readonly diagnostics: readonly string[] }
 
 function rowsOf(value: unknown): readonly Dict[] {
@@ -50,7 +51,7 @@ export function normalizeValuationFinancialData(value: unknown): { readonly rows
   const diagnostics: string[] = []; const rows: ValuationFinancialRow[] = []
   for (const row of rowsOf(value)) {
     const reportDate = dateOf(row, DATE_ALIASES); if (reportDate === undefined || !reportDate.endsWith('-12-31')) continue
-    const publicationDate = dateOf(row, PUBLICATION_ALIASES); const parsed = { basisFiscalYear: Number(reportDate.slice(0, 4)), reportDate, ...(publicationDate === undefined ? {} : { publicationDate }), ...(numberValue(first(row, EPS_ALIASES)) === undefined ? {} : { eps: numberValue(first(row, EPS_ALIASES)) }), ...(numberValue(first(row, BVPS_ALIASES)) === undefined ? {} : { bvps: numberValue(first(row, BVPS_ALIASES)) }), ...(numberValue(first(row, EBITDA_ALIASES)) === undefined ? {} : { ebitda: numberValue(first(row, EBITDA_ALIASES)) }), ...(numberValue(first(row, NET_DEBT_ALIASES)) === undefined ? {} : { netDebt: numberValue(first(row, NET_DEBT_ALIASES)) }), ...(numberValue(first(row, SHARES_ALIASES)) === undefined ? {} : { shares: numberValue(first(row, SHARES_ALIASES)) }) }
+    const publicationDate = dateOf(row, PUBLICATION_ALIASES); const aggregatorNoticeDate = dateOf(row, AGGREGATOR_NOTICE_ALIASES); const parsed = { basisFiscalYear: Number(reportDate.slice(0, 4)), reportDate, ...(publicationDate === undefined ? {} : { publicationDate }), ...(aggregatorNoticeDate === undefined ? {} : { aggregatorNoticeDate }), ...(numberValue(first(row, EPS_ALIASES)) === undefined ? {} : { eps: numberValue(first(row, EPS_ALIASES)) }), ...(numberValue(first(row, BVPS_ALIASES)) === undefined ? {} : { bvps: numberValue(first(row, BVPS_ALIASES)) }), ...(numberValue(first(row, EBITDA_ALIASES)) === undefined ? {} : { ebitda: numberValue(first(row, EBITDA_ALIASES)) }), ...(numberValue(first(row, NET_DEBT_ALIASES)) === undefined ? {} : { netDebt: numberValue(first(row, NET_DEBT_ALIASES)) }), ...(numberValue(first(row, SHARES_ALIASES)) === undefined ? {} : { shares: numberValue(first(row, SHARES_ALIASES)) }) }
     rows.push(parsed)
   }
   if (rows.length === 0) diagnostics.push('VALUATION_FINANCIAL_BASIS_UNAVAILABLE')
