@@ -59,7 +59,6 @@ export interface ManagementCommunicationAcquisitionSources {
   cninfoIr(request: ManagementCommunicationSourceRequest): Promise<readonly CninfoManagementCommunicationRecord[]>
   exchangeQaSzse(request: ManagementCommunicationSourceRequest): Promise<unknown>
   exchangeQaSse(request: ManagementCommunicationSourceRequest): Promise<unknown>
-  eastmoneyInstitutionalResearch(request: ManagementCommunicationSourceRequest): Promise<unknown>
   readonly exchangeQaSzseAnswer?: (questionId: string) => Promise<unknown>
 }
 

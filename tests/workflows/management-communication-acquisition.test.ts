@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { AkshareDataAdapter } from '../../plugins/research-acquisition/akshare.ts'
-import { dedupeDocuments, normalizeExchangeQaRows, runExchangeQa, runManagementCommunicationDocuments, resolveExchange, type CommunicationProvenance, type ManagementCommunicationAcquisitionSources, type ManagementCommunicationDocument } from '../../workflows/management-communication-acquisition/index.ts'
+import { dedupeDocuments, managementCommunicationDocumentPolicy, mapDocumentType, normalizeExchangeQaRows, normalizeSourceTimestamp, runExchangeQa, runManagementCommunicationDocuments, resolveExchange, type CommunicationProvenance, type ManagementCommunicationAcquisitionSources, type ManagementCommunicationDocument } from '../../workflows/management-communication-acquisition/index.ts'
 
 const AS_OF = '2026-09-22T00:00:00.000Z'
 const RETRIEVED = '2026-09-22T01:00:00.000Z'
@@ -11,7 +11,6 @@ function sources(overrides: Partial<ManagementCommunicationAcquisitionSources> =
     cninfoIr: async () => [],
     exchangeQaSzse: async () => [],
     exchangeQaSse: async () => [],
-    eastmoneyInstitutionalResearch: async () => [],
     ...overrides,
   }
 }
@@ -26,22 +25,6 @@ function cninfoRecord(overrides: Partial<{ title: string; publishedAt: string; r
     sourceUrl: 'https://static.cninfo.com.cn/finalpage/2026-08-01/123456.PDF',
     sourceNativeId: '123456',
     originPublisher: '贵州茅台',
-    ...overrides,
-  }
-}
-
-function eastmoneyRow(overrides: Record<string, unknown> = {}) {
-  return {
-    代码: '600519',
-    名称: '贵州茅台',
-    调研机构: 'Fixture Capital;Fixture Asset',
-    机构类型: '证券公司',
-    调研人员: 'Analyst',
-    接待方式: '路演活动',
-    接待人员: 'IR Representative',
-    接待地点: 'Online',
-    调研日期: '2026-08-01',
-    公告日期: '2026-08-02',
     ...overrides,
   }
 }
@@ -78,29 +61,25 @@ test('deterministic document mapping excludes unknown categories', async () => {
 
 test('missing or future publication time cannot become successful acquisition', async () => {
   for (const record of [cninfoRecord({ publishedAt: '' }), cninfoRecord({ publishedAt: '2026-09-23T00:00:00.000Z' })]) {
-    const result = await runManagementCommunicationDocuments({ request: { ticker: '600519', asOf: AS_OF }, sources: sources({ cninfoIr: async () => [record], eastmoneyInstitutionalResearch: async () => [] }), now: () => RETRIEVED })
+    const result = await runManagementCommunicationDocuments({ request: { ticker: '600519', asOf: AS_OF }, sources: sources({ cninfoIr: async () => [record] }), now: () => RETRIEVED })
     assert.equal(result.status, 'UNAVAILABLE')
     assert.equal(result.acquisition.attempts[0]?.status, 'NO_DATA')
-    assert.equal(result.acquisition.attempts[1]?.fallbackLevel, 'FALLBACK_2')
+    assert.equal(result.acquisition.attempts.length, 1)
   }
 })
 
-test('IR FIRST_VALID uses CNINFO and does not call EastMoney after primary success', async () => {
-  let eastmoneyCalls = 0
-  const result = await runManagementCommunicationDocuments({ request: { ticker: '600519', asOf: AS_OF }, sources: sources({ cninfoIr: async () => [cninfoRecord()], eastmoneyInstitutionalResearch: async () => { eastmoneyCalls++; return [eastmoneyRow()] } }), now: () => RETRIEVED })
+test('IR document policy contains only executable CNINFO primary', async () => {
+  const result = await runManagementCommunicationDocuments({ request: { ticker: '600519', asOf: AS_OF }, sources: sources({ cninfoIr: async () => [cninfoRecord()] }), now: () => RETRIEVED })
   assert.equal(result.status, 'AVAILABLE')
-  assert.equal(eastmoneyCalls, 0)
   assert.deepEqual(result.acquisition.attempts.map((attempt) => attempt.fallbackLevel), ['PRIMARY'])
+  assert.deepEqual(managementCommunicationDocumentPolicy().candidates.map((candidate) => candidate.sourceId), ['cninfo-official-ir'])
 })
 
-test('IR fallback uses executable EastMoney institutional research and preserves S3 provenance', async () => {
-  const result = await runManagementCommunicationDocuments({ request: { ticker: '600519', companyName: '贵州茅台', asOf: AS_OF }, sources: sources({ cninfoIr: async () => [], eastmoneyInstitutionalResearch: async () => [eastmoneyRow()] }), now: () => RETRIEVED })
-  assert.equal(result.status, 'AVAILABLE')
-  assert.equal(result.acquisition.source?.fallbackLevel, 'FALLBACK_2')
-  assert.equal(result.data[0]?.source.authority, 'S3_AGGREGATOR')
-  assert.equal(result.data[0]?.source.disclosureClass, 'AGGREGATED_IR')
-  assert.equal(result.data[0]?.source.hostPlatform, 'EastMoney')
-  assert.equal(result.data[0]?.source.retrievalProvider, 'AKShare')
+test('EastMoney metadata cannot become a ManagementCommunicationDocument', async () => {
+  const result = await runManagementCommunicationDocuments({ request: { ticker: '600519', companyName: '贵州茅台', asOf: AS_OF }, sources: sources({ cninfoIr: async () => [] }), now: () => RETRIEVED })
+  assert.equal(result.status, 'UNAVAILABLE')
+  assert.equal(result.data.length, 0)
+  assert.deepEqual(result.acquisition.attempts.map((attempt) => attempt.sourceId), ['cninfo-official-ir'])
 })
 
 test('SZSE exchange routing invokes only SZSE and preserves Q&A pairing', async () => {
@@ -115,12 +94,24 @@ test('SZSE exchange routing invokes only SZSE and preserves Q&A pairing', async 
   assert.equal(result.acquisition.attempts.length, 1)
 })
 
-test('SSE exchange routing invokes only SSE and never adds EastMoney fallback', async () => {
+test('SSE exchange routing invokes only SSE and never adds a document fallback', async () => {
   const calls: string[] = []
-  const result = await runExchangeQa({ request: { ticker: '600519', exchange: 'SSE', asOf: AS_OF }, sources: sources({ exchangeQaSse: async () => { calls.push('sse'); return [qaRow()] }, eastmoneyInstitutionalResearch: async () => { calls.push('eastmoney'); return [eastmoneyRow()] } }), now: () => RETRIEVED })
+  const result = await runExchangeQa({ request: { ticker: '600519', exchange: 'SSE', asOf: AS_OF }, sources: sources({ exchangeQaSse: async () => { calls.push('sse'); return [qaRow()] } }), now: () => RETRIEVED })
   assert.equal(result.status, 'AVAILABLE')
   assert.deepEqual(calls, ['sse'])
   assert.equal(result.data[0]?.platform, 'SSE_EINTERACTION')
+})
+
+test('meeting notices are rejected while actual communication titles map deterministically', () => {
+  assert.equal(mapDocumentType('关于召开2026年半年度业绩说明会的公告'), undefined)
+  assert.equal(mapDocumentType('投资者关系活动记录表'), 'INVESTOR_RELATIONS_RECORD')
+  assert.equal(mapDocumentType('2025年度暨2026年第一季度业绩说明会召开情况的公告'), 'EARNINGS_BRIEFING')
+  assert.equal(mapDocumentType('业绩说明会活动记录'), 'EARNINGS_BRIEFING')
+  assert.equal(mapDocumentType('业绩说明会投资者问答'), 'EARNINGS_BRIEFING')
+  assert.equal(mapDocumentType('召开2026年业绩说明会的通知'), undefined)
+  assert.equal(mapDocumentType('2026年业绩说明会邀请函'), undefined)
+  assert.equal(mapDocumentType('2026年业绩说明会预告'), undefined)
+  assert.equal(mapDocumentType('2026年业绩说明会问题征集'), undefined)
 })
 
 test('unsupported or unresolved exchange returns UNAVAILABLE without attempting either exchange', async () => {
@@ -149,8 +140,23 @@ test('normalizer accepts the observed AKShare CNINFO Q&A vocabulary', () => {
   assert.equal(batch.values.length, 1)
   assert.equal(batch.values[0]?.question, 'Observed question')
   assert.equal(batch.values[0]?.answer, 'Observed answer')
-  assert.equal(batch.values[0]?.answeredAt, '2026-08-02T09:00:00.000Z')
+  assert.equal(batch.values[0]?.answeredAt, '2026-08-02T01:00:00.000Z')
   assert.equal(batch.values[0]?.source.sourceNativeId, 'question-1')
+})
+
+test('source-aware China timestamps use Asia/Shanghai and preserve explicit zones', () => {
+  assert.equal(normalizeSourceTimestamp('2026-08-02 09:00:00', 'CNINFO', 'event'), '2026-08-02T01:00:00.000Z')
+  assert.equal(normalizeSourceTimestamp('2026-08-02T09:00:00+08:00', 'SSE_EINTERACTION', 'event'), '2026-08-02T01:00:00.000Z')
+  assert.equal(normalizeSourceTimestamp(1785632400000, 'SZSE_HUDONGYI', 'event'), '2026-08-02T01:00:00.000Z')
+})
+
+test('date-only publication uses Shanghai end-of-day and enforces the PIT boundary', () => {
+  assert.equal(normalizeSourceTimestamp('2026-08-02', 'EastMoney', 'publication'), '2026-08-02T15:59:59.999Z')
+  const row = { ...qaRow(), publishedAt: '2026-08-02' }
+  const before = normalizeExchangeQaRows([row], { ticker: '600519', asOf: '2026-08-02T15:59:59.998Z' }, 'SSE_EINTERACTION', RETRIEVED)
+  const after = normalizeExchangeQaRows([row], { ticker: '600519', asOf: '2026-08-02T16:00:00.000Z' }, 'SSE_EINTERACTION', RETRIEVED)
+  assert.equal(before.values.length, 0)
+  assert.equal(after.values.length, 1)
 })
 
 test('stable dedupe is row-order independent and keeps distinct provenance contexts', () => {

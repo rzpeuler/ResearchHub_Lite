@@ -13,14 +13,6 @@ const documentCandidates: readonly SourceCandidate[] = [
     operationId: 'cninfo_official_ir',
     supports: { dataKinds: ['document'] },
   },
-  {
-    sourceId: 'eastmoney-institutional-research',
-    fallbackLevel: 'FALLBACK_2',
-    originAuthority: 'S3_AGGREGATOR',
-    originPublisher: 'listed-company',
-    operationId: 'eastmoney_institutional_research',
-    supports: { dataKinds: ['document'] },
-  },
 ]
 
 export function managementCommunicationDocumentPolicy(): SourcePolicy {

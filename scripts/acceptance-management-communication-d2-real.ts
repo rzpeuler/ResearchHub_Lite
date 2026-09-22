@@ -35,10 +35,6 @@ const sources: ManagementCommunicationAcquisitionSources = {
     if (captures.sse === undefined) captures.sse = await real.exchangeQaSse(request)
     return captures.sse
   },
-  eastmoneyInstitutionalResearch: async (request) => {
-    if (captures.eastmoney === undefined) captures.eastmoney = await real.eastmoneyInstitutionalResearch(request)
-    return captures.eastmoney
-  },
   exchangeQaSzseAnswer: real.exchangeQaSzseAnswer,
 }
 
@@ -58,7 +54,7 @@ const probes = [
   await probe('CNINFO_IR_LIVE', async () => { if (captures.cninfo === undefined) captures.cninfo = await real.cninfoIr(company('600519', 'SSE', '贵州茅台')); return captures.cninfo }),
   await probe('SZSE_QA_LIVE', async () => { if (captures.szse === undefined) captures.szse = await real.exchangeQaSzse(company('000001', 'SZSE', '平安银行')); return captures.szse }),
   await probe('SSE_QA_LIVE', async () => { if (captures.sse === undefined) captures.sse = await real.exchangeQaSse(company('600519', 'SSE', '贵州茅台')); return captures.sse }),
-  await probe('EASTMONEY_IR_LIVE', async () => { if (captures.eastmoney === undefined) captures.eastmoney = await real.eastmoneyInstitutionalResearch(company('600519', 'SSE', '贵州茅台')); return captures.eastmoney }),
+  await probe('EASTMONEY_METADATA_LIVE', async () => { if (captures.eastmoney === undefined) captures.eastmoney = await real.eastmoneyInstitutionalResearch(company('600519', 'SSE', '贵州茅台')); return captures.eastmoney }),
 ]
 
 const workflowRuns = []
@@ -77,12 +73,6 @@ try {
 } catch (error) {
   errors.SSE_QA_WORKFLOW = error instanceof Error ? error.message : String(error)
 }
-try {
-  workflowRuns.push({ name: 'EASTMONEY_IR_WORKFLOW', result: await runManagementCommunicationDocuments({ request: { ticker: '600519', companyName: '贵州茅台', exchange: 'SSE', asOf, lookbackDays: 7 }, sources }) })
-} catch (error) {
-  errors.EASTMONEY_IR_WORKFLOW = error instanceof Error ? error.message : String(error)
-}
-
 let pythonRuntime = 'unavailable'
 let akshareVersion = 'unavailable'
 try {
@@ -96,10 +86,10 @@ try {
 
 const summarizeWorkflow = (item: typeof workflowRuns[number]) => ({ name: item.name, status: item.result.status, normalizedRowCount: item.result.data.length, attemptPath: item.result.acquisition.attempts.map((attempt) => ({ sourceId: attempt.sourceId, fallbackLevel: attempt.fallbackLevel, status: attempt.status })), diagnostics: item.result.diagnostics.slice(0, 20), documentTypes: item.result.data.flatMap((value) => 'documentType' in value ? [mapDocumentType(value.title ?? '') ?? value.documentType] : []), publicationDates: item.result.data.map((value) => value.publishedAt).sort() })
 const successfulProbeCount = probes.filter((probe) => probe.ok).length
-const workflowAttempted = workflowRuns.length === 4
+const workflowAttempted = workflowRuns.length === 3
 const output = {
   status: Object.keys(errors).length === 0 && successfulProbeCount === probes.length && workflowAttempted ? 'D2_ACQUISITION_PATH_VERIFIED' : 'LIVE_PROVIDER_LIMITATION_RECORDED',
-  labels: probes.filter((probe) => probe.ok).map((probe) => probe.name === 'CNINFO_IR_LIVE' ? 'CNINFO_IR_LIVE_VERIFIED' : probe.name === 'SZSE_QA_LIVE' ? 'SZSE_QA_LIVE_VERIFIED' : probe.name === 'SSE_QA_LIVE' ? 'SSE_QA_LIVE_VERIFIED' : 'EASTMONEY_IR_LIVE_VERIFIED'),
+  labels: probes.filter((probe) => probe.ok && probe.name !== 'EASTMONEY_METADATA_LIVE').map((probe) => probe.name === 'CNINFO_IR_LIVE' ? 'CNINFO_IR_LIVE_VERIFIED' : probe.name === 'SZSE_QA_LIVE' ? 'SZSE_QA_LIVE_VERIFIED' : 'SSE_QA_LIVE_VERIFIED'),
   runtime: { node: process.version, python: pythonRuntime, akshare: akshareVersion },
   asOf,
   lookbackStartDate,

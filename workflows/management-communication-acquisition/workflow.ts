@@ -6,7 +6,7 @@ import type { CninfoOfficialDisclosureClient } from '../../plugins/research-acqu
 import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
 import type { ExchangeQAPair, ManagementCommunicationAcquisitionRequest, ManagementCommunicationAcquisitionSources, ManagementCommunicationDocument, ManagementCommunicationExchange, ManagementCommunicationWorkflowResult } from './contracts.ts'
 import { dedupeDocuments, dedupeExchangeQa } from './dedupe.ts'
-import { normalizeCninfoDocuments, normalizeEastmoneyInstitutionalResearch, normalizeExchangeQaRows } from './normalization.ts'
+import { normalizeCninfoDocuments, normalizeExchangeQaRows } from './normalization.ts'
 import { EXCHANGE_QA_SSE_CAPABILITY, EXCHANGE_QA_SZSE_CAPABILITY, MANAGEMENT_COMMUNICATION_DOCUMENT_CAPABILITY, exchangeQAPolicy, managementCommunicationDocumentPolicy } from './source-policies.ts'
 
 export interface ManagementCommunicationWorkflowOptions {
@@ -95,14 +95,6 @@ async function executeDocumentCandidate(
     return values.length === 0
       ? { status: 'NO_DATA', diagnostic: diagnosticsForAttempt(batch.diagnostics, 'cninfo_ir_no_accepted_records'), source: { retrievedAt, retrievalProvider: 'cninfo-official-client' } }
       : { status: 'SUCCESS', data: values, source: { originPublisher: request.companyName ?? request.ticker, retrievalProvider: 'cninfo-official-client', retrievedAt } }
-  }
-  if (candidate.operationId === 'eastmoney_institutional_research') {
-    const batch = normalizeEastmoneyInstitutionalResearch(await sources.eastmoneyInstitutionalResearch(sourceRequest), request, retrievedAt)
-    diagnostics.push(...batch.diagnostics)
-    const values = dedupeDocuments(batch.values)
-    return values.length === 0
-      ? { status: 'NO_DATA', diagnostic: diagnosticsForAttempt(batch.diagnostics, 'eastmoney_ir_no_accepted_records'), source: { retrievedAt, retrievalProvider: 'AKShare' } }
-      : { status: 'SUCCESS', data: values, source: { originPublisher: request.companyName ?? request.ticker, retrievalProvider: 'AKShare', retrievedAt } }
   }
   return { status: 'UNSUPPORTED', diagnostic: `D2_UNKNOWN_DOCUMENT_OPERATION:${candidate.operationId}`, source: { retrievedAt } }
 }

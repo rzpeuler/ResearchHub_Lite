@@ -26,7 +26,7 @@ export function createManagementCommunicationSourceOperations(
 ) {
   return {
     async cninfoIr(request: ManagementCommunicationSourceRequest): Promise<readonly CninfoManagementCommunicationRecord[]> {
-      const records = (await cninfo.list({ company: request.company, asOf: request.asOf, limitPerKind: 20 }))
+      const records = (await cninfo.listManagementCommunication?.({ company: request.company, asOf: request.asOf, lookbackStartDate: request.lookbackStartDate }) ?? [])
         .filter((record) => isBoundedCommunicationTitle(record.title))
       const result: CninfoManagementCommunicationRecord[] = []
       for (const record of records) {
@@ -70,7 +70,10 @@ export function createManagementCommunicationSourceOperations(
 
 function isBoundedCommunicationTitle(title: string): boolean {
   const normalized = title.normalize('NFKC').replace(/\s+/g, '')
-  return normalized.includes('投资者关系活动记录') || normalized.includes('业绩说明会')
+  return normalized.includes('投资者关系活动记录')
+    || normalized.includes('业绩说明会召开情况')
+    || normalized.includes('业绩说明会活动记录')
+    || normalized.includes('业绩说明会投资者问答')
 }
 
 function cninfoNativeId(record: OfficialDisclosureRecord): string | undefined {

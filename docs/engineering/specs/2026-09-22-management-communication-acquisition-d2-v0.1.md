@@ -13,9 +13,10 @@ D2-001 provides deterministic acquisition for two research-input families:
 
 It owns CNINFO official IR acquisition/reuse, company official IR only when an
 explicit reusable path already exists, Shenzhen Hudongyi acquisition, Shanghai
-e-interaction acquisition, EastMoney institutional-research fallback for IR
-documents, D0 `SourcePolicy` execution, normalization, provenance, PIT
-filtering, deterministic deduplication, offline fixtures, and gated live probes.
+e-interaction acquisition, D0 `SourcePolicy` execution, normalization,
+provenance, PIT filtering, deterministic deduplication, offline fixtures, and
+gated live probes. EastMoney institutional-research metadata is deferred and
+is not an executable `ManagementCommunicationDocument` source.
 
 D2-001 does not extract Formal Guidance, Management Outlook, KPI candidates,
 tone or sentiment, Q&A quality, question clusters, or management execution. It
@@ -83,7 +84,9 @@ whether content is Formal Guidance or Management Outlook.
 `documentType` is assigned only through deterministic source-native category
 mapping, a bounded title allowlist, or an explicit endpoint mapping. For
 example, a source-native `投资者关系活动记录` maps to
-`INVESTOR_RELATIONS_RECORD`, and `业绩说明会` maps to `EARNINGS_BRIEFING`.
+`INVESTOR_RELATIONS_RECORD`, and `业绩说明会召开情况` or
+`业绩说明会活动记录` maps to `EARNINGS_BRIEFING`. Meeting notices,
+previews, and question-collection announcements are excluded.
 An unresolved or ambiguous category is excluded and recorded as a diagnostic;
 it does not receive a universal `COMPANY_IR_DOCUMENT` fallback and is never
 classified by an LLM. This is deterministic metadata normalization, not
@@ -96,27 +99,25 @@ v0.1 policy. The logical ladder may mention deferred acquisition families, but
 `SourcePolicy.candidates` contains only sources with a concrete executor in
 the current implementation.
 
-Logical ladder for `ManagementCommunicationDocument`:
+Deferred logical ladder for `ManagementCommunicationDocument`:
 
 ```text
 PRIMARY: CNINFO official IR record
 F1:      company official IR, only when an explicit reusable path already exists
-F2:      EastMoney institutional research
-LLM_WEB: official/public document discovery only
+F2:      attributable third-party reproduction, only after a bounded content
+        acquisition path is explicitly implemented
 ```
 
 Executable v0.1 IR policy:
 
 ```text
 PRIMARY: CNINFO official IR record
-F1:      existing reusable company official IR capability, only if present
-F2:      EastMoney institutional research
 ```
 
-If no reusable company-IR capability exists, F1 is omitted from
-`SourcePolicy.candidates`; the policy does not contain a known
-non-executable placeholder. `LLM_WEB` is deferred documentation only and is
-not a runtime candidate in D2-001.
+No company-official-IR or third-party reproduction capability exists in this
+implementation, so no F1/F2 placeholder is placed in `SourcePolicy.candidates`.
+EastMoney `stock_jgdy_detail_em` remains metadata/discovery-only and cannot
+be normalized into a document by serializing the row.
 
 For `ExchangeQAPair`:
 
@@ -146,7 +147,7 @@ a bounded Q&A acquisition outcome.
 | company official IR | S1 | `OFFICIAL_IR` |
 | SZSE Hudongyi | S1 | `EXCHANGE_INTERACTION` |
 | SSE e-interaction | S1 | `EXCHANGE_INTERACTION` |
-| EastMoney institutional research | S3 | `AGGREGATED_IR` |
+| EastMoney institutional-research metadata (deferred) | S3 | `AGGREGATED_IR` |
 
 ## 6. D0 SourcePolicy integration
 
@@ -187,6 +188,16 @@ missing, malformed, or otherwise invalid `publishedAt` returns
 completion time must not silently substitute for the source's actual
 `retrievedAt`.
 
+For CNINFO, SZSE Hudongyi, SSE e-interaction, and EastMoney values without an
+explicit timezone, local datetimes are interpreted as `Asia/Shanghai` and
+converted to UTC. Date-only publication values use Shanghai end-of-day
+(`23:59:59.999` local, or `15:59:59.999Z`) so a same-day record is not eligible
+before its publication window closes. Date-only event values remain semantic
+dates. Explicit timezone offsets and epoch milliseconds/seconds are preserved
+according to their source value. The CNINFO IR query uses the existing
+client's endpoint, request, headers, timeout, row parser, and document fetcher,
+with `seDate=lookbackStartDate~asOf` to avoid page-one recency hiding older IR.
+
 Normalization preserves question/answer pairing, rejects empty or malformed
 rows, preserves all five provenance concepts, applies only the deterministic
 `documentType` mappings defined in Section 4, derives stable IDs from source
@@ -213,7 +224,8 @@ or existing research-workflow behavior is changed.
 ## 9. Offline fixtures and gated live probes
 
 Offline tests must prove product-specific routing, authority versus host and
-retrieval provider, executable-candidate-only policies, IR-only fallback order,
+retrieval provider, executable-candidate-only policies, CNINFO-only document
+execution,
 strict SZSE/SSE routing and separation from the IR ladder, question/answer
 pairing, independent event/publication/answer/retrieval times, missing/future/
 malformed publication handling before success, deterministic document-type
@@ -260,15 +272,14 @@ existing instability warning; no live SSE evidence is claimed.
 
 Observed EastMoney institutional-research fields include `代码`, `名称`,
 `调研机构`, `机构类型`, `调研人员`, `接待方式`, `接待人员`, `接待地点`,
-`调研日期`, and `公告日期`. The D2 normalizer uses the endpoint identity as
-the deterministic `INVESTOR_RELATIONS_RECORD` mapping and serializes the raw
-row structure as evidence content without fabricating a narrative. A bounded
-live run returned 1,971 rows for the requested window but no accepted row for
-the selected ticker.
+`调研日期`, and `公告日期`. These rows are metadata/discovery only. D2 does
+not serialize them into `ManagementCommunicationDocument.content`, and they
+are absent from the executable document policy. A bounded live run returned
+1,971 metadata rows for the requested window.
 
-No company-official-IR F1 capability or LLM runtime candidate is registered in
-D2-001. The executable IR policy is CNINFO primary followed directly by
-EastMoney F2.
+No company-official-IR F1, third-party-reproduction F2, EastMoney document
+candidate, or LLM runtime candidate is registered in D2-001. The executable IR
+policy is CNINFO primary only.
 
 ## 11. Explicit non-goals
 

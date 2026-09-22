@@ -7,7 +7,9 @@ type Row = Readonly<Record<string, unknown>>
 const DOCUMENT_TYPE_TOKENS: readonly [string, ManagementCommunicationDocumentType][] = [
   ['投资者关系活动记录表', 'INVESTOR_RELATIONS_RECORD'],
   ['投资者关系活动记录', 'INVESTOR_RELATIONS_RECORD'],
-  ['业绩说明会', 'EARNINGS_BRIEFING'],
+  ['业绩说明会召开情况', 'EARNINGS_BRIEFING'],
+  ['业绩说明会活动记录', 'EARNINGS_BRIEFING'],
+  ['业绩说明会投资者问答', 'EARNINGS_BRIEFING'],
 ]
 
 export function normalizeCninfoDocuments(
@@ -22,8 +24,8 @@ export function normalizeCninfoDocuments(
       diagnostics.push(`unmapped_documentType:cninfo:${record.title.slice(0, 120)}`)
       continue
     }
-    const publishedAt = normalizeTimestamp(record.publishedAt)
-    const retrievedAt = normalizeTimestamp(record.retrievedAt)
+    const publishedAt = normalizeSourceTimestamp(record.publishedAt, 'CNINFO', 'publication')
+    const retrievedAt = normalizeSourceTimestamp(record.retrievedAt, 'CNINFO', 'retrieval')
     if (publishedAt === undefined) {
       diagnostics.push(`invalid_publishedAt:cninfo:${record.sourceNativeId ?? record.sourceUrl}`)
       continue
@@ -64,58 +66,6 @@ export function normalizeCninfoDocuments(
   return { values, diagnostics: boundedDiagnostics(diagnostics) }
 }
 
-export function normalizeEastmoneyInstitutionalResearch(
-  raw: unknown,
-  request: ManagementCommunicationAcquisitionRequest,
-  retrievedAtValue: string,
-): NormalizationBatch<ManagementCommunicationDocument> {
-  const diagnostics: string[] = []
-  const values: ManagementCommunicationDocument[] = []
-  const retrievedAt = normalizeTimestamp(retrievedAtValue)
-  if (retrievedAt === undefined) return { values: [], diagnostics: ['invalid_retrievedAt:eastmoney-institutional-research'] }
-  for (const row of rows(raw)) {
-    const ticker = normalizeTicker(read(row, ['代码', '股票代码', 'SECURITY_CODE', 'stockCode', 'ticker']))
-    if (ticker !== request.ticker) {
-      diagnostics.push(`ticker_mismatch:eastmoney-institutional-research:${ticker ?? 'missing'}`)
-      continue
-    }
-    const publishedAt = normalizeTimestamp(read(row, ['公告日期', 'NOTICE_DATE', 'publishedAt']))
-    if (publishedAt === undefined) {
-      diagnostics.push(`missing_or_invalid_publishedAt:eastmoney-institutional-research:${ticker}`)
-      continue
-    }
-    if (isAfterAsOf(publishedAt, request.asOf)) {
-      diagnostics.push(`future_publishedAt:eastmoney-institutional-research:${ticker}:${publishedAt}`)
-      continue
-    }
-    const eventDate = normalizeTimestamp(read(row, ['调研日期', 'RECEIVE_START_DATE', 'eventDate']))
-    const sourceContent = stableSerialize(row)
-    const title = `${text(read(row, ['名称', 'SECURITY_NAME_ABBR', 'stockName'])) ?? request.ticker} 机构调研`
-    const source: CommunicationProvenance = {
-      originPublisher: request.companyName ?? request.ticker,
-      hostPlatform: 'EastMoney',
-      retrievalProvider: 'AKShare',
-      authority: 'S3_AGGREGATOR',
-      disclosureClass: 'AGGREGATED_IR',
-      sourceUrl: 'https://data.eastmoney.com/jgdy/xx.html',
-    }
-    const identity = `${request.ticker}|${publishedAt}|${eventDate ?? ''}|${sourceContent}`
-    values.push({
-      id: `management-communication:eastmoney:${sha256(identity).slice(0, 32)}`,
-      ticker: request.ticker,
-      documentType: mapDocumentType(title, 'eastmoney-institutional-research')!,
-      ...(eventDate === undefined ? {} : { eventDate }),
-      publishedAt,
-      retrievedAt,
-      title,
-      content: sourceContent,
-      ...optionalParticipants(row),
-      source,
-    })
-  }
-  return { values, diagnostics: boundedDiagnostics(diagnostics) }
-}
-
 export function normalizeExchangeQaRows(
   raw: unknown,
   request: ManagementCommunicationAcquisitionRequest,
@@ -124,7 +74,8 @@ export function normalizeExchangeQaRows(
 ): NormalizationBatch<ExchangeQAPair> {
   const diagnostics: string[] = []
   const values: ExchangeQAPair[] = []
-  const retrievedAt = normalizeTimestamp(retrievedAtValue)
+  const timestampSource = platform === 'SZSE_HUDONGYI' ? 'SZSE_HUDONGYI' : 'SSE_EINTERACTION'
+  const retrievedAt = normalizeSourceTimestamp(retrievedAtValue, timestampSource, 'retrieval')
   if (retrievedAt === undefined) return { values: [], diagnostics: [`invalid_retrievedAt:${platform}`] }
   for (const row of rows(raw)) {
     const ticker = normalizeTicker(read(row, ['股票代码', '证券代码', '代码', 'stockCode', 'SECURITY_CODE', 'ticker']))
@@ -147,25 +98,26 @@ export function normalizeExchangeQaRows(
       continue
     }
     const questionAtValue = read(row, ['提问时间', '问题时间', 'questionAt', 'questionDate'])
-    const questionAt = questionAtValue === undefined ? undefined : normalizeTimestamp(questionAtValue)
+    const questionAt = questionAtValue === undefined ? undefined : normalizeSourceTimestamp(questionAtValue, timestampSource, 'event')
     if (questionAtValue !== undefined && questionAt === undefined) {
       diagnostics.push(`invalid_questionAt:${platform}`)
       continue
     }
-    const answeredAt = normalizeTimestamp(read(row, ['回答时间', '答复时间', '更新时间', 'answeredAt', 'replyDate', 'attachedPubDate']))
+    const answeredAtValue = read(row, ['回答时间', '答复时间', '更新时间', 'answeredAt', 'replyDate', 'attachedPubDate'])
+    const answeredAt = normalizeSourceTimestamp(answeredAtValue, timestampSource, 'event')
     if (answeredAt === undefined) {
       diagnostics.push(`missing_or_invalid_answeredAt:${platform}`)
       continue
     }
     const rawPublishedAt = read(row, ['publishedAt', 'publicAt', 'publicationTime', '发布时间'])
-    const explicitPublishedAt = rawPublishedAt === undefined ? undefined : normalizeTimestamp(rawPublishedAt)
+    const explicitPublishedAt = rawPublishedAt === undefined ? undefined : normalizeSourceTimestamp(rawPublishedAt, timestampSource, 'publication')
     if (rawPublishedAt !== undefined && explicitPublishedAt === undefined) {
       diagnostics.push(`invalid_publishedAt:${platform}`)
       continue
     }
     // These exchange endpoints expose answer/update time as the public reply time;
     // only this concrete source rule permits the deterministic equivalence.
-    const publishedAt = explicitPublishedAt ?? answeredAt
+    const publishedAt = explicitPublishedAt ?? normalizeSourceTimestamp(answeredAtValue, timestampSource, 'publication') ?? answeredAt
     if (isAfterAsOf(publishedAt, request.asOf)) {
       diagnostics.push(`future_publishedAt:${platform}:${publishedAt}`)
       continue
@@ -199,19 +151,10 @@ export function normalizeExchangeQaRows(
   return { values, diagnostics: boundedDiagnostics(diagnostics) }
 }
 
-export function mapDocumentType(title: string, endpoint?: 'eastmoney-institutional-research'): ManagementCommunicationDocumentType | undefined {
-  if (endpoint === 'eastmoney-institutional-research') return 'INVESTOR_RELATIONS_RECORD'
+export function mapDocumentType(title: string): ManagementCommunicationDocumentType | undefined {
   const normalized = title.normalize('NFKC').replace(/\s+/g, '')
+  if (normalized.includes('关于召开') || normalized.includes('召开') && normalized.includes('通知') || normalized.includes('通知') || normalized.includes('邀请') || normalized.includes('预告') || normalized.includes('问题征集')) return undefined
   return DOCUMENT_TYPE_TOKENS.find(([token]) => normalized.includes(token))?.[1]
-}
-
-function optionalParticipants(row: Row): Pick<ManagementCommunicationDocument, 'participants' | 'managementParticipants'> {
-  const participants = splitPeople(read(row, ['调研机构', 'RECEIVE_OBJECT', 'investigators']))
-  const managementParticipants = splitPeople(read(row, ['接待人员', 'RECEPTIONIST', 'receptionist']))
-  return {
-    ...(participants.length === 0 ? {} : { participants }),
-    ...(managementParticipants.length === 0 ? {} : { managementParticipants }),
-  }
 }
 
 function rows(value: unknown): readonly Row[] {
@@ -243,18 +186,33 @@ function normalizeTicker(value: unknown): string | undefined {
   return /^\d{6}$/.test(digits) ? digits : undefined
 }
 
-function normalizeTimestamp(value: unknown): string | undefined {
+export type CommunicationTimestampSource = 'CNINFO' | 'SZSE_HUDONGYI' | 'SSE_EINTERACTION' | 'EastMoney'
+export type CommunicationTimestampRole = 'publication' | 'event' | 'retrieval'
+
+export function normalizeSourceTimestamp(value: unknown, source: CommunicationTimestampSource, role: CommunicationTimestampRole): string | undefined {
+  const offsetHours = ({ CNINFO: 8, SZSE_HUDONGYI: 8, SSE_EINTERACTION: 8, EastMoney: 8 } as const)[source]
   if (typeof value === 'number' && Number.isFinite(value)) return normalizeEpoch(value)
   const raw = text(value)
   if (raw === undefined) return undefined
   if (/^\d{10,13}$/.test(raw)) return normalizeEpoch(Number(raw))
   const chinese = /^(\d{4})[年/-](\d{1,2})[月/-](\d{1,2})日?(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(raw)
   if (chinese) {
-    const iso = new Date(Date.UTC(Number(chinese[1]), Number(chinese[2]) - 1, Number(chinese[3]), Number(chinese[4] ?? 0), Number(chinese[5] ?? 0), Number(chinese[6] ?? 0)))
-    return Number.isNaN(iso.getTime()) ? undefined : iso.toISOString()
+    const year = Number(chinese[1]); const month = Number(chinese[2]); const day = Number(chinese[3])
+    if (chinese[4] === undefined) {
+      if (role === 'event') return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      return localSourceIso(year, month, day, 23, 59, 59, 999, offsetHours)
+    }
+    return localSourceIso(year, month, day, Number(chinese[4]), Number(chinese[5]), Number(chinese[6] ?? 0), 0, offsetHours)
   }
+  const local = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(raw)
+  if (local && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)) return localSourceIso(Number(local[1]), Number(local[2]), Number(local[3]), Number(local[4]), Number(local[5]), Number(local[6] ?? 0), Number((local[7] ?? '').padEnd(3, '0') || 0), offsetHours)
   const parsed = Date.parse(raw)
   return Number.isNaN(parsed) ? undefined : new Date(parsed).toISOString()
+}
+
+function localSourceIso(year: number, month: number, day: number, hour: number, minute: number, second: number, millisecond: number, offsetHours: number): string | undefined {
+  const value = new Date(Date.UTC(year, month - 1, day, hour, minute, second, millisecond) - offsetHours * 60 * 60 * 1000)
+  return Number.isNaN(value.getTime()) ? undefined : value.toISOString()
 }
 
 function normalizeEpoch(value: number): string | undefined {
@@ -268,20 +226,6 @@ function isAfterAsOf(publishedAt: string, asOf: string): boolean {
   return Number.isNaN(published) || Number.isNaN(cutoff) || published > cutoff
 }
 
-function splitPeople(value: unknown): readonly string[] {
-  const source = text(value)
-  if (source === undefined) return []
-  return [...new Set(source.split(/[;,，；、]/).map((item) => item.trim()).filter(Boolean))].sort((left, right) => left.localeCompare(right))
-}
-
 function boundedDiagnostics(values: readonly string[]): readonly string[] {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right)).slice(0, 64)
-}
-
-function stableSerialize(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(',')}]`
-  if (typeof value === 'object' && value !== null) {
-    return `{${Object.keys(value as Row).sort().map((key) => `${JSON.stringify(key)}:${stableSerialize((value as Row)[key])}`).join(',')}}`
-  }
-  return JSON.stringify(value)
 }
