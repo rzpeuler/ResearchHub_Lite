@@ -103,7 +103,7 @@ test('FIRST_VALID reaches FALLBACK_2 only after earlier failures', async () => {
 test('all FIRST_VALID candidates failing returns explicit unavailable result', async () => {
   const result = await runResearchDataAcquisition({ requirement: requirement(), policies: [policy('FIRST_VALID', [candidate('p', 'PRIMARY'), candidate('f1', 'FALLBACK_1'), candidate('f2', 'FALLBACK_2')])], executor: async () => failed('NO_DATA') })
   assert.equal(result.status, 'UNAVAILABLE')
-  assert.equal(result.unavailableReason, 'ALL_FALLBACKS_EXHAUSTED')
+  assert.equal(result.unavailableReason, 'DATA_NOT_PUBLISHED')
   assert.deepEqual(result.attempts.map((attempt) => attempt.sourceId), ['p', 'f1', 'f2'])
 })
 
@@ -130,8 +130,14 @@ test('minimum S3 accepts S0, S1, S2, and S3', () => {
   for (const authority of ['S0_STATUTORY', 'S1_OFFICIAL', 'S2_PROFESSIONAL', 'S3_AGGREGATOR'] as const) assert.equal(candidateEligibility(requirement({ minimumAuthority: 'S3_AGGREGATOR' }), candidate('source', 'PRIMARY', authority)).eligible, true)
 })
 
-test('LLM_WEB acquisition retains original S0 authority separately from fallback level', async () => {
+test('LLM_WEB EXTRACT_WITH_PROVENANCE rejects incomplete provenance', async () => {
   const result = await runResearchDataAcquisition({ requirement: requirement({ llmWebFallback: 'EXTRACT_WITH_PROVENANCE' }), policies: [policy('FIRST_VALID', [candidate('web', 'LLM_WEB', 'S0_STATUTORY')])], executor: async () => success(42, { originPublisher: 'National Bureau of Statistics', retrievalProvider: 'llm-web' }) })
+  assert.equal(result.attempts[0]?.status, 'VALIDATION_ERROR')
+  assert.equal(result.unavailableReason, 'INCOMPLETE_REQUIRED_FIELDS')
+})
+
+test('LLM_WEB acquisition retains original S0 authority with complete provenance', async () => {
+  const result = await runResearchDataAcquisition({ requirement: requirement({ llmWebFallback: 'EXTRACT_WITH_PROVENANCE' }), policies: [policy('FIRST_VALID', [candidate('web', 'LLM_WEB', 'S0_STATUTORY')])], executor: async () => success(42, { originPublisher: 'National Bureau of Statistics', sourceUrl: 'https://example.test/report', publishedAt: AS_OF, retrievedAt: AS_OF, retrievalProvider: 'llm-web' }) })
   assert.equal(result.source?.fallbackLevel, 'LLM_WEB')
   assert.equal(result.source?.originAuthority, 'S0_STATUTORY')
   assert.equal(result.source?.retrievalProvider, 'llm-web')
@@ -146,7 +152,7 @@ test('numeric zero is valid and is not treated as missing', async () => {
 test('missing required numeric field produces validation failure', async () => {
   const result = await runResearchDataAcquisition({ requirement: requirement({ requiredFields: ['value'] }), policies: [policy('FIRST_VALID', [candidate('p', 'PRIMARY')])], executor: async () => success({ other: 0 }) })
   assert.equal(result.attempts[0]?.status, 'VALIDATION_ERROR')
-  assert.equal(result.unavailableReason, 'ALL_FALLBACKS_EXHAUSTED')
+  assert.equal(result.unavailableReason, 'INCOMPLETE_REQUIRED_FIELDS')
 })
 
 test('missing and zero remain distinct in required-field validation', async () => {

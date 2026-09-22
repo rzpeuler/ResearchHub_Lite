@@ -6,7 +6,7 @@ import type { EstimatePoint } from '../../skills/earnings-review/expectations/co
 
 export const EASTMONEY_EPS_UNIT = 'CNY_per_share' as const
 
-export interface EastmoneyEstimateProjectionResult {
+export interface EstimateProjectionResult {
   readonly sources: readonly NormalizedResearchSource[]
   readonly estimates: readonly EstimatePoint[]
   readonly institutions: readonly {
@@ -19,6 +19,8 @@ export interface EastmoneyEstimateProjectionResult {
   readonly forecastBaseYear?: number
   readonly truncated: boolean
 }
+
+export type EastmoneyEstimateProjectionResult = EstimateProjectionResult
 
 function uniqueSorted(values: readonly string[]): readonly string[] {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right))
@@ -36,7 +38,7 @@ function institutionName(record: EastmoneyResearchReportRecord): string {
   return record.orgName ?? record.orgShortName
 }
 
-export function projectEastmoneyEstimatePoints(input: { readonly acquisition: EastmoneyReportAcquisitionResult; readonly targetFiscalYear: number }): EastmoneyEstimateProjectionResult {
+export function projectEastmoneyEstimatePoints(input: { readonly acquisition: EastmoneyReportAcquisitionResult; readonly targetFiscalYear: number }): EstimateProjectionResult {
   const diagnostics: string[] = [...input.acquisition.diagnostics]
   const sourcesByCandidateId = new Set(input.acquisition.sources.map((source) => source.candidate.candidateId))
   const estimates: EstimatePoint[] = []

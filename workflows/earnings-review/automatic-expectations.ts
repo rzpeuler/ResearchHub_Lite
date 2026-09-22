@@ -1,13 +1,13 @@
 import type { ResearchAcquisitionDiagnostic, ResearchCompanyIdentity, ResearchProviderOutcome, NormalizedResearchSource } from '../../plugins/research-acquisition/contracts.ts'
 import type { EastmoneyEstimateSourceRequest } from '../../plugins/research-acquisition/expectations/contracts.ts'
-import { projectEastmoneyEstimatePoints, type EastmoneyEstimateProjectionResult } from './expectation-source-eastmoney.ts'
+import { projectEastmoneyEstimatePoints, type EstimateProjectionResult } from './expectation-source-eastmoney.ts'
 import { buildConsensusSnapshot } from '../../skills/earnings-review/expectations/consensus.ts'
 import { validateEstimatePoint } from '../../skills/earnings-review/expectations/matching.ts'
 import type { EstimatePoint } from '../../skills/earnings-review/expectations/contracts.ts'
 import type { EarningsEastmoneyExpectationSource, EarningsReviewExpectationsBundle, EarningsReviewWorkflowInput, EstimateRevisionLink } from './contracts.ts'
 
 export interface AutomaticExpectationAssemblyInput {
-  readonly projection: EastmoneyEstimateProjectionResult
+  readonly projection: EstimateProjectionResult
   readonly targetFiscalYear: number
   readonly analysisAsOf: string
   readonly resultPublishedAt?: string
@@ -29,6 +29,7 @@ export interface ResolvedEarningsExpectations {
   readonly diagnostics: readonly string[]
   readonly acquisitionDiagnostics: readonly ResearchAcquisitionDiagnostic[]
   readonly providerOutcome?: ResearchProviderOutcome
+  readonly providerOutcomes?: readonly ResearchProviderOutcome[]
   readonly acquisitionStatus: 'not_attempted' | 'available' | 'partial' | 'unavailable' | 'failed'
   readonly estimateCount: number
   readonly institutionCount: number
@@ -68,7 +69,9 @@ function normalizeEstimate(estimate: EstimatePoint, input: AutomaticExpectationA
   const id = text(estimate.estimateId) ? estimate.estimateId.trim() : 'unknown'
   const validation = validateEstimatePoint(estimate)
   if (validation.length > 0) { diagnostics.push(...validation.map((item) => `automatic_estimate_invalid:${id}:${item}`)); return undefined }
-  if (estimate.metric !== 'eps' || estimate.fiscalPeriod !== `${input.targetFiscalYear}-FY` || estimate.unit !== 'CNY_per_share') { diagnostics.push(`automatic_estimate_period_or_unit_invalid:${id}`); return undefined }
+  const supportedUnit = estimate.metric === 'eps' ? 'CNY_per_share' : estimate.metric === 'net_profit' ? 'CNY_yuan' : undefined
+  if (supportedUnit === undefined || estimate.unit !== supportedUnit) { diagnostics.push(`automatic_estimate_period_or_unit_invalid:${id}`); return undefined }
+  if (estimate.fiscalPeriod !== `${input.targetFiscalYear}-FY`) { diagnostics.push(`automatic_estimate_out_of_target_fiscal_period:${id}`); return undefined }
   const published = timestamp(estimate.publishedAt); const asOf = timestamp(input.analysisAsOf)
   if (published === undefined || asOf === undefined || published > asOf) { diagnostics.push(`automatic_estimate_future:${id}`); return undefined }
   const sourceCandidateIds = uniqueSorted(estimate.sourceCandidateIds)
@@ -158,11 +161,33 @@ function acquisitionDiagnostics(diagnostics: readonly string[], outcome: Researc
   return reasons.map((reason) => ({ provider: EASTMONEY_PROVIDER, kind: 'structured_data', status, reason }))
 }
 
+function acquisitionDiagnosticsForProviders(diagnostics: readonly string[], outcomes: readonly ResearchProviderOutcome[], estimateCount: number): readonly ResearchAcquisitionDiagnostic[] {
+  if (outcomes.length === 0) return []
+  return outcomes.flatMap((outcome) => acquisitionDiagnostics(diagnostics, outcome, estimateCount)).slice(0, MAX_ACQUISITION_DIAGNOSTICS)
+}
+
 export async function resolveEarningsExpectations(input: { readonly workflow: EarningsReviewWorkflowInput; readonly company: ResearchCompanyIdentity; readonly analysisAsOf: string; readonly resultPublishedAt?: string }): Promise<ResolvedEarningsExpectations> {
   const caller = input.workflow.expectations
   if (caller !== undefined) {
     const counts = callerCounts(caller)
     return { mode: 'caller', bundle: caller, diagnostics: [], acquisitionDiagnostics: [], acquisitionStatus: 'not_attempted', ...counts }
+  }
+  const expectationsSource = input.workflow.earningsExpectationsSource
+  if (expectationsSource !== undefined) {
+    try {
+      const acquisition = await expectationsSource.acquire({ company: input.company, asOf: input.analysisAsOf, targetFiscalYear: input.workflow.fiscalYear })
+      const assembly = assembleAutomaticEarningsExpectations({ projection: acquisition.projection, targetFiscalYear: input.workflow.fiscalYear, analysisAsOf: input.analysisAsOf, ...(input.resultPublishedAt === undefined ? {} : { resultPublishedAt: input.resultPublishedAt }) })
+      const diagnostics = uniqueSorted([...acquisition.diagnostics, ...assembly.diagnostics, ...(assembly.bundle === undefined ? ['automatic_expectations_unavailable'] : [])])
+      const outcomes = acquisition.providerOutcomes
+      const primaryOutcome = outcomes[0] ?? acquisition.projection.providerOutcome
+      const acquisitionStatus = acquisition.status === 'failed' ? 'failed' : assembly.bundle === undefined ? 'unavailable' : acquisition.status === 'partial' || diagnostics.length > 0 ? 'partial' : 'available'
+      return { mode: 'automatic', ...(assembly.bundle === undefined ? {} : { bundle: assembly.bundle }), diagnostics, acquisitionDiagnostics: acquisitionDiagnosticsForProviders(diagnostics, outcomes, assembly.estimateCount), providerOutcome: primaryOutcome, providerOutcomes: outcomes, acquisitionStatus, estimateCount: assembly.estimateCount, institutionCount: assembly.institutionCount, consensusSnapshotCount: assembly.consensusSnapshotCount, revisionLinkCount: assembly.revisionLinkCount }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      const providerOutcome: ResearchProviderOutcome = { provider: 'akshare-earnings-expectations-source-ladder', providerAttempted: true, providerSucceeded: false, providerEmpty: false, providerFailed: true, usableSourceCount: 0 }
+      const diagnostics = [`automatic_expectation_source_exception:${reason}`]
+      return { mode: 'automatic', diagnostics, acquisitionDiagnostics: acquisitionDiagnostics(diagnostics, providerOutcome, 0), providerOutcome, providerOutcomes: [providerOutcome], acquisitionStatus: 'failed', estimateCount: 0, institutionCount: 0, consensusSnapshotCount: 0, revisionLinkCount: 0 }
+    }
   }
   const source: EarningsEastmoneyExpectationSource | undefined = input.workflow.eastmoneyExpectationSource
   if (source === undefined) return { mode: 'none', diagnostics: [], acquisitionDiagnostics: [], acquisitionStatus: 'not_attempted', estimateCount: 0, institutionCount: 0, consensusSnapshotCount: 0, revisionLinkCount: 0 }
@@ -173,11 +198,11 @@ export async function resolveEarningsExpectations(input: { readonly workflow: Ea
     const assembly = assembleAutomaticEarningsExpectations({ projection, targetFiscalYear: input.workflow.fiscalYear, analysisAsOf: input.analysisAsOf, ...(input.resultPublishedAt === undefined ? {} : { resultPublishedAt: input.resultPublishedAt }) })
     const diagnostics = uniqueSorted([...assembly.diagnostics, ...(assembly.bundle === undefined ? ['automatic_expectations_unavailable'] : [])])
     const acquisitionStatus = acquisition.providerOutcome.providerFailed ? 'failed' : assembly.bundle === undefined ? 'unavailable' : acquisition.truncated || diagnostics.length > 0 ? 'partial' : 'available'
-    return { mode: 'automatic', ...(assembly.bundle === undefined ? {} : { bundle: assembly.bundle }), diagnostics, acquisitionDiagnostics: acquisitionDiagnostics(diagnostics, acquisition.providerOutcome, assembly.estimateCount), providerOutcome: acquisition.providerOutcome, acquisitionStatus, estimateCount: assembly.estimateCount, institutionCount: assembly.institutionCount, consensusSnapshotCount: assembly.consensusSnapshotCount, revisionLinkCount: assembly.revisionLinkCount }
+    return { mode: 'automatic', ...(assembly.bundle === undefined ? {} : { bundle: assembly.bundle }), diagnostics, acquisitionDiagnostics: acquisitionDiagnostics(diagnostics, acquisition.providerOutcome, assembly.estimateCount), providerOutcome: acquisition.providerOutcome, providerOutcomes: [acquisition.providerOutcome], acquisitionStatus, estimateCount: assembly.estimateCount, institutionCount: assembly.institutionCount, consensusSnapshotCount: assembly.consensusSnapshotCount, revisionLinkCount: assembly.revisionLinkCount }
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error)
     const providerOutcome: ResearchProviderOutcome = { provider: EASTMONEY_PROVIDER, providerAttempted: true, providerSucceeded: false, providerEmpty: false, providerFailed: true, usableSourceCount: 0 }
     const diagnostics = [`automatic_expectation_source_exception:${reason}`]
-    return { mode: 'automatic', diagnostics, acquisitionDiagnostics: acquisitionDiagnostics(diagnostics, providerOutcome, 0), providerOutcome, acquisitionStatus: 'failed', estimateCount: 0, institutionCount: 0, consensusSnapshotCount: 0, revisionLinkCount: 0 }
+    return { mode: 'automatic', diagnostics, acquisitionDiagnostics: acquisitionDiagnostics(diagnostics, providerOutcome, 0), providerOutcome, providerOutcomes: [providerOutcome], acquisitionStatus: 'failed', estimateCount: 0, institutionCount: 0, consensusSnapshotCount: 0, revisionLinkCount: 0 }
   }
 }

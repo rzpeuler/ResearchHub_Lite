@@ -9,6 +9,7 @@ import type { ConsensusSnapshot, EstimatePoint, GuidanceRange, SegmentKpiDeltaIn
 import type { EarningsExpectationAnalysis } from './expectations-contracts.ts'
 import type { EarningsValuationImpactAnalysis, ThesisFilterReasoning } from './valuation-impact-thesis-filter-contracts.ts'
 import type { ResearchQualityGateResult } from '../research-quality-gate.ts'
+import type { EarningsExpectationsAcquisitionSource } from './expectations-acquisition.ts'
 
 export interface EstimateRevisionLink { readonly oldEstimateId: string; readonly newEstimateId: string }
 
@@ -48,6 +49,8 @@ export interface EarningsReviewWorkflowInput {
   readonly externalIdentifiers?: readonly ExternalIdentifierV04[]
   readonly expectations?: EarningsReviewExpectationsBundle
   readonly eastmoneyExpectationSource?: EarningsEastmoneyExpectationSource
+  /** AKShare-backed THS -> EastMoney expectations acquisition. Caller-owned expectations still take precedence. */
+  readonly earningsExpectationsSource?: EarningsExpectationsAcquisitionSource
 }
 
 export interface EarningsReviewTelemetry {

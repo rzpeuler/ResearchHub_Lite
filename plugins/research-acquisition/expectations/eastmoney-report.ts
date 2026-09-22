@@ -78,6 +78,15 @@ function shanghaiLocalIso(year: number, month: number, day: number, hour: number
 
 /** Normalize Eastmoney's timezone-free report timestamp as Asia/Shanghai. */
 export function normalizeEastmoneyTimestamp(value: unknown): ParsedTimestamp | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const epochMilliseconds = Math.abs(value) < 1_000_000_000_000 ? value * 1_000 : value
+    const date = new Date(epochMilliseconds)
+    if (!Number.isFinite(date.getTime())) return undefined
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
+    const fields = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]))
+    const iso = fields.year && fields.month && fields.day ? shanghaiLocalIso(Number(fields.year), Number(fields.month), Number(fields.day), 23, 59, 59, 999) : undefined
+    return iso === undefined ? undefined : { iso, precision: 'date' }
+  }
   const raw = text(value, 128)
   if (!raw) return undefined
   const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw)
@@ -189,6 +198,7 @@ function parseRow(value: unknown, currentYear: number, company: ResearchCompanyI
     forecastBaseYear: currentYear,
     epsForecasts: stableForecasts(epsForecasts),
     ...(text(row.emRatingName ?? row.sRatingName, 128) === undefined ? {} : { rating: text(row.emRatingName ?? row.sRatingName, 128) }),
+    ...(text(row.pdfUrl ?? row.reportPdfUrl ?? row.reportPdfLink, 2_048) === undefined ? {} : { reportPdfUrl: text(row.pdfUrl ?? row.reportPdfUrl ?? row.reportPdfLink, 2_048) }),
   }
   return { record: recordValue, diagnostics }
 }
@@ -224,7 +234,7 @@ function reportSource(recordValue: EastmoneyResearchReportRecord, retrievedAt: s
     kind: 'structured_data' as const,
     tier: 3 as const,
     title: recordValue.title,
-    url: `${REPORT_PAGE_URL}?infocode=${encodeURIComponent(recordValue.infoCode)}`,
+    url: recordValue.reportPdfUrl ?? `${REPORT_PAGE_URL}?infocode=${encodeURIComponent(recordValue.infoCode)}`,
     provider: EASTMONEY_REPORT_PROVIDER,
     publishedAt: recordValue.publishedAt,
     metadata,

@@ -99,7 +99,7 @@ async function runFirstValid<T>(
     source: null,
     quality: { pointInTimeSafe: false, complete: false, crossChecked: false },
     attempts,
-    unavailableReason: 'ALL_FALLBACKS_EXHAUSTED',
+    unavailableReason: terminalUnavailableReason(attempts),
     ...(failureStatuses.length > 0 ? { fallbackReason: failureStatuses.join('|') } : {}),
     policyId,
   }
@@ -137,7 +137,7 @@ async function runMultiSource<T>(
       source: null,
       quality: { pointInTimeSafe: false, complete: false, crossChecked: false },
       attempts,
-      unavailableReason: 'ALL_FALLBACKS_EXHAUSTED',
+      unavailableReason: terminalUnavailableReason(attempts),
       policyId,
     }
   }
@@ -183,6 +183,10 @@ function evaluateExecution<T>(
   if (execution.status !== 'SUCCESS') return { status: execution.status, ...(execution.diagnostic ? { diagnostic: execution.diagnostic } : {}) }
   const fieldErrors = validateAcquisitionData(requirement, execution.data)
   if (fieldErrors.length > 0) return { status: 'VALIDATION_ERROR', diagnostic: `INCOMPLETE_REQUIRED_FIELDS: ${fieldErrors.join(',')}` }
+  if (candidate.fallbackLevel === 'LLM_WEB' && requirement.llmWebFallback === 'EXTRACT_WITH_PROVENANCE') {
+    const provenance = execution.source
+    if (!provenance?.originPublisher || !provenance.sourceUrl || !provenance.publishedAt || !provenance.retrievedAt || Number.isNaN(Date.parse(provenance.publishedAt)) || Number.isNaN(Date.parse(provenance.retrievedAt))) return { status: 'VALIDATION_ERROR', diagnostic: 'LLM_WEB_PROVENANCE_REQUIRED: originPublisher, sourceUrl, publishedAt, and retrievedAt are required' }
+  }
   const publishedAt = execution.source?.publishedAt
   if (publishedAt !== undefined && Date.parse(publishedAt) > Date.parse(requirement.asOf)) return { status: 'POINT_IN_TIME_INVALID', diagnostic: `publishedAt ${publishedAt} is after asOf ${requirement.asOf}` }
   const source: AcquisitionSourceMetadata = {
@@ -196,6 +200,15 @@ function evaluateExecution<T>(
     retrievedAt: execution.source?.retrievedAt ?? completedAt,
   }
   return { status: 'SUCCESS', observation: { data: execution.data, source } }
+}
+
+function terminalUnavailableReason(attempts: readonly AcquisitionAttempt[]): AcquisitionResult<unknown>['unavailableReason'] {
+  if (attempts.length === 0) return 'ALL_FALLBACKS_EXHAUSTED'
+  const diagnostics = attempts.map((attempt) => attempt.diagnostic ?? '')
+  if (diagnostics.some((diagnostic) => diagnostic.includes('NO_ELIGIBLE_POINT_IN_TIME_DATA')) || attempts.every((attempt) => attempt.status === 'POINT_IN_TIME_INVALID')) return 'NO_ELIGIBLE_POINT_IN_TIME_DATA'
+  if (diagnostics.some((diagnostic) => diagnostic.includes('INCOMPLETE_REQUIRED_FIELDS')) || attempts.every((attempt) => attempt.status === 'VALIDATION_ERROR')) return 'INCOMPLETE_REQUIRED_FIELDS'
+  if (attempts.every((attempt) => attempt.status === 'NO_DATA')) return 'DATA_NOT_PUBLISHED'
+  return 'ALL_FALLBACKS_EXHAUSTED'
 }
 
 function stableSerialize(value: unknown): string {
