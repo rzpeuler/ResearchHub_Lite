@@ -157,6 +157,25 @@ Management commitment target-end timestamps are explicit Asia/Shanghai
 end-of-day instants (`T23:59:59.999+08:00`) for Q1, H1, Q3, and FY. Date-only
 period boundaries are not passed into execution assessment.
 
+### Consumer-side point-in-time validation
+
+Caller-supplied validated D2-002 extraction is revalidated against the current
+Earnings `analysisAsOf` before consumption. One deterministic consumer-side
+view excludes every formal-guidance, outlook, KPI, and Q&A candidate whose
+`publishedAt` is invalid or later than `analysisAsOf`, with bounded
+diagnostics. Projected `SegmentKpiPoint` values have no date of their own and
+are retained only when every `sourceCandidateId` is backed by an eligible
+`KpiCandidate`; otherwise `KPI_PIT_SOURCE_UNAVAILABLE` is recorded. Guidance
+publication dates are rechecked before current-guidance selection. Commentary,
+Q&A, execution, segment comparisons, and report enrichment consume only this
+filtered view.
+
+Caller-reconstructed source objects preserve the unique underlying validated
+publication timestamp as `candidate.publishedAt`. Conflicting timestamps for
+one source object ID are not resolved arbitrarily; the source is excluded and
+a bounded conflict diagnostic is retained. Synthetic retrieval time is not
+used as publication evidence.
+
 ## 5. Contracts and report integration
 
 D2-003 adds one narrow management-research result contract under the Earnings
