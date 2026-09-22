@@ -13,8 +13,8 @@ function metadata(candidateId: string, sourceObjectId: string, publishedAt: stri
   return { candidateId, sourceObjectId, publishedAt, sourceAuthority: 'S1_OFFICIAL' as const, extractionContractVersion: 'management-communication-extraction-v0.1' as const, reasoningOperation: 'management_communication_extract' as const, evidenceSpan: { sourceObjectId, startOffset: 0, endOffset: 20, exactText: 'bounded management evidence' }, validationDiagnostics: [] }
 }
 
-function kpiCandidate(candidateId: string, sourceObjectId: string, publishedAt: string, fiscalPeriod = '2026-FY', rawValue = '120', rawUnit = '元'): KpiCandidate {
-  return { ...metadata(candidateId, sourceObjectId, publishedAt), rawSegmentLabel: 'segment-a', metric: 'revenue', fiscalPeriod, rawFiscalPeriodText: fiscalPeriod, rawValue, rawUnit }
+function kpiCandidate(candidateId: string, sourceObjectId: string, publishedAt: string, fiscalPeriod = '2026-FY', rawValue = '120', rawUnit = '元', rawSegmentLabel = 'segment-a'): KpiCandidate {
+  return { ...metadata(candidateId, sourceObjectId, publishedAt), rawSegmentLabel, metric: 'revenue', fiscalPeriod, rawFiscalPeriodText: fiscalPeriod, rawValue, rawUnit }
 }
 
 function extraction(): ManagementCommunicationExtractionResult {
@@ -117,7 +117,7 @@ test('segment KPI prior selection uses exact comparable fiscal shape', async () 
 
 test('management execution requires later independent KPI evidence and due date', async () => {
   const base = extraction()
-  const outlook = base.managementOutlookCandidates[1]!
+  const outlook = { ...base.managementOutlookCandidates[1]!, evidenceSpan: { ...base.managementOutlookCandidates[1]!.evidenceSpan, exactText: 'segment-a revenue target 12元' } }
   const later = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: '2027-01-03T00:00:00.000Z', fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: { ...base, managementOutlookCandidates: [outlook], kpiCandidates: [kpiCandidate('kpi-later', 'source-later', '2027-01-02T00:00:00.000Z')] } } })
   assert.ok(later.execution.assessments.some((item) => item.assessment === 'met'))
 
@@ -133,6 +133,49 @@ test('management execution requires later independent KPI evidence and due date'
   assert.equal(future.execution.assessments.some((item) => item.assessment === 'met'), false)
 })
 
+function scopedOutlook(scope: string, period = '2026-FY', sourceObjectId = `outlook-${scope}`, publishedAt = '2026-01-01T00:00:00.000Z') {
+  const item = metadata(sourceObjectId, sourceObjectId, publishedAt)
+  return { ...item, evidenceSpan: { ...item.evidenceSpan, exactText: `${scope}收入预计达到100亿元` }, topic: 'demand', metric: 'revenue', direction: 'increase' as const, timeHorizon: period.slice(5), rawNumericValue: '100', rawUnit: '亿元', rawFiscalPeriodText: period }
+}
+
+test('automatic execution requires attributable KPI scope and preserves caller outcomes', async () => {
+  const base = extraction(); const commitment = scopedOutlook('汽车电子'); const extractionFor = (candidate: KpiCandidate) => ({ ...base, managementOutlookCandidates: [commitment], kpiCandidates: [candidate] })
+  const compatible = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: '2027-01-03T00:00:00.000Z', fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: extractionFor(kpiCandidate('kpi-auto-scope', 'kpi-auto-source', '2027-01-02T00:00:00.000Z', '2026-FY', '100', '亿元', '汽车电子')) } })
+  assert.ok(compatible.execution.assessments.some((item) => item.assessment === 'met'))
+  const mismatch = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: '2027-01-03T00:00:00.000Z', fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: extractionFor(kpiCandidate('kpi-wrong-scope', 'kpi-wrong-source', '2027-01-02T00:00:00.000Z', '2026-FY', '100', '亿元', '消费电子')) } })
+  assert.equal(mismatch.execution.assessments.some((item) => item.assessment === 'met'), false)
+  assert.ok(mismatch.diagnostics.includes('EXECUTION_OUTCOME_SCOPE_MISMATCH'))
+  const unresolved = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: '2027-01-03T00:00:00.000Z', fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: extractionFor(kpiCandidate('kpi-unscoped', 'kpi-unscoped-source', '2027-01-02T00:00:00.000Z', '2026-FY', '100', '亿元', '')) } })
+  assert.equal(unresolved.execution.assessments.some((item) => item.assessment === 'met'), false)
+  assert.ok(unresolved.diagnostics.includes('EXECUTION_OUTCOME_SCOPE_UNRESOLVED'))
+  const callerOutcome = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: '2027-01-03T00:00:00.000Z', fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: { ...base, managementOutlookCandidates: [commitment], kpiCandidates: [] }, executionOutcomes: [{ commitmentId: commitment.candidateId, period: '2026-FY', observedAt: '2027-01-02T00:00:00.000Z', value: 10_000_000_000, unit: 'CNY', sourceRefs: ['caller-independent-source'] }] } })
+  assert.ok(callerOutcome.execution.assessments.some((item) => item.assessment === 'met'))
+})
+
+test('target end uses Asia/Shanghai end-of-day for all Earnings periods', async () => {
+  const base = extraction()
+  const periods = [
+    ['Q1', '2026-03-31T15:59:59.999Z'],
+    ['H1', '2026-06-30T15:59:59.999Z'],
+    ['Q3', '2026-09-30T15:59:59.999Z'],
+    ['FY', '2026-12-31T15:59:59.999Z'],
+  ] as const
+  for (const [period, targetEndUtc] of periods) {
+    const fiscalPeriod = `2026-${period}`
+    const commitment = scopedOutlook('汽车电子', fiscalPeriod, `outlook-${period}`)
+    const kpi = kpiCandidate(`kpi-${period}`, `source-${period}`, targetEndUtc, fiscalPeriod, '100', '亿元', '汽车电子')
+    const early = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: period === 'FY' ? '2026-12-31T08:00:00+08:00' : targetEndUtc, fiscalYear: 2026, period, officialSources: [], caller: { extraction: { ...base, managementOutlookCandidates: [commitment], kpiCandidates: [kpi] } } })
+    if (period === 'FY') assert.ok(early.execution.assessments.some((item) => item.assessment === 'not_yet_observable'))
+    const dueAsOf = period === 'FY' ? '2026-12-31T23:59:59.999+08:00' : targetEndUtc
+    const due = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: dueAsOf, fiscalYear: 2026, period, officialSources: [], caller: { extraction: { ...base, managementOutlookCandidates: [commitment], kpiCandidates: [kpi] } } })
+    assert.ok(due.execution.assessments.some((item) => item.assessment === 'met'), period)
+    if (period === 'FY') {
+      const equivalentZ = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: targetEndUtc, fiscalYear: 2026, period, officialSources: [], caller: { extraction: { ...base, managementOutlookCandidates: [commitment], kpiCandidates: [kpi] } } })
+      assert.ok(equivalentZ.execution.assessments.some((item) => item.assessment === 'met'))
+    }
+  }
+})
+
 test('Q&A response quality requires coverage of the question', async () => {
   const make = (question: string, answer: string, explicitlyStatedMetrics: string[] = ['revenue']) => ({ ...extraction(), structuredQaCandidates: [{ ...extraction().structuredQaCandidates[0]!, question, answer, explicitlyStatedMetrics }] })
   const direct = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: AS_OF, fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: make('revenue?', 'revenue increased 10%', ['revenue']) } })
@@ -143,6 +186,24 @@ test('Q&A response quality requires coverage of the question', async () => {
   assert.equal(partial.qaClusters[0]?.members[0]?.response.status, 'partial')
   const nonAnswer = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: AS_OF, fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: make('margin?', '不便透露', []) } })
   assert.equal(nonAnswer.qaClusters[0]?.members[0]?.response.status, 'non_answer')
+})
+
+test('Q&A clusters provide deduplicated multi-topic and product-aware membership', async () => {
+  const makeExtraction = (topicTags: string[], referencedProductOrSegment?: string) => ({ ...extraction(), structuredQaCandidates: [{ ...extraction().structuredQaCandidates[0]!, topicTags, ...(referencedProductOrSegment === undefined ? {} : { referencedProductOrSegment }) }] })
+  const multiTopic = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: AS_OF, fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: makeExtraction(['demand', 'pricing']) } })
+  assert.deepEqual(multiTopic.qaClusters.map((item) => item.key).sort(), ['demand|', 'pricing|'])
+  assert.ok(multiTopic.qaClusters.every((item) => item.members.map((member) => member.pairId).filter((pairId) => pairId === 'pair-1').length === 1))
+  const duplicateTags = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: AS_OF, fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: makeExtraction(['demand', 'demand', 'Demand']) } })
+  assert.equal(duplicateTags.qaClusters.length, 1)
+  assert.equal(duplicateTags.qaClusters[0]?.members.filter((member) => member.pairId === 'pair-1').length, 1)
+  const productAware = { ...extraction(), structuredQaCandidates: [
+    { ...extraction().structuredQaCandidates[0]!, pairId: 'pair-automotive', candidateId: 'qa-automotive', referencedProductOrSegment: 'automotive', topicTags: ['demand'] },
+    { ...extraction().structuredQaCandidates[0]!, pairId: 'pair-consumer', candidateId: 'qa-consumer', referencedProductOrSegment: 'consumer-electronics', topicTags: ['demand'] },
+  ] }
+  const productResult = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: AS_OF, fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: productAware } })
+  assert.deepEqual(productResult.qaClusters.map((item) => item.key).sort(), ['demand|automotive', 'demand|consumer-electronics'])
+  const noTags = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: AS_OF, fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: makeExtraction([]) } })
+  assert.match(noTags.qaClusters[0]?.key ?? '', /^question\|/u)
 })
 
 function commentaryExtraction(current: { readonly candidateId: string; readonly sourceObjectId: string; readonly publishedAt: string; readonly direction: 'increase' | 'decrease'; readonly value: string; readonly evidence: string }, prior: { readonly candidateId: string; readonly sourceObjectId: string; readonly publishedAt: string; readonly direction: 'increase' | 'decrease'; readonly value: string; readonly evidence: string }) {
@@ -161,4 +222,16 @@ test('commentary is point-in-time and fail-closed for numeric semantics', async 
   assert.equal(ambiguous.commentaryDeltas[0]?.status, 'inconclusive')
   const future = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: AS_OF, fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: commentaryExtraction({ candidateId: 'future', sourceObjectId: 'future-source', publishedAt: '2026-10-20T00:00:00.000Z', direction: 'increase', value: '14', evidence: 'target revenue reaches 14元' }, { candidateId: 'prior', sourceObjectId: 'prior-source', publishedAt: '2026-08-20T00:00:00.000Z', direction: 'increase', value: '10', evidence: 'target revenue reaches 10元' }) } })
   assert.equal(future.commentaryDeltas[0]?.currentCandidateId, 'prior')
+})
+
+test('commentary chronology excludes same-timestamp priors and conflicts', async () => {
+  const base = commentaryExtraction({ candidateId: 'current', sourceObjectId: 'current-source', publishedAt: '2026-09-20T00:00:00.000Z', direction: 'increase', value: '12', evidence: 'target revenue reaches 12元' }, { candidateId: 'prior', sourceObjectId: 'prior-source', publishedAt: '2026-08-20T00:00:00.000Z', direction: 'increase', value: '10', evidence: 'target revenue reaches 10元' })
+  const duplicate = { ...base, managementOutlookCandidates: [...base.managementOutlookCandidates, { ...base.managementOutlookCandidates[1]!, candidateId: 'current-duplicate', sourceObjectId: 'current-duplicate-source' }] }
+  const duplicateResult = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: AS_OF, fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: duplicate } })
+  assert.equal(duplicateResult.commentaryDeltas[0]?.status, 'strengthened')
+  assert.equal(duplicateResult.commentaryDeltas[0]?.priorCandidateId, 'prior')
+  const conflict = { ...base, managementOutlookCandidates: [...base.managementOutlookCandidates, { ...base.managementOutlookCandidates[1]!, candidateId: 'current-conflict', sourceObjectId: 'current-conflict-source', rawNumericValue: '14', evidenceSpan: { ...base.managementOutlookCandidates[1]!.evidenceSpan, sourceObjectId: 'current-conflict-source', exactText: 'target revenue reaches 14元' } }] }
+  const conflictResult = await resolveManagementCommunication({ company: { symbol: '600519', exchange: 'SSE' }, analysisAsOf: AS_OF, fiscalYear: 2026, period: 'FY', officialSources: [], caller: { extraction: conflict } })
+  assert.equal(conflictResult.commentaryDeltas[0]?.status, 'inconclusive')
+  assert.ok(conflictResult.commentaryDeltas[0]?.diagnostics.includes('COMMENTARY_CURRENT_CONFLICT'))
 })

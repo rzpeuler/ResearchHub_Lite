@@ -107,12 +107,19 @@ claim. Identical same-direction values are `unchanged`. `strengthened` or
 otherwise a different same-direction value is `inconclusive` with
 `COMMENTARY_NUMERIC_SEMANTICS_AMBIGUOUS`. Opposite directional pairs are
 `reversed`. Incompatible or conflicting records retain source refs and
-diagnostics.
+diagnostics. The prior candidate must have a strictly earlier publication
+timestamp than current. Same-timestamp exact semantic duplicates are
+deduplicated deterministically; incompatible same-timestamp current
+candidates produce `COMMENTARY_CURRENT_CONFLICT` and an `inconclusive` delta.
 
 ### Q&A
 
-Q&A clusters use normalized validated tags and bounded question/product
-identity. Each member keeps its D2-002 evidence span and source object ID.
+Q&A clusters use one normalized validated topic tag plus the normalized
+question/product identity. A multi-topic Q&A member is included once in each
+relevant topic cluster; duplicate topic tags do not create duplicate members.
+Explicit product/segment identity remains part of the cluster key, so distinct
+products remain separate. With no topic tags, the bounded question fallback is
+retained. Each member keeps its D2-002 evidence span and source object ID.
 Response quality is qualitative and evidence-local. `direct` requires bounded
 coverage evidence: a meaningful normalized question term/phrase appears in
 the answer, or an explicitly stated metric appears in both question and
@@ -132,7 +139,12 @@ serves as its own outcome. Automatic outcomes use validated D2-002
 `KpiCandidate` evidence and require compatible metric/period/unit, a later
 publication than the commitment, an independent source object, and a
 published observation at or after the target end date. SegmentKpiPoint alone
-cannot create an automatic outcome. Caller-supplied outcomes are filtered
+cannot create an automatic outcome. Automatic KPI scope is also required:
+`rawSegmentLabel` or `rawProductLabel` must exist and match literally within
+the commitment evidence text after normalization. Missing scope produces
+`EXECUTION_OUTCOME_SCOPE_UNRESOLVED`; a non-matching scope produces
+`EXECUTION_OUTCOME_SCOPE_MISMATCH`. Missing scope is never treated as
+company-wide. Caller-supplied outcomes are filtered
 before assessment unless they have non-empty independent source refs, a
 compatible period/unit, `commitment.publishedAt <= observedAt <= analysisAsOf`,
 and an observed date at or after the target end date. Premature outcomes
@@ -140,6 +152,10 @@ therefore resolve to `not_yet_observable`; missing later evidence remains
 `inconclusive` after the due date. The existing execution Skill determines
 `met`, `not_met`, `not_yet_observable`, and `inconclusive`; qualitative targets
 remain non-authoritative.
+
+Management commitment target-end timestamps are explicit Asia/Shanghai
+end-of-day instants (`T23:59:59.999+08:00`) for Q1, H1, Q3, and FY. Date-only
+period boundaries are not passed into execution assessment.
 
 ## 5. Contracts and report integration
 

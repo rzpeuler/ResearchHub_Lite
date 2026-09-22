@@ -187,6 +187,8 @@ function absoluteTargetLevel(candidate: ManagementOutlookCandidate): boolean {
   return /达到|目标|不低于|不少于|至少|不超过|至多|target|reach|at least|at most/iu.test(evidence)
 }
 
+function commentarySemanticKey(candidate: ManagementOutlookCandidate): string { return [candidate.direction ?? '', candidate.rawNumericValue ?? '', candidate.rawNumericRange ?? '', candidate.rawUnit ?? '', candidate.rawFiscalPeriodText ?? ''].map(normalized).join('|') }
+
 function buildCommentary(outlooks: readonly ManagementOutlookCandidate[], analysisAsOf: string): readonly ManagementCommentaryDelta[] {
   const cutoff = Date.parse(analysisAsOf)
   const eligible = outlooks.filter((candidate) => Number.isFinite(Date.parse(candidate.publishedAt)) && Date.parse(candidate.publishedAt) <= cutoff)
@@ -194,11 +196,14 @@ function buildCommentary(outlooks: readonly ManagementOutlookCandidate[], analys
   for (const candidate of eligible) groups.set(outlookKey(candidate), [...(groups.get(outlookKey(candidate)) ?? []), candidate])
   const output: ManagementCommentaryDelta[] = []
   for (const [key, values] of [...groups.entries()].sort(([left], [right]) => left.localeCompare(right))) {
-    const ordered = values.slice().sort((left, right) => Date.parse(right.publishedAt) - Date.parse(left.publishedAt) || right.candidateId.localeCompare(left.candidateId)); const current = ordered[0]!; const prior = ordered[1]
+    const latestTimestamp = Math.max(...values.map((candidate) => Date.parse(candidate.publishedAt))); const latest = values.filter((candidate) => Date.parse(candidate.publishedAt) === latestTimestamp); const priorCandidates = values.filter((candidate) => Date.parse(candidate.publishedAt) < latestTimestamp).sort((left, right) => Date.parse(right.publishedAt) - Date.parse(left.publishedAt) || right.candidateId.localeCompare(left.candidateId)); const prior = priorCandidates[0]
+    const latestBySemantics = new Map<string, ManagementOutlookCandidate>(); for (const candidate of latest.slice().sort((left, right) => left.candidateId.localeCompare(right.candidateId))) { const semanticKey = commentarySemanticKey(candidate); if (!latestBySemantics.has(semanticKey)) latestBySemantics.set(semanticKey, candidate) }
+    const latestUnique = [...latestBySemantics.values()].sort((left, right) => left.candidateId.localeCompare(right.candidateId)); const current = latestUnique[0]!; const currentConflict = latestUnique.length > 1
     const currentNumber = outlookNumber(current); const priorNumber = prior === undefined ? {} : outlookNumber(prior); const currentSign = directionSign(current.direction); const priorSign = directionSign(prior?.direction); const diagnostics: string[] = []; let status: ManagementCommentaryDeltaStatus = 'new'
     const comparableNumeric = finite(currentNumber.value) && finite(priorNumber.value) && currentNumber.unit === priorNumber.unit
     const numericChange = comparableNumeric ? { current: currentNumber.value, prior: priorNumber.value, absoluteDelta: currentNumber.value - priorNumber.value, unit: currentNumber.unit } : undefined
-    if (prior !== undefined) {
+    if (currentConflict) { status = 'inconclusive'; diagnostics.push('COMMENTARY_CURRENT_CONFLICT')
+    } else if (prior !== undefined) {
       if (currentSign !== undefined && priorSign !== undefined && currentSign !== 0 && priorSign !== 0 && currentSign !== priorSign) status = 'reversed'
       else if (current.direction === prior.direction && comparableNumeric && currentNumber.value === priorNumber.value) status = 'unchanged'
       else if (current.direction === prior.direction && comparableNumeric && absoluteTargetLevel(current) && absoluteTargetLevel(prior)) {
@@ -208,7 +213,7 @@ function buildCommentary(outlooks: readonly ManagementOutlookCandidate[], analys
       if (!comparableNumeric && (finite(currentNumber.value) || finite(priorNumber.value))) diagnostics.push('COMMENTARY_NUMERIC_COMPARISON_INCOMPATIBLE')
       if (comparableNumeric && status === 'inconclusive') diagnostics.push('COMMENTARY_NUMERIC_SEMANTICS_AMBIGUOUS')
     }
-    output.push({ key, topic: current.topic, ...(current.metric === undefined ? {} : { metric: current.metric }), ...(current.timeHorizon === undefined ? {} : { timeHorizon: current.timeHorizon }), status, currentCandidateId: current.candidateId, ...(prior === undefined ? {} : { priorCandidateId: prior.candidateId }), ...(current.direction === undefined ? {} : { currentDirection: current.direction }), ...(prior?.direction === undefined ? {} : { priorDirection: prior.direction }), ...(numericChange === undefined ? {} : { numericChange }), sourceCandidateIds: unique([current.sourceObjectId, ...(prior === undefined ? [] : [prior.sourceObjectId])]), diagnostics })
+    output.push({ key, topic: current.topic, ...(current.metric === undefined ? {} : { metric: current.metric }), ...(current.timeHorizon === undefined ? {} : { timeHorizon: current.timeHorizon }), status, currentCandidateId: current.candidateId, ...(prior === undefined ? {} : { priorCandidateId: prior.candidateId }), ...(current.direction === undefined ? {} : { currentDirection: current.direction }), ...(prior?.direction === undefined ? {} : { priorDirection: prior.direction }), ...(numericChange === undefined || currentConflict ? {} : { numericChange }), sourceCandidateIds: unique([...latest.map((item) => item.sourceObjectId), ...(prior === undefined ? [] : [prior.sourceObjectId])]), diagnostics })
   }
   return output
 }
@@ -225,18 +230,20 @@ function assessResponse(item: StructuredQAEvidence): QAResponseAssessment {
   return { status: 'inconclusive', diagnostics: ['QA_RESPONSE_EVIDENCE_INSUFFICIENT'], sourceCandidateIds }
 }
 
-function qaKey(item: StructuredQAEvidence): string { const tags = unique(item.topicTags).map(normalized).join('|'); const product = normalized(item.referencedProductOrSegment ?? ''); return tags !== '' || product !== '' ? [tags, product].join('|') : normalized(item.question).slice(0, 120) }
+function normalizedTopicTags(values: readonly string[]): readonly string[] { return [...new Set(values.map((value) => normalized(value)).filter((value) => value !== ''))].sort((left, right) => left.localeCompare(right)) }
 function buildQaClusters(values: readonly StructuredQAEvidence[]): readonly QAQuestionCluster[] {
-  const groups = new Map<string, StructuredQAEvidence[]>(); for (const item of values) groups.set(qaKey(item), [...(groups.get(qaKey(item)) ?? []), item])
-  return [...groups.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([key, members]) => { const ordered = members.slice().sort((left, right) => left.candidateId.localeCompare(right.candidateId)); const first = ordered[0]!; const clusterId = `qa-cluster-${createHash('sha256').update(key).digest('hex').slice(0, 16)}`; return { clusterId, key, topicTags: unique(ordered.flatMap((item) => item.topicTags)), ...(first.referencedProductOrSegment === undefined ? {} : { referencedProductOrSegment: first.referencedProductOrSegment }), members: ordered.map((item): QAQuestionClusterMember => ({ pairId: item.pairId, question: item.question, answer: item.answer, sourceObjectId: item.sourceObjectId, topicTags: unique(item.topicTags), response: assessResponse(item) })), sourceCandidateIds: unique(ordered.flatMap((item) => [item.sourceObjectId, ...item.claimSpans.map((span) => span.sourceObjectId), ...item.managementStatementSpans.map((span) => span.sourceObjectId)])) } })
+  const groups = new Map<string, StructuredQAEvidence[]>(); for (const item of values) { const tags = normalizedTopicTags(item.topicTags); const product = normalized(item.referencedProductOrSegment ?? ''); const keys = tags.length === 0 ? [`question|${normalized(item.question).slice(0, 120)}`] : tags.map((tag) => `${tag}|${product}`); for (const key of keys) groups.set(key, [...(groups.get(key) ?? []), item]) }
+  return [...groups.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([key, members]) => { const byPair = new Map<string, StructuredQAEvidence>(); for (const member of members.slice().sort((left, right) => left.candidateId.localeCompare(right.candidateId))) if (!byPair.has(member.pairId)) byPair.set(member.pairId, member); const ordered = [...byPair.values()].sort((left, right) => left.candidateId.localeCompare(right.candidateId)); const first = ordered[0]!; const [topic] = key.split('|'); const clusterId = `qa-cluster-${createHash('sha256').update(key).digest('hex').slice(0, 16)}`; return { clusterId, key, topicTags: topic === 'question' ? [] : [topic], ...(first.referencedProductOrSegment === undefined ? {} : { referencedProductOrSegment: first.referencedProductOrSegment }), members: ordered.map((item): QAQuestionClusterMember => ({ pairId: item.pairId, question: item.question, answer: item.answer, sourceObjectId: item.sourceObjectId, topicTags: normalizedTopicTags(item.topicTags), response: assessResponse(item) })), sourceCandidateIds: unique(ordered.flatMap((item) => [item.sourceObjectId, ...item.claimSpans.map((span) => span.sourceObjectId), ...item.managementStatementSpans.map((span) => span.sourceObjectId)])) } })
 }
 
-function periodEnd(period: string | undefined): string | undefined { const match = /^(\d{4})-(FY|Q1|H1|Q3)$/u.exec(period ?? ''); if (!match) return undefined; const month = match[2] === 'Q1' ? '03-31' : match[2] === 'H1' ? '06-30' : match[2] === 'Q3' ? '09-30' : '12-31'; return `${match[1]}-${month}` }
+function periodEnd(period: string | undefined): string | undefined { const match = /^(\d{4})-(FY|Q1|H1|Q3)$/u.exec(period ?? ''); if (!match) return undefined; const month = match[2] === 'Q1' ? '03-31' : match[2] === 'H1' ? '06-30' : match[2] === 'Q3' ? '09-30' : '12-31'; return `${match[1]}-${month}T23:59:59.999+08:00` }
 function dateValue(value: string | undefined): number | undefined { if (!text(value)) return undefined; const parsed = Date.parse(value); return Number.isFinite(parsed) ? parsed : undefined }
-function kpiCandidatePoint(candidate: KpiCandidate): SegmentKpiPoint | undefined {
+function kpiCandidatePoint(candidate: KpiCandidate): { readonly point?: SegmentKpiPoint; readonly scopeLabel?: string; readonly diagnostic?: string } {
+  const scopeLabel = text(candidate.rawSegmentLabel) ? candidate.rawSegmentLabel.trim() : text(candidate.rawProductLabel) ? candidate.rawProductLabel.trim() : undefined
+  if (scopeLabel === undefined) return { diagnostic: 'EXECUTION_OUTCOME_SCOPE_UNRESOLVED' }
   const period = candidate.fiscalPeriod ?? resolveFiscalPeriod(candidate.rawFiscalPeriodText).fiscalPeriod; const unit = resolveUnit(candidate.rawUnit, candidate.evidenceSpan.exactText ?? ''); const numeric = parseNumericToken(candidate.rawValue)
-  if (period === undefined || unit === undefined || numeric === undefined) return undefined
-  return { segmentKey: candidate.rawSegmentLabel ?? candidate.rawProductLabel ?? 'company', metric: candidate.metric, fiscalPeriod: period, value: numeric.value * unit.factor, unit: unit.canonical, sourceCandidateIds: [candidate.sourceObjectId] }
+  if (period === undefined || unit === undefined || numeric === undefined) return { scopeLabel }
+  return { scopeLabel, point: { segmentKey: scopeLabel, metric: candidate.metric, fiscalPeriod: period, value: numeric.value * unit.factor, unit: unit.canonical, sourceCandidateIds: [candidate.sourceObjectId] } }
 }
 
 function buildExecution(company: ResearchCompanyIdentity, asOf: string, outlooks: readonly ManagementOutlookCandidate[], kpiCandidates: readonly KpiCandidate[], suppliedOutcomes: readonly ManagementOutcome[]): ManagementExecutionResult {
@@ -244,14 +251,16 @@ function buildExecution(company: ResearchCompanyIdentity, asOf: string, outlooks
   const diagnostics: string[] = []
   const automaticOutcomes: ManagementOutcome[] = []
   for (const candidate of kpiCandidates) {
-    const point = kpiCandidatePoint(candidate); if (point === undefined) continue
+    const resolved = kpiCandidatePoint(candidate); if (resolved.diagnostic !== undefined) { diagnostics.push(resolved.diagnostic); continue }; const point = resolved.point; if (point === undefined || resolved.scopeLabel === undefined) continue
     for (const commitment of commitments) {
       const targetEnd = dateValue(commitment.targetEndDate); const published = dateValue(candidate.publishedAt); const commitmentPublished = dateValue(commitment.publishedAt)
       const compatible = commitment.targetMetric === point.metric && commitment.targetPeriod === point.fiscalPeriod && commitment.targetUnit === point.unit
+      const scopeCompatible = normalized(commitment.statement).includes(normalized(resolved.scopeLabel))
       const later = published !== undefined && commitmentPublished !== undefined && published > commitmentPublished
       const asOfValue = dateValue(asOf); const due = targetEnd !== undefined && published !== undefined && asOfValue !== undefined && published <= asOfValue && asOfValue >= targetEnd && published >= targetEnd
       const independent = !commitment.sourceRefs.includes(candidate.sourceObjectId)
-      if (compatible && later && due && independent) automaticOutcomes.push({ commitmentId: commitment.id, period: point.fiscalPeriod, observedAt: candidate.publishedAt, value: point.value, unit: point.unit, statement: `Observed ${point.metric} for ${point.segmentKey}`, sourceRefs: [...point.sourceCandidateIds] })
+      if (compatible && !scopeCompatible) diagnostics.push('EXECUTION_OUTCOME_SCOPE_MISMATCH')
+      else if (compatible && scopeCompatible && later && due && independent) automaticOutcomes.push({ commitmentId: commitment.id, period: point.fiscalPeriod, observedAt: candidate.publishedAt, value: point.value, unit: point.unit, statement: `Observed ${point.metric} for ${point.segmentKey}`, sourceRefs: [...point.sourceCandidateIds] })
       else if (compatible && !independent) diagnostics.push('EXECUTION_OUTCOME_NOT_INDEPENDENT')
     }
   }
