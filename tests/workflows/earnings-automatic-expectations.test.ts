@@ -79,6 +79,14 @@ function automaticSourceClient(calls: unknown[] = []) {
   return { acquire: async (request: unknown) => { calls.push(request); return acquisition(sources, { records: [first, second, third] }) } }
 }
 
+function thsExpectationRow(institution: string, date: string, eps: number, netProfit: string) {
+  return { 机构名称: institution, 研究员: '研究员', 预测年报每股收益2026预测: eps, 预测年报每股收益2027预测: eps + 1, 预测年报每股收益2028预测: eps + 2, 预测年报净利润2026预测: netProfit, 预测年报净利润2027预测: '850亿', 预测年报净利润2028预测: '900亿', 报告日期: date }
+}
+
+function emExpectationRow(institution: string, date: string, eps: number) {
+  return { 股票代码: '600519', 股票简称: '贵州茅台', 报告名称: `${institution}报告`, 机构: institution, '2026-盈利预测-收益': eps, '2027-盈利预测-收益': eps + 1, '2028-盈利预测-收益': eps + 2, 日期: date, 报告PDF链接: `https://pdf.dfcfw.com/pdf/${institution}.pdf` }
+}
+
 async function runWorkflowFixture(fixture: Awaited<ReturnType<typeof workflowFixture>>, overrides: Partial<EarningsReviewWorkflowInput> = {}) {
   return runEarningsReview({ workflowRunId: `automatic-${Date.now()}-${Math.random().toString(16).slice(2)}`, handle: fixture.handle, company: { symbol: '600519', name: '贵州茅台', exchange: 'SSE' }, fiscalYear: 2026, period: 'H1', reportRoot: fixture.reports, acquisitionPlugins: [fixture.plugin], akshare: fixture.akshare, now: () => AS_OF, reasoningExecutor: new CaptureExecutor(), ...overrides })
 }
@@ -252,6 +260,51 @@ test('non-empty caller expectations remain caller-owned and never report provide
     assert.equal(result.telemetry.expectationInputMode, 'caller')
     assert.equal(result.telemetry.expectationAcquisitionStatus, 'not_attempted')
     assert.equal(result.providerOutcomes.some((item) => item.provider === 'eastmoney-reportapi'), false)
+  } finally { await fixture.close() }
+})
+
+test('normal Earnings Review implicitly activates the AKShare expectations source ladder', async () => {
+  const fixture = await workflowFixture(); const calls: string[] = []
+  const akshare = { ...fixture.akshare, profitForecastThs: async () => { calls.push('ths'); return [thsExpectationRow('诚通证券', '2026-07-01', 65.1, '814亿'), thsExpectationRow('浙商证券', '2026-07-02', 65.7, '823亿')] }, researchReportEm: async () => { calls.push('eastmoney'); return [emExpectationRow('EastMoney', '2026-07-01', 1)] }, profitForecastEm: async () => { calls.push('aggregate'); return [{ 代码: '600519', '2026预测每股收益': 999 }] } }
+  try {
+    const result = await runWorkflowFixture(fixture, { akshare })
+    assert.equal(result.status, 'completed')
+    assert.deepEqual(calls, ['ths', 'ths'])
+    assert.equal(result.telemetry.expectationInputMode, 'automatic')
+    assert.equal(result.telemetry.expectationAcquisitionStatus, 'available')
+    assert.equal(result.telemetry.expectationEstimateCount, 4)
+    assert.equal(result.telemetry.expectationInstitutionCount, 2)
+    assert.equal(result.telemetry.expectationConsensusSnapshotCount, 1)
+    assert.equal(result.providerOutcomes.some((item) => item.provider === 'ths-institution-forecast' && item.providerSucceeded), true)
+  } finally { await fixture.close() }
+})
+
+test('normal Earnings Review falls back from THS to individual EastMoney without using aggregate forecasts', async () => {
+  const fixture = await workflowFixture(); const calls: string[] = []
+  const akshare = { ...fixture.akshare, profitForecastThs: async () => { calls.push('ths'); return [] }, researchReportEm: async () => { calls.push('eastmoney'); return [emExpectationRow('西南证券', '2026-07-01', 65.1), emExpectationRow('中银证券', '2026-07-02', 65.7)] }, profitForecastEm: async () => { calls.push('aggregate'); return [{ 代码: '600519', '2026预测每股收益': 999 }] } }
+  try {
+    const result = await runWorkflowFixture(fixture, { akshare })
+    assert.equal(result.status, 'completed')
+    assert.deepEqual(calls, ['ths', 'eastmoney', 'ths'])
+    assert.equal(result.telemetry.expectationInputMode, 'automatic')
+    assert.equal(result.telemetry.expectationAcquisitionStatus, 'partial')
+    assert.equal(result.telemetry.expectationEstimateCount, 2)
+    assert.equal(result.telemetry.expectationConsensusSnapshotCount, 1)
+    assert.equal(result.providerOutcomes.some((item) => item.provider === 'eastmoney-individual-research-report' && item.providerSucceeded), true)
+    assert.equal(calls.includes('aggregate'), false)
+  } finally { await fixture.close() }
+})
+
+test('caller expectations override implicit AKShare activation', async () => {
+  const fixture = await workflowFixture(); let thsCalls = 0; let eastmoneyCalls = 0
+  const caller = { sources: [], estimates: [] }
+  const akshare = { ...fixture.akshare, profitForecastThs: async () => { thsCalls += 1; return [] }, researchReportEm: async () => { eastmoneyCalls += 1; return [] } }
+  try {
+    const result = await runWorkflowFixture(fixture, { expectations: caller, akshare })
+    assert.equal(result.status, 'completed')
+    assert.equal(result.telemetry.expectationInputMode, 'caller')
+    assert.equal(thsCalls, 0)
+    assert.equal(eastmoneyCalls, 0)
   } finally { await fixture.close() }
 })
 

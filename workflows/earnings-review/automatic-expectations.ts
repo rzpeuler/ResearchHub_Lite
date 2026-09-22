@@ -5,6 +5,7 @@ import { buildConsensusSnapshot } from '../../skills/earnings-review/expectation
 import { validateEstimatePoint } from '../../skills/earnings-review/expectations/matching.ts'
 import type { EstimatePoint } from '../../skills/earnings-review/expectations/contracts.ts'
 import type { EarningsEastmoneyExpectationSource, EarningsReviewExpectationsBundle, EarningsReviewWorkflowInput, EstimateRevisionLink } from './contracts.ts'
+import { createAkshareEarningsExpectationsSource } from './expectations-acquisition.ts'
 
 export interface AutomaticExpectationAssemblyInput {
   readonly projection: EstimateProjectionResult
@@ -158,12 +159,16 @@ function callerCounts(bundle: EarningsReviewExpectationsBundle): Pick<ResolvedEa
 function acquisitionDiagnostics(diagnostics: readonly string[], outcome: ResearchProviderOutcome, estimateCount: number): readonly ResearchAcquisitionDiagnostic[] {
   const status = outcome.providerFailed ? 'failed' : outcome.providerEmpty || estimateCount === 0 ? 'empty' : 'usable'
   const reasons = uniqueSorted(diagnostics.length > 0 ? diagnostics : [`automatic_expectations_${status}`]).slice(0, MAX_ACQUISITION_DIAGNOSTICS)
-  return reasons.map((reason) => ({ provider: EASTMONEY_PROVIDER, kind: 'structured_data', status, reason }))
+  return reasons.map((reason) => ({ provider: outcome.provider, kind: 'structured_data', status, reason }))
 }
 
 function acquisitionDiagnosticsForProviders(diagnostics: readonly string[], outcomes: readonly ResearchProviderOutcome[], estimateCount: number): readonly ResearchAcquisitionDiagnostic[] {
   if (outcomes.length === 0) return []
-  return outcomes.flatMap((outcome) => acquisitionDiagnostics(diagnostics, outcome, estimateCount)).slice(0, MAX_ACQUISITION_DIAGNOSTICS)
+  return outcomes.filter((outcome) => outcome.providerAttempted).flatMap((outcome) => acquisitionDiagnostics(diagnostics, outcome, estimateCount)).slice(0, MAX_ACQUISITION_DIAGNOSTICS)
+}
+
+function hasAkshareExpectationsCapability(client: NonNullable<EarningsReviewWorkflowInput['akshare']>): boolean {
+  return client.profitForecastThs !== undefined || client.researchReportEm !== undefined
 }
 
 export async function resolveEarningsExpectations(input: { readonly workflow: EarningsReviewWorkflowInput; readonly company: ResearchCompanyIdentity; readonly analysisAsOf: string; readonly resultPublishedAt?: string }): Promise<ResolvedEarningsExpectations> {
@@ -172,7 +177,7 @@ export async function resolveEarningsExpectations(input: { readonly workflow: Ea
     const counts = callerCounts(caller)
     return { mode: 'caller', bundle: caller, diagnostics: [], acquisitionDiagnostics: [], acquisitionStatus: 'not_attempted', ...counts }
   }
-  const expectationsSource = input.workflow.earningsExpectationsSource
+  const expectationsSource = input.workflow.earningsExpectationsSource ?? (input.workflow.akshare !== undefined && hasAkshareExpectationsCapability(input.workflow.akshare) ? createAkshareEarningsExpectationsSource({ akshare: input.workflow.akshare, now: input.workflow.now }) : undefined)
   if (expectationsSource !== undefined) {
     try {
       const acquisition = await expectationsSource.acquire({ company: input.company, asOf: input.analysisAsOf, targetFiscalYear: input.workflow.fiscalYear })
@@ -180,7 +185,8 @@ export async function resolveEarningsExpectations(input: { readonly workflow: Ea
       const diagnostics = uniqueSorted([...acquisition.diagnostics, ...assembly.diagnostics, ...(assembly.bundle === undefined ? ['automatic_expectations_unavailable'] : [])])
       const outcomes = acquisition.providerOutcomes
       const primaryOutcome = outcomes[0] ?? acquisition.projection.providerOutcome
-      const acquisitionStatus = acquisition.status === 'failed' ? 'failed' : assembly.bundle === undefined ? 'unavailable' : acquisition.status === 'partial' || diagnostics.length > 0 ? 'partial' : 'available'
+      const assemblyDiagnostics = diagnostics.filter((diagnostic) => !diagnostic.startsWith('automatic_estimate_out_of_target_fiscal_period:'))
+      const acquisitionStatus = acquisition.status === 'failed' ? 'failed' : assembly.bundle === undefined ? 'unavailable' : acquisition.status === 'partial' || assemblyDiagnostics.length > 0 ? 'partial' : 'available'
       return { mode: 'automatic', ...(assembly.bundle === undefined ? {} : { bundle: assembly.bundle }), diagnostics, acquisitionDiagnostics: acquisitionDiagnosticsForProviders(diagnostics, outcomes, assembly.estimateCount), providerOutcome: primaryOutcome, providerOutcomes: outcomes, acquisitionStatus, estimateCount: assembly.estimateCount, institutionCount: assembly.institutionCount, consensusSnapshotCount: assembly.consensusSnapshotCount, revisionLinkCount: assembly.revisionLinkCount }
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)

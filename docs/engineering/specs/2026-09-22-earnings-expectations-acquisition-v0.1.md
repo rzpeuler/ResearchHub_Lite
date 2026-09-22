@@ -71,14 +71,17 @@ The existing W2 assembly remains authoritative. It accepts EPS and net-profit an
 
 Command: `RESEARCHHUB_RUN_REAL_EXPECTATIONS=1 npm run acceptance:earnings-expectations-d1-real`.
 
-Observed run at `2026-09-22T02:52:09.216Z` for `600519`:
+This command exercises `resolveEarningsExpectations` with an AKShare client on the workflow input and does not manually inject `earningsExpectationsSource`.
 
-- status: `AVAILABLE`;
-- THS attempts: 2 successful metric acquisitions (EPS and net profit);
+Observed normal-resolver run at `2026-09-22T03:14:01.237Z` for `600519`:
+
+- status: `EXPECTATIONS_PRODUCT_PATH_VERIFIED`;
+- automatic source injection: false;
+- acquisition status: `available`;
+- THS: attempted and succeeded for the EPS and net-profit requirements;
 - THS provider: attempted and succeeded, 10 usable sources;
 - EastMoney individual fallback: not attempted;
-- projection: 60 points, 30 EPS and 30 net-profit points, 10 institutions;
-- W2 assembly: 20 requested-fiscal-year points, 10 institutions, 1 EPS consensus snapshot;
-- no provider diagnostics.
+- resolver output: 20 requested-fiscal-year points, 10 institutions, 1 EPS consensus snapshot;
+- the full Earnings Review Workflow was not run by this gated script; official filing and reasoning dependencies were outside this focused product-path validation.
 
 Live provider data is expected to change; the command is intentionally gated and is not part of the offline test suite.

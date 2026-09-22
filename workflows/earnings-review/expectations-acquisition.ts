@@ -35,6 +35,7 @@ export interface EarningsExpectationsAcquisitionSource {
 export interface AkshareEarningsExpectationsSourceOptions {
   readonly akshare: AkshareDataClient
   readonly now?: () => string
+  readonly onRequirement?: (requirement: DataRequirement) => void
   /** Legacy source is accepted only as a compatibility fallback when the AKShare EM route is unavailable. */
   readonly legacyEastmoney?: EarningsEastmoneyExpectationSource
 }
@@ -70,7 +71,8 @@ export class AkshareEarningsExpectationsSource implements EarningsExpectationsAc
     const results: AcquisitionResult<{ readonly projection: EstimateProjectionResult }>[] = []
     const diagnostics: string[] = []
     for (const metric of METRICS) {
-      const requirement: DataRequirement = { id: `earnings-expectation-${request.company.symbol}-${request.targetFiscalYear}-${metric}`, consumer: { workflow: 'earnings-review', capability: 'earnings_expectations' }, subject: { ticker: request.company.symbol, companyId: request.company.name }, dataKind: 'estimate', metricId: metric, asOf: request.asOf, determinismClass: 'EVIDENCE_BACKED_NUMERIC', minimumAuthority: 'S3_AGGREGATOR', llmWebFallback: 'FORBIDDEN' }
+      const requirement: DataRequirement = { id: `earnings-expectation-${request.company.symbol}-${request.targetFiscalYear}-${metric}`, consumer: { workflow: 'earnings-review', capability: 'earnings_expectations' }, subject: { ticker: request.company.symbol, companyId: request.company.name }, dataKind: 'estimate', metricId: metric, asOf: request.asOf, determinismClass: 'AUTHORITATIVE_NUMERIC', minimumAuthority: 'S3_AGGREGATOR', llmWebFallback: 'FORBIDDEN' }
+      this.options.onRequirement?.(requirement)
       const result = await runResearchDataAcquisition({ requirement, policies: [earningsExpectationSourcePolicy()], executor: async (_requirement, candidate) => {
         if (candidate.sourceId === THS_SOURCE_ID) {
           if (this.options.akshare.profitForecastThs === undefined) throw new Error('AKSHARE_THS_ROUTE_UNAVAILABLE')

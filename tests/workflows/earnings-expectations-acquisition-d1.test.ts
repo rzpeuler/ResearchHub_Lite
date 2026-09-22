@@ -135,3 +135,30 @@ test('caller-supplied expectations override the D1 acquisition source', async ()
   assert.equal(result.mode, 'caller')
   assert.equal(calls, 0)
 })
+
+test('explicit expectations source takes precedence over implicit AKShare activation', async () => {
+  let explicitCalls = 0
+  let thsCalls = 0
+  const explicit = { acquire: async () => { explicitCalls += 1; return { projection: projectThsInstitutionForecasts({ payload: [thsRow('诚通证券', '2026-09-18')], company: COMPANY, asOf: AS_OF, retrievedAt: RETRIEVED }), results: [], attempts: [], diagnostics: [], providerOutcomes: [], status: 'available' as const } } }
+  const workflow = { fiscalYear: 2026, earningsExpectationsSource: explicit, akshare: client({ profitForecastThs: async () => { thsCalls += 1; return [] } }) } as unknown as EarningsReviewWorkflowInput
+  const result = await resolveEarningsExpectations({ workflow, company: COMPANY, analysisAsOf: AS_OF })
+  assert.equal(result.mode, 'automatic')
+  assert.equal(explicitCalls, 1)
+  assert.equal(thsCalls, 0)
+})
+
+test('automatic D0 requirements are authoritative numeric and prohibit LLM Web fallback', async () => {
+  const requirements: Array<{ readonly determinismClass: string; readonly llmWebFallback: string }> = []
+  const source = new AkshareEarningsExpectationsSource({ akshare: client({ profitForecastThs: async () => [] }), now: () => RETRIEVED, onRequirement: (requirement) => requirements.push(requirement) })
+  await source.acquire({ company: COMPANY, asOf: AS_OF, targetFiscalYear: 2026 })
+  assert.deepEqual(requirements.map((requirement) => [requirement.determinismClass, requirement.llmWebFallback]), [['AUTHORITATIVE_NUMERIC', 'FORBIDDEN'], ['AUTHORITATIVE_NUMERIC', 'FORBIDDEN']])
+})
+
+test('automatic diagnostics attribute THS and EastMoney to their actual providers', async () => {
+  const workflow = { fiscalYear: 2026, akshare: client({ profitForecastThs: async () => [], researchReportEm: async () => [] }) } as unknown as EarningsReviewWorkflowInput
+  const result = await resolveEarningsExpectations({ workflow, company: COMPANY, analysisAsOf: AS_OF })
+  assert.equal(result.acquisitionStatus, 'unavailable')
+  assert.equal(result.acquisitionDiagnostics.some((item) => item.provider === 'ths-institution-forecast'), true)
+  assert.equal(result.acquisitionDiagnostics.some((item) => item.provider === 'eastmoney-individual-research-report'), true)
+  assert.equal(result.acquisitionDiagnostics.some((item) => item.provider === 'eastmoney-reportapi'), false)
+})
