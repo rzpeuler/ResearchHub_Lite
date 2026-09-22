@@ -14,7 +14,7 @@ const capabilities = { maxContextTokens: 1000, maxOutputTokens: 500, structuredO
 
 test('shared reasoning contract includes exactly the three Industry operations and preserves existing operations', () => {
   assert.deepEqual(REASONING_OPERATIONS.slice(-3), ['industry_research_design', 'industry_module_analysis', 'industry_cross_module_synthesis'])
-  for (const operation of ['understandAndPlan', 'extractKnowledge', 'resolveSemanticCase', 'company_research_synthesis', 'thesis_red_team_synthesis']) assert.equal(REASONING_OPERATIONS.includes(operation as never), true)
+  for (const operation of ['understandAndPlan', 'extractKnowledge', 'resolveSemanticCase', 'company_research_synthesis', 'thesis_red_team_synthesis', 'management_communication_extract']) assert.equal(REASONING_OPERATIONS.includes(operation as never), true)
 })
 
 test('MockReasoningExecutor records calls and returns deterministic operation responses', async () => {

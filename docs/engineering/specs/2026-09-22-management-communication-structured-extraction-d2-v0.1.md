@@ -1,6 +1,6 @@
 # Structured Management Communication Extraction v0.1 (D2-002)
 
-Status: DESIGN READY / SOL REVIEW PENDING
+Status: IMPLEMENTED / SOL ACCEPTANCE PENDING
 Task: `RHL-D2-002-DESIGN`
 Baseline: `origin/main = 286dd6ff8deafae4318bfb7103934d5adb0ff2e2`
 Target branch: `codex/d2-002-structured-management-communication-extraction`
@@ -22,10 +22,40 @@ The semantic output families are:
 These families do not have a common source authority. The source lane is part
 of the contract and cannot be inferred away after extraction.
 
-This document specifies the future implementation only. It authorizes no
-runtime code, test, Reasoning operation registration, Workflow, Skill, Plugin,
-Knowledge, API, or UI change in D2-002 itself. D2-003 may later consume the
-independently testable structured result.
+The original design-only gate authorized only this specification and was
+recorded by design commit `902b7d5`. The implementation described by the
+current task now follows that approved boundary: runtime code and focused
+tests may be added, but no acquisition, Knowledge, API, UI, or downstream
+consumer behavior may change. D2-003 may later consume the independently
+testable structured result.
+
+During implementation, this specification is the controlling D2-002 contract.
+The model emits only raw extraction fields. Workflow code owns inherited
+metadata, validation, canonicalization, candidate identity, and projection.
+
+### 1.1 Exact statutory source binding
+
+Formal Guidance consumes the existing
+`NormalizedResearchSource` type from
+`plugins/research-acquisition/contracts.ts`. Its required source fields are:
+
+- `candidate.candidateId`: stable source identity and downstream source
+  binding;
+- `candidate.kind`: must be `official_disclosure` for the statutory lane;
+- `candidate.tier`: the existing official-disclosure path uses tier `1`;
+- `candidate.publishedAt`: source publication time;
+- `content`: the exact text supplied to the reasoning request and span
+  validator;
+- `retrievedAt`, `contentHash`, `title`, `publisher`, and `rights`: existing
+  acquisition/provenance and processing metadata.
+
+`NormalizedResearchSource` does not contain a separate `authority` property.
+For D2-002, the narrow statutory adapter derives the code-owned
+`S0_STATUTORY` authority only from the existing `official_disclosure` + tier 1
+source contract and preserves `candidate.candidateId` as the source binding.
+CNINFO hosting alone is not sufficient. Lane A continues to use the D2-001
+`ManagementCommunicationDocument` and `ExchangeQAPair` contracts, whose
+`CommunicationProvenance` carries their management/interaction authority.
 
 ## 2. Source lanes and authority
 
@@ -109,21 +139,91 @@ guidance. It also cannot create a new information time: the model may not
 invent or infer `publishedAt`. A future source reaching the extractor is a
 validation failure, not a candidate with a later effective date.
 
-## 3. Intermediate extraction contracts
+## 3. Raw extraction and validated candidate contracts
 
-The following are intermediate contracts, not final Earnings inputs. Every
-candidate includes the extraction metadata below in addition to its semantic
-fields:
+The model output is separate from the validated candidate. Raw model output
+does not contain authoritative `candidateId`, `publishedAt`, source
+authority, extraction version, reasoning operation, canonical fiscal periods,
+canonical units, canonical segment keys, or canonical numeric values.
+
+```text
+RawExtractionOutput
+        -> schema validation
+        -> semantic/source/PIT/numeric validation
+        -> code-owned ValidatedCandidate
+```
+
+The raw contract uses the exact source text supplied to the executor. It
+supports incompleteness where the source omits a period, unit, segment, or
+numeric endpoint.
+
+```ts
+interface RawEvidenceLocator {
+  sourceObjectId: string
+  startOffset?: number
+  endOffset?: number
+  exactText?: string
+}
+
+interface RawFormalGuidanceCandidate {
+  metric: string
+  rawFiscalPeriodText?: string
+  guidanceType: 'range' | 'minimum' | 'maximum' | 'point' | 'qualitative'
+  rawLow?: string
+  rawHigh?: string
+  rawPoint?: string
+  rawUnit?: string
+  qualifiers: readonly string[]
+  evidence: RawEvidenceLocator
+}
+
+interface RawManagementOutlookCandidate {
+  topic: string
+  metric?: string
+  direction?: 'increase' | 'decrease' | 'stable' | 'improve' | 'deteriorate' | 'uncertain'
+  rawTimeHorizon?: string
+  rawNumericValue?: string
+  rawNumericRange?: string
+  rawUnit?: string
+  rawFiscalPeriodText?: string
+  evidence: RawEvidenceLocator
+}
+
+interface RawKpiCandidate {
+  rawSegmentLabel?: string
+  rawProductLabel?: string
+  metric: string
+  rawFiscalPeriodText?: string
+  rawValue: string
+  rawUnit?: string
+  evidence: RawEvidenceLocator
+}
+
+interface RawStructuredQAEvidence {
+  pairId: string
+  topicTags: readonly string[]
+  claimSpans: readonly RawEvidenceLocator[]
+  managementStatementSpans: readonly RawEvidenceLocator[]
+  rawReferencedProductOrSegment?: string
+  explicitlyStatedMetrics: readonly string[]
+}
+```
+
+For Q&A, `pairId` must be one of the explicitly supplied pair IDs. The raw
+model does not echo the authoritative question, answer, platform, or
+publication time; Workflow code copies those fields from the original pair.
+
+Validated candidates are code-owned structures. Their shared metadata is:
 
 ```ts
 interface EvidenceSpan {
   sourceObjectId: string
-  startOffset?: number
-  endOffset?: number
-  exactText?: string // bounded; offsets are authoritative when present
+  startOffset: number
+  endOffset: number
+  exactText?: string
 }
 
-interface CandidateMetadata {
+interface ValidatedCandidateMetadata {
   candidateId: string
   sourceObjectId: string
   publishedAt: string
@@ -134,15 +234,10 @@ interface CandidateMetadata {
 }
 ```
 
-`sourceAuthority` is represented with the existing D2-001 provenance
-vocabulary, not a new authority taxonomy. The future implementation may use a
-source binding object instead of duplicating the string, but it must preserve
-the same facts.
-
-### 3.1 FormalGuidanceCandidate
+### 3.1 Validated FormalGuidanceCandidate
 
 ```ts
-interface FormalGuidanceCandidate extends CandidateMetadata {
+interface FormalGuidanceCandidate extends ValidatedCandidateMetadata {
   metric: string
   fiscalPeriod: string
   guidanceType: 'range' | 'minimum' | 'maximum' | 'point' | 'qualitative'
@@ -154,22 +249,17 @@ interface FormalGuidanceCandidate extends CandidateMetadata {
 }
 ```
 
-This candidate is valid only when its source is Lane B statutory disclosure.
-It is extraction output and cannot be consumed by Earnings comparison code
-until validation and projection succeed.
+This candidate is valid only for Lane B statutory disclosure. It is still an
+intermediate extraction result and cannot be consumed by Earnings comparison
+code until projection to the existing contract succeeds.
 
-### 3.2 ManagementOutlookCandidate
+### 3.2 Validated ManagementOutlookCandidate
 
 ```ts
-interface ManagementOutlookCandidate extends CandidateMetadata {
-  topic:
-    | 'demand' | 'pricing' | 'capacity' | 'inventory' | 'orders' | 'margin'
-    | 'capex' | 'new_product' | 'technology' | 'international'
-    | 'competition' | string
+interface ManagementOutlookCandidate extends ValidatedCandidateMetadata {
+  topic: string
   metric?: string
-  direction?:
-    | 'increase' | 'decrease' | 'stable' | 'improve'
-    | 'deteriorate' | 'uncertain'
+  direction?: 'increase' | 'decrease' | 'stable' | 'improve' | 'deteriorate' | 'uncertain'
   timeHorizon?: string
   rawNumericValue?: string
   rawNumericRange?: string
@@ -178,32 +268,29 @@ interface ManagementOutlookCandidate extends CandidateMetadata {
 ```
 
 `ManagementOutlookCandidate` is intentionally not structurally equivalent to
-`GuidanceRange` and must never automatically project to it. A later capability
-may compare outlook with outcomes while retaining its lower source authority.
+`GuidanceRange` and must never automatically project to it.
 
-### 3.3 KpiCandidate
+### 3.3 Validated KpiCandidate
 
 ```ts
-interface KpiCandidate extends CandidateMetadata {
-  segmentKey?: string
-  productKey?: string
+interface KpiCandidate extends ValidatedCandidateMetadata {
+  rawSegmentLabel?: string
+  rawProductLabel?: string
   metric: string
   fiscalPeriod?: string
   rawValue: string
-  rawUnit: string
+  rawUnit?: string
 }
 ```
 
-This generic candidate covers explicit facts such as shipment, sales volume,
-ASP, capacity, utilization, yield, orders, customer count, new-product
-revenue, segment revenue, or regional growth. D2-002 does not create dozens of
-fixed KPI fields. A candidate with ambiguous segment, period, unit, or value
-is retained with a diagnostic but does not project to a final numeric point.
+The generic candidate covers explicit operating facts without creating dozens
+of fixed KPI fields. A candidate with ambiguous identity, period, unit, or
+value remains diagnostic-bearing and unprojected.
 
-### 3.4 StructuredQAEvidence
+### 3.4 Validated StructuredQAEvidence
 
 ```ts
-interface StructuredQAEvidence extends CandidateMetadata {
+interface StructuredQAEvidence extends ValidatedCandidateMetadata {
   pairId: string
   question: string
   answer: string
@@ -217,9 +304,8 @@ interface StructuredQAEvidence extends CandidateMetadata {
 ```
 
 `pairId` is the D2-001 `ExchangeQAPair.id`. The question, answer, platform,
-and publication time are copied from the acquired pair or retained through a
-source binding; they are not reconstructed from an LLM summary. D2-002 does
-not calculate response quality, management credibility, evasiveness, or a
+and publication time are copied from the acquired pair. D2-002 does not
+calculate response quality, management credibility, evasiveness, or a
 bullish/bearish rating.
 
 ## 4. Existing final contracts remain authoritative
@@ -280,7 +366,7 @@ candidate remains independently inspectable and unprojected.
 
 ### 5.1 Existing reasoning boundary
 
-The future implementation reuses the existing `ReasoningExecutor` and adds
+The implementation reuses the existing `ReasoningExecutor` and adds
 one narrow operation to the existing closed operation catalog:
 
 ```text
@@ -603,10 +689,66 @@ automatically reads these outputs until a separately approved D2-003 design.
 | Knowledge | None; no canonical projection |
 | Consumer integration | None; D2-003 owns downstream wiring |
 
-## 13. Deliverable and acceptance gate
+## 13. Implementation facts
 
-The D2-002 design-only deliverable is this specification file. Completion of
-the design task requires:
+The approved design is implemented in the following narrow boundaries:
+
+- statutory input is the existing `NormalizedResearchSource` from
+  `plugins/research-acquisition/contracts.ts`; D2-002 requires
+  `candidate.kind = official_disclosure`, tier `1`, publication time,
+  company attribution in `candidate.metadata.companySymbol` or `issuer`, and
+  source content;
+- D2-001 management documents and Q&A pairs remain their existing contracts;
+  D2-002 contains no acquisition client or provider call;
+- raw model contracts live in
+  `skills/management-communication-extraction/contracts.ts` and are parsed by
+  `workflows/management-communication-extraction/schema.ts`; model-supplied
+  IDs, timestamps, authority, canonical periods, units, values, and keys are
+  ignored rather than trusted;
+- validated candidates are created by
+  `workflows/management-communication-extraction/validation.ts`, with IDs
+  derived from the versioned family/source/span/semantic/raw identity hash;
+- the methodology is in
+  `skills/management-communication-extraction/SKILL.md`; deterministic
+  orchestration, validation, parsing, and projection are in the matching
+  Workflow directory;
+- the only new reasoning operation is
+  `management_communication_extract`, registered in the existing closed
+  `plugins/reasoning/contracts.ts` catalog;
+- document input is bounded to `min(60,000, maxContextTokens * 3)` UTF-16
+  characters per reasoning unit, with absolute source offsets; Q&A uses a
+  deterministic default batch cap of five pairs and caller cap of fifty;
+- each unit receives one reasoning call and at most one format-repair call;
+  semantic/evidence failures are never repaired by the model;
+- the closed unit registry normalizes the implemented families to `CNY`,
+  `share_count`, `unit_count`, `vehicle_count`, `ton`, `%`,
+  `percentage_points`, and `bps`; unknown units remain candidates but block
+  projection;
+- fiscal period normalization reuses the existing Earnings keys `YYYY-Q1`,
+  `YYYY-H1`, `YYYY-Q3`, and `YYYY-FY`. Explicit Q2/Q4/H2 and ambiguous
+  relative periods remain unprojectable because the repository has no accepted
+  canonical convention for them;
+- `GuidanceRange` and `SegmentKpiPoint` are reused without shape changes;
+  midpoint arithmetic is code-owned and segment projection requires a
+  caller-supplied deterministic label-to-key map;
+- the gated real-evidence harness is
+  `scripts/acceptance-management-communication-extraction-d2-real.ts`. It
+  consumes pre-acquired `statutory.json`, `management.json`, and `qa.json`
+  files, keeps acquisition outside the extraction Workflow, and writes only
+  bounded telemetry to
+  `tests/validation/evidence/RHL_D2_002_MANAGEMENT_EXTRACTION_REAL.json`.
+
+Focused offline validation is in
+`tests/workflows/management-communication-extraction.test.ts` with 11 passing
+tests. The real-evidence harness was executed under its gate and truthfully
+reported `REAL_EVIDENCE_UNAVAILABLE` because no evidence directory was
+provided; no live source or model success is claimed.
+
+## 14. Deliverable and acceptance gate
+
+The D2-002 deliverable includes this specification and the bounded Skill,
+Workflow, reasoning catalog entry, focused tests, and gated validation harness.
+Completion of the implementation task requires:
 
 - no runtime implementation or unrelated file changes;
 - a self-review for placeholders, contradictions, scope leakage, and
@@ -614,5 +756,5 @@ the design task requires:
 - a commit on the target branch;
 - remote branch verification after push.
 
-The design is ready for Sol review. Implementation must not begin from this
-task until a later approved implementation request exists.
+The implementation is ready for Sol review. D2-003 consumer integration and
+any Knowledge projection remain outside this task.

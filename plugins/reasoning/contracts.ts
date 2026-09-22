@@ -18,6 +18,7 @@ export const REASONING_OPERATIONS = [
   'catalyst_map_semantic',
   'thesis_refresh_semantic',
   'research_dispatch_resolution',
+  'management_communication_extract',
   'industry_research_design',
   'industry_module_analysis',
   'industry_cross_module_synthesis',

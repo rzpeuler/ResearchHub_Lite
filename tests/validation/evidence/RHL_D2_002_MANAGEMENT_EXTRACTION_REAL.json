@@ -1,0 +1,12 @@
+{
+  "taskId": "RHL-D2-002",
+  "generatedAt": "2026-09-22T08:20:00.002Z",
+  "asOf": "2026-09-22T08:20:00.001Z",
+  "extractionOperation": "management_communication_extract",
+  "rawBodiesIncluded": false,
+  "completePromptsIncluded": false,
+  "acquisitionInsideExtractionWorkflow": false,
+  "classification": "REAL_REASONING_UNAVAILABLE",
+  "realPiReasoningExecutor": false,
+  "reason": "REAL_EVIDENCE_UNAVAILABLE: set RESEARCHHUB_MANAGEMENT_EXTRACTION_EVIDENCE_DIR to a directory containing statutory.json, management.json, and qa.json"
+}
