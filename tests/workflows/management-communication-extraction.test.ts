@@ -12,8 +12,8 @@ const asOf = '2026-09-22T00:00:00.000Z'
 class SequenceExecutor implements ReasoningExecutor {
   readonly calls: ReasoningRequest[] = []
   private index = 0
-  constructor(private readonly outputs: readonly unknown[]) {}
-  capabilities(): ReasoningCapabilities { return capabilities }
+  constructor(private readonly outputs: readonly unknown[], private readonly executorCapabilities: ReasoningCapabilities = capabilities) {}
+  capabilities(): ReasoningCapabilities { return this.executorCapabilities }
   async execute(request: ReasoningRequest): Promise<ReasoningResult> {
     this.calls.push(request)
     const output = this.outputs[Math.min(this.index++, this.outputs.length - 1)]
@@ -108,6 +108,112 @@ test('offset and exactText evidence rules are fail-closed', async () => {
   const result = await runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'management_document', source: document(content) }, reasoningExecutor: executor })
   assert.equal(result.kpiCandidates.length, 0)
   assert.ok(result.diagnostics.some((item) => item.includes('EVIDENCE_EXACT_TEXT_MISMATCH')))
+})
+
+test('chunk-local evidence translates to absolute offsets and exactText lookup is slice-scoped', async () => {
+  const repeated = '汽车电子收入12亿元。'
+  const content = `${repeated}${'前文。'.repeat(4_500)}${repeated}`
+  const executor = new class implements ReasoningExecutor {
+    readonly calls: ReasoningRequest[] = []
+    capabilities(): ReasoningCapabilities { return capabilities }
+    async execute(request: ReasoningRequest): Promise<ReasoningResult> {
+      this.calls.push(request)
+      const source = (request.input as { readonly sourceObjects: readonly [{ readonly sourceText: string; readonly absoluteStartOffset: number }] }).sourceObjects[0]!
+      if (source.absoluteStartOffset === 0) return { operation: request.operation, output: { formalGuidanceCandidates: [], managementOutlookCandidates: [], kpiCandidates: [], structuredQaCandidates: [] } }
+      const localStart = source.sourceText.indexOf(repeated)
+      return { operation: request.operation, output: { formalGuidanceCandidates: [], managementOutlookCandidates: [], kpiCandidates: [{ rawSegmentLabel: '汽车电子', metric: 'revenue', rawFiscalPeriodText: '2026年全年', rawValue: '12', rawUnit: '亿元', evidence: { sourceObjectId: 'ir-doc-1', startOffset: localStart, endOffset: localStart + repeated.length, exactText: repeated } }], structuredQaCandidates: [] } }
+    }
+  }()
+  const result = await runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'management_document', source: document(content) }, reasoningExecutor: executor, segmentIdentityMap: { '汽车电子': 'segment:auto-electronics' } })
+  const candidate = result.kpiCandidates[0]!
+  const expectedAbsolute = content.lastIndexOf(repeated)
+  assert.equal(result.status, 'COMPLETE')
+  assert.notEqual(candidate.evidenceSpan.startOffset, executor.calls[1] === undefined ? -1 : ((executor.calls[1].input as { readonly sourceObjects: readonly [{ readonly absoluteStartOffset: number }] }).sourceObjects[0]!.absoluteStartOffset))
+  assert.equal(candidate.evidenceSpan.startOffset, expectedAbsolute)
+  assert.equal(candidate.evidenceSpan.endOffset, expectedAbsolute + repeated.length)
+  assert.equal(result.segmentKpis.length, 1)
+})
+
+test('exactText-only evidence resolves inside the model slice before translating to the full source', async () => {
+  const repeated = '订单增长20%。'
+  const content = `${repeated}${'背景。'.repeat(4_500)}${repeated}`
+  const executor = new class implements ReasoningExecutor {
+    readonly calls: ReasoningRequest[] = []
+    capabilities(): ReasoningCapabilities { return capabilities }
+    async execute(request: ReasoningRequest): Promise<ReasoningResult> {
+      this.calls.push(request)
+      const source = (request.input as { readonly sourceObjects: readonly [{ readonly absoluteStartOffset: number }] }).sourceObjects[0]!
+      return { operation: request.operation, output: source.absoluteStartOffset === 0 ? { formalGuidanceCandidates: [], managementOutlookCandidates: [], kpiCandidates: [], structuredQaCandidates: [] } : { formalGuidanceCandidates: [], managementOutlookCandidates: [{ topic: 'orders', rawNumericValue: '20%', evidence: { sourceObjectId: 'ir-doc-1', exactText: repeated } }], kpiCandidates: [], structuredQaCandidates: [] } }
+    }
+  }()
+  const result = await runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'management_document', source: document(content) }, reasoningExecutor: executor })
+  assert.equal(result.managementOutlookCandidates[0]?.evidenceSpan.startOffset, content.lastIndexOf(repeated))
+  assert.equal(result.managementOutlookCandidates[0]?.evidenceSpan.exactText, repeated)
+})
+
+test('oversized single Q&A pair is skipped before reasoning without truncation', async () => {
+  const oversized = pair('Q', '回答'.repeat(400))
+  const executor = new SequenceExecutor([], { ...capabilities, maxContextTokens: 4 })
+  const result = await runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'exchange_qa', sources: [oversized] }, reasoningExecutor: executor })
+  assert.equal(result.status, 'UNAVAILABLE')
+  assert.equal(executor.calls.length, 0)
+  assert.ok(result.diagnostics.some((item) => item.startsWith('QA_PAIR_EXCEEDS_CONTEXT_BOUND:qa-1')))
+})
+
+test('numeric ranges require one attributable range expression', async () => {
+  const unrelated = '收入20亿元，净利润30亿元。'
+  const guidance = await runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'statutory_disclosure', source: statutory(unrelated) }, reasoningExecutor: new SequenceExecutor([{ formalGuidanceCandidates: [{ metric: 'revenue', guidanceType: 'range', rawLow: '20', rawHigh: '30', rawUnit: '亿元', qualifiers: [], evidence: { sourceObjectId: 'stat-1', exactText: unrelated } }], managementOutlookCandidates: [], kpiCandidates: [], structuredQaCandidates: [] }]) })
+  assert.equal(guidance.formalGuidanceCandidates.length, 0)
+  assert.ok(guidance.diagnostics.some((item) => item.includes('GUIDANCE_RANGE_EXPRESSION_NOT_FOUND')))
+
+  const outlook = await runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'management_document', source: document(unrelated) }, reasoningExecutor: new SequenceExecutor([{ formalGuidanceCandidates: [], managementOutlookCandidates: [{ topic: 'revenue', rawNumericRange: '20-30', rawUnit: '亿元', evidence: { sourceObjectId: 'ir-doc-1', exactText: unrelated } }], kpiCandidates: [], structuredQaCandidates: [] }]) })
+  assert.equal(outlook.managementOutlookCandidates.length, 0)
+  assert.ok(outlook.diagnostics.some((item) => item.includes('OUTLOOK_RANGE_EXPRESSION_NOT_FOUND')))
+
+  const ranged = '收入20亿元至30亿元。'
+  const accepted = await runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'statutory_disclosure', source: statutory(ranged) }, reasoningExecutor: new SequenceExecutor([{ formalGuidanceCandidates: [{ metric: 'revenue', guidanceType: 'range', rawLow: '20', rawHigh: '30', rawUnit: '亿元', qualifiers: [], evidence: { sourceObjectId: 'stat-1', exactText: ranged } }], managementOutlookCandidates: [], kpiCandidates: [], structuredQaCandidates: [] }]) })
+  assert.equal(accepted.formalGuidanceCandidates.length, 1)
+
+  const kpiRange = '销量10-12万台。'
+  const kpi = await runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'management_document', source: document(kpiRange) }, reasoningExecutor: new SequenceExecutor([{ formalGuidanceCandidates: [], managementOutlookCandidates: [], kpiCandidates: [{ rawSegmentLabel: '汽车', metric: 'shipments', rawFiscalPeriodText: '2026年全年', rawValue: '10-12', rawUnit: '万台', evidence: { sourceObjectId: 'ir-doc-1', exactText: kpiRange } }], structuredQaCandidates: [] }]), segmentIdentityMap: { '汽车': 'segment:auto' } })
+  assert.equal(kpi.kpiCandidates.length, 1)
+  assert.equal(kpi.segmentKpis.length, 0)
+  assert.ok(kpi.diagnostics.some((item) => item.includes('KPI_RANGE_NOT_PROJECTABLE')))
+})
+
+test('same-span KPI metrics survive while genuinely conflicting semantic values are excluded from projection', async () => {
+  const content = '汽车电子收入12亿元，出货量30万台。'
+  const output = { formalGuidanceCandidates: [], managementOutlookCandidates: [], kpiCandidates: [
+    { rawSegmentLabel: '汽车电子', metric: 'revenue', rawFiscalPeriodText: '2026年全年', rawValue: '12', rawUnit: '亿元', evidence: { sourceObjectId: 'ir-doc-1', exactText: content } },
+    { rawSegmentLabel: '汽车电子', metric: 'shipments', rawFiscalPeriodText: '2026年全年', rawValue: '30', rawUnit: '万台', evidence: { sourceObjectId: 'ir-doc-1', exactText: content } },
+  ], structuredQaCandidates: [] }
+  const distinct = await runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'management_document', source: document(content) }, reasoningExecutor: new SequenceExecutor([output]), segmentIdentityMap: { '汽车电子': 'segment:auto-electronics' } })
+  assert.equal(distinct.kpiCandidates.length, 2)
+  assert.equal(distinct.segmentKpis.length, 2)
+
+  const conflictContent = '汽车电子收入12亿元或13亿元。'
+  const conflictEvidence = { sourceObjectId: 'ir-doc-1', exactText: conflictContent }
+  const conflictingOutput = { ...output, kpiCandidates: [{ ...output.kpiCandidates[0]!, evidence: conflictEvidence }, { ...output.kpiCandidates[0]!, rawValue: '13', evidence: conflictEvidence }] }
+  const conflicting = await runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'management_document', source: document(conflictContent) }, reasoningExecutor: new SequenceExecutor([conflictingOutput]), segmentIdentityMap: { '汽车电子': 'segment:auto-electronics' } })
+  assert.equal(conflicting.kpiCandidates.length, 2)
+  assert.equal(conflicting.segmentKpis.length, 0)
+  assert.ok(conflicting.diagnostics.some((item) => item.includes('CONFLICTING_CANDIDATES:kpi:')))
+})
+
+test('candidate identity canonicalizes qualifier and topic-tag order but changes with semantic values', async () => {
+  const formal = '公司预计稳健增长。'
+  const runFormal = (qualifiers: readonly string[]) => runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'statutory_disclosure', source: statutory(formal) }, reasoningExecutor: new SequenceExecutor([{ formalGuidanceCandidates: [{ metric: 'outlook', guidanceType: 'qualitative', qualifiers, evidence: { sourceObjectId: 'stat-1', exactText: formal } }], managementOutlookCandidates: [], kpiCandidates: [], structuredQaCandidates: [] }]) })
+  const firstFormal = await runFormal([' demand ', 'capacity', 'demand'])
+  const reorderedFormal = await runFormal(['capacity', 'demand'])
+  const changedFormal = await runFormal(['capacity', 'pricing'])
+  assert.equal(firstFormal.formalGuidanceCandidates[0]?.candidateId, reorderedFormal.formalGuidanceCandidates[0]?.candidateId)
+  assert.notEqual(firstFormal.formalGuidanceCandidates[0]?.candidateId, changedFormal.formalGuidanceCandidates[0]?.candidateId)
+
+  const source = pair('Q', '订单保持增长。')
+  const runQa = (topicTags: readonly string[]) => runManagementCommunicationExtraction({ analysisAsOf: asOf, source: { lane: 'exchange_qa', sources: [source] }, reasoningExecutor: new SequenceExecutor([{ formalGuidanceCandidates: [], managementOutlookCandidates: [], kpiCandidates: [], structuredQaCandidates: [{ pairId: 'qa-1', topicTags, claimSpans: [{ sourceObjectId: 'qa-1', exactText: source.answer }], managementStatementSpans: [], explicitlyStatedMetrics: ['orders'] }] }]) })
+  const firstQa = await runQa(['orders', 'international'])
+  const reorderedQa = await runQa(['international', 'orders'])
+  assert.equal(firstQa.structuredQaCandidates[0]?.candidateId, reorderedQa.structuredQaCandidates[0]?.candidateId)
 })
 
 test('candidate IDs are stable, batch-order independent, and exact duplicates are deduped', async () => {

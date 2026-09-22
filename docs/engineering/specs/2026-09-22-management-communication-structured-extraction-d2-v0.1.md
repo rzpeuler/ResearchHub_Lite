@@ -716,14 +716,39 @@ The approved design is implemented in the following narrow boundaries:
   `management_communication_extract`, registered in the existing closed
   `plugins/reasoning/contracts.ts` catalog;
 - document input is bounded to `min(60,000, maxContextTokens * 3)` UTF-16
-  characters per reasoning unit, with absolute source offsets; Q&A uses a
-  deterministic default batch cap of five pairs and caller cap of fifty;
+  characters per reasoning unit. Each unit carries an explicit
+  `ReasoningSourceSlice` containing the exact model-visible text and its
+  `absoluteStartOffset`; model locators are validated as slice-local offsets
+  first, translated to absolute offsets only after local success, and then
+  rechecked against the complete source. Offset-free `exactText` lookup is
+  likewise slice-scoped, so repeated text elsewhere in the document does not
+  create a false ambiguity;
+- Q&A uses a deterministic default batch cap of five pairs and caller cap of
+  fifty. A single pair exceeding the context character bound is skipped with
+  `QA_PAIR_EXCEEDS_CONTEXT_BOUND`; question/answer text is never truncated or
+  sent in an oversized request;
 - each unit receives one reasoning call and at most one format-repair call;
   semantic/evidence failures are never repaired by the model;
 - the closed unit registry normalizes the implemented families to `CNY`,
   `share_count`, `unit_count`, `vehicle_count`, `ton`, `%`,
   `percentage_points`, and `bps`; unknown units remain candidates but block
   projection;
+- numeric ranges require one bounded source expression joining both endpoints.
+  The accepted connectors are `-`, `–`, `—`, `~`, `～`, `至`, and `到`, with
+  short unit or percent text allowed around the connector. Independent numbers
+  in one span are not a range; this gate applies to Formal Guidance, Outlook
+  ranges, and range-valued KPIs (which remain non-projectable);
+- conflict detection compares family-specific semantic keys rather than span
+  occupancy. Formal Guidance keys include source/span, metric, period,
+  guidance type, and semantic unit; KPI keys additionally include raw
+  segment/product identity; Outlook keys include topic, metric, and horizon;
+  Structured Q&A candidates are not conflicted merely because primary spans
+  overlap. Only incompatible values for one semantic key are excluded from
+  projection, while all validated candidates remain available for audit;
+- candidate identity canonicalizes unordered qualifiers, topic tags, stated
+  metrics, and evidence-span collections by trimming, deduplicating, and
+  sorting before hashing. Incidental model array ordering therefore does not
+  change a candidate ID;
 - fiscal period normalization reuses the existing Earnings keys `YYYY-Q1`,
   `YYYY-H1`, `YYYY-Q3`, and `YYYY-FY`. Explicit Q2/Q4/H2 and ambiguous
   relative periods remain unprojectable because the repository has no accepted
@@ -739,8 +764,9 @@ The approved design is implemented in the following narrow boundaries:
   `tests/validation/evidence/RHL_D2_002_MANAGEMENT_EXTRACTION_REAL.json`.
 
 Focused offline validation is in
-`tests/workflows/management-communication-extraction.test.ts` with 11 passing
-tests. The real-evidence harness was executed under its gate and truthfully
+`tests/workflows/management-communication-extraction.test.ts` with 17 passing
+tests covering chunk translation, slice-scoped exact text, bounded Q&A, range
+relations, semantic conflicts, and order-invariant IDs. The real-evidence harness was executed under its gate and truthfully
 reported `REAL_EVIDENCE_UNAVAILABLE` because no evidence directory was
 provided; no live source or model success is claimed.
 

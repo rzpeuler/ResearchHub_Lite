@@ -1,14 +1,22 @@
 import type { ReasoningExecutor, ReasoningRequest } from '../../plugins/reasoning/contracts.ts'
 import { EXTRACTION_CONTRACT_VERSION, EXTRACTION_OPERATION, RAW_EXTRACTION_OUTPUT_CONTRACT, extractionInstruction, type ExtractionLane, type RawExtractionOutput, type FormalGuidanceCandidate, type ManagementOutlookCandidate, type KpiCandidate, type StructuredQAEvidence } from '../../skills/management-communication-extraction/contracts.ts'
 import { parseRawExtractionOutput } from './schema.ts'
-import { buildSourceContexts, validateRawOutput, type SourceContext } from './validation.ts'
+import { buildSourceContexts, validateRawOutput, type ReasoningSourceSlice, type SourceContext } from './validation.ts'
 import { projectValidatedCandidates } from './projection.ts'
+import { parseNumericRange, parseNumericToken } from './numeric-parsing.ts'
+import { resolveUnit } from './unit-normalization.ts'
 import type { ExtractionSource, ManagementCommunicationExtractionInput, ManagementCommunicationExtractionResult, ExtractionTelemetry } from './contracts.ts'
 
 interface InputUnit {
   readonly unitId: string
   readonly sourceIds: readonly string[]
+  readonly slices: readonly ReasoningSourceSlice[]
   readonly modelInput: Readonly<Record<string, unknown>>
+}
+
+interface InputUnitBuildResult {
+  readonly units: readonly InputUnit[]
+  readonly diagnostics: readonly string[]
 }
 
 interface UnitExecutionResult {
@@ -38,7 +46,9 @@ export async function runManagementCommunicationExtraction(input: ManagementComm
   if (!isValidTimestamp(input.analysisAsOf)) return unavailable([...diagnostics, 'ANALYSIS_AS_OF_INVALID'], telemetryBase)
   if (input.reasoningExecutor === undefined) return unavailable([...diagnostics, 'STRUCTURED_EXTRACTION_UNAVAILABLE'], telemetryBase)
   if (!input.reasoningExecutor.capabilities().structuredOutputSupport) return unavailable([...diagnostics, 'STRUCTURED_OUTPUT_UNSUPPORTED'], telemetryBase)
-  const units = buildInputUnits(input.source, contextsResult.contexts, input.reasoningExecutor.capabilities().maxContextTokens, input.maxQAPairsPerBatch)
+  const builtUnits = buildInputUnits(input.source, contextsResult.contexts, input.reasoningExecutor.capabilities().maxContextTokens, input.maxQAPairsPerBatch)
+  diagnostics.push(...builtUnits.diagnostics)
+  const units = builtUnits.units
   if (units.length === 0) return unavailable([...diagnostics, 'NO_EXTRACTION_INPUT_UNITS'], { ...telemetryBase, inputUnits: 0 })
   const contextMap = new Map(contextsResult.contexts.map((context) => [context.sourceObjectId, context]))
   const allCandidates: MutableCandidates = { formalGuidanceCandidates: [], managementOutlookCandidates: [], kpiCandidates: [], structuredQaCandidates: [] }
@@ -61,7 +71,7 @@ export async function runManagementCommunicationExtraction(input: ManagementComm
   const validatedCandidateCount = deduped.formalGuidanceCandidates.length + deduped.managementOutlookCandidates.length + deduped.kpiCandidates.length + deduped.structuredQaCandidates.length
   const telemetry: ExtractionTelemetry = { operation: EXTRACTION_OPERATION, calls, repairCalls, inputUnits: units.length, rawCandidateCount, validatedCandidateCount, rejectedCandidateCount: rejectedCount, projectedGuidanceCount: projection.guidance.length, projectedSegmentKpiCount: projection.segmentKpis.length }
   const hasValid = validatedCandidateCount > 0
-  const hasFailure = rejectedCount > 0 || diagnostics.some((item) => item.includes('INVALID') || item.includes('REJECTED') || item.includes('UNAVAILABLE') || item.includes('BLOCKED') || item.includes('CONFLICT') || item.includes('FAILED') || item.includes('NOT_'))
+  const hasFailure = rejectedCount > 0 || diagnostics.some((item) => item.includes('INVALID') || item.includes('REJECTED') || item.includes('UNAVAILABLE') || item.includes('BLOCKED') || item.includes('CONFLICT') || item.includes('FAILED') || item.includes('NOT_') || item.includes('EXCEEDS_CONTEXT_BOUND'))
   return { status: hasFailure ? (hasValid ? 'PARTIAL' : 'UNAVAILABLE') : 'COMPLETE', formalGuidanceCandidates: deduped.formalGuidanceCandidates, managementOutlookCandidates: deduped.managementOutlookCandidates, kpiCandidates: deduped.kpiCandidates, structuredQaCandidates: deduped.structuredQaCandidates, guidance: projection.guidance, segmentKpis: projection.segmentKpis, diagnostics: [...new Set(diagnostics)].sort(), telemetry }
 }
 
@@ -83,33 +93,40 @@ async function executeUnit(executor: ReasoningExecutor, lane: ExtractionLane, an
   }
   if (parsed.output === undefined) return emptyUnit(['RAW_OUTPUT_SCHEMA_INVALID', ...parsed.diagnostics], 0, repairCalls)
   const rawCandidateCount = countRaw(parsed.output)
-  const validated = validateRawOutput(parsed.output, lane, contexts, analysisAsOf)
+  const validated = validateRawOutput(parsed.output, lane, contexts, analysisAsOf, new Map(unit.slices.map((slice) => [slice.sourceObjectId, slice])))
   return { output: parsed.output, diagnostics: validated.diagnostics, rawCandidateCount, repairCalls, rejectedCount: validated.rejectedCount, candidates: validated.candidates }
 }
 
-function buildInputUnits(source: ExtractionSource, contexts: readonly SourceContext[], maxContextTokens: number, maxQAPairsPerBatch = DEFAULT_QA_BATCH_SIZE): readonly InputUnit[] {
+function buildInputUnits(source: ExtractionSource, contexts: readonly SourceContext[], maxContextTokens: number, maxQAPairsPerBatch = DEFAULT_QA_BATCH_SIZE): InputUnitBuildResult {
   const maxChars = Math.max(512, Math.min(MAX_INPUT_CHARS_FALLBACK * 10, Math.floor(Math.max(1, maxContextTokens) * 3)))
   if (source.lane === 'management_document' || source.lane === 'statutory_disclosure') {
     const context = contexts[0]
-    if (context === undefined) return []
+    if (context === undefined) return { units: [], diagnostics: [] }
     const units: InputUnit[] = []; const chunkSize = Math.max(1, maxChars)
     for (let start = 0, ordinal = 0; start < context.sourceText.length; start += chunkSize, ordinal += 1) {
       const text = context.sourceText.slice(start, Math.min(context.sourceText.length, start + chunkSize))
-      units.push({ unitId: `${context.sourceObjectId}-${ordinal}`, sourceIds: [context.sourceObjectId], modelInput: { sourceObjects: [{ sourceObjectId: context.sourceObjectId, sourceText: text, absoluteStartOffset: start, publishedAt: context.publishedAt, authority: context.authority }] } })
+      const slice: ReasoningSourceSlice = { sourceObjectId: context.sourceObjectId, sourceText: text, absoluteStartOffset: start }
+      units.push({ unitId: `${context.sourceObjectId}-${ordinal}`, sourceIds: [context.sourceObjectId], slices: [slice], modelInput: { sourceObjects: [{ sourceObjectId: context.sourceObjectId, sourceText: text, absoluteStartOffset: start, publishedAt: context.publishedAt, authority: context.authority }] } })
     }
-    return units
+    return { units, diagnostics: [] }
   }
   const configuredMaxItems = Number.isFinite(maxQAPairsPerBatch) ? maxQAPairsPerBatch : DEFAULT_QA_BATCH_SIZE
   const maxItems = Math.min(50, Math.max(1, Math.floor(configuredMaxItems)))
-  const units: InputUnit[] = []; let current: SourceContext[] = []; let currentChars = 0; let ordinal = 0
-  const flush = () => { if (current.length === 0) return; units.push({ unitId: `qa-batch-${ordinal++}`, sourceIds: current.map((item) => item.sourceObjectId), modelInput: { sourceObjects: current.map((item) => ({ sourceObjectId: item.sourceObjectId, sourceText: item.sourceText, publishedAt: item.publishedAt, authority: item.authority, pairId: item.pair?.id, platform: item.pair?.platform })) } }); current = []; currentChars = 0 }
+  const units: InputUnit[] = []; const diagnostics: string[] = []; let current: SourceContext[] = []; let currentChars = 0; let ordinal = 0
+  const flush = () => {
+    if (current.length === 0) return
+    const slices = current.map((item): ReasoningSourceSlice => ({ sourceObjectId: item.sourceObjectId, sourceText: item.sourceText, absoluteStartOffset: 0 }))
+    units.push({ unitId: `qa-batch-${ordinal++}`, sourceIds: current.map((item) => item.sourceObjectId), slices, modelInput: { sourceObjects: current.map((item) => ({ sourceObjectId: item.sourceObjectId, sourceText: item.sourceText, absoluteStartOffset: 0, publishedAt: item.publishedAt, authority: item.authority, pairId: item.pair?.id, platform: item.pair?.platform })) } })
+    current = []; currentChars = 0
+  }
   for (const context of contexts) {
+    if (context.sourceText.length > maxChars) { flush(); diagnostics.push(`QA_PAIR_EXCEEDS_CONTEXT_BOUND:${context.sourceObjectId}`); continue }
     const nextChars = currentChars + context.sourceText.length
     if (current.length > 0 && (current.length >= maxItems || nextChars > maxChars)) flush()
     current.push(context); currentChars += context.sourceText.length
   }
   flush()
-  return units
+  return { units, diagnostics }
 }
 
 function dedupeCandidates(candidates: ReturnType<typeof validateRawOutput>['candidates'], diagnostics: string[]): ReturnType<typeof validateRawOutput>['candidates'] {
@@ -123,17 +140,74 @@ function dedupeCandidates(candidates: ReturnType<typeof validateRawOutput>['cand
 
 function removeConflicts(candidates: ReturnType<typeof validateRawOutput>['candidates'], diagnostics: string[]): ReturnType<typeof validateRawOutput>['candidates'] {
   const result = { formalGuidanceCandidates: [...candidates.formalGuidanceCandidates], managementOutlookCandidates: [...candidates.managementOutlookCandidates], kpiCandidates: [...candidates.kpiCandidates], structuredQaCandidates: [...candidates.structuredQaCandidates] }
-  const bySpan = new Map<string, string[]>()
+  const bySemanticKey = new Map<string, { readonly candidateId: string; readonly value: string }[]>()
   const all = [
     ...result.formalGuidanceCandidates.map((item) => ({ family: 'formalGuidance', item })),
     ...result.managementOutlookCandidates.map((item) => ({ family: 'managementOutlook', item })),
     ...result.kpiCandidates.map((item) => ({ family: 'kpi', item })),
     ...result.structuredQaCandidates.map((item) => ({ family: 'structuredQa', item })),
   ]
-  for (const { family, item } of all) { const key = `${family}:${item.evidenceSpan.sourceObjectId}:${item.evidenceSpan.startOffset}:${item.evidenceSpan.endOffset}`; bySpan.set(key, [...(bySpan.get(key) ?? []), item.candidateId]) }
+  for (const { family, item } of all) {
+    const key = semanticConflictKey(family, item)
+    if (key === undefined) continue
+    const value = semanticValueSignature(family, item)
+    bySemanticKey.set(key, [...(bySemanticKey.get(key) ?? []), { candidateId: item.candidateId, value }])
+  }
   const conflicts = new Set<string>()
-  for (const [key, ids] of bySpan) if (ids.length > 1) { diagnostics.push(`CONFLICTING_CANDIDATES:${key}`); ids.forEach((id) => conflicts.add(id)) }
+  for (const [key, entries] of bySemanticKey) {
+    const values = new Set(entries.map((entry) => entry.value))
+    if (values.size > 1) { diagnostics.push(`CONFLICTING_CANDIDATES:${key}`); entries.forEach((entry) => conflicts.add(entry.candidateId)) }
+  }
   return { formalGuidanceCandidates: result.formalGuidanceCandidates.filter((item) => !conflicts.has(item.candidateId)), managementOutlookCandidates: result.managementOutlookCandidates.filter((item) => !conflicts.has(item.candidateId)), kpiCandidates: result.kpiCandidates.filter((item) => !conflicts.has(item.candidateId)), structuredQaCandidates: result.structuredQaCandidates.filter((item) => !conflicts.has(item.candidateId)) }
+}
+
+function semanticConflictKey(family: string, item: FormalGuidanceCandidate | ManagementOutlookCandidate | KpiCandidate | StructuredQAEvidence): string | undefined {
+  const span = `${item.evidenceSpan.sourceObjectId}:${item.evidenceSpan.startOffset}:${item.evidenceSpan.endOffset}`
+  const text = (value: string | undefined): string => (value ?? '').trim().toLocaleLowerCase()
+  const unit = (rawUnit: string | undefined, evidence: string | undefined): string => resolveUnit(rawUnit, evidence ?? '')?.canonical ?? text(rawUnit)
+  if (family === 'formalGuidance') {
+    const candidate = item as FormalGuidanceCandidate
+    return `formalGuidance:${span}:${text(candidate.metric)}:${candidate.fiscalPeriod ?? text(candidate.rawFiscalPeriodText)}:${candidate.guidanceType}:${unit(candidate.rawUnit, candidate.evidenceSpan.exactText)}`
+  }
+  if (family === 'kpi') {
+    const candidate = item as KpiCandidate
+    return `kpi:${span}:${text(candidate.metric)}:${text(candidate.rawSegmentLabel)}:${text(candidate.rawProductLabel)}:${candidate.fiscalPeriod ?? text(candidate.rawFiscalPeriodText)}:${unit(candidate.rawUnit, candidate.evidenceSpan.exactText)}`
+  }
+  if (family === 'managementOutlook') {
+    const candidate = item as ManagementOutlookCandidate
+    return `managementOutlook:${span}:${text(candidate.topic)}:${text(candidate.metric)}:${text(candidate.timeHorizon)}`
+  }
+  return undefined
+}
+
+function semanticValueSignature(family: string, item: FormalGuidanceCandidate | ManagementOutlookCandidate | KpiCandidate | StructuredQAEvidence): string {
+  const number = (raw: string | undefined, unitRaw: string | undefined, evidence: string | undefined): string => {
+    const parsed = parseNumericToken(raw)
+    if (parsed === undefined) return textValue(raw)
+    const unit = resolveUnit(unitRaw, evidence ?? '')
+    return `number:${parsed.value * (unit?.factor ?? 1)}`
+  }
+  const textValue = (value: string | undefined): string => (value ?? '').trim().toLocaleLowerCase()
+  if (family === 'formalGuidance') {
+    const candidate = item as FormalGuidanceCandidate
+    if (candidate.guidanceType === 'range') return `range:${number(candidate.rawLow, candidate.rawUnit, candidate.evidenceSpan.exactText)}:${number(candidate.rawHigh, candidate.rawUnit, candidate.evidenceSpan.exactText)}`
+    if (candidate.guidanceType === 'point') return number(candidate.rawPoint, candidate.rawUnit, candidate.evidenceSpan.exactText)
+    if (candidate.guidanceType === 'minimum') return `minimum:${number(candidate.rawLow, candidate.rawUnit, candidate.evidenceSpan.exactText)}`
+    if (candidate.guidanceType === 'maximum') return `maximum:${number(candidate.rawHigh, candidate.rawUnit, candidate.evidenceSpan.exactText)}`
+    return `qualitative:${candidate.qualifiers.map(textValue).sort().join('|')}`
+  }
+  if (family === 'kpi') {
+    const candidate = item as KpiCandidate
+    const range = parseNumericRange(candidate.rawValue)
+    return range === undefined ? number(candidate.rawValue, candidate.rawUnit, candidate.evidenceSpan.exactText) : `range:${number(range[0].rawToken, candidate.rawUnit, candidate.evidenceSpan.exactText)}:${number(range[1].rawToken, candidate.rawUnit, candidate.evidenceSpan.exactText)}`
+  }
+  if (family === 'managementOutlook') {
+    const candidate = item as ManagementOutlookCandidate
+    const range = parseNumericRange(candidate.rawNumericRange)
+    const numeric = range === undefined ? number(candidate.rawNumericValue, candidate.rawUnit, candidate.evidenceSpan.exactText) : `range:${number(range[0].rawToken, candidate.rawUnit, candidate.evidenceSpan.exactText)}:${number(range[1].rawToken, candidate.rawUnit, candidate.evidenceSpan.exactText)}`
+    return `${textValue(candidate.direction)}:${numeric}`
+  }
+  return ''
 }
 
 function countRaw(output: RawExtractionOutput): number { return output.formalGuidanceCandidates.length + output.managementOutlookCandidates.length + output.kpiCandidates.length + output.structuredQaCandidates.length }

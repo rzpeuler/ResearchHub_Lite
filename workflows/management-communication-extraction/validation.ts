@@ -2,7 +2,7 @@ import type { ExchangeQAPair, ManagementCommunicationDocument } from '../managem
 import { sha256 } from '../../plugins/research-acquisition/hash.ts'
 import type { RawEvidenceLocator, RawExtractionOutput, RawFormalGuidanceCandidate, RawKpiCandidate, RawManagementOutlookCandidate, RawStructuredQAEvidence, EvidenceSpan, FormalGuidanceCandidate, KpiCandidate, ManagementOutlookCandidate, StructuredQAEvidence, CandidateFamily, ExtractionLane, SourceAuthority } from '../../skills/management-communication-extraction/contracts.ts'
 import { resolveFiscalPeriod } from './period-normalization.ts'
-import { numericTokenInText, parseNumericRange, parseNumericToken } from './numeric-parsing.ts'
+import { numericRangeExpressionInText, numericTokenInText, parseNumericRange, parseNumericToken } from './numeric-parsing.ts'
 import { findUnit, resolveUnit } from './unit-normalization.ts'
 import type { ExtractionSource } from './contracts.ts'
 
@@ -13,6 +13,12 @@ export interface SourceContext {
   readonly authority: SourceAuthority
   readonly lane: ExtractionLane
   readonly pair?: ExchangeQAPair
+}
+
+export interface ReasoningSourceSlice {
+  readonly sourceObjectId: string
+  readonly sourceText: string
+  readonly absoluteStartOffset: number
 }
 
 export interface SourceContextResult {
@@ -31,17 +37,17 @@ export function buildSourceContexts(source: ExtractionSource): SourceContextResu
   return exchangeQaContexts(source.sources)
 }
 
-export function validateFormalGuidance(raw: RawFormalGuidanceCandidate, context: ReadonlyMap<string, SourceContext>, analysisAsOf: string): CandidateValidationResult<FormalGuidanceCandidate> {
+export function validateFormalGuidance(raw: RawFormalGuidanceCandidate, context: ReadonlyMap<string, SourceContext>, analysisAsOf: string, slices?: ReadonlyMap<string, ReasoningSourceSlice>): CandidateValidationResult<FormalGuidanceCandidate> {
   const source = context.get(raw.evidence.sourceObjectId)
   if (source === undefined) return rejected('SOURCE_OBJECT_NOT_IN_REQUEST')
   if (source.lane !== 'statutory_disclosure' || source.authority !== 'S0_STATUTORY') return rejected('FORMAL_GUIDANCE_REQUIRES_STATUTORY_SOURCE')
-  const span = resolveEvidence(raw.evidence, source, context)
+  const span = resolveEvidence(raw.evidence, source, context, slices)
   if (span.error !== undefined) return rejected(span.error)
   const diagnostics = [...sourcePitDiagnostics(source, analysisAsOf)]
   if (diagnostics.length > 0) return rejected(...diagnostics)
   const period = resolveFiscalPeriod(raw.rawFiscalPeriodText)
   if (period.diagnostic !== undefined) diagnostics.push(period.diagnostic)
-  const numeric = guidanceNumeric(raw, span.value!.exactText!, diagnostics)
+  const numeric = guidanceNumeric(raw, span.value!.exactText!)
   if (!numeric.valid) return rejected(...diagnostics, numeric.diagnostic ?? 'GUIDANCE_NUMERIC_INVALID')
   const unit = numeric.numeric ? resolveUnit(raw.rawUnit, span.value!.exactText!) : undefined
   if (numeric.numeric && raw.rawUnit !== undefined && !span.value!.exactText!.includes(raw.rawUnit)) return rejected(...diagnostics, 'UNIT_TOKEN_NOT_IN_EVIDENCE')
@@ -50,15 +56,19 @@ export function validateFormalGuidance(raw: RawFormalGuidanceCandidate, context:
   return { candidate: { candidateId, sourceObjectId: source.sourceObjectId, publishedAt: source.publishedAt, sourceAuthority: source.authority, extractionContractVersion: 'management-communication-extraction-v0.1', reasoningOperation: 'management_communication_extract', evidenceSpan: span.value!, validationDiagnostics: uniqueSorted(diagnostics), metric: raw.metric.trim(), fiscalPeriod: period.fiscalPeriod, rawFiscalPeriodText: raw.rawFiscalPeriodText, guidanceType: raw.guidanceType, rawLow: raw.rawLow, rawHigh: raw.rawHigh, rawPoint: raw.rawPoint, rawUnit: unit?.source ?? raw.rawUnit, qualifiers: raw.qualifiers.map((item) => item.trim()).filter(Boolean) }, diagnostics: uniqueSorted(diagnostics) }
 }
 
-export function validateManagementOutlook(raw: RawManagementOutlookCandidate, context: ReadonlyMap<string, SourceContext>, analysisAsOf: string): CandidateValidationResult<ManagementOutlookCandidate> {
+export function validateManagementOutlook(raw: RawManagementOutlookCandidate, context: ReadonlyMap<string, SourceContext>, analysisAsOf: string, slices?: ReadonlyMap<string, ReasoningSourceSlice>): CandidateValidationResult<ManagementOutlookCandidate> {
   const source = context.get(raw.evidence.sourceObjectId)
   if (source === undefined) return rejected('SOURCE_OBJECT_NOT_IN_REQUEST')
   if (source.lane === 'statutory_disclosure') return rejected('OUTLOOK_SOURCE_LANE_INVALID')
-  const span = resolveEvidence(raw.evidence, source, context)
+  const span = resolveEvidence(raw.evidence, source, context, slices)
   if (span.error !== undefined) return rejected(span.error)
   const diagnostics = [...sourcePitDiagnostics(source, analysisAsOf)]
   if (diagnostics.length > 0) return rejected(...diagnostics)
-  for (const value of [raw.rawNumericValue, raw.rawNumericRange]) if (value !== undefined && !numericTokenInText(value, span.value!.exactText!)) return rejected(...diagnostics, 'NUMERIC_TOKEN_NOT_IN_EVIDENCE')
+  if (raw.rawNumericValue !== undefined && (!numericTokenInText(raw.rawNumericValue, span.value!.exactText!) || parseNumericToken(raw.rawNumericValue) === undefined)) return rejected(...diagnostics, 'NUMERIC_TOKEN_NOT_IN_EVIDENCE')
+  if (raw.rawNumericRange !== undefined) {
+    const range = parseNumericRange(raw.rawNumericRange)
+    if (range === undefined || !numericRangeExpressionInText(range[0].rawToken, range[1].rawToken, span.value!.exactText!)) return rejected(...diagnostics, 'OUTLOOK_RANGE_EXPRESSION_NOT_FOUND')
+  }
   if (raw.rawUnit !== undefined && !span.value!.exactText!.includes(raw.rawUnit)) return rejected(...diagnostics, 'UNIT_TOKEN_NOT_IN_EVIDENCE')
   const period = raw.rawFiscalPeriodText === undefined ? {} : resolveFiscalPeriod(raw.rawFiscalPeriodText)
   if (period.diagnostic !== undefined) diagnostics.push(period.diagnostic)
@@ -66,16 +76,20 @@ export function validateManagementOutlook(raw: RawManagementOutlookCandidate, co
   return { candidate: { candidateId, sourceObjectId: source.sourceObjectId, publishedAt: source.publishedAt, sourceAuthority: source.authority, extractionContractVersion: 'management-communication-extraction-v0.1', reasoningOperation: 'management_communication_extract', evidenceSpan: span.value!, validationDiagnostics: uniqueSorted(diagnostics), topic: raw.topic.trim(), metric: raw.metric?.trim(), direction: raw.direction, timeHorizon: raw.rawTimeHorizon, rawNumericValue: raw.rawNumericValue, rawNumericRange: raw.rawNumericRange, rawUnit: raw.rawUnit, rawFiscalPeriodText: raw.rawFiscalPeriodText }, diagnostics: uniqueSorted(diagnostics) }
 }
 
-export function validateKpi(raw: RawKpiCandidate, context: ReadonlyMap<string, SourceContext>, analysisAsOf: string): CandidateValidationResult<KpiCandidate> {
+export function validateKpi(raw: RawKpiCandidate, context: ReadonlyMap<string, SourceContext>, analysisAsOf: string, slices?: ReadonlyMap<string, ReasoningSourceSlice>): CandidateValidationResult<KpiCandidate> {
   const source = context.get(raw.evidence.sourceObjectId)
   if (source === undefined) return rejected('SOURCE_OBJECT_NOT_IN_REQUEST')
-  const span = resolveEvidence(raw.evidence, source, context)
+  const span = resolveEvidence(raw.evidence, source, context, slices)
   if (span.error !== undefined) return rejected(span.error)
   const diagnostics = [...sourcePitDiagnostics(source, analysisAsOf)]
   if (diagnostics.length > 0) return rejected(...diagnostics)
   if (!numericTokenInText(raw.rawValue, span.value!.exactText!)) return rejected(...diagnostics, 'NUMERIC_TOKEN_NOT_IN_EVIDENCE')
   if (parseNumericToken(raw.rawValue) === undefined) return rejected(...diagnostics, 'NUMERIC_VALUE_INVALID')
-  if (parseNumericRange(raw.rawValue) !== undefined) diagnostics.push('KPI_RANGE_NOT_PROJECTABLE')
+  const rawRange = parseNumericRange(raw.rawValue)
+  if (rawRange !== undefined) {
+    if (!numericRangeExpressionInText(rawRange[0].rawToken, rawRange[1].rawToken, span.value!.exactText!)) return rejected(...diagnostics, 'KPI_RANGE_EXPRESSION_NOT_FOUND')
+    diagnostics.push('KPI_RANGE_NOT_PROJECTABLE')
+  }
   if (raw.rawUnit !== undefined && !span.value!.exactText!.includes(raw.rawUnit)) return rejected(...diagnostics, 'UNIT_TOKEN_NOT_IN_EVIDENCE')
   if (raw.rawUnit !== undefined && findUnit(raw.rawUnit) === undefined) diagnostics.push('UNKNOWN_UNIT')
   else if (raw.rawUnit === undefined && resolveUnit(undefined, span.value!.exactText!) === undefined) diagnostics.push('UNIT_UNAVAILABLE_FOR_PROJECTION')
@@ -85,7 +99,7 @@ export function validateKpi(raw: RawKpiCandidate, context: ReadonlyMap<string, S
   return { candidate: { candidateId, sourceObjectId: source.sourceObjectId, publishedAt: source.publishedAt, sourceAuthority: source.authority, extractionContractVersion: 'management-communication-extraction-v0.1', reasoningOperation: 'management_communication_extract', evidenceSpan: span.value!, validationDiagnostics: uniqueSorted(diagnostics), rawSegmentLabel: raw.rawSegmentLabel, rawProductLabel: raw.rawProductLabel, metric: raw.metric.trim(), fiscalPeriod: period.fiscalPeriod, rawFiscalPeriodText: raw.rawFiscalPeriodText, rawValue: raw.rawValue, rawUnit: raw.rawUnit }, diagnostics: uniqueSorted(diagnostics) }
 }
 
-export function validateStructuredQa(raw: RawStructuredQAEvidence, context: ReadonlyMap<string, SourceContext>, analysisAsOf: string): CandidateValidationResult<StructuredQAEvidence> {
+export function validateStructuredQa(raw: RawStructuredQAEvidence, context: ReadonlyMap<string, SourceContext>, analysisAsOf: string, slices?: ReadonlyMap<string, ReasoningSourceSlice>): CandidateValidationResult<StructuredQAEvidence> {
   const source = context.get(raw.pairId)
   if (source === undefined || source.pair === undefined || source.lane !== 'exchange_qa') return rejected('Q_AND_A_PAIR_NOT_IN_REQUEST')
   const locators = [...raw.claimSpans, ...raw.managementStatementSpans]
@@ -95,16 +109,16 @@ export function validateStructuredQa(raw: RawStructuredQAEvidence, context: Read
   if (diagnostics.length > 0) return rejected(...diagnostics)
   for (const locator of locators) {
     if (locator.sourceObjectId !== raw.pairId) return rejected(...diagnostics, 'QA_PAIR_ID_SPAN_MISMATCH')
-    const resolved = resolveEvidence(locator, source, context)
+    const resolved = resolveEvidence(locator, source, context, slices)
     if (resolved.error !== undefined) return rejected(...diagnostics, resolved.error)
     spans.push(resolved.value!)
   }
   const claimCount = raw.claimSpans.length
-  const candidateId = stableCandidateId('structuredQa', raw, spans[0]!, undefined)
+  const candidateId = stableCandidateId('structuredQa', raw, spans[0]!, undefined, spans)
   return { candidate: { candidateId, sourceObjectId: source.sourceObjectId, publishedAt: source.publishedAt, sourceAuthority: source.authority, extractionContractVersion: 'management-communication-extraction-v0.1', reasoningOperation: 'management_communication_extract', evidenceSpan: spans[0]!, validationDiagnostics: uniqueSorted(diagnostics), pairId: raw.pairId, question: source.pair.question, answer: source.pair.answer, platform: source.pair.platform, topicTags: raw.topicTags.map((item) => item.trim()).filter(Boolean), claimSpans: spans.slice(0, claimCount), managementStatementSpans: spans.slice(claimCount), referencedProductOrSegment: raw.rawReferencedProductOrSegment, explicitlyStatedMetrics: raw.explicitlyStatedMetrics.map((item) => item.trim()).filter(Boolean) }, diagnostics: uniqueSorted(diagnostics) }
 }
 
-export function validateRawOutput(output: RawExtractionOutput, lane: ExtractionLane, contexts: ReadonlyMap<string, SourceContext>, analysisAsOf: string): { readonly candidates: { readonly formalGuidanceCandidates: readonly FormalGuidanceCandidate[]; readonly managementOutlookCandidates: readonly ManagementOutlookCandidate[]; readonly kpiCandidates: readonly KpiCandidate[]; readonly structuredQaCandidates: readonly StructuredQAEvidence[] }; readonly diagnostics: readonly string[]; readonly rejectedCount: number } {
+export function validateRawOutput(output: RawExtractionOutput, lane: ExtractionLane, contexts: ReadonlyMap<string, SourceContext>, analysisAsOf: string, slices?: ReadonlyMap<string, ReasoningSourceSlice>): { readonly candidates: { readonly formalGuidanceCandidates: readonly FormalGuidanceCandidate[]; readonly managementOutlookCandidates: readonly ManagementOutlookCandidate[]; readonly kpiCandidates: readonly KpiCandidate[]; readonly structuredQaCandidates: readonly StructuredQAEvidence[] }; readonly diagnostics: readonly string[]; readonly rejectedCount: number } {
   const formalGuidanceCandidates: FormalGuidanceCandidate[] = []; const managementOutlookCandidates: ManagementOutlookCandidate[] = []; const kpiCandidates: KpiCandidate[] = []; const structuredQaCandidates: StructuredQAEvidence[] = []; const diagnostics: string[] = []; let rejectedCount = 0
   const accept = <T>(family: CandidateFamily, raw: T, validator: (value: T) => CandidateValidationResult<unknown>, target: unknown[]): void => {
     const allowed = lane === 'statutory_disclosure' ? family === 'formalGuidance' || family === 'kpi' : lane === 'management_document' ? family === 'managementOutlook' || family === 'kpi' : family !== 'formalGuidance'
@@ -113,10 +127,10 @@ export function validateRawOutput(output: RawExtractionOutput, lane: ExtractionL
     if (result.candidate === undefined) { diagnostics.push(...result.diagnostics.map((item) => `${family}:${item}`)); rejectedCount += 1; return }
     target.push(result.candidate); diagnostics.push(...result.diagnostics.map((item) => `${family}:${item}`))
   }
-  for (const raw of output.formalGuidanceCandidates) accept('formalGuidance', raw, (value) => validateFormalGuidance(value, contexts, analysisAsOf), formalGuidanceCandidates)
-  for (const raw of output.managementOutlookCandidates) accept('managementOutlook', raw, (value) => validateManagementOutlook(value, contexts, analysisAsOf), managementOutlookCandidates)
-  for (const raw of output.kpiCandidates) accept('kpi', raw, (value) => validateKpi(value, contexts, analysisAsOf), kpiCandidates)
-  for (const raw of output.structuredQaCandidates) accept('structuredQa', raw, (value) => validateStructuredQa(value, contexts, analysisAsOf), structuredQaCandidates)
+  for (const raw of output.formalGuidanceCandidates) accept('formalGuidance', raw, (value) => validateFormalGuidance(value, contexts, analysisAsOf, slices), formalGuidanceCandidates)
+  for (const raw of output.managementOutlookCandidates) accept('managementOutlook', raw, (value) => validateManagementOutlook(value, contexts, analysisAsOf, slices), managementOutlookCandidates)
+  for (const raw of output.kpiCandidates) accept('kpi', raw, (value) => validateKpi(value, contexts, analysisAsOf, slices), kpiCandidates)
+  for (const raw of output.structuredQaCandidates) accept('structuredQa', raw, (value) => validateStructuredQa(value, contexts, analysisAsOf, slices), structuredQaCandidates)
   return { candidates: { formalGuidanceCandidates, managementOutlookCandidates, kpiCandidates, structuredQaCandidates }, diagnostics: uniqueSorted(diagnostics), rejectedCount }
 }
 
@@ -160,36 +174,60 @@ function sourcePitDiagnostics(source: SourceContext, analysisAsOf: string): read
   return published > cutoff ? ['FUTURE_SOURCE_REJECTED'] : []
 }
 
-function resolveEvidence(locator: RawEvidenceLocator, source: SourceContext, all: ReadonlyMap<string, SourceContext>): { readonly value?: EvidenceSpan; readonly error?: string } {
+function resolveEvidence(locator: RawEvidenceLocator, source: SourceContext, all: ReadonlyMap<string, SourceContext>, slices?: ReadonlyMap<string, ReasoningSourceSlice>): { readonly value?: EvidenceSpan; readonly error?: string } {
   if (all.get(locator.sourceObjectId) !== source) return { error: 'SOURCE_BINDING_MISMATCH' }
+  const slice = slices?.get(source.sourceObjectId) ?? { sourceObjectId: source.sourceObjectId, sourceText: source.sourceText, absoluteStartOffset: 0 }
+  if (slice.sourceObjectId !== source.sourceObjectId || !Number.isInteger(slice.absoluteStartOffset) || slice.absoluteStartOffset < 0) return { error: 'REASONING_SLICE_INVALID' }
   const hasStart = locator.startOffset !== undefined; const hasEnd = locator.endOffset !== undefined
   if (hasStart !== hasEnd) return { error: 'EVIDENCE_OFFSETS_INCOMPLETE' }
   let start: number; let end: number
   if (hasStart && hasEnd) {
     start = locator.startOffset!; end = locator.endOffset!
-    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end > source.sourceText.length) return { error: 'EVIDENCE_OFFSETS_OUT_OF_RANGE' }
-    if (locator.exactText !== undefined && source.sourceText.slice(start, end) !== locator.exactText) return { error: 'EVIDENCE_EXACT_TEXT_MISMATCH' }
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end > slice.sourceText.length) return { error: 'EVIDENCE_OFFSETS_OUT_OF_RANGE' }
+    if (locator.exactText !== undefined && slice.sourceText.slice(start, end) !== locator.exactText) return { error: 'EVIDENCE_EXACT_TEXT_MISMATCH' }
   } else {
     if (locator.exactText === undefined) return { error: 'EVIDENCE_LOCATOR_REQUIRED' }
-    start = source.sourceText.indexOf(locator.exactText); end = start + locator.exactText.length
+    start = slice.sourceText.indexOf(locator.exactText); end = start + locator.exactText.length
     if (start < 0) return { error: 'EVIDENCE_EXACT_TEXT_NOT_FOUND' }
-    if (source.sourceText.indexOf(locator.exactText, start + 1) >= 0) return { error: 'EVIDENCE_EXACT_TEXT_AMBIGUOUS' }
+    if (slice.sourceText.indexOf(locator.exactText, start + 1) >= 0) return { error: 'EVIDENCE_EXACT_TEXT_AMBIGUOUS' }
   }
   if (start === end) return { error: 'EVIDENCE_SPAN_EMPTY' }
-  return { value: { sourceObjectId: source.sourceObjectId, startOffset: start, endOffset: end, exactText: source.sourceText.slice(start, end) } }
+  const localText = slice.sourceText.slice(start, end)
+  const absoluteStart = slice.absoluteStartOffset + start
+  const absoluteEnd = slice.absoluteStartOffset + end
+  if (absoluteEnd > source.sourceText.length || source.sourceText.slice(absoluteStart, absoluteEnd) !== localText) return { error: 'EVIDENCE_FULL_SOURCE_MISMATCH' }
+  return { value: { sourceObjectId: source.sourceObjectId, startOffset: absoluteStart, endOffset: absoluteEnd, exactText: source.sourceText.slice(absoluteStart, absoluteEnd) } }
 }
 
-function guidanceNumeric(raw: RawFormalGuidanceCandidate, text: string, diagnostics: string[]): { readonly valid: boolean; readonly numeric: boolean; readonly diagnostic?: string } {
+function guidanceNumeric(raw: RawFormalGuidanceCandidate, text: string): { readonly valid: boolean; readonly numeric: boolean; readonly diagnostic?: string } {
   if (raw.guidanceType === 'qualitative') return { valid: raw.qualifiers.length > 0, numeric: false, diagnostic: raw.qualifiers.length === 0 ? 'QUALITATIVE_QUALIFIER_REQUIRED' : undefined }
   const value = raw.guidanceType === 'range' ? [raw.rawLow, raw.rawHigh] : raw.guidanceType === 'minimum' ? [raw.rawLow] : raw.guidanceType === 'maximum' ? [raw.rawHigh] : [raw.rawPoint]
   if (value.some((item) => item === undefined || parseNumericToken(item) === undefined)) return { valid: false, numeric: true, diagnostic: 'GUIDANCE_NUMERIC_ENDPOINT_REQUIRED' }
   if (value.some((item) => !numericTokenInText(item, text))) return { valid: false, numeric: true, diagnostic: 'NUMERIC_TOKEN_NOT_IN_EVIDENCE' }
-  if (raw.guidanceType === 'range' && parseNumericRange(`${raw.rawLow}-${raw.rawHigh}`) === undefined) diagnostics.push('GUIDANCE_RANGE_PARSE_DEFERRED_TO_PROJECTION')
+  if (raw.guidanceType === 'range' && !numericRangeExpressionInText(raw.rawLow, raw.rawHigh, text)) return { valid: false, numeric: true, diagnostic: 'GUIDANCE_RANGE_EXPRESSION_NOT_FOUND' }
   return { valid: true, numeric: true }
 }
 
-function stableCandidateId(family: CandidateFamily, raw: object, span: EvidenceSpan, period: string | undefined): string {
-  return `d2-002-${family}-${sha256(JSON.stringify({ version: 'management-communication-extraction-v0.1', family, raw, span: [span.sourceObjectId, span.startOffset, span.endOffset], period })) .slice(0, 32)}`
+function stableCandidateId(family: CandidateFamily, raw: object, span: EvidenceSpan, period: string | undefined, evidenceSpans: readonly EvidenceSpan[] = [span]): string {
+  return `d2-002-${family}-${sha256(JSON.stringify({ version: 'management-communication-extraction-v0.1', family, raw: canonicalRaw(family, raw), span: canonicalSpans(evidenceSpans), period })) .slice(0, 32)}`
+}
+
+function canonicalRaw(family: CandidateFamily, raw: object): unknown {
+  const value = raw as Record<string, unknown>
+  const strings = (items: unknown): readonly string[] => [...new Set(Array.isArray(items) ? items.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean) : [])].sort()
+  const locator = (item: unknown): unknown => {
+    const candidate = item as Record<string, unknown>
+    return { sourceObjectId: candidate.sourceObjectId, startOffset: candidate.startOffset, endOffset: candidate.endOffset }
+  }
+  const sortedLocators = (items: unknown): readonly unknown[] => (Array.isArray(items) ? items.map(locator).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))) : [])
+  if (family === 'formalGuidance') return { metric: value.metric, rawFiscalPeriodText: value.rawFiscalPeriodText, guidanceType: value.guidanceType, rawLow: value.rawLow, rawHigh: value.rawHigh, rawPoint: value.rawPoint, rawUnit: value.rawUnit, qualifiers: strings(value.qualifiers) }
+  if (family === 'managementOutlook') return { topic: value.topic, metric: value.metric, direction: value.direction, rawTimeHorizon: value.rawTimeHorizon, rawNumericValue: value.rawNumericValue, rawNumericRange: value.rawNumericRange, rawUnit: value.rawUnit, rawFiscalPeriodText: value.rawFiscalPeriodText }
+  if (family === 'kpi') return { rawSegmentLabel: value.rawSegmentLabel, rawProductLabel: value.rawProductLabel, metric: value.metric, rawFiscalPeriodText: value.rawFiscalPeriodText, rawValue: value.rawValue, rawUnit: value.rawUnit }
+  return { pairId: value.pairId, topicTags: strings(value.topicTags), claimSpans: sortedLocators(value.claimSpans), managementStatementSpans: sortedLocators(value.managementStatementSpans), rawReferencedProductOrSegment: value.rawReferencedProductOrSegment, explicitlyStatedMetrics: strings(value.explicitlyStatedMetrics) }
+}
+
+function canonicalSpans(spans: readonly EvidenceSpan[]): readonly [string, number, number][] {
+  return spans.map((span) => [span.sourceObjectId, span.startOffset, span.endOffset] as [string, number, number]).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)))
 }
 
 function rejected<T>(...diagnostics: string[]): CandidateValidationResult<T> { return { diagnostics: uniqueSorted(diagnostics) } }
