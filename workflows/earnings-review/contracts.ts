@@ -10,6 +10,8 @@ import type { EarningsExpectationAnalysis } from './expectations-contracts.ts'
 import type { EarningsValuationImpactAnalysis, ThesisFilterReasoning } from './valuation-impact-thesis-filter-contracts.ts'
 import type { ResearchQualityGateResult } from '../research-quality-gate.ts'
 import type { EarningsExpectationsAcquisitionSource } from './expectations-acquisition.ts'
+import type { ManagementCommunicationAcquisitionSources } from '../management-communication-acquisition/contracts.ts'
+import type { ManagementCommunicationResearchInput, ManagementCommunicationResearchResult } from './management-communication.ts'
 
 export interface EstimateRevisionLink { readonly oldEstimateId: string; readonly newEstimateId: string }
 
@@ -51,6 +53,10 @@ export interface EarningsReviewWorkflowInput {
   readonly eastmoneyExpectationSource?: EarningsEastmoneyExpectationSource
   /** AKShare-backed THS -> EastMoney expectations acquisition. Caller-owned expectations still take precedence. */
   readonly earningsExpectationsSource?: EarningsExpectationsAcquisitionSource
+  /** Existing D2-001 source seam; the normal application runtime supplies it. */
+  readonly managementCommunicationSources?: ManagementCommunicationAcquisitionSources
+  readonly managementCommunication?: ManagementCommunicationResearchInput
+  readonly managementCommunicationLookbackDays?: number
 }
 
 export interface EarningsReviewTelemetry {
@@ -79,6 +85,11 @@ export interface EarningsReviewTelemetry {
   readonly guidanceRevisionCount: number
   readonly guidanceConsensusComparisonCount: number
   readonly segmentKpiComparisonCount: number
+  readonly managementCommunicationStatus: 'not_attempted' | 'available' | 'partial' | 'unavailable' | 'failed'
+  readonly managementCommunicationAcquisitionAttempted: boolean
+  readonly managementCommentaryDeltaCount: number
+  readonly managementQaClusterCount: number
+  readonly managementExecutionAssessmentCount: number
   readonly valuationImpactCount: number
   readonly valuationRefreshRequired: boolean
   readonly thesisImpactCount: number
@@ -117,6 +128,7 @@ export interface EarningsReviewWorkflowResult {
   readonly telemetry: EarningsReviewTelemetry
   readonly providerOutcomes: readonly ResearchProviderOutcome[]
   readonly expectationAnalysis?: EarningsExpectationAnalysis
+  readonly managementCommunication?: ManagementCommunicationResearchResult
   readonly valuationImpactAnalysis?: EarningsValuationImpactAnalysis
   readonly qualityGate?: ResearchQualityGateResult
 }
