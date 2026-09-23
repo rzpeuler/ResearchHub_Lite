@@ -1469,3 +1469,47 @@ Runtime implementation status remains:
 ```text
 IMPLEMENTED / SOL ACCEPTANCE PENDING
 ```
+
+## 26. D3-002-FIX-002 candidate budget and evidence-lineage closure — 2026-09-23
+
+The second follow-up closes the remaining bounded-candidate, provenance, report,
+and live-harness gaps without changing the frozen methodology:
+
+- every consensus-qualified candidate is targeted-scale resolved before frozen
+  ordering; there is no ticker-count truncation before ordering. Ordering remains
+  family count descending, log scale distance ascending, then ticker ascending,
+  and only the first twelve ordered peers receive expensive validation;
+- selected automatic-method `sourceRefs` and the compatible crosscheck include
+  the exact target-scale source, selected peer cohort/profile, selected peer
+  scale, market, financial, and CNINFO sources. Rejected, non-selected, and
+  alternate-method-only evidence remains in `diagnosticSourceRefs` only;
+- report text distinguishes `selected peers` (peer identities) from
+  `runtime evidence candidate IDs` (selected result evidence lineage), and
+  explicitly states that canonical peer sources are not persisted;
+- the gated live harness keeps the normal
+  `ResearchService -> startValuation -> runValuation -> automatic -> crosscheck`
+  path and deterministic `ReasoningExecutor` seam. When the target market is
+  blocked with unsuccessful empty provider transport, it emits the precise
+  `REAL_TARGET_MARKET_TRANSPORT_UNAVAILABLE` label; mixed non-transport outcomes
+  remain `REAL_AUTO_COMPS_ACCEPTANCE_INCONCLUSIVE`. No direct resolver final
+  acceptance, alternate-method substitution, averaging, or fabricated success
+  is permitted.
+
+The enabled 2026-09-23 live run executed all four targets through the normal
+product path. Each target had `transportSucceeded=false`, `marketRowCount=0`,
+and `marketPriceFound=false`; each stage and the overall result were classified
+as `REAL_TARGET_MARKET_TRANSPORT_UNAVAILABLE`. `acceptedTargets` was empty and
+no success label was emitted. The default gated run remained
+`REAL_AUTO_COMPS_NOT_RUN` with zero network calls.
+
+The FIX-002 offline regressions cover more than twenty-four consensus candidates
+being scale-resolved before the twelve-peer cap, target-scale inclusion in
+selected lineage and crosscheck, exclusion of rejected and alternate-method-only
+evidence, broader diagnostics, report terminology, normal product-path
+execution, precise target transport classification, and prior D3-002 regressions.
+
+Runtime implementation status remains:
+
+```text
+IMPLEMENTED / SOL ACCEPTANCE PENDING
+```

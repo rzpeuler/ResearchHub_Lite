@@ -15,9 +15,9 @@ function family(family: AksharePeerComparisonFamily, tickers: readonly string[])
   if (family === 'scale') return [row(target, { TOTAL_CAP: 1000, FREECAP: 800, REPORT_TYPE: '2025年报' }), ...tickers.map((ticker, index) => row(ticker, { TOTAL_CAP: 900 + index * 100, FREECAP: 700, REPORT_TYPE: '2025年报' }))]
   return [row(target)]
 }
-function fakeAkshare(tickers: readonly string[] = peers, options: { readonly scaleSnapshotTickers?: readonly string[]; readonly failFamily?: AksharePeerComparisonFamily; readonly failFamilies?: readonly AksharePeerComparisonFamily[] } = {}): AkshareDataClient & { readonly peerCalls: string[]; readonly validationCalls: string[]; readonly scaleCalls: string[] } {
+function fakeAkshare(tickers: readonly string[] = peers, options: { readonly scaleSnapshotTickers?: readonly string[]; readonly scaleUnavailableTickers?: readonly string[]; readonly invalidPeTickers?: readonly string[]; readonly failFamily?: AksharePeerComparisonFamily; readonly failFamilies?: readonly AksharePeerComparisonFamily[] } = {}): AkshareDataClient & { readonly peerCalls: string[]; readonly validationCalls: string[]; readonly scaleCalls: string[] } {
   const peerCalls: string[] = []; const validationCalls: string[] = []; const scaleCalls: string[] = []
-  return { peerCalls, validationCalls, scaleCalls, companyBasic: async () => [], financialData: async () => [], historicalMarketData: async ({ symbol }) => { validationCalls.push(`market:${symbol}`); return [{ date: '2026-09-08', close: 100 }] }, valuationFinancialIndicators: async ({ symbol }) => { validationCalls.push(`financial:${symbol}`); return [{ REPORT_DATE: '2025-12-31', EPSJB: 10, BPS: 20 }] }, peerComparison: async ({ family: requested, correlatedSymbol }) => { if ((options.failFamily === requested || options.failFamilies?.includes(requested)) && correlatedSymbol === undefined) throw new Error(`FAIL_${requested}`); peerCalls.push(requested); if (requested === 'scale' && correlatedSymbol !== undefined) { scaleCalls.push(correlatedSymbol); return { result: { data: [row(correlatedSymbol, { TOTAL_CAP: correlatedSymbol === target ? 1000 : 900, FREECAP: 700, REPORT_TYPE: '2025年报' })] } } } const snapshotTickers = requested === 'scale' && options.scaleSnapshotTickers !== undefined ? options.scaleSnapshotTickers : tickers; return { result: { data: family(requested, snapshotTickers) } } } }
+  return { peerCalls, validationCalls, scaleCalls, companyBasic: async () => [], financialData: async () => [], historicalMarketData: async ({ symbol }) => { validationCalls.push(`market:${symbol}`); return [{ date: '2026-09-08', close: 100 }] }, valuationFinancialIndicators: async ({ symbol }) => { validationCalls.push(`financial:${symbol}`); return [{ REPORT_DATE: '2025-12-31', ...(options.invalidPeTickers?.includes(symbol) ? {} : { EPSJB: 10 }), BPS: 20 }] }, peerComparison: async ({ family: requested, correlatedSymbol }) => { if ((options.failFamily === requested || options.failFamilies?.includes(requested)) && correlatedSymbol === undefined) throw new Error(`FAIL_${requested}`); peerCalls.push(requested); if (requested === 'scale' && correlatedSymbol !== undefined) { scaleCalls.push(correlatedSymbol); if (options.scaleUnavailableTickers?.includes(correlatedSymbol)) return { result: { data: [] } }; return { result: { data: [row(correlatedSymbol, { TOTAL_CAP: correlatedSymbol === target ? 1000 : 900, FREECAP: 700, REPORT_TYPE: '2025年报' })] } } } const snapshotTickers = requested === 'scale' && options.scaleSnapshotTickers !== undefined ? options.scaleSnapshotTickers : tickers; return { result: { data: family(requested, snapshotTickers) } } } }
 }
 const official: OfficialDisclosureClient = { list: async () => [], fetch: async () => '', resolveAnnualReportPublication: async ({ fiscalYear, company }) => ({ issuer: company.symbol, fiscalYear, reportTitle: `${fiscalYear} annual report`, officialPublishedAt: '2026-03-30T00:00:00.000Z', rawPublishedAt: '2026-03-30', sourceUrl: `https://static.cninfo.com.cn/${company.symbol}-${fiscalYear}.pdf`, originPublisher: 'CNINFO', originAuthority: 'S0_STATUTORY', retrievalProvider: 'CNINFO', retrievedAt: NOW }) }
 function request(akshare: AkshareDataClient, overrides: Partial<Parameters<typeof resolveAutomaticComps>[0]> = {}) { return resolveAutomaticComps({ company: { symbol: target, name: 'Target', exchange: 'SSE' }, valuationDate: NOW, basisFiscalYear: 2025, targetFiscalYear: 2026, selectedMethod: 'PE', targetForecastMetric: 12, targetSourceRefs: ['target-financial'], akshare, officialDisclosure: official, retrievedAt: NOW, now: NOW, ...overrides }) }
@@ -63,6 +63,29 @@ test('automatic resolver orders deterministically and hard caps expensive valida
   assert.equal(resolved.result.validPeers.length, 12)
   const again = await request(fakeAkshare(many))
   assert.deepEqual(resolved.result.validPeers.map((peer) => peer.identity.ticker), again.result.validPeers.map((peer) => peer.identity.ticker))
+})
+
+test('more than twenty-four consensus peers are all scale-resolved before the frozen twelve-peer cap', async () => {
+  const many = Array.from({ length: 30 }, (_, index) => String(100001 + index)); const akshare = fakeAkshare(many); const resolved = await request(akshare)
+  assert.equal(akshare.scaleCalls.length, 31)
+  assert.equal(resolved.result.candidatePeerCount, 30)
+  assert.equal(resolved.result.expensiveValidationCount, 12)
+  assert.equal(resolved.result.validPeers.length, 12)
+  assert.ok(!resolved.result.rejectedPeers.some((peer) => peer.reasonCodes.includes('TARGETED_SCALE_LOOKUP_LIMIT')))
+})
+
+test('selected lineage includes target scale and excludes rejected and alternate-method-only peer evidence', async () => {
+  const tickers = ['000001', '000002', '000003', '000004', '000005']; const akshare = fakeAkshare(tickers, { scaleUnavailableTickers: ['000004'], invalidPeTickers: ['000005'] }); const resolved = await request(akshare); const result = resolved.result
+  assert.equal(result.availability, 'available')
+  assert.ok(result.sourceRefs.includes(`eastmoney-auto-comps-scale-target-${target}-${NOW}`))
+  assert.ok(result.sourceRefs.some((sourceRef) => sourceRef.includes('eastmoney-auto-comps-scale-peer-000001')))
+  assert.ok(result.sourceRefs.some((sourceRef) => sourceRef.includes('eastmoney-auto-comps-market-000001')))
+  assert.ok(result.sourceRefs.some((sourceRef) => sourceRef.includes('eastmoney-auto-comps-financial-000001')))
+  assert.ok(result.sourceRefs.some((sourceRef) => sourceRef.includes('cninfo-auto-comps-annual-report-000001')))
+  assert.ok(!result.sourceRefs.some((sourceRef) => sourceRef.includes('000004') || sourceRef.includes('000005')))
+  assert.ok(result.diagnosticSourceRefs.length > result.sourceRefs.length)
+  const crosscheck = buildValuationCrosscheck({ eligibleMethods: ['PE'], automaticCompsResult: result }).methodResults.find((item) => item.method === 'comps_valuation')!
+  assert.deepEqual(crosscheck.sourceRefs, result.sourceRefs)
 })
 
 test('historical input is not accepted by the automatic resolver path contract', async () => {
