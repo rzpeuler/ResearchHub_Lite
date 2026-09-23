@@ -18,6 +18,12 @@ test('NBS parser requires the target row, header, unit, and year', () => {
   assert.equal(parseNbsAnnualAirConditionerProduction('other | 万台 | 26697.5\n', { ...context('nbs-drift'), originPublisher: 'National Bureau of Statistics', hostPlatform: 'NBS official web/PDF host', sourceAuthority: 'S0_STATUTORY' }), undefined)
 })
 
+test('NBS parser aligns the vertical PDF columns by product ordinal', () => {
+  const text = '表 3 2025 年规模以上工业主要产品产量及其增长速度\n产品名称\n家用电冰箱\n房间空气调节器\n单位\n万台\n万台\n产量\n10924 . 4\n26697 . 5\n'
+  const observation = parseNbsAnnualAirConditionerProduction(text, { ...context('nbs-vertical'), originPublisher: 'National Bureau of Statistics', hostPlatform: 'NBS official web/PDF host', sourceAuthority: 'S0_STATUTORY' })
+  assert.equal(observation?.value, 26697.5); assert.equal(observation?.originalValue, '26697 . 5'); assert.equal(observation?.unit, '万台')
+})
+
 test('MIIT parser preserves lower bound and article-period average prices', () => {
   const text = '2026年上半年，锂离子电池产量超过1240 GWh。电池级碳酸锂平均价格为16.3万元/吨，氢氧化锂平均价格为15.3万元/吨。锂电池出口额3370亿元。'
   const observations = parseMiitLithiumOperatingObservations(text, context('miit-fixture'))
@@ -30,6 +36,12 @@ test('CHEAA parser reads monthly quantity, not cumulative or money columns', () 
   const observation = parseCheaaHouseholdAirConditionerExport(text, { ...context('cheaa-fixture'), originPublisher: 'CHEAA', hostPlatform: 'CHEAA official web/PDF host', sourceAuthority: 'S2_PROFESSIONAL', metadata: { period: '2024-09' } }, '2024-09')
   assert.equal(observation?.metricKey, 'air_conditioner.export_volume'); assert.equal(observation?.value, 4039692); assert.equal(observation?.unit, '台'); assert.equal(observation?.metadata.upstreamDataSource, 'GACC')
   assert.equal(parseCheaaHouseholdAirConditionerExport('产品名称 | 累计数量（台）\n家用空调器 | 66,841,194\n', context('cheaa-no-month'), '2024-09'), undefined)
+})
+
+test('CHEAA parser aligns the vertical PDF export table and keeps GACC attribution', () => {
+  const text = '产品名称 当月数量（台） 累计数量（台） 数量累计同比增长（%） 当月金额（美元） 累计金额（美元） 金额累计同比增长（%）\n家用空调器\n5133858\n61001511\n6.05\n1045560003\n11614988626\n5.39\n'
+  const observation = parseCheaaHouseholdAirConditionerExport(text, { ...context('cheaa-vertical'), originPublisher: 'CHEAA', hostPlatform: 'CHEAA official web/PDF host', sourceAuthority: 'S2_PROFESSIONAL', metadata: { period: '2025-07' } }, '2025-07')
+  assert.equal(observation?.value, 5133858); assert.equal(observation?.originalValue, '5133858'); assert.equal(observation?.metadata.upstreamDataSource, 'GACC')
 })
 
 test('unsupported targets perform no D4 network calls', async () => {

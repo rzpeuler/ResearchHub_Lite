@@ -28,7 +28,8 @@
     "acceptance:earnings-expectations-d1-real": "tsx scripts/acceptance-earnings-expectations-d1-real.ts",
     "acceptance:management-communication-d2-003-real": "tsx scripts/acceptance-management-communication-d2-003-real.ts",
     "acceptance:valuation-basis-d3-real": "tsx scripts/acceptance-valuation-basis-evidence-d3-real.ts",
-    "acceptance:auto-comps-d3-real": "tsx scripts/acceptance-auto-comps-d3-real.ts"
+    "acceptance:auto-comps-d3-real": "tsx scripts/acceptance-auto-comps-d3-real.ts",
+    "acceptance:industry-operating-observations-d4-real": "tsx scripts/acceptance-industry-operating-observations-d4-real.ts"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.0",

@@ -1,4 +1,8 @@
 import { sha256 } from './hash.ts'
+import { spawn } from 'node:child_process'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { DocumentInputResolver } from '../document/input-resolver.ts'
 import type { NormalizedResearchSource, ResearchFetchedSource, ResearchSourceCandidate } from './contracts.ts'
 import type { IndustryTargetInput } from '../../skills/industry-research/contracts.ts'
@@ -215,13 +219,29 @@ export function parseNbsAnnualAirConditionerProduction(text: string, context?: O
   const headerWindow = rows.slice(Math.max(0, rowIndex - 8), rowIndex).join(' ')
   const row = cellsOf(rows[rowIndex]!)
   const unitIndex = row.findIndex((cell) => /万台|台/.test(cell)); const numericCells = row.map((cell, index) => ({ value: parseNumber(cell), index })).filter((item): item is { value: number; index: number } => item.value !== undefined)
-  const year = /2025(?:年|\b)/.test(headerWindow) || /2025/.test(rows[rowIndex]!) ? 2025 : undefined
-  const unit = unitIndex >= 0 ? row[unitIndex]!.match(/万台|台/)?.[0] : undefined
-  if (year !== 2025 || !unit || numericCells.length === 0 || !/(产品|指标|项目|单位|产量|工业产品)/.test(headerWindow) || !/(2025|年度|年)/.test(headerWindow)) return undefined
-  const numeric = unitIndex >= 0 ? numericCells.find((item) => item.index > unitIndex)?.value : numericCells[0]?.value
+  const year = /表\s*3\s*2025\s*年|2025\s*年\s*规模以上工业主要产品产量/i.test(text) || /2025(?:年|\b)/.test(headerWindow) || /2025/.test(rows[rowIndex]!) ? 2025 : undefined
+  let unit = unitIndex >= 0 ? row[unitIndex]!.match(/万台|台/)?.[0] : undefined
+  let numeric = unitIndex >= 0 ? numericCells.find((item) => item.index > unitIndex)?.value : numericCells[0]?.value
+  let originalValue = numericCells.find((item) => item.value === numeric)?.value === undefined ? undefined : row[numericCells.find((item) => item.value === numeric)!.index]
+  if (!unit || numeric === undefined) {
+    const productHeaderIndex = rows.slice(0, rowIndex).map((line, index) => ({ line, index })).reverse().find((item) => /产品名称/.test(item.line))?.index
+    const verticalUnitHeaderIndex = productHeaderIndex === undefined ? undefined : rows.findIndex((line, index) => index > productHeaderIndex && /^(单位|计量单位)$/.test(line))
+    const unitHeaderIndex = verticalUnitHeaderIndex ?? -1
+    const productionHeaderIndex = unitHeaderIndex < 0 ? -1 : rows.findIndex((line, index) => index > unitHeaderIndex && /^产量$/.test(line))
+    if (productHeaderIndex !== undefined && unitHeaderIndex >= 0 && productionHeaderIndex >= 0) {
+      const productEntries = rows.slice(productHeaderIndex + 1, unitHeaderIndex).filter((line) => !/^\[\s*\d+\s*\]$/.test(line))
+      const productOffset = productEntries.findIndex((line) => /房间空气调节器/.test(line))
+      const units = rows.slice(unitHeaderIndex + 1, productionHeaderIndex).filter((line) => !/^\[\s*\d+\s*\]$/.test(line))
+      const values = rows.slice(productionHeaderIndex + 1).filter((line) => !/^\[\s*\d+\s*\]$/.test(line))
+      unit = productOffset >= 0 ? units[productOffset]?.match(/万台|台/)?.[0] : undefined
+      numeric = productOffset >= 0 ? parseNumber(values[productOffset] ?? '') : undefined
+      originalValue = productOffset >= 0 ? values[productOffset] : undefined
+    }
+  }
   if (numeric === undefined) return undefined
+  if (year !== 2025 || !unit || !/(产品|指标|项目|单位|产量|工业产品)/.test(`${headerWindow} ${text}`) || !/(2025|年度|年)/.test(text)) return undefined
   const ctx = textContext(context, { publishedAt: context?.publishedAt, retrievedAt: context?.retrievedAt }); const period = yearPeriod(year)
-  return base(ctx, { metricKey: 'room_air_conditioner.production', observationClass: 'PRODUCTION', value: numeric, qualifier: 'EXACT', unit, originalValue: row[numericCells.find((item) => item.value === numeric)?.index ?? 0] ?? String(numeric), originalUnit: unit, ...period, frequency: 'ANNUAL', aggregation: 'PERIOD', geography: 'China national', productOrSegment: '房间空气调节器' })
+  return base(ctx, { metricKey: 'room_air_conditioner.production', observationClass: 'PRODUCTION', value: numeric, qualifier: 'EXACT', unit, originalValue: originalValue ?? String(numeric), originalUnit: unit, ...period, frequency: 'ANNUAL', aggregation: 'PERIOD', geography: 'China national', productOrSegment: '房间空气调节器' })
 }
 
 function miitPeriod(text: string): { readonly periodStart: string; readonly periodEnd: string; readonly frequency: string; readonly aggregation: IndustryObservationAggregation } | undefined {
@@ -258,11 +278,21 @@ export function parseCheaaHouseholdAirConditionerExport(text: string, context?: 
   const rows = linesOf(text); const headerIndex = rows.findIndex((line) => /当月数量\s*[（(]\s*台\s*[）)]/.test(line) && /累计数量/.test(line) && /当月金额/.test(line)); if (headerIndex < 0) return undefined
   const header = cellsOf(rows[headerIndex]!); const monthlyIndex = header.findIndex((cell) => /当月数量\s*[（(]\s*台\s*[）)]/.test(cell)); if (monthlyIndex < 0) return undefined
   const rowIndex = rows.findIndex((line, index) => index > headerIndex && /家用空调器/.test(line)); if (rowIndex < 0) return undefined
-  const row = cellsOf(rows[rowIndex]!); const value = parseNumber(row[monthlyIndex] ?? ''); if (value === undefined) return undefined
+  const row = cellsOf(rows[rowIndex]!); let rawValue = row[monthlyIndex]
+  let value = parseNumber(rawValue ?? '')
+  if (value === undefined) {
+    const horizontalMatch = /家用空调器\s+([0-9][0-9,]*)/.exec(rows[rowIndex]!)
+    if (horizontalMatch) { rawValue = horizontalMatch[1]; value = parseNumber(rawValue) }
+  }
+  if (value === undefined) {
+    const verticalValues = rows.slice(rowIndex + 1).filter((line) => !/^\[\s*\d+\s*\]$/.test(line)).slice(0, 6)
+    rawValue = verticalValues[0]; value = parseNumber(rawValue ?? '')
+  }
+  if (value === undefined || rawValue === undefined) return undefined
   const periodValue = periodHint ?? String(context?.metadata?.period ?? '')
   const period = monthPeriod(periodValue); if (!period) return undefined
   const ctx = contextWith(textContext(context), { ...(context?.metadata ?? {}), sourceDataLabel: 'GACC', upstreamDataSource: 'GACC' })
-  return base(ctx, { metricKey: 'air_conditioner.export_volume', observationClass: 'TRADE', value, qualifier: 'EXACT', unit: '台', originalValue: row[monthlyIndex]!, originalUnit: '台', ...period, frequency: 'MONTHLY', aggregation: 'PERIOD', geography: 'China national exports', productOrSegment: '家用空调器' })
+  return base(ctx, { metricKey: 'air_conditioner.export_volume', observationClass: 'TRADE', value, qualifier: 'EXACT', unit: '台', originalValue: rawValue, originalUnit: '台', ...period, frequency: 'MONTHLY', aggregation: 'PERIOD', geography: 'China national exports', productOrSegment: '家用空调器' })
 }
 
 function candidate(spec: { readonly id: string; readonly url: string; readonly title: string; readonly provider: string; readonly kind: ResearchSourceCandidate['kind']; readonly tier: ResearchSourceCandidate['tier']; readonly publishedAt: string; readonly metadata?: Readonly<Record<string, unknown>> }): ResearchSourceCandidate {
@@ -274,6 +304,16 @@ async function readBounded(response: Response, max: number): Promise<Uint8Array>
   const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let total = 0
   for (;;) { const item = await reader.read(); if (item.done) break; total += item.value.byteLength; if (total > max) { await reader.cancel(); throw new Error('OPERATING_PAYLOAD_TOO_LARGE') } chunks.push(item.value) }
   const bytes = new Uint8Array(total); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength } return bytes
+}
+async function pdfTextFallback(bytes: Uint8Array): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), 'researchhub-d4-pdf-')); const path = join(directory, 'document.pdf'); await writeFile(path, bytes)
+  const executable = process.env.RESEARCHHUB_PYTHON_EXECUTABLE?.trim() || 'python'; const script = "from pypdf import PdfReader; import sys; sys.stdout.reconfigure(encoding='utf-8'); reader=PdfReader(sys.argv[1]); print('\\n'.join((page.extract_text() or '') for page in reader.pages))"
+  try {
+    return await new Promise<string>((resolve, reject) => {
+      const child = spawn(executable, ['-c', script, path], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }); let stdout = ''; let stderr = ''
+      child.stdout.setEncoding('utf8'); child.stderr.setEncoding('utf8'); child.stdout.on('data', (value: string) => { stdout += value }); child.stderr.on('data', (value: string) => { stderr += value }); child.on('error', (error) => reject(new Error(`PDF_TEXT_FALLBACK_FAILED:${error.message}`))); child.on('close', (code) => code === 0 && stdout.trim() ? resolve(stdout) : reject(new Error(`PDF_TEXT_FALLBACK_FAILED:${stderr.trim().slice(0, 240) || `exit_${code ?? 'unknown'}`}`)))
+    })
+  } finally { await rm(directory, { recursive: true, force: true }) }
 }
 function abortIfNeeded(signal?: AbortSignal): void { if (signal?.aborted) throw new Error('WORKFLOW_CANCELLED') }
 function sourceFromFetched(fetched: ResearchFetchedSource, candidateValue: ResearchSourceCandidate, url: string): NormalizedResearchSource {
@@ -320,7 +360,11 @@ export class IndustryOperatingObservationAcquisition implements IndustryOperatin
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', forward) }
   }
   private async documentText(source: NormalizedResearchSource, expected: OperatingSourceSpec['expected']): Promise<string> {
-    const bytes = source.rawBytes ?? new TextEncoder().encode(source.content); const document = await this.resolver.parse({ bytes: Uint8Array.from(bytes), filename: expected === 'pdf' ? 'source.pdf' : 'source.html', mediaType: expected === 'pdf' ? 'application/pdf' : 'text/html', documentId: `d4-${source.candidate.candidateId}` }); return document.normalizedText
+    const bytes = source.rawBytes ?? new TextEncoder().encode(source.content)
+    try { const document = await this.resolver.parse({ bytes: Uint8Array.from(bytes), filename: expected === 'pdf' ? 'source.pdf' : 'source.html', mediaType: expected === 'pdf' ? 'application/pdf' : 'text/html', documentId: `d4-${source.candidate.candidateId}` }); return document.normalizedText } catch (error) {
+      if (expected !== 'pdf' || !(error instanceof Error) || !/document_parser_environment_not_ready/i.test(error.message)) throw error
+      return pdfTextFallback(bytes)
+    }
   }
   async acquire(request: IndustryOperatingObservationRequest): Promise<IndustryOperatingObservationAcquisitionResult> {
     const diagnostics: string[] = []; const sources: NormalizedResearchSource[] = []; const observations: IndustryOperatingObservation[] = []; const specs = this.specs(request.target)

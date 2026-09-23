@@ -729,3 +729,54 @@ The first runtime implementation should be accepted only through the normal Indu
 - CHEAA remains the publisher and host for the accepted PDF evidence; ResearchHub is the retrieval provider; GACC remains upstream data-source/method attribution.
 - No source conclusions, metric classes, PIT semantics, runtime files, probes, or architecture decisions changed.
 - The browser-harness executable remained unavailable; live evidence was obtained through official web search/open results and direct read-only HTTPS checks. No runtime implementation was started.
+
+## 15. D4 long-haul implementation appendix
+
+**Status:** `IMPLEMENTED / SOL ACCEPTANCE PENDING`
+
+The approved D4 contract is implemented on the isolated branch
+`codex/d4-longhaul-industry-operating-observations` and remains additive to the
+existing Industry Workflow, Skill, Knowledge Production Gateway, Writer, and
+report path.
+
+Implementation facts:
+
+- `plugins/research-acquisition/industry-operating-observations.ts` owns the
+  source-specific HTTPS acquisition, publication-PIT gate, bounded payload
+  handling, deterministic parsing, observation validation, and fail-soft
+  diagnostics. It does not introduce a provider registry, generic metric
+  repository, or new Knowledge schema.
+- Lithium uses official MIIT disclosures for `PRODUCTION` and `PRICE`.
+  Production preserves the article's lower-bound qualifier; price observations
+  are article-period averages and retain `valueVersionPit=UNVERIFIED`.
+- Household air conditioner production uses the NBS official PDF. Trade uses
+  CHEAA official PDFs with `metadata.upstreamDataSource=GACC`; CHEAA remains
+  `originPublisher` and `S2_PROFESSIONAL`, while ResearchHub remains the
+  retrieval provider. The parser supports both horizontal and vertical PDF
+  text layouts and reads the monthly quantity column rather than cumulative or
+  money columns.
+- The Workflow independently caps D4 sources and observations, deduplicates
+  D4 and ordinary evidence by canonical URL/content hash, routes observations
+  only to the market/supply/synthesis Industry modules, and renders the
+  code-owned observation table in the existing `Key Metrics & Monitoring`
+  report section. Numeric truth is not delegated to the Skill or model.
+- The normal runtime injects the acquisition port through application runtime
+  construction. Unknown targets return `SCOPE_UNSUPPORTED` without D4 network
+  calls, and the default real-acceptance harness is network-disabled unless
+  `RESEARCHHUB_RUN_REAL_INDUSTRY_OBSERVATIONS=1` is set.
+
+Live acceptance evidence on 2026-09-23:
+
+- Default harness: `REAL_D4_OPERATING_OBSERVATIONS_NOT_RUN`, `networkCalls=0`.
+- Enabled harness: `D4_INDUSTRY_OPERATING_REAL_PRODUCT_PATH_VERIFIED`,
+  `networkCalls=5`, no secrets or raw response bodies emitted.
+- Lithium accepted both required classes: MIIT `PRODUCTION` and `PRICE`.
+- Household air conditioner accepted NBS `PRODUCTION` and CHEAA/GACC-backed
+  `TRADE`, including source references bound by the Gateway and report output.
+- The optional MIIT annual fallback reported parser drift, but the required
+  H1 disclosure satisfied the lithium acceptance gate; the implementation
+  preserves that diagnostic rather than hiding it.
+
+Validation performed for this appendix includes focused parser/workflow tests,
+TypeScript typecheck, the default and enabled real harnesses, and the complete
+repository/client/build suite recorded in the final task report.

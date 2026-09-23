@@ -12,6 +12,7 @@ import { INDUSTRY_MODULES } from '../../../skills/industry-research/index.ts'
 import type { ReasoningCapabilities, ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../../plugins/reasoning/contracts.ts'
 import type { NormalizedResearchSource, ResearchAcquisitionPlugin, ResearchFetchedSource, ResearchSourceCandidate } from '../../../plugins/research-acquisition/contracts.ts'
 import { sha256 } from '../../../plugins/research-acquisition/hash.ts'
+import { createIndustryOperatingObservation } from '../../../plugins/research-acquisition/industry-operating-observations.ts'
 
 const capabilities: ReasoningCapabilities = { maxContextTokens: 100_000, maxOutputTokens: 10_000, structuredOutputSupport: true, maxConcurrency: 4 }
 const design = { definitionHypothesis: 'Fixture PCB Industry', targetKind: 'industry', scope: { included: ['PCB'], excluded: ['theme'] }, moduleQuestions: Object.fromEntries(INDUSTRY_MODULES.map((module) => [module, module])), keyMetrics: ['capacity'], evidenceRequirements: ['official'], searchTerms: ['PCB'], knownGaps: [], verificationCandidates: [] }
@@ -107,5 +108,17 @@ test('Application Industry research aggregates bounded provider evidence across 
     assert.equal(result.status, 'completed'); assert.ok(result.providerOutcomes[0])
     const outcome = result.providerOutcomes[0] as { usableSourceCount: number; providerSucceeded: boolean; providerAttempted: boolean }
     assert.equal(outcome.providerAttempted, true); assert.equal(outcome.providerSucceeded, true); assert.equal(outcome.usableSourceCount, 2); assert.deepEqual(observedSearchTerms, [['base-search-term'], ['capacity-gap', 'base-search-term']]); assert.ok(result.acquisitionDiagnostics.length <= 32)
+  } finally { await rm(f.root, { recursive: true, force: true }); await rm(f.reports, { recursive: true, force: true }) }
+})
+
+test('Application Service normal Industry path accepts a fake D4 port without network access', async () => {
+  let d4Calls = 0
+  const d4Source = source('fixture-d4')
+  const observation = createIndustryOperatingObservation({ metricKey: 'fixture.metric', observationClass: 'PRODUCTION', value: 42, qualifier: 'EXACT', unit: 'units', originalValue: 42, originalUnit: 'units', periodStart: '2025-01-01T00:00:00.000Z', periodEnd: '2025-12-31T23:59:59.999Z', frequency: 'ANNUAL', aggregation: 'PERIOD', geography: 'China national', productOrSegment: 'Fixture PCB', publishedAt: '2026-01-01T00:00:00.000Z', retrievedAt: '2026-01-02T00:00:00.000Z', originPublisher: 'Fixture Official', hostPlatform: 'Fixture', retrievalProvider: 'Fixture D4', sourceAuthority: 'S1_OFFICIAL', determinismClass: 'EVIDENCE_BACKED_NUMERIC', sourceCandidateId: 'fixture-d4', publicationPit: 'VERIFIED', valueVersionPit: 'UNVERIFIED', metadata: {} })
+  const f = await fixture()
+  try {
+    const service = new ResearchService({ mountedKnowledgeBaseRoot: f.root, reportRoot: f.reports, workflowService: f.workflowService, reasoningExecutor: f.executor, acquisitionPlugins: [fixturePlugin()], industryOperatingObservationAcquisition: { acquire: async () => { d4Calls++; return { status: 'COMPLETED', observations: [observation], sources: [d4Source], diagnostics: [] } } } })
+    const result = await service.startIndustryResearch({ workflowRunId: 'industry-app-d4-port', name: 'Fixture PCB Industry', maxSources: 4, maxEvidencePerModule: 2 }).completion
+    assert.equal(result.status, 'completed'); assert.equal(d4Calls, 1); assert.equal(result.operatingObservationStatus, 'COMPLETED'); assert.equal(result.operatingObservations.length, 1); assert.match(result.operatingObservations[0]?.sourceRef ?? '', /^source:/)
   } finally { await rm(f.root, { recursive: true, force: true }); await rm(f.reports, { recursive: true, force: true }) }
 })
