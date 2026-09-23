@@ -1,7 +1,7 @@
 # D3-002 v0.1 — Minimal PE/PB Comparable Input Closure
 
 - Task: `RHL-D3-002-DESIGN`
-- Status: `DESIGN READY / SOURCE FEASIBILITY PROBED / SOL REVIEW PENDING`
+- Status: `DESIGN REVISED / SOURCE FEASIBILITY COMPLETED / SOL REVIEW PENDING`
 - Checked: `2026-09-23`
 - Branch: `codex/d3-002-comparable-input-design`
 - Worktree: `C:\Users\Administrator\Desktop\ResearchHub_Lite_worktrees\D3_002`
@@ -21,23 +21,31 @@ The live probe establishes a partial future path:
   four sample issuers.
 - The existing CNINFO annual-publication resolver found current annual reports
   for `600519` and `000333`.
-- EastMoney industry identity, board-list, board-constituent, and real-time
-  spot endpoints were transport-unavailable in this environment.
+- The initial EastMoney industry identity, board-list, board-constituent, and
+  real-time spot endpoints remain transport-unavailable in this environment.
+- The supplemental EastMoney dedicated peer-comparison endpoints succeeded on
+  `datacenter.eastmoney.com` for all four targets, returning bounded target-
+  relative cohorts plus raw period, ranking, growth, economics, and scale
+  fields.
+- Shenwan third-level classification metadata was available through the
+  installed wrapper, while its constituent wrapper had a schema mismatch;
+  current upstream contains a header-cleaning correction.
 - The published direct PE field is explicitly labelled `市盈率-动态`; its
   denominator and period semantics were not established.
 - Free current sources and the existing repository contracts did not prove a
   deterministic comparability set beyond coarse industry membership plus a
   possible market-cap scale filter.
 
-Therefore the architecture outcome for this design/probe task is:
+Therefore the corrected architecture outcome for this design/probe task is:
 
-> **C. NOT_CURRENTLY_SUPPORTABLE**
+> **A. IMPLEMENTABLE_WITH_NARROW_CONTRACT**
 
-This is a source-and-contract feasibility result, not a statement that a
-future narrow Option C design is impossible. The cleanest future direction,
-if the missing source and comparability gates are later proven, is a bounded
-current-only resolver that computes peer PE/PB from price and common-period
-EPS/BVPS. No runtime D3-002 implementation is authorized by this document.
+This is a design-feasibility result, not runtime authorization. The narrow
+future direction is a bounded current-only resolver that preserves dedicated
+EastMoney cohort provenance, requires structured scale plus at least one actual
+growth/economics profile, reuses D3-001 price/EPS/BVPS/publication evidence,
+and computes peer PE/PB from price and common-period EPS/BVPS. No runtime
+D3-002 implementation is authorized by this document.
 
 ## 2. Forcing function and hard scope
 
@@ -151,7 +159,7 @@ claim that all existing comparability dimensions are proven.
 | Provenance | Many fields and deferred components | Direct field lineage but weak semantic proof | Separate identity, market, financial, publication, and comparability refs |
 | Existing code reuse | Reuses legacy arithmetic but smuggles deferred inputs | Little safe reuse beyond display | Reuses D3-001 price/EPS/BVPS/publication seams and existing crosscheck adapter |
 | Runtime complexity | High; many fields and calls | Low but semantically unsafe | Bounded discovery plus per-peer evidence calls |
-| Recommendation | Reject for D3-002 scope | Reject as canonical calculation input | Conditional future direction only after source/comparability gates pass |
+| Recommendation | Reject for D3-002 scope | Reject as canonical calculation input | Recommended narrow additive direction; runtime remains Sol-gated |
 
 ### Option A — keep `ComparableCompanyInput`
 
@@ -182,9 +190,9 @@ subject PB implied price = subject common-period BVPS × selected peer PB
 ```
 
 This avoids debt, cash, and diluted shares, but only if period, unit, currency,
-price timing, and publication/value-version semantics are explicit. The live
-probe did not establish the candidate universe or deterministic comparability
-gate needed to authorize it now.
+price timing, and publication/value-version semantics are explicit. The
+supplemental probe establishes a bounded source candidate path and a narrow
+comparability gate; runtime authorization still requires Sol review.
 
 ## 6. Mathematical equivalence and limitation
 
@@ -285,11 +293,164 @@ cutoff, restatement policy, or share basis for those values. The probe could not
 obtain rows to reverse-check them. They are therefore not suitable as canonical
 peer PE/PB inputs and must not be combined with D3-001 annual EPS/BVPS.
 
+### 8.4 Supplemental Structured Peer-Comparison Probe
+
+The initial `push2` conclusion was provisional because it tested only board and
+spot routes. The installed AKShare `1.18.64` operations below were then called
+for `SH600519`, `SZ000333`, `SZ300750`, and `SH601398`:
+
+| Operation | Raw reportName | Installed wrapper result | Raw result | Host |
+|---|---|---|---|---|
+| `stock_zh_growth_comparison_em` | `RPT_PCF10_INDUSTRY_GROWTH` | success, 8 rows per target | success, 8 rows per target | `datacenter.eastmoney.com` |
+| `stock_zh_valuation_comparison_em` | `RPT_PCF10_INDUSTRY_CVALUE` | success for three; `601398` `KeyError` because `QYBS` is absent | success for all four | `datacenter.eastmoney.com` |
+| `stock_zh_dupont_comparison_em` | `RPT_PCF10_INDUSTRY_DBFX` | success, 8 rows per target | success, 8 rows per target | `datacenter.eastmoney.com` |
+| `stock_zh_scale_comparison_em` | `RPT_PCF10_INDUSTRY_MARKET` | success, one target row because the wrapper filters `CORRE_SECUCODE` to the target | success with target plus top peer rows when the raw cohort filter is used | `datacenter.eastmoney.com` |
+
+All sixteen raw comparison requests succeeded in the normal environment. An
+isolated `requests.Session(trust_env=False)` probe also succeeded for all
+sixteen. Therefore the result is not `ENVIRONMENT_TRANSPORT_LIMITATION` for
+the dedicated comparison host; the original failures remain specific to
+`push2.eastmoney.com`, `17.push2.eastmoney.com`, `82.push2.eastmoney.com`, and
+`push2his.eastmoney.com`.
+
+The raw payload was inspected without persisting complete response bodies. The
+common raw identity fields were `SECUCODE`, `CORRE_SECUCODE`,
+`CORRE_SECURITY_CODE`, `CORRE_SECURITY_NAME`, `PAIMING`, and `TOTAL_COUNT`.
+The family-specific fields were:
+
+| Raw family | Period/date metadata | Actual structured fields inspected | Count/ranking behavior |
+|---|---|---|---|
+| Growth | `REPORT_DATE=2025-12-31 00:00:00` | `MGSY_3Y`, `MGSYTB`, `YYSR_3Y`, `YYSRTB`, `JLR_3Y`, `JLRTB`; forecast keys `*_1E`, `*_2E`, `*_3E` were excluded | six coded peers plus target and aggregate rows; `TOTAL_COUNT` was 20, 13, 107, and 42 for the four targets |
+| Valuation | `REPORT_DATE=2025-12-31 00:00:00` | `PB`, `PB_MRQ`, `PE_TTM`, `PE_1Y`, `PEG`, plus raw identity/ranking fields | six coded peers plus target and aggregate rows; `TOTAL_COUNT` was 20, 13, 107, and 42 |
+| DuPont | `REPORT_DATE=2025-12-31 00:00:00` | `ROE_AVG`, `XSJLL_AVG`, `TOAZZL_AVG`, and raw `*_L1`/`*_L2`/`*_L3` fields | six coded peers plus target and aggregate rows; `TOTAL_COUNT` was 20, 13, 107, and 42 |
+| Scale | `REPORT_TYPE=2026年中报` | `TOTAL_CAP`, `FREECAP`, `TOTAL_OPERATEINCOME`, `NETPROFIT`, and all four rank fields | raw cohort query returned five rows; `result.count` was 22, 15, 109, and 44; targeted raw filters returned individual peers |
+
+The raw target/peer identity and representative rows included:
+
+| Target | Growth representative | Valuation representative | DuPont representative | Scale representative |
+|---|---|---|---|---|
+| `600519` | `600809 山西汾酒`, `REPORT_DATE=2025-12-31`, `JLR_3Y=14.66` | `000858 五粮液`, `REPORT_DATE=2025-12-31`, `PB=2.2830`, `PE_TTM=20.9280` | `600809 山西汾酒`, `ROE_AVG=38.17`, `XSJLL_AVG=32.85` | `000858 五粮液`, `REPORT_TYPE=2026年中报`, `TOTAL_CAP=273808628672.7` |
+| `000333` | `002668 TCL智家`, `REPORT_DATE=2025-12-31`, `YYSR_3Y=16.69` | `002668 TCL智家`, `REPORT_DATE=2025-12-31`, `PB=2.7561`, `PE_TTM=9.8026` | `002668 TCL智家`, `ROE_AVG=52.31`, `XSJLL_AVG=10.74` | `000651 格力电器`, `REPORT_TYPE=2026年中报`, `TOTAL_CAP=213861671191.38` |
+| `300750` | `002058 紫竹高科`, `REPORT_DATE=2025-12-31`, `MGSY_3Y=-32.51` | `603026 石大胜华`, `REPORT_DATE=2025-12-31`, `PB=2.8328`, `PE_TTM=26.6511` | `002058 紫竹高科`, `ROE_AVG=36.89`, `XSJLL_AVG=5.57` | `300014 亿纬锂能`, `REPORT_TYPE=2026年中报`, `TOTAL_CAP=109860160064.25` |
+| `601398` | `601128 常熟银行`, `REPORT_DATE=2025-12-31`, `YYSR_3Y=9.67` | `002948 青岛银行`, `REPORT_DATE=2025-12-31`, `PB=0.8637`, `PE_TTM=6.1329` | `601128 常熟银行`, `ROE_AVG=13.96`, `XSJLL_AVG=37.10` | `601939 建设银行`, `REPORT_TYPE=2026年中报`, `TOTAL_CAP=2856676165532.28` |
+
+Authority is kept separate: EastMoney is the original publisher/aggregator
+surface classified as `S3_AGGREGATOR`; AKShare is only the retrieval library;
+CNINFO remains `S0_STATUTORY` for publication proof. Peer-cohort membership is
+not an official company fact and must never be expanded into business model,
+product, customer, or geography claims.
+
+The `TOTAL_COUNT` value is a source-reported cohort size, not the number of
+rows returned by the wrapper. Aggregate rows such as `行业平均` and `行业中值`
+are not peers and must be excluded. The target row is also excluded from the
+candidate set.
+
+#### Year-label drift and period truth
+
+The installed and current-upstream comparison source both contain display
+mappings such as `MGSYTB -> 24A`, `MGSY_1E -> 25E`, and DuPont `*_L1 -> 24A`.
+On this probe the raw growth and DuPont payloads reported
+`REPORT_DATE=2025-12-31`, while those display labels still said `24A`. This is
+year-label drift. The display labels are not period truth and must not enter a
+future contract. A narrow design may use only raw actual keys such as `*_3Y`
+and `*_AVG`, anchored to raw `REPORT_DATE`, until field-level period semantics
+are explicitly documented. Forecast `E` fields are excluded.
+
+#### Peer cohort consistency
+
+The four families do not describe one identical universe. The following coded
+sets were returned after excluding aggregate rows; the target is shown in each
+set because the source includes it, but the future resolver must remove it.
+
+| Target | Growth cohort sample | Valuation cohort sample | DuPont cohort sample | Scale top-peer sample | All-four intersection excluding target |
+|---|---|---|---|---|---|
+| `600519` | `000995,000860,600809,600519,600197,603919` | `000858,603198,600559,603369,600519,603919` | `600809,600519,000568,603198,600779,603369` | `000858,600809,000568` | none |
+| `000333` | `600983,002668,000921,200521,000521,000333` | `002668,000333,001387,600690,000651,600983` | `002668,000651,000921,000333,600690,001387` | `000651,600690,000921` | none |
+| `300750` | `002058,002074,688772,300409,688155,300750` | `603026,688353,300619,300390,002812,300750` | `301513,920289,002058,301662,300750,920523` | `300014,301217,301511,002709` | none |
+| `601398` | `002948,600926,002958,601665,601128,601398` | `002948,601128,601665,601963,600926,601398` | `601838,601128,600926,600036,002142,601398` | `601939,601288,601988,600036` | none |
+
+The overlap is therefore evidence to preserve, not evidence that all four
+families share a common universe. A candidate appearing in multiple families is
+stronger; a candidate appearing in one family remains source-specific evidence.
+The resolver must preserve each membership observation instead of silently
+intersecting or averaging cohorts.
+
+#### Growth, economics, and scale semantics
+
+- `MGSY_3Y`, `YYSR_3Y`, and `JLR_3Y` provide historical actual growth-profile
+  candidates when finite; raw `*_TB` fields are actual-looking but remain
+  period-label-sensitive until their raw field semantics are frozen.
+- `ROE_AVG`, `XSJLL_AVG`, and `TOAZZL_AVG` provide structured profitability,
+  margin, and economics observations anchored to the raw report date.
+- Asset turnover is not capital-intensity evidence. `capital_intensity` stays
+  unsupported.
+- `TOTAL_CAP` and `FREECAP` are current scale observations. Revenue and net
+  profit in the scale payload carry `REPORT_TYPE=2026年中报`; those report-period
+  metrics must not be conflated with current market capitalization.
+- The scale endpoint can replace `stock_zh_a_spot_em` as a candidate scale
+  dependency when queried through a controlled raw route. D3-001's normalized
+  market-price path remains the preferred price source.
+
+#### Shenwan probe and authority
+
+Installed AKShare results were separated from current-upstream evidence:
+
+| Operation | Installed `1.18.64` result | Authority/host interpretation |
+|---|---|---|
+| `sw_index_third_info()` | success, 335 level-3 rows | Legulegu-hosted classification/aggregator data |
+| `sw_index_third_cons()` | `ValueError: Length mismatch` because the live table had 19–20 columns while the wrapper expected 17 | Legulegu host; installed wrapper/schema mismatch, not source infeasibility |
+| `stock_industry_clf_hist_sw()` | wrapper SSL verification failure against `www.swsresearch.com` | SWS-hosted classification file; an isolated `verify=False` probe retrieved 12,920 rows, but this is not accepted runtime behavior |
+| `index_component_sw()` | available for ordinary SWS index components | Not a substitute for third-level target industry membership |
+
+The isolated SWS classification-file probe mapped the latest observed rows for
+the samples as follows: `600519 -> 340501` (白酒), `000333 -> 330102` (空调),
+`300750 -> 630701` (锂电池), and `601398 -> 480201` (国有大型银行). The
+classification file carried admission/update dates, but target constituent
+membership through the installed third-level wrapper was not accepted because
+of the schema mismatch and subsequent Legulegu rate limiting.
+
+Current AKShare upstream was inspected separately. Its [`index_sw.py` source](https://github.com/akfamily/akshare/blob/main/akshare/index/index_sw.py)
+contains header cleaning for the expanded Legulegu table and recognizes fields
+including `ROE(%)`, current market value, and actual growth columns. The current
+upstream source is therefore ahead of installed `1.18.64`; no dependency or
+isolated latest-version environment was installed for this task. The upstream
+source is the relevant correction evidence, not runtime authorization.
+
+Shenwan data must be labelled accurately: the Legulegu route is an aggregator
+retrieval surface, while the SWS classification workbook is an SWS-hosted
+classification artifact. Neither source's PE/PB fields become canonical
+valuation inputs.
+
+Because the installed Shenwan constituent wrapper failed before returning target
+rows, no EastMoney-versus-Shenwan constituent intersection is claimed. The
+available cross-source evidence is target classification mapping only; a future
+probe may use intersection as a confidence signal but must not require it by
+default or fabricate membership from industry names.
+
+#### Corrected comparability dimensions
+
+| Dimension | Supplemental status | Boundary |
+|---|---|---|
+| `business_model` | `UNSUPPORTED` | no structured proof |
+| `customer_decision` | `UNSUPPORTED` | no structured proof |
+| `product_service` | `COARSE_PROXY_ONLY` | source cohort/industry only |
+| `economics` | `STRUCTURED_PROVABLE` | ROE, net margin, asset turnover observations |
+| `growth_profile` | `STRUCTURED_PROVABLE` | raw 3Y actual growth with report-date anchoring |
+| `margin_structure` | `STRUCTURED_PROVABLE` | raw net-margin observations |
+| `capital_intensity` | `UNSUPPORTED` | asset turnover is not a substitute |
+| `geography` | `UNSUPPORTED` | no structured evidence |
+| `scale` | `STRUCTURED_PROVABLE` | current cap/free-cap plus separately dated report metrics |
+
+This is enough to evaluate a narrow PE/PB-only contract, but not enough to
+claim that all nine legacy generic dimensions are proven.
+
 ## 9. Target discovery and candidate universe design
 
-### 9.1 Deterministic target-industry resolution
+### 9.1 Initial board-path alternative
 
-The future resolver should use this sequence, only in current mode:
+The initial board hypothesis remains a valid alternative only if its transport
+is restored. It is not a mandatory dependency after the supplemental probe. Its
+current-mode sequence was:
 
 1. Resolve the target's exact A-share identity (`ticker`, exchange, company ID)
    through existing identity helpers.
@@ -306,8 +467,10 @@ No fuzzy name matching, substring fallback, or board-name guessing is allowed.
 No exact board match, multiple exact matches, or failed membership check yields
 `INDUSTRY_MAPPING_UNRESOLVED` and no automatic comps result.
 
-The live probe could not execute steps 2–4 because all three relevant
-EastMoney endpoint families were transport-unavailable. Consequently:
+The initial live probe could not execute steps 2–4 because all three relevant
+EastMoney endpoint families were transport-unavailable. This historical result
+is retained below; the dedicated comparison route now supplies the primary
+bounded candidate-universe hypothesis.
 
 | Target | Resolved industry | Board source | Candidate count | Sample candidates | Ambiguity |
 |---|---|---|---:|---|---|
@@ -316,12 +479,12 @@ EastMoney endpoint families were transport-unavailable. Consequently:
 | `300750` | unavailable in probe | unavailable | unavailable | none claimed | unresolved by transport |
 | `601398` | unavailable in probe | unavailable | unavailable | none claimed | unresolved by transport |
 
-### 9.2 Bounded target/peer evidence matrix
+### 9.2 Initial board-path target/peer evidence matrix
 
-The following is the complete bounded evidence record for this design probe. It
-does not claim a candidate universe where transport stopped before candidate
-construction. `NOT_PROBED` means that the stage was not reached; it is not an
-accepted-peer rejection after a completed comparability evaluation.
+The following is the complete bounded evidence record for the initial board
+path. It does not claim a candidate universe where transport stopped before
+candidate construction. `NOT_PROBED` means that the stage was not reached; it
+is not an accepted-peer rejection after a completed comparability evaluation.
 
 | Target | Candidate | Industry evidence | Scale evidence | Price | EPS | BVPS | Official publication | PE recomputable | PB recomputable | Comparability | Rejection/status |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -330,9 +493,9 @@ accepted-peer rejection after a completed comparability evaluation.
 | `300750` | none established | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | peer not probed | target/peer candidate not paired | target/peer candidate not paired | peer publication control not probed | no accepted peer | no accepted peer | not reached | no candidate universe accepted |
 | `601398` | none established | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | peer not probed | target/peer candidate not paired | target/peer candidate not paired | peer publication control not probed | no accepted peer | no accepted peer | not reached | no candidate universe accepted |
 
-Accepted peer count is therefore `0` because no candidate universe was accepted,
-not because a completed universe produced zero valid peers. No row in this matrix
-is an accepted peer or a runtime result.
+Accepted peer count for the initial board path is therefore `0` because no
+candidate universe was accepted, not because a completed universe produced zero
+valid peers. No row in this matrix is an accepted peer or a runtime result.
 
 ### 9.3 Industry is candidate discovery only
 
@@ -342,69 +505,141 @@ It may supply one `industry_membership` evidence item in a future additive
 contract. It must not be expanded into arbitrary values for the existing nine
 `COMPARABILITY_DIMENSIONS`.
 
-### 9.4 Proposed bounded funnel
+### 9.4 Initial board funnel (not recommended as the primary route)
 
-If the missing source gates are later proven, the smallest deterministic funnel
-is:
+If the missing board/spot source gates are later proven, the initial funnel
+would be:
 
 ```text
 exact target identity
   -> exact current industry board and membership
   -> exclude target and invalid identities
-  -> current market-cap availability
-  -> proposed scale band: 0.25x <= peer/target market cap <= 4.0x
+   -> current market-cap availability
+   -> scale profile, without a frozen round-number band
   -> stable ticker-order cap of 12 expensive candidates
   -> common-period EPS/BVPS and publication checks
   -> deterministic comparability gate
   -> 3–8 accepted metric-specific peers
 ```
 
-The `0.25x–4.0x` scale band and 12-candidate expensive-validation cap are
-design recommendations, not live-proven thresholds. They are intentionally
-scale-based and ticker-stable; they do not rank by valuation, return, or
-performance. Sol must approve or revise them before implementation.
+The prior `0.25x–4.0x` scale band is withdrawn as a default. The supplemental
+sample has peer/target total-cap ratios far below `0.25x` for most selected
+peers, so freezing that band would be arbitrary and would eliminate otherwise
+source-qualified candidates. Any future scale threshold requires a fresh
+observed-distribution analysis and Sol approval.
 
 The live probe did not establish a practical target-specific universe size.
 The documentation example shows that a board constituent query can return an
 entire board, so the future resolver must never send an unbounded 50–200-name
 board through financial and CNINFO calls.
 
+### 9.5 Corrected dedicated-peer funnel
+
+The recommended design funnel is now:
+
+```text
+exact target identity
+  -> raw EastMoney dedicated peer-comparison cohorts
+  -> preserve growth/valuation/DuPont membership observations separately
+  -> exclude target and aggregate rows
+  -> targeted raw scale profile for each bounded candidate
+  -> require at least one raw actual growth or profitability/economics profile
+  -> common-FY D3-001 EPS/BVPS and normalized current price
+  -> CNINFO publication proof
+  -> deterministic PE/PB recomputation and existing crosscheck
+```
+
+The additive narrow evidence contract is:
+
+```text
+PeerComparabilityEvidence {
+  peerCohortMembership: one or more source-specific EastMoney cohort refs
+  scaleProfile: current TOTAL_CAP/FREECAP with separate report-period fields
+  growthProfile?: raw 3Y actual growth anchored to REPORT_DATE
+  profitabilityProfile?: ROE_AVG / XSJLL_AVG / TOAZZL_AVG
+}
+```
+
+`peerCohortMembership` and `scaleProfile` are required. At least one actual
+`growthProfile` or `profitabilityProfile` observation is also required for a
+future accepted peer; when a candidate appears in multiple families, all
+memberships and observations are preserved. The source families are not
+intersected or averaged. This is deliberately narrower than the legacy
+generic comparability contract and is not equivalent to “same industry plus
+size.”
+
+The source response provides a bounded ranked sample rather than a complete
+universe. A future implementation may use a stable source-order/ticker-order
+cap only after the evidence gates pass. No valuation ranking, performance
+ranking, or arbitrary `0.25x–4.0x` scale band is authorized by this design.
+
+### 9.6 Representative candidate evidence
+
+These rows are design evidence only. They are not accepted runtime peers because
+the future normalized peer-price calls and final code-owned gates were not run.
+`scaleRatio` is raw `TOTAL_CAP(peer) / TOTAL_CAP(target)` from the targeted
+scale comparison query; all scale rows reported `REPORT_TYPE=2026年中报`.
+
+| Target | Candidate | Cohort/profile evidence | `scaleRatio` | FY2025 EPS / BVPS | CNINFO FY2025 | Provisional status |
+|---|---|---|---:|---:|---|---|
+| `600519` | `000858 五粮液` | valuation cohort; no growth/DuPont overlap in this target probe | 0.1747 | 2.3068 / 30.8976 CNY | found | cohort + scale + D3-001 financial/publication; profile gate not met |
+| `600519` | `603198 迎驾贡酒` | valuation + DuPont; ROE 25.73, net margin 34.17, turnover 54.69 | 0.0199 | 2.48 / 13.2941 CNY | found | candidate evidence complete except normalized price |
+| `600519` | `603919 金徽酒` | valuation + growth; 3Y EPS/revenue/net-profit growth 8.37/13.20/6.49 | 0.0054 | 0.70 / 6.7619 CNY | found | candidate evidence complete except normalized price |
+| `000333` | `002668 TCL智家` | valuation + growth + DuPont; 3Y EPS/revenue/net-profit growth 38.67/16.69/30.57; ROE 52.31 | 0.0155 | 1.04 / 3.2692 CNY | found | candidate evidence complete except normalized price |
+| `000333` | `000651 格力电器` | valuation + DuPont; ROE 24.32, net margin 15.88, turnover 51.13 | 0.3396 | 5.20 / 26.0523 CNY | found | candidate evidence complete except normalized price |
+| `000333` | `600690 海尔智家` | valuation + DuPont; ROE 17.20, net margin 6.64, turnover 105.70 | 0.2984 | 2.12 / 12.6576 CNY | found | candidate evidence complete except normalized price |
+| `300750` | `002058 紫竹高科` | growth + DuPont; 3Y EPS/revenue/net-profit growth 125.06/76.67/163.78; ROE 36.89 | 0.0018 | 1.41 / 0.3893 CNY | found | union-funnel candidate; not a valuation-cohort member |
+| `300750` | `002074 国轩高科` | growth cohort; 3Y EPS/revenue/net-profit growth 94.28/25.04/84.29 | 0.0357 | 1.32 / 16.0541 CNY | found | union-funnel candidate; no DuPont overlap |
+| `300750` | `603026 石大胜华` | valuation cohort; no growth/DuPont overlap in this target probe | 0.0099 | 0.07 / 21.1030 CNY | found | cohort + scale + D3-001 financial/publication; profile gate not met |
+| `601398` | `002948 青岛银行` | valuation + growth; 3Y EPS/revenue/net-profit growth 23.61/7.77/19.14 | 0.0122 | 0.85 / 7.00 CNY | found | candidate evidence complete except normalized price |
+| `601398` | `601128 常熟银行` | valuation + growth + DuPont; growth 8.29/9.67/15.11; ROE 13.96 | 0.0079 | 1.27 / 9.46 CNY | found | candidate evidence complete except normalized price |
+| `601398` | `601665 齐鲁银行` | valuation + growth; 3Y EPS/revenue/net-profit growth 11.06/5.89/16.31 | 0.0145 | 1.00 / 7.96 CNY | found | candidate evidence complete except normalized price |
+
+The sample proves common-FY EPS/BVPS and CNINFO feasibility for representative
+candidate rows, but it does not prove current normalized price feasibility for
+every row: only a subset of the historical-price calls returned rows in the
+normal environment. That remains a runtime acquisition gate, not a reason to
+consume direct comparison-endpoint PE/PB.
+
 ## 10. Comparability design
 
 ### 10.1 Dimensions actually provable
 
-From the currently available free structured surfaces, the only plausible
-code-owned dimensions are:
+From the supplemental structured surfaces, the narrow PE/PB contract can
+code-own:
 
-- exact current EastMoney industry-board membership;
-- market-cap scale, if the spot snapshot is available and its units are valid;
+- source-specific EastMoney peer-cohort membership;
 - A-share identity and exchange;
+- current total/free market-cap scale, with report-period revenue/profit kept
+  temporally separate;
+- raw 3Y actual growth fields anchored to `REPORT_DATE`;
+- raw 3Y-average ROE, net margin, and asset-turnover observations;
 - common annual reporting period and currency after D3-001 normalization.
 
-The probe did not establish a deterministic product/service, customer,
-business-model, economics, growth, margin, capital-intensity, or geography
-classifier. CNINFO text may contain business descriptions, but no existing
-structured operation proves those dimensions without introducing an extraction
-and policy project. LLM selection is not an acceptable substitute.
+The probe still did not establish deterministic product/service, customer,
+business-model, capital-intensity, or geography evidence. CNINFO text may
+contain business descriptions, but no existing structured operation proves
+those dimensions without introducing an extraction and policy project. LLM
+selection is not an acceptable substitute.
 
 ### 10.2 Minimum evidence
 
 A future peer must have, independently:
 
 - exact identity evidence: ticker, exchange, company ID, and name;
-- exact industry-board and membership evidence;
-- current market evidence for price and the scale filter;
+- source-specific peer-cohort membership evidence;
+- current market evidence for price and a scale profile;
+- at least one raw actual growth or profitability/economics profile;
 - common-period annual EPS and/or BVPS evidence;
 - CNINFO annual-publication proof for the same fiscal year;
 - explicit currency, units, retrieval time, and current-only PIT status;
 - a non-empty, code-owned comparability evidence set.
 
-For the current free-source design, industry membership plus scale is not enough
-to claim all existing generic comparability dimensions. This is the quality
-blocker behind the architecture outcome C. A future implementation must either
-freeze those two dimensions as sufficient for a deliberately narrow PE/PB
-comps contract, or add a separately proven deterministic business-similarity
-source. It must not silently populate unsupported dimensions.
+For the current free-source design, the dedicated source-specific cohort plus
+scale/profile evidence is sufficient to evaluate a deliberately narrow PE/PB
+contract, but it is not enough to claim all existing generic comparability
+dimensions. Unsupported dimensions must remain absent; the narrow contract must
+not be passed to legacy EV/Revenue, EV/EBITDA, or FCF methods.
 
 ### 10.3 Metric-specific acceptance
 
@@ -423,8 +658,9 @@ than globally rejecting a peer because one metric is unavailable.
 ### 11.1 Current-only automatic scope
 
 Automatic peer resolution is permitted only when `asOf` is omitted. It may use
-current industry membership, current market observations, and the latest common
-annual financial period whose publication evidence is available.
+current source-specific peer cohorts, current scale/profile observations, and
+the latest common annual financial period whose publication evidence is
+available.
 
 When `asOf` is explicitly supplied, automatic peer resolution returns
 `AUTO_COMPS_HISTORICAL_UNAVAILABLE` unless versioned industry membership,
@@ -455,9 +691,9 @@ availability, not a historical version of EastMoney's numeric value.
 
 The preferred future choice is reuse of D3-001's `historicalMarketData()` path
 for peer prices, in omitted-`asOf` current mode, because it preserves the
-existing daily-close normalization and retrieval semantics. The spot endpoint
-is needed only for a current market-cap scale prefilter if its transport and
-field contract are available.
+existing daily-close normalization and retrieval semantics. The dedicated raw
+scale comparison route can supply the scale profile, so
+`stock_zh_a_spot_em` is not a hard candidate-prefilter dependency.
 
 The future result must record the actual retrieval timestamp and must not label a
 current snapshot as strict historical PIT. Fixed-asOf automatic peer resolution
@@ -473,15 +709,18 @@ The future resolver should reuse, not duplicate:
 | Peer EPS/BVPS | `valuationFinancialIndicators()` | EastMoney numeric `S3_AGGREGATOR`; report date and notice date preserved |
 | Peer publication | `CninfoOfficialDisclosureClient.resolveAnnualReportPublication()` | CNINFO origin and `S0_STATUTORY` publication authority |
 | Peer identity | existing company identity normalization | no name-only or fuzzy identity |
-| Industry/membership | future bounded EastMoney board acquisition | EastMoney classification remains S3/discovery evidence, not statutory fact |
+| Peer cohort | future bounded raw EastMoney comparison acquisition | `EASTMONEY_PEER_COHORT_MEMBERSHIP`; S3 aggregator evidence, not statutory fact |
+| Scale/profile | future bounded raw EastMoney comparison acquisition | current scale plus separately dated growth/economics observations; no direct PE/PB authority |
+| Shenwan classification | optional future Legulegu/SWS acquisition | aggregator or SWS-hosted classification authority must remain explicit |
 
 Every accepted peer must retain separate source refs for:
 
 ```text
-identity/industry
+identity/cohort membership
 market price
 financial numeric
 official publication
+scale/growth/economics profile
 comparability evidence
 ```
 
@@ -491,9 +730,9 @@ retrieval may become the publisher.
 
 ## 13. Conditional narrow calculation contract
 
-If source and comparability gates are later proven, the additive contract should
-be narrower than `ComparableCompanyInput` and metric-specific. A conceptual
-shape is:
+The supplemental probe supports, but does not implement, an additive contract
+narrower than `ComparableCompanyInput` and metric-specific. A conceptual shape
+is:
 
 ```text
 ComparableEquityMultiplePeer {
@@ -505,14 +744,14 @@ ComparableEquityMultiplePeer {
   asOf: current retrieval timestamp / current-run marker
   pitStatus: CURRENT_VALUE_ONLY
   sourceRefs: identity + market + financial + publication + comparability
-  comparabilityEvidence: explicitly supported dimensions only
+  comparabilityEvidence: peerCohortMembership + scaleProfile + one actual growth/profitability profile
 }
 ```
 
 The calculation input would also need the subject's existing D3-001 EPS/BVPS
 and price basis, rather than reacquiring target financial evidence. The exact
-type is deliberately not frozen because the current live probe did not prove
-that the resolver is implementable.
+TypeScript type is deliberately not frozen; the design is implementable with
+this narrow contract only after Sol approves the raw-parser and gate details.
 
 The contract must remain additive:
 
@@ -532,8 +771,8 @@ peerPE = peerCurrentPrice / peerCommonFYAnnualEPS
 ```
 
 Required: positive finite price, positive finite annual EPS, common FY period,
-CNY units, current-mode timestamp, industry/scale comparability evidence, and
-CNINFO publication proof.
+CNY units, current-mode timestamp, peer-cohort/scale/profile comparability
+evidence, and CNINFO publication proof.
 
 The peer median is the deterministic selected multiple. The subject implied
 price is:
@@ -553,8 +792,8 @@ peerPB = peerCurrentPrice / peerCommonFYAnnualBVPS
 ```
 
 Required: positive finite price, positive finite annual BVPS, common FY period,
-CNY units, current-mode timestamp, industry/scale comparability evidence, and
-CNINFO publication proof.
+CNY units, current-mode timestamp, peer-cohort/scale/profile comparability
+evidence, and CNINFO publication proof.
 
 The subject implied price is:
 
@@ -614,8 +853,9 @@ primary scenario method or silently change investment conclusions.
 
 `601398` is intentionally included as a control. The proposed current-only
 machinery can calculate PE/PB for banks without introducing bank EV, debt, or
-EBITDA. However, the live industry/spot probe did not establish the bank board
-membership or a sufficient bank-specific comparability set.
+EBITDA. The dedicated comparison route returned a bank cohort and structured
+growth/economics/scale observations, while the initial board/spot route remained
+unavailable.
 
 Therefore `601398` does not authorize a bank peer result. A future acceptance
 run must separately prove that the target and accepted bank peers pass the same
@@ -635,35 +875,38 @@ Proposed future defaults, pending Sol approval:
 - no dynamic lowering of the minimum;
 - PE and PB counts remain metric-specific.
 
-The probe could not validate these counts because the industry and spot
-endpoints were transport-unavailable. They are design hypotheses, not accepted
-runtime behavior.
+The supplemental probe shows more than three source candidates in each raw
+family, but it did not validate final accepted counts because normalized price
+and the future code-owned gates were not run. These remain design hypotheses,
+not accepted runtime behavior.
 
 If independently valid sources disagree, the future resolver must preserve both
 observations and their provenance, emit a deterministic conflict diagnostic, and
 reject the affected metric rather than average or silently choose a value. An
 unaffected metric may remain usable only when its own evidence is independently
 complete and conflict-free. This applies to price, market cap, EPS, BVPS,
-industry membership, publication, and identity observations.
+peer-cohort membership, publication, profile, and identity observations.
 
 Automatic selection is not investment ranking: no best peer, winner, attractive
 PE, attractive PB, stock-performance, return, or momentum selection is allowed.
-The cap may be applied only after identity/industry/scale gates and source
+The cap may be applied only after identity/cohort/scale/profile gates and source
 stability are established, using stable ticker ordering for bounded work.
 
 ## 18. Future D0 requirements
 
-Only if the source feasibility blocker is cleared, a future D0 design should
+If a later task authorizes runtime implementation, a future D0 design should
 define narrow requirements for:
 
 ```text
 peer_candidate_discovery
-peer_industry_membership
+peer_cohort_membership
 peer_market_price
 peer_market_cap_scale
 peer_eps
 peer_bvps
 peer_publication
+peer_growth_profile
+peer_profitability_profile
 peer_comparability
 ```
 
@@ -680,7 +923,8 @@ must use:
 - `600519` plus either `000333` or `300750`;
 - `601398` as the financial-sector control;
 - no caller-supplied comps input;
-- exact target industry-to-board mapping and membership proof;
+  - exact source-specific peer-cohort membership proof;
+  - scale profile and at least one actual growth/profitability profile per accepted peer;
 - at least three accepted peers for PE and/or PB;
 - common fiscal year across subject and accepted peers;
 - separate market, financial, CNINFO, identity, and comparability source refs;
@@ -691,7 +935,7 @@ must use:
 Negative acceptance must fail closed for:
 
 ```text
-industry mapping unresolved
+peer cohort unresolved
 too few qualified peers
 period mismatch
 missing source or dangling source ref
@@ -702,43 +946,48 @@ fixed-asOf automatic request
 direct PE/PB denominator semantics unknown
 ```
 
-No live success may be claimed when industry, market, financial, or CNINFO
-stages fail. Fixture rows must never replace a failed live stage.
+No live success may be claimed when required cohort, scale/profile, market,
+financial, or CNINFO stages fail. Fixture rows must never replace a failed live
+stage.
 
 ## 20. Architecture decision
 
-**C. NOT_CURRENTLY_SUPPORTABLE**
+**A. IMPLEMENTABLE_WITH_NARROW_CONTRACT**
 
-Exact blockers:
+The supplemental probe corrects the provisional initial C result. The required
+source path is now feasible for a narrow additive PE/PB design:
 
-1. The required current industry identity/board/constituent path could not be
-   transport-verified for any sample target.
-2. The required current spot market-cap path could not be transport-verified,
-   so no bounded scale filter or current peer market input was established.
-3. The direct PE/PB fields have unproven denominator, period, and update
-   semantics and cannot be canonicalized.
-4. Existing free structured sources prove only coarse membership and possible
-   scale; they do not prove enough deterministic comparability dimensions for
-   the existing peer contract.
-5. The legacy contract requires deferred debt/cash and, for implied per-share
-   output, shares, so retaining it would violate D3-001 scope.
+1. All four dedicated EastMoney comparison families returned raw structured
+   rows for all four targets through `datacenter.eastmoney.com`.
+2. The raw families provide target-relative cohort membership, raw report dates,
+   growth/economics observations, and current scale observations. Their cohort
+   differences are explicit and can be preserved rather than intersected.
+3. Representative candidates have common-FY EPS/BVPS rows and CNINFO FY2025
+   publication proof through the existing D3-001 seams.
+4. A deliberately narrow contract can require peer-cohort membership, scale,
+   one actual growth/profitability profile, common-FY D3-001 evidence, current
+   normalized price, and CNINFO publication proof.
+5. Direct comparison-endpoint PE/PB remains non-canonical because denominator,
+   period, share-basis, and update semantics are not sufficiently established.
+6. The legacy contract remains too broad; debt, cash, net debt, and shares stay
+   deferred, and the automatic path emits only recomputed PE/PB.
 
-Conditional future direction: re-probe the blocked endpoints in a transportable
-environment, then evaluate a narrow Option C contract with Sol-approved
-industry/scale comparability, common-FY rules, metric-specific acceptance, and
-current-only PIT semantics. Until then, automatic D3-002 must remain unavailable
-and caller-supplied comps must remain the only normal input path.
+The implementation decision is design-level only. Sol must approve the raw
+parser, source-specific cohort contract, no-frozen-round-number scale policy,
+minimum peer rule, and current-only PIT behavior before runtime work begins.
+Caller-supplied comps retain precedence, and fixed-`asOf` automatic comps remain
+unavailable.
 
 ## 21. Open/blocking questions
 
-- Can a governed runtime transport EastMoney board and spot endpoints reliably
-  enough for a bounded current product call?
-- Is exact EastMoney board membership plus a scale band sufficient for the
-  narrow PE/PB comparability contract, or is a deterministic product/business
-  evidence source required?
-- What exact scale band and expensive-validation cap should Sol approve?
-- Should peer price use the D3-001 latest daily close or a current spot price
-  when both are available, and how should the two source timestamps be compared?
+- Can a governed runtime expose the dedicated `datacenter` comparison route
+  through a thin Workflow-owned acquisition seam without adding a provider
+  layer?
+- Should the narrow contract require one actual growth/economics profile, or
+  require two independent profile families when both are available?
+- What stable candidate cap should Sol approve for the source-ranked samples?
+- Should peer price use the D3-001 latest daily close or another current price
+  route, and how should the two source timestamps be compared?
 - Which fiscal-year intersection rule should be frozen when a peer lacks the
   latest annual row or CNINFO publication proof?
 - Is a separate bank-sector comparability gate required for `601398`?
