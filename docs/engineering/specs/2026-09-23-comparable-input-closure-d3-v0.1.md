@@ -316,7 +316,25 @@ EastMoney endpoint families were transport-unavailable. Consequently:
 | `300750` | unavailable in probe | unavailable | unavailable | none claimed | unresolved by transport |
 | `601398` | unavailable in probe | unavailable | unavailable | none claimed | unresolved by transport |
 
-### 9.2 Industry is candidate discovery only
+### 9.2 Bounded target/peer evidence matrix
+
+The following is the complete bounded evidence record for this design probe. It
+does not claim a candidate universe where transport stopped before candidate
+construction. `NOT_PROBED` means that the stage was not reached; it is not an
+accepted-peer rejection after a completed comparability evaluation.
+
+| Target | Candidate | Industry evidence | Scale evidence | Price | EPS | BVPS | Official publication | PE recomputable | PB recomputable | Comparability | Rejection/status |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `600519` | none established | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | target historical row observed; peer not probed | target/peer candidate not paired | target/peer candidate not paired | target CNINFO FY2025 control available; peer not probed | no accepted peer | no accepted peer | not reached | no candidate universe accepted |
+| `000333` | none established | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | peer not probed | target/peer candidate not paired | target/peer candidate not paired | target CNINFO FY2025 control available; peer not probed | no accepted peer | no accepted peer | not reached | no candidate universe accepted |
+| `300750` | none established | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | peer not probed | target/peer candidate not paired | target/peer candidate not paired | peer publication control not probed | no accepted peer | no accepted peer | not reached | no candidate universe accepted |
+| `601398` | none established | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | `INDUSTRY_DISCOVERY_TRANSPORT_UNAVAILABLE` | peer not probed | target/peer candidate not paired | target/peer candidate not paired | peer publication control not probed | no accepted peer | no accepted peer | not reached | no candidate universe accepted |
+
+Accepted peer count is therefore `0` because no candidate universe was accepted,
+not because a completed universe produced zero valid peers. No row in this matrix
+is an accepted peer or a runtime result.
+
+### 9.3 Industry is candidate discovery only
 
 Same-board membership is not proof of business-model, product, customer,
 economics, growth, margin, capital-intensity, geography, or scale comparability.
@@ -324,7 +342,7 @@ It may supply one `industry_membership` evidence item in a future additive
 contract. It must not be expanded into arbitrary values for the existing nine
 `COMPARABILITY_DIMENSIONS`.
 
-### 9.3 Proposed bounded funnel
+### 9.4 Proposed bounded funnel
 
 If the missing source gates are later proven, the smallest deterministic funnel
 is:
@@ -567,6 +585,23 @@ caller comps absent + fixed asOf supplied
   -> keep comps unavailable; do not fabricate a historical universe
 ```
 
+Future product wiring, if separately authorized and source gates are cleared,
+should remain narrow and explicit:
+
+```text
+ResearchService
+  -> runValuation
+  -> existing D3-001 target basis
+  -> bounded current-only peer resolver
+  -> narrow PE/PB comparable input
+  -> deterministic peer median
+  -> existing execute/crosscheck path
+```
+
+This does not authorize a generic Company or Industry service, a new provider
+layer, or an Agent Runtime. The resolver remains a bounded Workflow-owned
+acquisition step using the existing D3-001 seams.
+
 `buildValuationCrosscheck()` should remain the integration seam. It should
 receive a compatible valuation method result or a narrow adapter result; its
 basis compatibility, disagreement diagnostics, and `automaticAveraging: false`
@@ -603,6 +638,18 @@ Proposed future defaults, pending Sol approval:
 The probe could not validate these counts because the industry and spot
 endpoints were transport-unavailable. They are design hypotheses, not accepted
 runtime behavior.
+
+If independently valid sources disagree, the future resolver must preserve both
+observations and their provenance, emit a deterministic conflict diagnostic, and
+reject the affected metric rather than average or silently choose a value. An
+unaffected metric may remain usable only when its own evidence is independently
+complete and conflict-free. This applies to price, market cap, EPS, BVPS,
+industry membership, publication, and identity observations.
+
+Automatic selection is not investment ranking: no best peer, winner, attractive
+PE, attractive PB, stock-performance, return, or momentum selection is allowed.
+The cap may be applied only after identity/industry/scale gates and source
+stability are established, using stable ticker ordering for bounded work.
 
 ## 18. Future D0 requirements
 
@@ -724,4 +771,3 @@ The expected changed-file list is exactly the single design document above.
 
 This document is ready for Sol review. It does not authorize D3-002 runtime
 implementation, branch merge, or the next phase.
-
