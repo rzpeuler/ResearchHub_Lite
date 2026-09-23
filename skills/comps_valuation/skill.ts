@@ -129,19 +129,24 @@ export function executeCompsValuation(input: CompsValuationInput): CompsValuatio
 
 function finitePositive(value: number | undefined): value is number { return value !== undefined && Number.isFinite(value) && value > 0 }
 function median(values: readonly number[]): number | undefined { if (!values.length) return undefined; const sorted = [...values].sort((left, right) => left - right); const middle = Math.floor(sorted.length / 2); return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle] }
+function automaticPeerRef(peer: AutomaticComparablePeer): string { return `${peer.identity.exchange}:${peer.identity.ticker}` }
 function automaticSummary(method: 'PE' | 'PB', peers: readonly AutomaticComparablePeer[]): AutomaticMultipleSummary {
-  const values = peers.flatMap((peer) => {
+  const eligible = peers.filter((peer) => finitePositive(peer.marketPrice) && finitePositive(method === 'PE' ? peer.eps : peer.bvps)).slice(0, 8)
+  const values = eligible.flatMap((peer) => {
     const denominator = method === 'PE' ? peer.eps : peer.bvps
     return finitePositive(peer.marketPrice) && finitePositive(denominator) ? [peer.marketPrice / denominator] : []
   })
-  return { method, validCount: values.length, ...(values.length ? { min: Math.min(...values), median: median(values), max: Math.max(...values) } : {}), peerRefs: peers.flatMap((peer) => finitePositive(peer.marketPrice) && finitePositive(method === 'PE' ? peer.eps : peer.bvps) ? [`${peer.identity.exchange}:${peer.identity.ticker}`] : []) }
+  return { method, validCount: values.length, ...(values.length ? { min: Math.min(...values), median: median(values), max: Math.max(...values) } : {}), peerRefs: eligible.map(automaticPeerRef) }
 }
 
 export function executeEquityMultipleComps(input: AutomaticEquityCompsInput): AutomaticEquityCompsResult {
-  const peers = input.peers.slice(0, 8)
+  const peers = [...input.peers]
   const summaries = [automaticSummary('PE', peers), automaticSummary('PB', peers)]
   const selected = summaries.find((summary) => summary.method === input.selectedMethod)!
-  const diagnostics = [...(selected.validCount < 3 ? ['INSUFFICIENT_VALID_PEERS'] : [])]
+  const selectedPeerRefs = [...selected.peerRefs]
+  const selectedPeerSet = new Set(selectedPeerRefs)
+  const selectedPeers = peers.filter((peer) => selectedPeerSet.has(automaticPeerRef(peer)))
+  const diagnostics = [...(selected.validCount < 3 ? ['INSUFFICIENT_VALID_PEERS'] : []), ...(finitePositive(input.targetForecastMetric) ? [] : ['AUTO_COMPS_TARGET_METRIC_UNAVAILABLE'])]
   const selectedMedian = selected.median
   const impliedTargetPrice = selectedMedian !== undefined && finitePositive(input.targetForecastMetric) ? input.targetForecastMetric * selectedMedian : undefined
   return {
@@ -157,8 +162,11 @@ export function executeEquityMultipleComps(input: AutomaticEquityCompsInput): Au
     multipleSummaries: summaries,
     ...(selectedMedian === undefined ? {} : { selectedMedian }),
     ...(impliedTargetPrice === undefined ? {} : { impliedTargetPrice }),
-    sourceRefs: [...new Set([...(input.sourceRefs ?? []), ...peers.flatMap((peer) => peer.sourceRefs)])],
-    diagnostics,
+    selectedPeerRefs,
+    sourceRefs: [...new Set([...(input.sourceRefs ?? []), ...selectedPeers.flatMap((peer) => peer.sourceRefs)])],
+    diagnosticSourceRefs: [...new Set([...(input.diagnosticSourceRefs ?? input.sourceRefs ?? []), ...peers.flatMap((peer) => peer.sourceRefs)])],
+    familyStatuses: [],
+    diagnostics: [...new Set(diagnostics)],
     candidatePeerCount: input.peers.length,
     expensiveValidationCount: input.peers.length,
   }

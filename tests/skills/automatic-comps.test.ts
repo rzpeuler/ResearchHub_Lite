@@ -25,9 +25,18 @@ test('automatic selected PB remains independently available when PE is insuffici
 
 test('automatic comps use at most eight calculation peers and require three valid peers', () => {
   const result = executeEquityMultipleComps(input(Array.from({ length: 10 }, (_, index) => peer(`00000${index + 1}`, { marketPrice: 100 + index }))))
-  assert.equal(result.validPeers.length, 8)
+  assert.equal(result.validPeers.length, 10)
   assert.equal(result.multipleSummaries.find((item) => item.method === 'PE')?.validCount, 8)
   const insufficient = executeEquityMultipleComps(input([peer('000001'), peer('000002')]))
   assert.equal(insufficient.availability, 'insufficient_data')
   assert.ok(insufficient.diagnostics.includes('INSUFFICIENT_VALID_PEERS'))
+})
+
+test('PE and PB each scan the ordered validated list independently before their own eight-peer cap', () => {
+  const ids = ['000101', '000102', '000103', '000104', '000105', '000106', '000107', '000108', '000109', '000110']
+  const peers = ids.map((ticker, index) => peer(ticker, { eps: index < 2 ? 10 : index >= 8 ? 10 : undefined, bvps: index % 2 === 0 ? 20 : undefined, marketPrice: 100 + index }))
+  const result = executeEquityMultipleComps(input(peers))
+  assert.equal(result.multipleSummaries.find((item) => item.method === 'PE')?.validCount, 4)
+  assert.deepEqual(result.multipleSummaries.find((item) => item.method === 'PE')?.peerRefs, ['SZ:000101', 'SZ:000102', 'SZ:000109', 'SZ:000110'])
+  assert.notDeepEqual(result.multipleSummaries.find((item) => item.method === 'PE')?.peerRefs, result.multipleSummaries.find((item) => item.method === 'PB')?.peerRefs)
 })

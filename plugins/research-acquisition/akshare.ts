@@ -4,7 +4,7 @@ import { promisify } from 'node:util'
 const execFileAsync = promisify(execFile)
 export interface AkshareDataRequest { readonly symbol: string; readonly startDate?: string; readonly endDate?: string }
 export type AksharePeerComparisonFamily = 'growth' | 'valuation' | 'dupont' | 'scale'
-export interface AksharePeerComparisonRequest { readonly symbol: string; readonly family: AksharePeerComparisonFamily }
+export interface AksharePeerComparisonRequest { readonly symbol: string; readonly family: AksharePeerComparisonFamily; readonly correlatedSymbol?: string }
 export interface AkshareForecastRequest extends AkshareDataRequest { readonly indicator?: string }
 export interface AkshareInstitutionalResearchRequest { readonly date: string }
 export interface AkshareDataClient { companyBasic(request: AkshareDataRequest): Promise<unknown>; financialData(request: AkshareDataRequest): Promise<unknown>; valuationFinancialIndicators?(request: AkshareDataRequest): Promise<unknown>; historicalMarketData(request: AkshareDataRequest): Promise<unknown>; peerComparison?(request: AksharePeerComparisonRequest): Promise<unknown>; profitForecastThs?(request: AkshareForecastRequest): Promise<unknown>; researchReportEm?(request: AkshareDataRequest): Promise<unknown>; profitForecastEm?(request?: AkshareDataRequest): Promise<unknown>; indexDaily?(request: AkshareDataRequest): Promise<unknown>; sectorPerformance?(request: AkshareDataRequest): Promise<unknown>; tradingCalendar?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSzse?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSzseAnswer?(request: AkshareDataRequest): Promise<unknown>; exchangeQaSse?(request: AkshareDataRequest): Promise<unknown>; institutionalResearchDetail?(request: AkshareInstitutionalResearchRequest): Promise<unknown> }
@@ -45,7 +45,10 @@ export class AkshareDataAdapter implements AkshareDataClient {
     const exchange = request.symbol.toUpperCase().endsWith('.SH') ? 'SH' : 'SZ'
     const ticker = request.symbol.toUpperCase().replace(/\.(SH|SZ)$/, '')
     const secucode = `${ticker}.${exchange}`
-    const params = new URLSearchParams({ reportName, columns: request.family === 'scale' ? 'SECUCODE,SECURITY_CODE,SECURITY_NAME_ABBR,ORG_CODE,CORRE_SECUCODE,CORRE_SECURITY_CODE,CORRE_SECURITY_NAME,CORRE_ORG_CODE,TOTAL_CAP,FREECAP,TOTAL_OPERATEINCOME,NETPROFIT,REPORT_TYPE,TOTAL_CAP_RANK,FREECAP_RANK,TOTAL_OPERATEINCOME_RANK,NETPROFIT_RANK' : 'ALL', quoteColumns: '', filter: `(SECUCODE="${secucode}")`, pageNumber: request.family === 'scale' ? '1' : '', pageSize: request.family === 'scale' ? '5' : '', sortTypes: request.family === 'scale' ? '-1' : '1', sortColumns: request.family === 'scale' ? 'TOTAL_CAP' : 'PAIMING', source: 'HSF10', client: 'PC' })
+    const correlated = request.correlatedSymbol === undefined ? undefined : request.correlatedSymbol.toUpperCase().replace(/\.(SH|SZ)$/, '')
+    const correlatedExchange = correlated === undefined ? undefined : correlated.startsWith('6') ? 'SH' : 'SZ'
+    const filter = correlated === undefined ? `(SECUCODE="${secucode}")` : `(SECUCODE="${secucode}")(CORRE_SECUCODE="${correlated}.${correlatedExchange}")`
+    const params = new URLSearchParams({ reportName, columns: request.family === 'scale' ? 'SECUCODE,SECURITY_CODE,SECURITY_NAME_ABBR,ORG_CODE,CORRE_SECUCODE,CORRE_SECURITY_CODE,CORRE_SECURITY_NAME,CORRE_ORG_CODE,TOTAL_CAP,FREECAP,TOTAL_OPERATEINCOME,NETPROFIT,REPORT_TYPE,TOTAL_CAP_RANK,FREECAP_RANK,TOTAL_OPERATEINCOME_RANK,NETPROFIT_RANK' : 'ALL', quoteColumns: '', filter, pageNumber: request.family === 'scale' ? '1' : '', pageSize: request.family === 'scale' ? (correlated === undefined ? '5' : '1') : '', sortTypes: request.family === 'scale' ? '-1' : '1', sortColumns: request.family === 'scale' ? 'TOTAL_CAP' : 'PAIMING', source: 'HSF10', client: 'PC' })
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), this.timeoutMs)
     try {

@@ -47,8 +47,8 @@ function compsResult(result: CompsValuationResult | undefined): ValuationMethodR
 }
 
 function automaticCompsResult(result: AutomaticEquityCompsResult | undefined, primaryMethod: ValuationMethod | undefined): ValuationMethodResult | undefined {
-  if (!result || result.availability !== 'available' || !finite(result.impliedTargetPrice)) return undefined
-  return { method: compsMethod, sourceMethod: primaryMethod, value: result.impliedTargetPrice, unit: 'CNY/share', valuationDate: result.valuationDate, period: `FY${result.targetFiscalYear}`, currency: 'CNY', basis: 'equity_per_share', sourceRefs: result.sourceRefs, diagnostics: [`multipleBasisPeriod=FY${result.multipleBasisFiscalYear}`, ...result.diagnostics] }
+  if (!result || result.availability !== 'available' || !finite(result.impliedTargetPrice) || (primaryMethod !== undefined && result.selectedMethod !== primaryMethod)) return undefined
+  return { method: compsMethod, sourceMethod: result.selectedMethod, value: result.impliedTargetPrice, unit: 'CNY/share', valuationDate: result.valuationDate, period: `FY${result.targetFiscalYear}`, currency: 'CNY', basis: 'equity_per_share', sourceRefs: result.sourceRefs, diagnostics: [`multipleBasisPeriod=FY${result.multipleBasisFiscalYear}`, ...result.diagnostics] }
 }
 
 function unavailableComps(result: CompsValuationResult | undefined): ValuationMethodResult {

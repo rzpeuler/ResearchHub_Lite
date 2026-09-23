@@ -180,7 +180,7 @@ export interface EarningsReviewInput { readonly workflowRunId: string; readonly 
 export interface ApplicationEarningsReviewResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string }
 export type ValuationMethod = 'PE' | 'PB' | 'EV_EBITDA'
 export interface ValuationInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly asOf?: string; readonly methods?: readonly ValuationMethod[]; readonly targetFiscalYear?: number; readonly writeKnowledge?: boolean; readonly useStructuredKnowledge?: boolean; readonly sourceLibraryContext?: readonly import('./source-library.ts').SourceLibraryHit[] }
-export interface ApplicationValuationResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string; readonly providerOutcome?: unknown }
+export interface ApplicationValuationResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string; readonly providerOutcome?: unknown; readonly automaticCompsResult?: unknown; readonly crosscheck?: unknown }
 export type EventAnchor =
   | { readonly kind: 'daily_signal'; readonly signalId: string }
   | { readonly kind: 'article'; readonly url: string; readonly title?: string; readonly publishedAt?: string; readonly content?: string }

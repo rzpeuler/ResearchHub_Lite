@@ -157,6 +157,12 @@ export interface AutomaticMultipleSummary {
   readonly peerRefs: readonly string[]
 }
 
+export interface AutomaticFamilyStatus {
+  readonly family: AutomaticPeerComparisonFamily
+  readonly status: 'available' | 'empty' | 'failed'
+  readonly diagnostics: readonly string[]
+}
+
 export interface AutomaticRejectedPeer {
   readonly identity: Partial<ComparablePeerIdentity>
   readonly reasonCodes: readonly string[]
@@ -176,7 +182,10 @@ export interface AutomaticEquityCompsResult {
   readonly multipleSummaries: readonly AutomaticMultipleSummary[]
   readonly selectedMedian?: number
   readonly impliedTargetPrice?: number
+  readonly selectedPeerRefs: readonly string[]
   readonly sourceRefs: readonly string[]
+  readonly diagnosticSourceRefs: readonly string[]
+  readonly familyStatuses: readonly AutomaticFamilyStatus[]
   readonly diagnostics: readonly string[]
   readonly candidatePeerCount: number
   readonly expensiveValidationCount: number
@@ -192,4 +201,5 @@ export interface AutomaticEquityCompsInput {
   readonly peers: readonly AutomaticComparablePeer[]
   readonly rejectedPeers?: readonly AutomaticRejectedPeer[]
   readonly sourceRefs?: readonly string[]
+  readonly diagnosticSourceRefs?: readonly string[]
 }

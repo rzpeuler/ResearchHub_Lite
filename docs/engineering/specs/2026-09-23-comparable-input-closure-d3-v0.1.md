@@ -1417,3 +1417,55 @@ Runtime implementation status:
 ```text
 IMPLEMENTED / SOL ACCEPTANCE PENDING
 ```
+
+## 25. D3-002-FIX-001 scale, lineage, and product-path closure — 2026-09-23
+
+The follow-up closure keeps the narrow contract and adds only the identified
+implementation corrections:
+
+- scale snapshot rows remain cohort membership evidence; the resolver now
+  performs exact target scale and exact peer scale lookups after consensus and
+  before profile/order/financial validation. Missing target scale returns
+  `TARGET_SCALE_UNAVAILABLE` and automatic valuation is unavailable;
+- PE and PB independently use the first eight ordered peers with positive
+  price, positive exact-basis EPS/BVPS, and retain separate selected peer
+  lineage;
+- target cohort evidence and target scale use the target company identity;
+  peer market, financial, and CNINFO evidence uses the peer ticker identity;
+- `sourceRefs` is the selected-method lineage, while
+  `diagnosticSourceRefs` retains the broader acquisition trace;
+- Growth, DuPont, scale, and valuation acquisition failures are recorded per
+  family and fail soft. A valuation-family failure does not erase sufficient
+  Growth/DuPont/scale evidence, while missing scale/profile evidence rejects
+  the affected candidate;
+- automatic details are rendered in `Secondary Method Cross-checks`, the
+  quality gate counts the selected method's peers, and the normal
+  `ResearchService -> startValuation -> runValuation -> automatic ->
+  crosscheck` path exposes automatic results without persisting legacy peer
+  sources or a canonical peer graph;
+- mandatory workflow regressions prove zero automatic peer calls for caller
+  comps, fixed `asOf`, unsupported primary method, and unavailable target
+  metric. Targeted scale, independent PE/PB caps, peer provenance, family
+  fail-soft, report lineage, and normal product-path coverage are also tested.
+
+The gated real harness now exercises the normal product path with live
+AKShare/EastMoney/CNINFO adapters and a deterministic `ReasoningExecutor`.
+Targets are `600519`, `000333`, `300750`, and `601398`; the control candidate
+counts remain `4 / 6 / 1 / 4`. It emits the exact success label only when
+`600519` and one of `000333` or `300750` have at least three selected peers,
+finite median/implied price, a compatible PE cross-check, and no legacy comps;
+transport failure emits `REAL_PEER_MARKET_TRANSPORT_UNAVAILABLE`. The default
+run is gated and reports `REAL_AUTO_COMPS_NOT_RUN` with zero network calls.
+
+The 2026-09-23 enabled live attempt executed all four normal product-path
+runs and returned `REAL_AUTO_COMPS_ACCEPTANCE_INCONCLUSIVE`: each target had
+financial rows and a usable fiscal-year basis, but the target market stage
+returned zero rows with `transportSucceeded=false`, so no automatic peer result
+was eligible. The harness therefore emitted no success label and retained the
+Sol acceptance status below.
+
+Runtime implementation status remains:
+
+```text
+IMPLEMENTED / SOL ACCEPTANCE PENDING
+```
