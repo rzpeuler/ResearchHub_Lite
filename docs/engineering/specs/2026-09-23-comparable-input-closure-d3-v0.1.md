@@ -1,11 +1,11 @@
 # D3-002 v0.1 — Minimal PE/PB Comparable Input Closure
 
 - Task: `RHL-D3-002-DESIGN`
-- Status: `DESIGN HARDENED / SOL REVIEW PENDING`
+- Status: `DESIGN ACCEPTED / RUNTIME IMPLEMENTATION NOT STARTED`
 - Checked: `2026-09-23`
 - Branch: `codex/d3-002-comparable-input-design`
 - Worktree: `C:\Users\Administrator\Desktop\ResearchHub_Lite_worktrees\D3_002`
-- Required/current HEAD: `7e7aaa75fcdf4f5f9e2733863719a9b4b87784f2`
+- Accepted design chain: `6a7bcde` → `fc19a155` → `7e7aaa75` → `c24a0c249458965a1dcc085c0a4e7f8dc002624a`
 - Existing D0 worktree: preserved and untouched
 
 ## 1. Decision summary
@@ -32,9 +32,11 @@ The live probe establishes a partial future path:
   current upstream contains a header-cleaning correction.
 - The published direct PE field is explicitly labelled `市盈率-动态`; its
   denominator and period semantics were not established.
-- Free current sources and the existing repository contracts did not prove a
-  deterministic comparability set beyond coarse industry membership plus a
-  possible market-cap scale filter.
+- The initial board/spot probe did not establish sufficient comparability
+  evidence, but the supplemental dedicated EastMoney comparison probe
+  established structured source-specific cohort membership plus growth,
+  economics, margin, and scale evidence sufficient to define the frozen narrow
+  source-consensus comparability gate.
 
 Therefore the corrected architecture outcome for this design/probe task is:
 
@@ -303,7 +305,10 @@ peer PE/PB inputs and must not be combined with D3-001 annual EPS/BVPS.
 ### 8.4 Supplemental Structured Peer-Comparison Probe
 
 The initial `push2` conclusion was provisional because it tested only board and
-spot routes. The installed AKShare `1.18.64` operations below were then called
+spot routes; its provisional architecture outcome was the historical initial C
+finding that a deterministic automatic peer set was not yet proven. That
+finding remains preserved as the result of the first probe only. The installed
+AKShare `1.18.64` operations below were then called
 for `SH600519`, `SZ000333`, `SZ300750`, and `SH601398`:
 
 | Operation | Raw reportName | Installed wrapper result | Raw result | Host |
@@ -1102,6 +1107,25 @@ before runtime work begins, but no further design choice is left open in this
 document for the comparability gate or narrow PE/PB execution contract.
 Caller-supplied comps retain precedence, and fixed-`asOf` automatic comps remain
 unavailable.
+
+Final decision block:
+
+```text
+Architecture decision:
+A. IMPLEMENTABLE_WITH_NARROW_CONTRACT
+
+Source feasibility:
+CLOSED
+
+Comparability gate:
+FROZEN
+
+Narrow execution contract:
+FROZEN
+
+Runtime implementation:
+NOT STARTED
+```
 
 ## 21. Remaining Sol/runtime questions
 
