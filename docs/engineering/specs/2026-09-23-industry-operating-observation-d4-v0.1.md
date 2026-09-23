@@ -334,7 +334,7 @@ The official Customs statistics index and monthly bulletin establish that the sa
 
 For household-specific scope and a directly retrievable recurring numeric series, the probe uses the official CHEAA monthly tables whose rows are explicitly labeled `家用空调器` and whose footer says `数据来源：海关总署` (data source: General Administration of Customs). The September 2024 and July 2025 reports expose the same headers, the physical unit `台`, monthly quantity, cumulative quantity, and cumulative quantity growth. This is a reproducible S2 publication path with GACC source attribution, and it proves the narrow household export-volume class without inventing an HS code that the report does not provide.
 
-The future live acceptance path should prefer a direct GACC retrieval when the TLS/query path is resolved, but it may retain the CHEAA/GACC-backed source with accurate S2 authority and origin/source attribution. It must preserve the broader direct GACC `Air conditioners` scope separately from the household-specific `家用空调器` scope.
+The future live acceptance path should prefer a direct GACC retrieval when the TLS/query path is resolved, but it may retain the CHEAA/GACC-backed source with accurate provenance: CHEAA is the `originPublisher`, the CHEAA official web/PDF host is the `hostPlatform`, ResearchHub direct HTTPS is the `retrievalProvider`, and GACC is upstream data-source/method attribution in metadata. It must preserve the broader direct GACC `Air conditioners` scope separately from the household-specific `家用空调器` scope.
 
 Customs export value must not be stored as `EXPORT_VOLUME`. MIIT's lithium export value is likewise document evidence, not a volume observation.
 
@@ -585,7 +585,7 @@ The first runtime implementation should be accepted only through the normal Indu
 - aggregation: `PERIOD` for monthly/annual observations; cumulative fields are source-reported cumulative/YTD values and are not converted to monthly values.
 - geography: China national exports.
 - publishedAt: direct GACC annual table 2025-01-23; CHEAA issue publication 2024-11-08 for the 2024-09 row and 2025-09-08 for the 2025-07 row.
-- retrieval: direct stable public CHEAA PDF URLs returned HTTP 200; official GACC pages/search/index exposed the exact statutory headers and annual row. The local direct GACC HTTPS path failed certificate validation (`SSL_ERROR`), so the accepted household recurring path retains CHEAA as retrieval provider and GACC as stated data source.
+- retrieval: direct stable public CHEAA PDF URLs returned HTTP 200; official GACC pages/search/index exposed the exact statutory headers and annual row. For the accepted household recurring path, `originPublisher=CHEAA`, `hostPlatform=CHEAA official web/PDF host`, `retrievalProvider=ResearchHub direct HTTPS`, and `metadata.upstreamDataSource=GACC`; the local direct GACC HTTPS path failed certificate validation (`SSL_ERROR`).
 - recurring periods: same CHEAA/GACC-backed methodology observed for 2023-09, 2024-05, 2024-09, 2024-11, 2024-12, and 2025-07; at least two comparable monthly periods are proven.
 - authentication/session: no authentication or cookie required for the accepted CHEAA PDF retrieval; direct GACC session/query behavior remains unverified.
 - transport: CHEAA PDFs HTTP 200; direct GACC English static pages local `SSL_ERROR`; official web/index access returned source content.
@@ -641,10 +641,10 @@ The first runtime implementation should be accepted only through the normal Indu
 
 **Git:**
 
-- commit: pending this FIX-001 documentation amendment.
+- FIX-001 commit: `49b24e2210845421ba5bc3b126b6bf38db3bb9d7`.
 - remote branch: `origin/codex/d4-001-industry-operating-observation-design`.
-- local == remote: to be verified after push.
-- worktree clean: to be verified after commit.
+- local == remote at FIX-001 completion: `yes`.
+- worktree clean at FIX-001 completion: `yes`.
 
 **D4 runtime implementation started:**
 
@@ -654,4 +654,78 @@ The first runtime implementation should be accepted only through the normal Indu
 
 - The second air-conditioner class is now proven without changing the accepted architecture. It is a narrow `TRADE` observation with `metricKey=air_conditioner.export_volume`, explicit household product label, physical quantity, recurring monthly periods, publication dates, direct PDF retrieval, and GACC data-source attribution.
 - The direct GACC summary table proves quantity/value headers and a broad annual row but does not expose an HS code or household-only scope. The document keeps this limitation explicit and does not promote it to an HS-coded household claim.
+
+## 14. D4-001-FIX-002 REPORT
+
+**Status:** `DOCUMENT RECONCILED / SOL FINAL REVIEW PENDING`
+
+**Baseline:**
+
+- required HEAD: `49b24e2210845421ba5bc3b126b6bf38db3bb9d7`
+- starting HEAD: `49b24e2210845421ba5bc3b126b6bf38db3bb9d7`
+- origin/main: `2b9ddac3cf68432177ee2c6210a466885cf53706`
+
+**Accepted design:**
+
+- architecture decision: `A. IMPLEMENTABLE_WITH_NARROW_OBSERVATION_CONTRACT`
+- source feasibility: `CLOSED`
+- lithium classes: `PRODUCTION` + `PRICE`
+- air-conditioner classes: `PRODUCTION` + `TRADE / air_conditioner.export_volume`
+- original two-class gate lowered: `NO`
+
+**CHEAA/GACC provenance:**
+
+- `originPublisher`: `CHEAA` / China Household Electrical Appliances Association.
+- `hostPlatform`: CHEAA official web/PDF host.
+- `retrievalProvider`: ResearchHub direct HTTPS retrieval, conceptually; exact implementation field name remains implementation-time detail.
+- `sourceAuthority`: `S2_PROFESSIONAL`.
+- `determinismClass`: `EVIDENCE_BACKED_NUMERIC`.
+- GACC role: upstream data-source and source-method attribution, retained in metadata such as `metadata.upstreamDataSource` or `metadata.dataSourceAttribution`.
+- GACC promoted to `originPublisher`: `NO` for the CHEAA PDF observation.
+- CHEAA labeled `retrievalProvider`: `NO`; CHEAA is publisher/host, while ResearchHub is the retrieval provider.
+
+**Direct GACC:**
+
+- broad `Air conditioners` scope retained: `YES`.
+- household HS mapping claimed: `NO`.
+- authority: `S0_STATUTORY` for the direct broad GACC table; the accepted CHEAA/GACC-backed household observation remains `S2_PROFESSIONAL`.
+
+**PIT:**
+
+- publication PIT: `FROZEN` using `publishedAt <= analysisAsOf` and the Shanghai date-only convention.
+- value-version PIT: `NOT GENERALLY VERIFIED`; accepted status remains `VALUE_VERSION_UNVERIFIED`.
+
+**Document reconciliation:**
+
+- stale pending commit text removed: `YES`.
+- FIX-001 commit recorded: `49b24e2210845421ba5bc3b126b6bf38db3bb9d7`.
+- FIX-001 remote state recorded: local and remote matched and the worktree was clean at FIX-001 completion.
+- final top-level status: architecture A; source feasibility `CLOSED`; observation contract `DESIGN FROZEN`; provenance semantics `FROZEN`; runtime implementation `NOT STARTED`.
+
+**Changed files:**
+
+- `docs/engineering/specs/2026-09-23-industry-operating-observation-d4-v0.1.md`
+
+**Validation:**
+
+- diff check: `git diff --check`.
+- runtime files changed: `NO`.
+- network probes run: `NO` for FIX-002; no source re-probe was performed.
+
+**Git:**
+
+- commit: FIX-002 reconciliation commit; its SHA is intentionally not embedded here to avoid self-reference.
+- remote branch: `origin/codex/d4-001-industry-operating-observation-design`.
+- local == remote: `YES` at FIX-002 completion.
+- worktree clean: `YES` at FIX-002 completion.
+
+**D4 runtime implementation started:**
+
+- no.
+
+**Notes for Sol:**
+
+- Only provenance role terminology and stale FIX-001 metadata were reconciled.
+- CHEAA remains the publisher and host for the accepted PDF evidence; ResearchHub is the retrieval provider; GACC remains upstream data-source/method attribution.
+- No source conclusions, metric classes, PIT semantics, runtime files, probes, or architecture decisions changed.
 - The browser-harness executable remained unavailable; live evidence was obtained through official web search/open results and direct read-only HTTPS checks. No runtime implementation was started.
