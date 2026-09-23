@@ -1,4 +1,5 @@
 import type { EntityTypeV03, RelationTypeV03 } from '../../knowledge/schema/domain.ts'
+import type { IndustryOperatingObservation, IndustryOperatingObservationStatus } from '../../plugins/research-acquisition/industry-operating-observations.ts'
 
 export type ApplicationErrorCode = 'not_found' | 'invalid_input' | 'cancelled' | 'failed' | 'conflict' | 'no_kb_mounted' | 'unauthorized_runtime_token'
 
@@ -174,7 +175,7 @@ export interface ApplicationProductionResult {
 export interface ResearchCompanyInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly asOf?: string; readonly writeKnowledge?: boolean; readonly useStructuredKnowledge?: boolean; readonly sourceLibraryContext?: readonly import('./source-library.ts').SourceLibraryHit[] }
 export interface ApplicationResearchResult { readonly runId: string; readonly status: WorkflowStatus; readonly knowledgeBaseId: string; readonly reportId?: string; readonly reportPath?: string; readonly committedIds: readonly string[]; readonly proposalCount: number; readonly summary: string; readonly errorSummary?: string }
 export interface IndustryResearchInput { readonly workflowRunId: string; readonly name: string; readonly aliases?: readonly string[]; readonly canonicalRef?: string; readonly searchTerms?: readonly string[]; readonly asOf?: string; readonly maxSources?: number; readonly maxEvidencePerModule?: number; readonly writeKnowledge?: boolean; readonly useStructuredKnowledge?: boolean; readonly sourceLibraryContext?: readonly import('./source-library.ts').SourceLibraryHit[] }
-export interface ApplicationIndustryResearchResult extends ApplicationResearchResult { readonly providerOutcomes: readonly unknown[]; readonly acquisitionDiagnostics: readonly string[] }
+export interface ApplicationIndustryResearchResult extends ApplicationResearchResult { readonly providerOutcomes: readonly unknown[]; readonly acquisitionDiagnostics: readonly string[]; readonly operatingObservations: readonly IndustryOperatingObservation[]; readonly operatingObservationStatus: IndustryOperatingObservationStatus; readonly operatingObservationDiagnostics: readonly string[] }
 export type EarningsReviewPeriod = 'Q1' | 'H1' | 'Q3' | 'FY'
 export interface EarningsReviewInput { readonly workflowRunId: string; readonly symbol: string; readonly name?: string; readonly exchange?: string; readonly fiscalYear: number; readonly period: EarningsReviewPeriod; readonly asOf?: string; readonly writeKnowledge?: boolean; readonly useStructuredKnowledge?: boolean; readonly sourceLibraryContext?: readonly import('./source-library.ts').SourceLibraryHit[] }
 export interface ApplicationEarningsReviewResult extends ApplicationResearchResult { readonly telemetry: unknown; readonly blockedReason?: string }

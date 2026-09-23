@@ -4,6 +4,7 @@ import type {
   ReasoningOperation,
 } from "../../plugins/reasoning/contracts.ts";
 import type { SemanticProductionProposal } from "../../knowledge/production/contracts.ts";
+import type { IndustryOperatingObservation } from "../../plugins/research-acquisition/industry-operating-observations.ts";
 import {
   INDUSTRY_MODULES,
   INDUSTRY_CLAIM_TYPES,
@@ -549,11 +550,55 @@ function evidence(
     excerpt: excerptFor(e.excerpt ?? e.source.content, module),
   }));
 }
+function operatingObservationProjection(observations: readonly IndustryOperatingObservation[] | undefined): readonly Record<string, unknown>[] {
+  return (observations ?? []).slice(0, 12).sort((a, b) => a.observationId.localeCompare(b.observationId)).map((observation) => ({
+    observationId: observation.observationId,
+    semanticKey: `observation:${observation.observationId}`,
+    metricKey: observation.metricKey,
+    class: observation.observationClass,
+    value: observation.value,
+    qualifier: observation.qualifier,
+    unit: observation.unit,
+    period: { start: observation.periodStart, end: observation.periodEnd },
+    aggregation: observation.aggregation,
+    geography: observation.geography,
+    product: observation.productOrSegment,
+    sourceEvidenceId: `evidence-${observation.sourceCandidateId}`,
+    authority: observation.sourceAuthority,
+  }))
+}
+function observationPeriodTags(observation: IndustryOperatingObservation): Set<string> {
+  return new Set([observation.periodStart.slice(0, 4), observation.periodStart.slice(0, 7), observation.periodStart.slice(0, 10), String(observation.metadata.period ?? ''), `${observation.periodStart.slice(0, 4)}-${observation.frequency}`].filter(Boolean))
+}
+export function observationBackedProposalIsDeterministic(proposal: SemanticProductionProposal, observations: readonly IndustryOperatingObservation[]): boolean {
+  const structured = proposal.structuredValue as Record<string, unknown> | undefined
+  const semanticKey = typeof structured?.semanticKey === 'string' ? structured.semanticKey : undefined
+  if (semanticKey === undefined || !semanticKey.startsWith('observation:')) return true
+  const observation = observations.find((item) => semanticKey === `observation:${item.observationId}`)
+  if (!observation || structured?.metric !== observation.metricKey || structured?.unit !== observation.unit || structured?.value !== observation.value) return false
+  const period = typeof structured.period === 'string' ? structured.period : typeof structured.fiscalPeriod === 'string' ? structured.fiscalPeriod : undefined
+  if (period === undefined || !observationPeriodTags(observation).has(period)) return false
+  const sourceIds = proposal.sourceCandidateIds ?? []
+  if (!sourceIds.includes(observation.sourceCandidateId) && !sourceIds.includes(`evidence-${observation.sourceCandidateId}`)) return false
+  if (observation.qualifier === 'LOWER_BOUND' && !['>=', 'gte', 'at_least', 'greater_than_or_equal'].includes(String(structured.comparator))) return false
+  if (observation.qualifier === 'UPPER_BOUND' && !['<=', 'lte', 'at_most', 'less_than_or_equal'].includes(String(structured.comparator))) return false
+  return true
+}
+function enforceObservationClaims(result: IndustryModuleResult, observations: readonly IndustryOperatingObservation[] | undefined): IndustryModuleResult {
+  if (!observations?.length) return result
+  const accepted = result.proposals.filter((proposal) => observationBackedProposalIsDeterministic(proposal, observations)).map((proposal) => {
+    const structured = proposal.structuredValue as Record<string, unknown> | undefined
+    const observation = typeof structured?.semanticKey === 'string' ? observations.find((item) => structured.semanticKey === `observation:${item.observationId}`) : undefined
+    if (!observation || !proposal.sourceCandidateIds?.includes(observation.sourceCandidateId)) return proposal
+    return { ...proposal, sourceCandidateIds: proposal.sourceCandidateIds.map((id) => id === observation.sourceCandidateId ? `evidence-${id}` : id) }
+  })
+  return accepted.length === result.proposals.length && accepted.every((proposal, index) => proposal === result.proposals[index]) ? result : { ...result, proposals: accepted }
+}
 const instruction = {
   design:
     "Return exactly the bounded IndustryResearchDesign object. Ontology: independently researchable economic/industrial-chain activity=industry; broad cross-industry concept=theme; commercial category/component=product; technical route/process/architecture=technology; insufficiently resolvable=uncertain. Use all eight exact module keys and the explicit property schemas. This is a plan only: no canonical IDs, Knowledge writes, unsupported numbers, or durable proposals.",
   module:
-    "Return exactly the bounded IndustryModuleResult for the requested module. The contract fixes module to the requested module and exposes the exact evidence allowlist. Copy evidence IDs exactly; if empty, keep evidenceIds/proposals empty and use partial/unavailable plus explicit gaps. Use local IDs only; industry is the reserved root key. Relations use only frozen names. Claim/Relation candidates require direct evidence; quantitative claims require metric, finite value, unit, comparator and period or fiscalPeriod. Never invent unsupported numbers. If a conclusion is useful for the report but not directly supported enough for a durable candidate, return no candidate for it and set reportMaterial.reportOnly=true. In industry_chain_analysis and company_mapping, prefer report-only material over inferred entities, relations, companies, or quantitative claims when the supplied evidence does not name and support them directly. supplier_of requires direct authoritative evidence. No canonical writes.",
+    "Return exactly the bounded IndustryModuleResult for the requested module. The contract fixes module to the requested module and exposes the exact evidence allowlist. Copy evidence IDs exactly; if empty, keep evidenceIds/proposals empty and use partial/unavailable plus explicit gaps. Use local IDs only; industry is the reserved root key. Relations use only frozen names. Claim/Relation candidates require direct evidence; quantitative claims require metric, finite value, unit, comparator and period or fiscalPeriod. Never invent unsupported numbers. Operating observations are code-owned numeric truth: do not mutate value, unit, qualifier, period, geography, product, or sourceCandidateId; do not average conflicts or derive a missing number. Observation-backed structured claims must use semanticKey observation:<observationId> and exactly match the supplied observation or be omitted. If a conclusion is useful for the report but not directly supported enough for a durable candidate, return no candidate for it and set reportMaterial.reportOnly=true. In industry_chain_analysis and company_mapping, prefer report-only material over inferred entities, relations, companies, or quantitative claims when the supplied evidence does not name and support them directly. supplier_of requires direct authoritative evidence. No canonical writes.",
   synthesis:
     "Return exactly the bounded CrossModuleSynthesis using only validated modules and supplied evidence. Copy evidence and existing proposal/Relation IDs only from the explicit allowlists; new IDs are local. Keep concrete gap and alternative-view item schemas bounded. No new facts, unsupported numbers, canonical IDs, resolution ownership, or Knowledge writes.",
 };
@@ -631,6 +676,7 @@ export class IndustryResearchSkill {
         module,
         target: input.target,
         evidence: ev,
+        operatingObservations: operatingObservationProjection(input.operatingObservations),
         existingKnowledge: knowledge(input.existingKnowledge),
         localReferences: input.localReferences.slice(0, 32),
       },
@@ -642,11 +688,7 @@ export class IndustryResearchSkill {
     let prior: unknown;
     try {
       prior = await this.call("industry_module_analysis", bound, contract);
-      return validateIndustryModuleResult(
-        prior,
-        module,
-        ev.map((x) => x.evidenceId),
-      );
+      return enforceObservationClaims(validateIndustryModuleResult(prior, module, ev.map((x) => x.evidenceId)), input.operatingObservations);
     } catch (e) {
       let repaired: unknown;
       try {
@@ -658,11 +700,7 @@ export class IndustryResearchSkill {
           prior,
           [e instanceof IndustryValidationError ? e.code : "parser_failure"],
         );
-        return validateIndustryModuleResult(
-          repaired,
-          module,
-          ev.map((x) => x.evidenceId),
-        );
+        return enforceObservationClaims(validateIndustryModuleResult(repaired, module, ev.map((x) => x.evidenceId)), input.operatingObservations);
       } catch (second) {
         try {
           const candidate = repaired ?? prior;
@@ -707,11 +745,13 @@ export class IndustryResearchSkill {
   async synthesize(input: {
     modules: readonly IndustryModuleResult[];
     evidence: readonly IndustryResearchSkillInput["evidence"][number][];
+    operatingObservations?: readonly IndustryOperatingObservation[];
     existingKnowledge?: readonly unknown[];
   }) {
     const bound = {
       modules: input.modules,
       evidence: evidence(input.evidence, "synthesis"),
+      operatingObservations: operatingObservationProjection(input.operatingObservations),
       existingKnowledge: knowledge(input.existingKnowledge ?? []),
     };
     const ev = input.evidence.map((x) => x.evidenceId),

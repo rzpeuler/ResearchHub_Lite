@@ -12,6 +12,7 @@ import type { ResearchAcquisitionPlugin } from '../../plugins/research-acquisiti
 import type { ResearchDispatchService } from '../services/research-dispatch-service.ts'
 import type { SourceLibraryService } from '../services/source-library.ts'
 import type { SkillOnboardingService } from '../services/skill-onboarding.ts'
+import type { IndustryOperatingObservationAcquisitionPort } from '../../plugins/research-acquisition/industry-operating-observations.ts'
 
 export interface SafeConversationSummary {
   readonly conversationId: string
@@ -84,5 +85,6 @@ export interface ResearchHubApplicationRuntimeOptions {
   readonly resourceLoader?: DefaultResourceLoader
   readonly researchService?: ResearchService
   readonly industryAcquisitionPlugins?: readonly ResearchAcquisitionPlugin[]
+  readonly industryOperatingObservationAcquisition?: IndustryOperatingObservationAcquisitionPort
   readonly dailyIntelligenceService?: DailyIntelligenceService
 }
