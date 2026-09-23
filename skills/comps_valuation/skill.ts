@@ -1,7 +1,7 @@
 import { calculateComparableCompany, calculateComparableSet, calculateImpliedEquityFromEvMultiple } from '../valuation/calculations/comps.ts'
 import type { ComparableCompanyInput, ComparableCompanyResult, ComparableMultipleKind } from '../valuation/calculations/contracts.ts'
 import { ValuationCalculationError } from '../valuation/calculations/errors.ts'
-import { COMPARABILITY_DIMENSIONS, type AcceptedComparablePeer, type ComparablePeerCandidate, type ComparablePeerMetricDiagnostic, type CompsValuationInput, type CompsValuationResult, type ComparableTarget, type RejectedComparablePeer } from './contracts.ts'
+import { COMPARABILITY_DIMENSIONS, type AcceptedComparablePeer, type AutomaticComparablePeer, type AutomaticEquityCompsInput, type AutomaticEquityCompsResult, type AutomaticMultipleSummary, type ComparablePeerCandidate, type ComparablePeerMetricDiagnostic, type CompsValuationInput, type CompsValuationResult, type ComparableTarget, type RejectedComparablePeer } from './contracts.ts'
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/
 const METHODS: readonly ComparableMultipleKind[] = ['EV_REVENUE', 'EV_EBITDA', 'PE', 'PB', 'FCF_YIELD']
@@ -125,4 +125,41 @@ export function executeCompsValuation(input: CompsValuationInput): CompsValuatio
   }
   if (acceptedPeers.length === 0) diagnostics.push('INSUFFICIENT_VALID_PEERS')
   return { subject: input.subject, asOf: input.asOf, valuationBasis: input.subject.period, candidatePeers: input.candidatePeers.map((candidate) => ({ companyId: candidate.companyId, ticker: candidate.ticker, exchange: candidate.exchange, ...(candidate.name === undefined ? {} : { name: candidate.name }) })), acceptedPeers, rejectedPeers, multipleSummaries: set.summaries, ...(selection === undefined ? {} : { selectedMethod: selection.method, selectedMultiple: selected, selectedMultipleBasis: selection.basis }), ...(impliedValuation === undefined ? {} : { impliedValuation }), diagnostics: [...new Set(diagnostics)], sourceRefs: [...new Set(input.candidatePeers.flatMap((peer) => peer.sourceRefs))], availability: acceptedPeers.length === 0 ? 'unavailable' : selection && diagnostics.includes('INSUFFICIENT_VALID_PEERS') ? 'insufficient_data' : 'available' }
+}
+
+function finitePositive(value: number | undefined): value is number { return value !== undefined && Number.isFinite(value) && value > 0 }
+function median(values: readonly number[]): number | undefined { if (!values.length) return undefined; const sorted = [...values].sort((left, right) => left - right); const middle = Math.floor(sorted.length / 2); return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle] }
+function automaticSummary(method: 'PE' | 'PB', peers: readonly AutomaticComparablePeer[]): AutomaticMultipleSummary {
+  const values = peers.flatMap((peer) => {
+    const denominator = method === 'PE' ? peer.eps : peer.bvps
+    return finitePositive(peer.marketPrice) && finitePositive(denominator) ? [peer.marketPrice / denominator] : []
+  })
+  return { method, validCount: values.length, ...(values.length ? { min: Math.min(...values), median: median(values), max: Math.max(...values) } : {}), peerRefs: peers.flatMap((peer) => finitePositive(peer.marketPrice) && finitePositive(method === 'PE' ? peer.eps : peer.bvps) ? [`${peer.identity.exchange}:${peer.identity.ticker}`] : []) }
+}
+
+export function executeEquityMultipleComps(input: AutomaticEquityCompsInput): AutomaticEquityCompsResult {
+  const peers = input.peers.slice(0, 8)
+  const summaries = [automaticSummary('PE', peers), automaticSummary('PB', peers)]
+  const selected = summaries.find((summary) => summary.method === input.selectedMethod)!
+  const diagnostics = [...(selected.validCount < 3 ? ['INSUFFICIENT_VALID_PEERS'] : [])]
+  const selectedMedian = selected.median
+  const impliedTargetPrice = selectedMedian !== undefined && finitePositive(input.targetForecastMetric) ? input.targetForecastMetric * selectedMedian : undefined
+  return {
+    availability: selected.validCount >= 3 && impliedTargetPrice !== undefined ? 'available' : 'insufficient_data',
+    subject: input.subject,
+    selectedMethod: input.selectedMethod,
+    multipleBasisFiscalYear: input.multipleBasisFiscalYear,
+    targetFiscalYear: input.targetFiscalYear,
+    valuationDate: input.valuationDate,
+    targetForecastMetric: input.targetForecastMetric,
+    validPeers: peers,
+    rejectedPeers: [...(input.rejectedPeers ?? [])],
+    multipleSummaries: summaries,
+    ...(selectedMedian === undefined ? {} : { selectedMedian }),
+    ...(impliedTargetPrice === undefined ? {} : { impliedTargetPrice }),
+    sourceRefs: [...new Set([...(input.sourceRefs ?? []), ...peers.flatMap((peer) => peer.sourceRefs)])],
+    diagnostics,
+    candidatePeerCount: input.peers.length,
+    expensiveValidationCount: input.peers.length,
+  }
 }

@@ -4,7 +4,7 @@ import type { OfficialDisclosureClient } from '../../plugins/research-acquisitio
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { ResearchCompanyIdentity } from '../../plugins/research-acquisition/contracts.ts'
 import type { ValuationComputation, ValuationAssumptionPlan, ValuationMethod, ValuationReasoningTelemetry, ValuationSynthesisOutput } from '../../skills/valuation/index.ts'
-import type { CompsValuationInput, CompsValuationResult } from '../../skills/comps_valuation/index.ts'
+import type { AutomaticEquityCompsResult, CompsValuationInput, CompsValuationResult } from '../../skills/comps_valuation/index.ts'
 import type { ResearchQualityGateResult } from '../research-quality-gate.ts'
 import type { ValuationBasisEvidence, ValuationEvidencePitStatus } from './basis-evidence.ts'
 
@@ -62,6 +62,7 @@ export interface ValuationWorkflowResult {
   readonly synthesis?: ValuationSynthesisOutput
   readonly telemetry: ValuationTelemetrySnapshot
   readonly compsResult?: CompsValuationResult
+  readonly automaticCompsResult?: AutomaticEquityCompsResult
   readonly qualityGate?: ResearchQualityGateResult
   readonly crosscheck?: ValuationCrosscheck
 }

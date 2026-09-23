@@ -1,4 +1,4 @@
-import type { CompsValuationResult } from '../../skills/comps_valuation/contracts.ts'
+import type { AutomaticEquityCompsResult, CompsValuationResult } from '../../skills/comps_valuation/contracts.ts'
 import type { ValuationAssumptionPlan, ValuationBasis, ValuationComputation, ValuationMethod } from '../../skills/valuation/contracts.ts'
 import type { ValuationBasisCompatibility, ValuationCrosscheck, ValuationCrosscheckConflict, ValuationMethodResult } from './contracts.ts'
 
@@ -46,6 +46,11 @@ function compsResult(result: CompsValuationResult | undefined): ValuationMethodR
   }
 }
 
+function automaticCompsResult(result: AutomaticEquityCompsResult | undefined, primaryMethod: ValuationMethod | undefined): ValuationMethodResult | undefined {
+  if (!result || result.availability !== 'available' || !finite(result.impliedTargetPrice)) return undefined
+  return { method: compsMethod, sourceMethod: primaryMethod, value: result.impliedTargetPrice, unit: 'CNY/share', valuationDate: result.valuationDate, period: `FY${result.targetFiscalYear}`, currency: 'CNY', basis: 'equity_per_share', sourceRefs: result.sourceRefs, diagnostics: [`multipleBasisPeriod=FY${result.multipleBasisFiscalYear}`, ...result.diagnostics] }
+}
+
 function unavailableComps(result: CompsValuationResult | undefined): ValuationMethodResult {
   return {
     method: compsMethod,
@@ -57,6 +62,10 @@ function unavailableComps(result: CompsValuationResult | undefined): ValuationMe
     sourceRefs: [],
     diagnostics: [result === undefined ? 'COMPS_INPUT_UNAVAILABLE' : `COMPS_RESULT_${result.availability.toUpperCase()}`],
   }
+}
+
+function unavailableAutomaticComps(result: AutomaticEquityCompsResult | undefined): ValuationMethodResult {
+  return { method: compsMethod, unit: 'CNY/share', valuationDate: '', period: result === undefined ? '' : `FY${result.targetFiscalYear}`, currency: 'CNY', basis: 'equity_per_share', sourceRefs: [], diagnostics: [result === undefined ? 'COMPS_INPUT_UNAVAILABLE' : `AUTO_COMPS_${result.availability.toUpperCase()}`, ...(result?.diagnostics ?? [])] }
 }
 
 function compatible(left: ValuationMethodResult, right: ValuationMethodResult): ValuationBasisCompatibility {
@@ -92,13 +101,13 @@ function conflicts(left: ValuationMethodResult, right: ValuationMethodResult, ba
   return [{ code: 'VALUATION_METHOD_DISAGREEMENT', methods: [left.method, right.method], message: `Valuation methods ${left.method} and ${right.method} produce different values; no averaging was applied`, absoluteSpread, relativeSpread, diagnostics: [] }]
 }
 
-export function buildValuationCrosscheck(input: { readonly eligibleMethods: readonly ValuationMethod[]; readonly plan?: ValuationAssumptionPlan; readonly basis?: ValuationBasis; readonly computation?: ValuationComputation; readonly compsResult?: CompsValuationResult }): ValuationCrosscheck {
+export function buildValuationCrosscheck(input: { readonly eligibleMethods: readonly ValuationMethod[]; readonly plan?: ValuationAssumptionPlan; readonly basis?: ValuationBasis; readonly computation?: ValuationComputation; readonly compsResult?: CompsValuationResult; readonly automaticCompsResult?: AutomaticEquityCompsResult }): ValuationCrosscheck {
   const observations: ValuationMethodResult[] = []
   const scenario = input.basis && input.plan && input.computation ? scenarioResult(input.basis, input.plan, input.computation) : undefined
   if (scenario) observations.push(scenario)
-  const comps = compsResult(input.compsResult)
+  const comps = input.compsResult !== undefined ? compsResult(input.compsResult) : automaticCompsResult(input.automaticCompsResult, input.plan?.primaryMethod)
   if (comps) observations.push(comps)
-  const methodResults = [scenario ?? unavailableScenario(), ...(comps ? [comps] : [unavailableComps(input.compsResult)])]
+  const methodResults = [scenario ?? unavailableScenario(), ...(comps ? [comps] : [input.compsResult !== undefined ? unavailableComps(input.compsResult) : unavailableAutomaticComps(input.automaticCompsResult)])]
   const basisCompatibility: ValuationBasisCompatibility[] = []
   const disagreement: ValuationCrosscheckConflict[] = []
   for (let index = 0; index < observations.length; index += 1) {

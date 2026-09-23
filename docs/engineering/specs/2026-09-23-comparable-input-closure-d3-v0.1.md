@@ -1,10 +1,10 @@
 # D3-002 v0.1 — Minimal PE/PB Comparable Input Closure
 
 - Task: `RHL-D3-002-DESIGN`
-- Status: `DESIGN ACCEPTED / RUNTIME IMPLEMENTATION NOT STARTED`
+- Status: `IMPLEMENTED / SOL ACCEPTANCE PENDING`
 - Checked: `2026-09-23`
-- Branch: `codex/d3-002-period-alignment-fix`
-- Worktree: `C:\Users\Administrator\Desktop\ResearchHub_Lite_worktrees\D3_002_PERIOD_FIX`
+- Branch: `codex/d3-002-auto-pe-pb-comps`
+- Worktree: `C:\Users\Administrator\Desktop\ResearchHub_Lite_worktrees\D3_002_IMPL`
 - Accepted design chain: `6a7bcde` → `fc19a155` → `7e7aaa75` → `c24a0c249458965a1dcc085c0a4e7f8dc002624a`
 - Existing D0 worktree: preserved and untouched
 
@@ -1387,3 +1387,33 @@ The expected changed-file list is exactly the single design document above.
 
 This document is ready for Sol review. It does not authorize D3-002 runtime
 implementation, branch merge, or the next phase.
+
+## 24. Runtime implementation addendum — 2026-09-23
+
+The accepted narrow contract is implemented on the feature branch above. The
+implementation adds a Workflow-owned automatic resolver and a deterministic
+`executeEquityMultipleComps()` Skill operation. It calls the dedicated
+EastMoney datacenter comparison endpoint through the optional
+`peerComparison()` seam, preserves raw family/report/identity metadata, joins
+only exact ticker/exchange identities, applies the four-family consensus,
+positive scale/profile gates, deterministic ordering, the twelve-peer expensive
+validation cap, and the eight-peer PE/PB calculation cap. Peer market and
+financial inputs are current-only and anchored to the D3-001 basis fiscal year;
+CNINFO annual-publication evidence remains separate S0 lineage. No Knowledge
+peer graph, provider framework, Agent/Planner, synthetic forecast, or direct
+canonical peer mutation was added. Caller-supplied legacy comps retain strict
+precedence, and fixed-`asOf` automatic comps return
+`AUTO_COMPS_HISTORICAL_UNAVAILABLE` without peer calls.
+
+The existing node suite remains green after the implementation, with focused
+automatic PE/PB Skill and Workflow resolver tests added. The gated real harness
+is `scripts/acceptance-auto-comps-d3-real.ts`; without
+`RESEARCHHUB_RUN_REAL_AUTO_COMPS=1` it performs zero external calls. Full
+client/runtime validation and Sol live acceptance remain pending at this
+document revision.
+
+Runtime implementation status:
+
+```text
+IMPLEMENTED / SOL ACCEPTANCE PENDING
+```
