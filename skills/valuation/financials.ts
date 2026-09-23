@@ -41,8 +41,9 @@ export function normalizeValuationDate(value: unknown): string | undefined {
 }
 function dateOf(row: Dict, aliases: readonly string[]): string | undefined { return normalizeValuationDate(first(row, aliases)) }
 
-export function normalizeValuationMarketData(value: unknown, valuationDate: string): { readonly observation?: ValuationMarketObservation; readonly diagnostics: readonly string[] } {
-  const diagnostics: string[] = []; const candidates = rowsOf(value).map((row) => ({ date: dateOf(row, MARKET_DATE_ALIASES), close: numberValue(first(row, CLOSE_ALIASES)) })).filter((item): item is { date: string; close: number } => item.date !== undefined && item.close !== undefined && item.close > 0 && Number.isFinite(item.close) && item.date <= valuationDate).sort((left, right) => left.date.localeCompare(right.date))
+export function dailyCloseAvailableAt(priceDate: string): string { return new Date(`${priceDate}T15:00:00+08:00`).toISOString() }
+export function normalizeValuationMarketData(value: unknown, valuationDate: string, fixedAsOf?: string): { readonly observation?: ValuationMarketObservation; readonly diagnostics: readonly string[] } {
+  const diagnostics: string[] = []; const candidates = rowsOf(value).map((row) => ({ date: dateOf(row, MARKET_DATE_ALIASES), close: numberValue(first(row, CLOSE_ALIASES)) })).filter((item): item is { date: string; close: number } => item.date !== undefined && item.close !== undefined && item.close > 0 && Number.isFinite(item.close) && (fixedAsOf === undefined ? item.date <= valuationDate : Date.parse(dailyCloseAvailableAt(item.date)) <= Date.parse(fixedAsOf))).sort((left, right) => left.date.localeCompare(right.date))
   if (candidates.length === 0) { diagnostics.push('VALUATION_MARKET_PRICE_UNAVAILABLE'); return { diagnostics } }
   const selected = candidates[candidates.length - 1]!; return { observation: { priceDate: selected.date, close: selected.close }, diagnostics }
 }

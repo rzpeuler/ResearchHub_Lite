@@ -1,11 +1,11 @@
 # D3 v0.1 — Valuation Basis Evidence Design Correction
 
-- Task: `RHL-D3-001-DESIGN-FIX-001`
+- Task: `RHL-D3-001-FIX-001`
 - Status: `IMPLEMENTATION COMPLETE / SOL REVIEW PENDING`
 - Checked: 2026-09-23
 - Branch: `codex/d3-001-pe-pb-evidence-closure`
-- Starting HEAD: `f58011638dfa5a3514ec915f1c03699ec61509a6`
-- Required baseline: `f580116`
+- Starting HEAD: `fb1216478699f20e84dd746aac9a2415219e4b48`
+- Required baseline: `fb121647`
 
 ## 1. Decision summary
 
@@ -43,12 +43,13 @@ Sol review pending.
 - Source and provenance design for price, annual EPS/BVPS, and publication/
   value-version evidence.
 - Live feasibility results for `600519`, `000333`, `300750`, and `601398`.
-- A bounded current and historical acceptance plan for the later implementation
-  task.
+- A bounded current and historical acceptance plan, now implemented and recorded
+  in the implementation closure below.
 
 ### Out of scope
 
-- Implementation of adapters, source policies, or CNINFO pagination.
+- Expansion beyond the narrow adapter, source-policy, and CNINFO pagination
+  implementation recorded in §15.
 - Changes to `ValuationBasis`, `ValuationFinancialRow`, or arithmetic.
 - Cash/debt/net-debt and share-history implementation; those remain deferred
   EV/EBITDA design assets.
@@ -304,7 +305,7 @@ field cannot be marked live-ready from this probe alone.
 ### 6.2 Publication crosswalk evidence
 
 For each issuer, the date-bounded CNINFO query used the resolved organization ID,
-`searchkey=2024`, and a 2025 publication window. The annual-report documents
+an empty `searchkey`, and a 2025 publication window. The annual-report documents
 were:
 
 | Issuer | FY2024 official publication date | Example CNINFO PDF |
@@ -322,10 +323,10 @@ calendar date.
 The existing `CninfoOfficialDisclosureClient.list()` fetches page 1 without a
 date range and filters locally. The probe showed that page 1 contains current
 2026 filings, so it cannot reliably find a 2025 document for a historical
-cutoff. The implementation should use the existing CNINFO operation and
-endpoint with a bounded date window and deterministic annual-report matching;
-it must fail closed on zero or ambiguous matches. This is a narrow extension,
-not permission to create a new crawler.
+cutoff. The implementation now uses the existing CNINFO operation and
+endpoint with a bounded date window, complete normal-form fields, and
+deterministic annual-report matching; it fails closed on zero or ambiguous
+matches. This remains a narrow extension, not a new crawler.
 
 ### 6.3 Financial and balance-sheet observations
 
@@ -678,6 +679,9 @@ classification, and arithmetic wiring; it cannot prove source availability or
 publication authority. No cash/debt/share pagination acceptance belongs in
 D3-001 v0.1.
 
+The implementation closure below records which acceptance gates were completed
+offline and which remained externally unavailable during the bounded live run.
+
 ## 14. External feasibility sources checked
 
 Checked on 2026-09-23:
@@ -707,13 +711,22 @@ The implementation uses the existing seams described above:
 - `CninfoOfficialDisclosureClient.resolveAnnualReportPublication()` reuses
   `topSearch/query` and bounded `hisAnnouncement/query` requests with the
   resolved `<secCode>,<orgId>` stock, annual-report category, bounded
-  `seDate`, page size 30, bounded pagination, body-title classification, and
-  fail-closed same-time ambiguity.
+  `seDate`, complete normal-form fields, `searchkey=''`, deterministic
+  exchange/plate mapping (`sse/sh`, `szse/sz`, `szse/szcy`), page size 30,
+  bounded pagination, body-title classification, and fail-closed same-time
+  ambiguity. The live discrepancy was that `searchkey=2024` returned an empty
+  HTTP-200 result while the bounded empty-search form returned the known annual
+  reports.
 - `workflows/valuation/basis-evidence.ts` owns annual selection, explicit
   `CURRENT_VALUE_ONLY` versus fixed-`asOf` classification, publication proof,
   metric-level provenance, units, and the non-versioned EastMoney limitation.
   `ValuationBasis` remains the calculation projection; `ValuationWorkflowResult`
   exposes the additive optional `basisEvidence` seam.
+- The automatic product path always invokes the evidence resolver after market
+  and financial retrieval, even when the official client is absent, lacks the
+  optional resolver method, or returns no proof. The legacy selector remains
+  available only to low-level legacy/unit utilities and is not a product-path
+  basis fallback.
 - Omitted `asOf` is current-run mode. Any supplied `asOf`, including the current
   calendar date, is fixed-asOf mode. Fixed runs after CNINFO publication remain
   `PUBLICATION_VERIFIED_VALUE_VERSION_UNVERIFIED` and do not construct an
@@ -723,6 +736,12 @@ The implementation uses the existing seams described above:
   publication matching.
 - D3 keeps EV/EBITDA unsupported in the normal official-evidence path and does
   not acquire cash, debt, net debt, share history, or EBITDA fields.
+- Fixed-asOf market selection uses daily-close availability at 15:00 Asia/
+  Shanghai; current mode retains latest-observable selection. Method Eligibility,
+  FY-Based Reference Multiples, and Primary Method Selection retain market,
+  EastMoney financial, and CNINFO publication source bindings when those
+  outputs are produced, and viewpoint Gateway proposals carry the deterministic
+  evidence set so CNINFO lineage is not severed.
 
 The offline D3 matrix is in
 `tests/workflows/valuation-basis-evidence.test.ts`. The gated real-source
@@ -731,14 +750,15 @@ disabled unless `RESEARCHHUB_RUN_REAL_VALUATION_BASIS=1` and reports transport, 
 CNINFO, and basis-resolution stages independently without fabricating success.
 
 Implementation validation passed `npm run typecheck`, `npm run client:typecheck`,
-`npm run client:build`, `npm test` (1,424 Node tests and 28 client tests), and
+`npm run client:build`, `npm test` (1,430 Node tests and 28 client tests), and
 `git diff --check`. The enabled real-source attempt reached EastMoney financial
-rows for all four targets, but market transport was empty or proxy-unavailable
-and no current CNINFO publication proof was returned; every current target
-therefore remained unavailable rather than being accepted as a valuation basis.
-The same run attempted bounded 600519 FY2024 before/after publication windows;
-those historical outcomes are recorded separately from current market failure
-and never promote a current numeric row to strict PIT evidence.
+rows for all four targets and verified current CNINFO publication records
+independently. Market transport was empty for all four targets, so no current
+PE/PB product path was claimed. The same run verified `600519` FY2024
+after-publication at Shanghai calendar date 2025-04-03 and `000333` at
+2025-03-29; the 600519 before-publication control was classified
+`DATA_NOT_PUBLISHED`. After-publication controls are reported as
+`PUBLICATION_VERIFIED_VALUE_VERSION_UNVERIFIED`, never strict PIT.
 
 ## 16. Review gate
 

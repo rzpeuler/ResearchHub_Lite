@@ -11,7 +11,7 @@ import { validateUsableAcquisitionPayload } from '../../plugins/research-acquisi
 import { normalizeExchange } from '../../skills/knowledge-curation/identity/company-identity.ts'
 import { canonicalizeValuationViewpointStatement, deterministicValuationAssumptionStatement, deterministicValuationEvidence, expectedValuationAssumptionStructuredValue, expectedValuationViewpointStructuredValue, validateValuationStructuredValue, ValuationAssumptionDesignSkill, ValuationSynthesisSkill } from '../../skills/valuation/skill.ts'
 import { VALUATION_REPORT_SECTIONS, type ValuationAssumptionPlan, type ValuationBasis, type ValuationComputation, type ValuationMethod, type ValuationSynthesisOutput, type ValuationSynthesisProposal } from '../../skills/valuation/contracts.ts'
-import { buildValuationBasis, calculateValuation, methodEligibility, normalizeValuationFinancialData, normalizeValuationMarketData, referenceMultiples, selectValuationBasis } from '../../skills/valuation/financials.ts'
+import { calculateValuation, methodEligibility, normalizeValuationFinancialData, normalizeValuationMarketData, referenceMultiples } from '../../skills/valuation/financials.ts'
 import { validateResearchReport, writeResearchReport, type ResearchReport, type ResearchReportSection } from '../../app/services/research-report.ts'
 import { executeCompsValuation, type CompsValuationResult } from '../../skills/comps_valuation/index.ts'
 import { runResearchQualityGate, type ResearchQualityGateResult } from '../research-quality-gate.ts'
@@ -39,7 +39,7 @@ async function acquire(input: ValuationWorkflowInput, company: ResearchCompanyId
   try { basicValue = await input.akshare.companyBasic({ symbol: company.symbol }); abortIfNeeded(input.signal) } catch (error) { if (error instanceof Error && error.message === 'WORKFLOW_CANCELLED') throw error; transportSucceeded = false; diagnostics.push(`companyBasic: ${error instanceof Error ? error.message : String(error)}`) } abortIfNeeded(input.signal)
   try { financialValue = input.akshare.valuationFinancialIndicators ? await input.akshare.valuationFinancialIndicators({ symbol: company.symbol }) : await input.akshare.financialData({ symbol: company.symbol }); financialRetrievedAt = clock(); abortIfNeeded(input.signal) } catch (error) { if (error instanceof Error && error.message === 'WORKFLOW_CANCELLED') throw error; transportSucceeded = false; diagnostics.push(`valuationFinancialIndicators: ${error instanceof Error ? error.message : String(error)}`) } abortIfNeeded(input.signal)
   try { marketValue = await input.akshare.historicalMarketData({ symbol: company.symbol }); marketRetrievedAt = clock(); abortIfNeeded(input.signal) } catch (error) { if (error instanceof Error && error.message === 'WORKFLOW_CANCELLED') throw error; transportSucceeded = false; diagnostics.push(`historicalMarketData: ${error instanceof Error ? error.message : String(error)}`) } abortIfNeeded(input.signal)
-  const market = normalizeValuationMarketData(marketValue, valuationDate); const financial = normalizeValuationFinancialData(financialValue); const sources: NormalizedResearchSource[] = []
+  const market = normalizeValuationMarketData(marketValue, valuationDate, asOf); const financial = normalizeValuationFinancialData(financialValue); const sources: NormalizedResearchSource[] = []
   const selectedRow = financial.rows.find((row) => row.reportDate <= valuationDate)
   if (input.officialDisclosure?.resolveAnnualReportPublication && selectedRow) {
     try { publication = await input.officialDisclosure.resolveAnnualReportPublication({ company, fiscalYear: selectedRow.basisFiscalYear, ...(asOf === undefined ? {} : { asOf }) }); abortIfNeeded(input.signal) } catch (error) { if (error instanceof Error && error.message === 'WORKFLOW_CANCELLED') throw error; diagnostics.push(`CNINFO annual publication: ${error instanceof Error ? error.message : String(error)}`) }
@@ -97,8 +97,8 @@ function preciseReportSections(sections: readonly ResearchReportSection[], sourc
     let candidateIds: readonly (string | undefined)[] = []; let existingClaimIds: readonly string[] = []
     if (section.id === 'valuation-snapshot') candidateIds = [market]
     else if (section.id === 'data-basis-point-in-time-status') candidateIds = [market, financial, official]
-    else if (['method-eligibility', 'fy-based-reference-multiples', 'secondary-method-cross-checks'].includes(section.id)) candidateIds = [financial]
-    else if (section.id === 'primary-method-selection') candidateIds = [financial]
+    else if (['method-eligibility', 'fy-based-reference-multiples', 'secondary-method-cross-checks'].includes(section.id)) candidateIds = [market, financial, official]
+    else if (section.id === 'primary-method-selection') candidateIds = [market, financial, official]
     else if (section.id === 'assumption-framework') { candidateIds = plan?.scenarios.find((item) => item.scenarioId === 'base')?.sourceCandidateIds ?? []; existingClaimIds = assumptionClaimIds }
     else if (['bear-scenario', 'base-scenario', 'bull-scenario'].includes(section.id)) candidateIds = [plan?.scenarios.find((item) => item.scenarioId === section.id.replace('-scenario', ''))?.sourceCandidateIds ?? []].flat()
     else if (['target-price-range', 'sensitivity-analysis'].includes(section.id)) candidateIds = allDeterministic
@@ -122,18 +122,17 @@ export async function runValuation(input: ValuationWorkflowInput): Promise<Valua
     const valuationDate = input.asOf ?? now
     const acquired = await acquire(input, company, valuationDate, input.asOf, clock)
     abortIfNeeded(input.signal)
-    const market = normalizeValuationMarketData(acquired.marketValue, valuationDate)
+    const market = normalizeValuationMarketData(acquired.marketValue, valuationDate, input.asOf)
     if (!market.observation) return { workflowRunId: input.workflowRunId, status: 'blocked', knowledgeBaseId: input.handle.knowledgeBaseId, knowledgeBaseRevision: input.handle.revision, proposalIds: [], committedIds: [], sourceIds: [], claimIds: [], errors: [], blockedReason: 'VALUATION_MARKET_PRICE_UNAVAILABLE', diagnostics: acquired.diagnostics, providerOutcome: acquired.providerOutcome, telemetry: baseTelemetry({ companyCoverageResolved: true }) }
 
     const financial = { rows: acquired.financialRows, diagnostics: [] as readonly string[] }
-    const legacySelected = selectValuationBasis(financial.rows, valuationDate, input.asOf)
-    const evidenceResolution = input.officialDisclosure?.resolveAnnualReportPublication && acquired.market && acquired.financialRetrievedAt && acquired.marketRetrievedAt
+    const evidenceResolution = acquired.market && acquired.financialRetrievedAt && acquired.marketRetrievedAt
       ? resolveValuationBasisEvidence({ market: acquired.market, financialRows: financial.rows, ...(acquired.publication === undefined ? {} : { publication: acquired.publication }), valuationDate, ...(input.asOf === undefined ? {} : { asOf: input.asOf }), now, retrievedAt: acquired.financialRetrievedAt, marketRetrievedAt: acquired.marketRetrievedAt, marketSourceUrl: 'https://push2his.eastmoney.com/api/qt/kline/get', financialSourceUrl: 'https://datacenter.eastmoney.com/securities/api/data/get' })
       : undefined
     const basisEvidence: ValuationBasisEvidence | undefined = evidenceResolution?.evidence
-    const pitStatus: ValuationEvidencePitStatus = evidenceResolution?.pitStatus ?? (input.asOf === undefined ? 'CURRENT_VALUE_ONLY' : 'PUBLICATION_VERIFIED_VALUE_VERSION_UNVERIFIED')
-    const basis: ValuationBasis | undefined = evidenceResolution?.basis ?? (legacySelected.basis === undefined ? undefined : buildValuationBasis(market.observation, legacySelected.basis, valuationDate, legacySelected.publicationStatus ?? 'current_snapshot_unverified'))
-    const basisDiagnostics = evidenceResolution?.diagnostics ?? legacySelected.diagnostics
+    const pitStatus: ValuationEvidencePitStatus = evidenceResolution?.pitStatus ?? 'UNAVAILABLE'
+    const basis: ValuationBasis | undefined = evidenceResolution?.basis
+    const basisDiagnostics = evidenceResolution?.diagnostics ?? ['VALUATION_BASIS_PUBLICATION_UNAVAILABLE']
     const eligibility = basis ? methodEligibility(basis) : []
     const eligible = requestedMethods(input, eligibility.filter((item) => item.eligible).map((item) => item.method))
     if (basis && input.targetFiscalYear !== undefined && (input.targetFiscalYear <= basis.basisFiscalYear || input.targetFiscalYear > basis.basisFiscalYear + 3)) return { workflowRunId: input.workflowRunId, status: 'blocked', knowledgeBaseId: input.handle.knowledgeBaseId, knowledgeBaseRevision: input.handle.revision, proposalIds: [], committedIds: [], sourceIds: [], claimIds: [], errors: [], blockedReason: 'VALUATION_TARGET_FISCAL_YEAR_INVALID', diagnostics: ['VALUATION_TARGET_FISCAL_YEAR_INVALID'], providerOutcome: acquired.providerOutcome, basis, ...(basisEvidence === undefined ? {} : { basisEvidence }), telemetry: baseTelemetry({ companyCoverageResolved: true, marketDataUsable: true, financialBasisUsable: true, pointInTimeVerified: pitStatus === 'PIT_VERIFIED' }) }
@@ -164,7 +163,9 @@ export async function runValuation(input: ValuationWorkflowInput): Promise<Valua
            telemetry = { ...telemetry, synthesis: synthesis.reasoning, modelDerivedInterpretiveSectionCount: synthesis.output.sections.length, proposalCandidateCount: synthesis.output.proposals.length }
            const sourceIds = new Set(deterministicValuationEvidence(acquired.sources).map((source) => source.candidate.candidateId))
           const claimRefs = new Set(coverage.claims.map((claim) => String(claim.canonicalRef)))
-          proposals = synthesis.output.proposals.filter((proposal) => validProposal(proposal, plan!, computation!, sourceIds, claimRefs))
+          const accepted = synthesis.output.proposals.filter((proposal) => validProposal(proposal, plan!, computation!, sourceIds, claimRefs))
+          const requiredEvidenceIds = deterministicValuationEvidence(acquired.sources).map((source) => source.candidate.candidateId)
+          proposals = accepted.map((proposal) => proposal.claimType === 'viewpoint' ? { ...proposal, sourceCandidateIds: [...new Set([...(proposal.sourceCandidateIds ?? []), ...requiredEvidenceIds])] } : proposal)
         } catch (error) {
           telemetry = { ...telemetry, computation: { scenarioCount: plan.scenarios.length, calculatedScenarioCount: 0, sensitivityCellCount: 0, deterministicRecomputeStatus: 'unavailable' }, synthesis: { called: false, validated: false, applied: false, fallbackUsed: true, repairAttempts: 0, operation: 'valuation_synthesis' }, proposalCandidateCount: 0 }
           void error

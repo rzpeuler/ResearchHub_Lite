@@ -65,10 +65,11 @@ export class CninfoOfficialDisclosureClient implements OfficialDisclosureClient 
   async resolveAnnualReportPublication(request: AnnualReportPublicationRequest): Promise<AnnualReportPublicationProof | undefined> {
     if (!Number.isInteger(request.fiscalYear) || request.fiscalYear < 1990 || request.fiscalYear > 2100) throw new Error('CNINFO_INVALID_FISCAL_YEAR')
     const exchange = request.company.exchange?.toLowerCase(); const column = exchange === 'sse' || exchange === 'szse' ? exchange : request.company.symbol.startsWith('6') ? 'sse' : 'szse'
+    const plate = column === 'sse' ? 'sh' : request.company.symbol.startsWith('300') ? 'szcy' : 'sz'
     const startDate = `${request.fiscalYear + 1}-01-01`
     const requestedEnd = request.asOf === undefined ? `${request.fiscalYear + 2}-12-31` : cninfoShanghaiCalendarDate(request.asOf)
     const endDate = requestedEnd < startDate ? startDate : requestedEnd > `${request.fiscalYear + 2}-12-31` ? `${request.fiscalYear + 2}-12-31` : requestedEnd
-    const records = await this.queryAnnouncements({ stock: await this.companyStock(request.company.symbol), searchkey: String(request.fiscalYear), pageNum: '1', pageSize: String(MAX_ANNUAL_REPORT_PAGE_SIZE), tabName: 'fulltext', column, category: CNINFO_ANNUAL_REPORT_CATEGORY, seDate: `${startDate}~${endDate}` }, request.asOf, MAX_ANNUAL_REPORT_PAGES)
+    const records = await this.queryAnnouncements({ pageNum: '1', pageSize: String(MAX_ANNUAL_REPORT_PAGE_SIZE), column, plate, stock: await this.companyStock(request.company.symbol), searchkey: '', secid: '', category: CNINFO_ANNUAL_REPORT_CATEGORY, trade: '', seDate: `${startDate}~${endDate}`, sortName: '', sortType: '', isHLtitle: 'true', tabName: 'fulltext' }, request.asOf, MAX_ANNUAL_REPORT_PAGES)
     const selected = selectCninfoAnnualReportRecord(records, request.fiscalYear)
     if (selected === undefined) return undefined
     return { issuer: selected.issuer ?? request.company.name ?? request.company.symbol, fiscalYear: request.fiscalYear, reportTitle: selected.title, officialPublishedAt: selected.publishedAt, rawPublishedAt: selected.rawPublishedAt ?? selected.publishedAt, sourceUrl: selected.url, ...(selected.announcementId === undefined ? {} : { announcementId: selected.announcementId }), originPublisher: 'CNINFO', originAuthority: 'S0_STATUTORY', retrievalProvider: 'CNINFO', retrievedAt: this.now() }
@@ -131,7 +132,7 @@ function textValue(value: unknown): string | undefined { if (typeof value === 's
 function numberValue(value: unknown): number { const number = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : Number.NaN; return Number.isFinite(number) ? number : Number.NaN }
 export function isCninfoAnnualReportBodyTitle(title: string, fiscalYear: number): boolean {
   const normalized = title.normalize('NFKC').replace(/\s+/g, '')
-  if (!normalized.includes(`${fiscalYear}年年度报告`)) return false
+  if (!new RegExp(`${fiscalYear}(?:年年度报告|年度报告)`).test(normalized)) return false
   return !/(摘要|英文|审计报告|内控报告|提示性公告|取消公告|更正公告|更正后|修订|补充公告)/u.test(normalized)
 }
 export function selectCninfoAnnualReportRecord(records: readonly OfficialDisclosureRecord[], fiscalYear: number): OfficialDisclosureRecord | undefined {

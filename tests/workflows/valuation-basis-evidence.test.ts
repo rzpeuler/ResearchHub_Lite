@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { CninfoOfficialDisclosureClient, selectCninfoAnnualReportRecord, type AnnualReportPublicationProof, type OfficialDisclosureRecord } from '../../plugins/research-acquisition/official.ts'
-import { normalizeValuationFinancialData, type ValuationFinancialRow } from '../../skills/valuation/financials.ts'
+import { normalizeValuationFinancialData, normalizeValuationMarketData, type ValuationFinancialRow } from '../../skills/valuation/financials.ts'
 import { compareValuationNumericObservations, resolveValuationBasisEvidence } from '../../workflows/valuation/basis-evidence.ts'
 
 const NOW = '2026-09-23T00:00:00.000Z'
@@ -25,6 +25,21 @@ test('D3 current mode retains EastMoney/CNINFO provenance and closes PE/PB only'
   assert.equal(result.basis?.ebitda, undefined)
   assert.equal(result.basis?.netDebt, undefined)
   assert.equal(result.basis?.shares, undefined)
+})
+
+test('D3 missing publication proof fails closed', () => {
+  const result = resolve({ publication: undefined })
+  assert.equal(result.basis, undefined)
+  assert.equal(result.pitStatus, 'UNAVAILABLE')
+  assert.ok(result.diagnostics.includes('VALUATION_BASIS_PUBLICATION_UNAVAILABLE'))
+})
+
+test('D3 fixed market cutoff uses Shanghai daily-close availability', () => {
+  const rows = [{ date: '2025-04-09', close: 149 }, { date: '2025-04-10', close: 150 }]
+  assert.equal(normalizeValuationMarketData(rows, '2025-04-10T09:00:00+08:00', '2025-04-10T09:00:00+08:00').observation?.priceDate, '2025-04-09')
+  assert.equal(normalizeValuationMarketData(rows, '2025-04-10T15:00:00+08:00', '2025-04-10T15:00:00+08:00').observation?.priceDate, '2025-04-10')
+  assert.equal(normalizeValuationMarketData(rows, '2025-04-10T01:00:00Z', '2025-04-10T01:00:00Z').observation?.priceDate, '2025-04-09')
+  assert.equal(normalizeValuationMarketData(rows, '2025-04-10T07:00:00Z', '2025-04-10T07:00:00Z').observation?.priceDate, '2025-04-10')
 })
 
 test('D3 fixed cutoff before publication fails closed', () => {
@@ -78,6 +93,10 @@ test('D3 CNINFO annual crosswalk uses bounded composite query and excludes non-b
   assert.equal(result?.originAuthority, 'S0_STATUTORY')
   assert.equal(requests[0]?.get('stock'), '600519,gssh0600519')
   assert.equal(requests[0]?.get('category'), 'category_ndbg_szsh')
+  assert.equal(requests[0]?.get('plate'), 'sh')
+  assert.equal(requests[0]?.get('searchkey'), '')
+  assert.equal(requests[0]?.get('secid'), '')
+  assert.equal(requests[0]?.get('isHLtitle'), 'true')
   assert.equal(requests[0]?.get('pageSize'), '30')
   assert.match(requests[0]?.get('seDate') ?? '', /^2025-01-01~2025-04-10$/)
 })
@@ -88,4 +107,18 @@ test('D3 CNINFO ambiguous same-time original reports fail closed', () => {
     { title: '2024年年度报告', url: 'https://static.cninfo.com.cn/b.PDF', publishedAt: '2025-04-03T08:00:00.000Z' },
   ]
   assert.throws(() => selectCninfoAnnualReportRecord(records, 2024), /ANNUAL_REPORT_PUBLICATION_AMBIGUOUS/)
+})
+
+test('D3 CNINFO accepts Shenzhen plate mapping and annual title variants', async () => {
+  const requests: URLSearchParams[] = []
+  const client = new CninfoOfficialDisclosureClient({ now: () => NOW, fetchImpl: async (input, init) => {
+    if (String(input).includes('/topSearch/')) return new Response(JSON.stringify([{ code: '300750', orgId: 'GD165627', zwjc: 'Fixture' }]))
+    requests.push(new URLSearchParams(String(init?.body ?? '')))
+    return new Response(JSON.stringify({ hasMore: false, announcements: [{ announcementTitle: '2024年度报告', adjunctUrl: '/finalpage/2025-03-15/body.PDF', announcementTime: '2025-03-15T08:00:00.000Z', secName: 'Fixture' }] }))
+  } })
+  const result = await client.resolveAnnualReportPublication({ company: { symbol: '300750', exchange: 'SZSE' }, fiscalYear: 2024, asOf: '2025-04-10T00:00:00.000Z' })
+  assert.equal(result?.reportTitle, '2024年度报告')
+  assert.equal(requests[0]?.get('column'), 'szse')
+  assert.equal(requests[0]?.get('plate'), 'szcy')
+  assert.equal(requests[0]?.get('stock'), '300750,GD165627')
 })

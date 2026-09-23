@@ -1,7 +1,7 @@
 import type { SourceAuthority, DataRequirement, SourcePolicy } from '../research-data-acquisition/contracts.ts'
 import type { AnnualReportPublicationProof } from '../../plugins/research-acquisition/official.ts'
 import type { ValuationBasis } from '../../skills/valuation/contracts.ts'
-import { buildValuationBasis, type ValuationFinancialRow, type ValuationMarketObservation } from '../../skills/valuation/financials.ts'
+import { buildValuationBasis, dailyCloseAvailableAt, type ValuationFinancialRow, type ValuationMarketObservation } from '../../skills/valuation/financials.ts'
 
 export type ValuationEvidencePitStatus = 'PIT_VERIFIED' | 'PUBLICATION_VERIFIED_VALUE_VERSION_UNVERIFIED' | 'CURRENT_VALUE_ONLY' | 'UNAVAILABLE'
 export type ValuationEvidenceMetric = 'marketPrice' | 'eps' | 'bvps'
@@ -30,6 +30,7 @@ export interface ValuationMetricEvidence {
   readonly unit: 'CNY/share'
   readonly reportDate?: string
   readonly priceDate?: string
+  readonly dailyCloseAvailableAt?: string
   readonly numericSource: ValuationNumericSource
   readonly officialPublication?: ValuationOfficialPublication
   readonly pitStatus: ValuationEvidencePitStatus
@@ -96,14 +97,14 @@ function source(field: string, retrievedAt: string, sourceUrl: string | undefine
 
 function metricEvidence(metric: ValuationEvidenceMetric, value: number, input: ResolveValuationBasisEvidenceInput, status: ValuationEvidencePitStatus, publication: ValuationOfficialPublication | undefined): ValuationMetricEvidence {
   const field = metric === 'marketPrice' ? 'close' : metric === 'eps' ? 'EPSJB' : 'BPS'
-  return { metric, value, unit: 'CNY/share', ...(metric === 'marketPrice' ? { priceDate: input.market.priceDate } : { reportDate: input.financialRows[0]?.reportDate }), numericSource: source(field, metric === 'marketPrice' ? input.marketRetrievedAt : input.retrievedAt, metric === 'marketPrice' ? input.marketSourceUrl : input.financialSourceUrl), ...(publication === undefined || metric === 'marketPrice' ? {} : { officialPublication: publication }), pitStatus: status }
+  return { metric, value, unit: 'CNY/share', ...(metric === 'marketPrice' ? { priceDate: input.market.priceDate, dailyCloseAvailableAt: dailyCloseAvailableAt(input.market.priceDate) } : { reportDate: input.financialRows[0]?.reportDate }), numericSource: source(field, metric === 'marketPrice' ? input.marketRetrievedAt : input.retrievedAt, metric === 'marketPrice' ? input.marketSourceUrl : input.financialSourceUrl), ...(publication === undefined || metric === 'marketPrice' ? {} : { officialPublication: publication }), pitStatus: status }
 }
 
 export function resolveValuationBasisEvidence(input: ResolveValuationBasisEvidenceInput): ValuationBasisResolution {
   const diagnostics: string[] = []
   const currentMode = input.asOf === undefined
   const cutoff = input.asOf ?? input.now
-  const marketStatus: ValuationEvidencePitStatus = currentMode ? 'CURRENT_VALUE_ONLY' : Date.parse(input.market.priceDate) <= Date.parse(cutoff) ? 'PIT_VERIFIED' : 'UNAVAILABLE'
+  const marketStatus: ValuationEvidencePitStatus = currentMode ? 'CURRENT_VALUE_ONLY' : Date.parse(dailyCloseAvailableAt(input.market.priceDate)) <= Date.parse(cutoff) ? 'PIT_VERIFIED' : 'UNAVAILABLE'
   const publication = publicationValue(input.publication)
   const annualRows = input.financialRows.filter((row) => row.reportDate <= input.valuationDate).sort((left, right) => right.basisFiscalYear - left.basisFiscalYear)
   const row = annualRows[0]
