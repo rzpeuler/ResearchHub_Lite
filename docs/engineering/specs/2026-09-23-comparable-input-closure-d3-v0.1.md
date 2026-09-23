@@ -1,11 +1,11 @@
 # D3-002 v0.1 — Minimal PE/PB Comparable Input Closure
 
 - Task: `RHL-D3-002-DESIGN`
-- Status: `DESIGN REVISED / SOURCE FEASIBILITY COMPLETED / SOL REVIEW PENDING`
+- Status: `DESIGN HARDENED / SOL REVIEW PENDING`
 - Checked: `2026-09-23`
 - Branch: `codex/d3-002-comparable-input-design`
 - Worktree: `C:\Users\Administrator\Desktop\ResearchHub_Lite_worktrees\D3_002`
-- Starting HEAD: `626f3ab69bc0d8dfc94d98467059a73675387263`
+- Required/current HEAD: `7e7aaa75fcdf4f5f9e2733863719a9b4b87784f2`
 - Existing D0 worktree: preserved and untouched
 
 ## 1. Decision summary
@@ -46,6 +46,13 @@ EastMoney cohort provenance, requires structured scale plus at least one actual
 growth/economics profile, reuses D3-001 price/EPS/BVPS/publication evidence,
 and computes peer PE/PB from price and common-period EPS/BVPS. No runtime
 D3-002 implementation is authorized by this document.
+
+The final hardening state is:
+
+- `SOURCE FEASIBILITY = CLOSED`;
+- `COMPARABILITY GATE = FROZEN`;
+- `NARROW EXECUTION CONTRACT = FROZEN`;
+- `RUNTIME IMPLEMENTATION = NOT STARTED`.
 
 ## 2. Forcing function and hard scope
 
@@ -155,7 +162,7 @@ claim that all existing comparability dimensions are proven.
 | Denominator semantics | Explicit only if all full financials share one basis | Not established for `市盈率-动态`; PB basis also unproven | Explicit annual EPS/BVPS period and units |
 | Source authority | EastMoney numeric would remain S3; CNINFO still needed for publication | EastMoney S3 only unless separately crosswalked | EastMoney numeric S3, AKShare retrieval, CNINFO S0 publication proof |
 | PIT integrity | Heavy and still incomplete | Current snapshot only; fixed-asOf unavailable | Current-only; fixed-asOf unavailable without versioned peer universe |
-| Period alignment | Possible but expensive | Not proven | Deterministic latest common published FY |
+| Period alignment | Possible but expensive | Not proven | Subject-selected D3-001 fiscal year; no automatic backshift |
 | Provenance | Many fields and deferred components | Direct field lineage but weak semantic proof | Separate identity, market, financial, publication, and comparability refs |
 | Existing code reuse | Reuses legacy arithmetic but smuggles deferred inputs | Little safe reuse beyond display | Reuses D3-001 price/EPS/BVPS/publication seams and existing crosscheck adapter |
 | Runtime complexity | High; many fields and calls | Low but semantically unsafe | Bounded discovery plus per-peer evidence calls |
@@ -516,7 +523,7 @@ exact target identity
   -> exclude target and invalid identities
    -> current market-cap availability
    -> scale profile, without a frozen round-number band
-  -> stable ticker-order cap of 12 expensive candidates
+  -> section-17 deterministic ordering and cap of 12 expensive candidates
   -> common-period EPS/BVPS and publication checks
   -> deterministic comparability gate
   -> 3–8 accepted metric-specific peers
@@ -544,7 +551,7 @@ exact target identity
   -> exclude target and aggregate rows
   -> targeted raw scale profile for each bounded candidate
   -> require at least one raw actual growth or profitability/economics profile
-  -> common-FY D3-001 EPS/BVPS and normalized current price
+  -> subject-FY D3-001 EPS/BVPS and normalized current price
   -> CNINFO publication proof
   -> deterministic PE/PB recomputation and existing crosscheck
 ```
@@ -568,10 +575,67 @@ intersected or averaged. This is deliberately narrower than the legacy
 generic comparability contract and is not equivalent to “same industry plus
 size.”
 
+Evidence completeness is not the same as actual comparability. In particular:
+
+- `scaleProfile != similar scale`;
+- `growthProfile != similar growth`;
+- `profitabilityProfile != similar profitability`.
+
+These profiles are observable evidence required by the narrow gate, not a
+claim that the values are close, economically interchangeable, or suitable for
+investment ranking. No arbitrary absolute-ratio cutoff is frozen. A candidate
+must first pass the source-consensus gate below, then its metric-specific
+financial, publication, price, and profile evidence is evaluated.
+
+### 9.5.1 Frozen source-consensus gate
+
+The automatic source-consensus gate is exactly:
+
+```text
+cohortFamilyCount >= 2
+AND (hasGrowthMembership OR hasDupontMembership)
+```
+
+The four recognized source families are `GROWTH`, `VALUATION`, `DUPONT`, and
+`SCALE`. `SCALE` alone never proves comparability. `VALUATION` alone never
+proves comparability. A candidate must therefore have corroboration from at
+least two families and at least one growth or DuPont membership observation;
+the scale profile remains a required separate evidence item rather than a
+substitute for that consensus.
+
+The bounded probe below records the candidate-level consensus result. It is a
+source-consensus result, not final runtime acceptance: D3-001 normalized price,
+subject-fiscal-year metrics, and CNINFO publication checks still run later.
+
+| Target | Candidate | Families observed | Family count | Growth membership | DuPont membership | Scale evidence | Consensus |
+|---|---|---|---:|---|---|---|---|
+| `600519` | `600809` | GROWTH, DUPONT, SCALE | 3 | yes | yes | yes | pass |
+| `600519` | `603198` | VALUATION, DUPONT, SCALE | 3 | no | yes | yes | pass |
+| `600519` | `603369` | VALUATION, DUPONT, SCALE | 3 | no | yes | yes | pass |
+| `600519` | `603919` | GROWTH, VALUATION, SCALE | 3 | yes | no | yes | pass |
+| `000333` | `002668` | GROWTH, VALUATION, DUPONT, SCALE | 4 | yes | yes | yes | pass |
+| `000333` | `600983` | GROWTH, VALUATION, SCALE | 3 | yes | no | yes | pass |
+| `000333` | `000921` | GROWTH, DUPONT, SCALE | 3 | yes | yes | yes | pass |
+| `000333` | `000651` | VALUATION, DUPONT, SCALE | 3 | no | yes | yes | pass |
+| `000333` | `600690` | VALUATION, DUPONT, SCALE | 3 | no | yes | yes | pass |
+| `000333` | `001387` | VALUATION, DUPONT, SCALE | 3 | no | yes | yes | pass |
+| `300750` | `002058` | GROWTH, DUPONT, SCALE | 3 | yes | yes | yes | pass |
+| `601398` | `002948` | GROWTH, VALUATION, SCALE | 3 | yes | no | yes | pass |
+| `601398` | `600926` | GROWTH, VALUATION, DUPONT, SCALE | 4 | yes | yes | yes | pass |
+| `601398` | `601128` | GROWTH, VALUATION, DUPONT, SCALE | 4 | yes | yes | yes | pass |
+| `601398` | `601665` | GROWTH, VALUATION, SCALE | 3 | yes | no | yes | pass |
+
+The resulting source-consensus counts are `4` for `600519`, `6` for
+`000333`, `1` for `300750`, and `4` for `601398`. The `300750` result is
+therefore not a usable automatic peer set under the frozen minimum of three
+valid peers, even though one candidate passes source consensus. No family
+intersection, source averaging, or dynamic relaxation is permitted.
+
 The source response provides a bounded ranked sample rather than a complete
-universe. A future implementation may use a stable source-order/ticker-order
-cap only after the evidence gates pass. No valuation ranking, performance
-ranking, or arbitrary `0.25x–4.0x` scale band is authorized by this design.
+universe. A future implementation may use the deterministic ordering frozen in
+section 17 only after the cheap identity, consensus, profile, and scale gates
+pass. No valuation ranking, performance ranking, or arbitrary `0.25x–4.0x`
+scale band is authorized by this design.
 
 ### 9.6 Representative candidate evidence
 
@@ -627,9 +691,11 @@ selection is not an acceptable substitute.
 A future peer must have, independently:
 
 - exact identity evidence: ticker, exchange, company ID, and name;
-- source-specific peer-cohort membership evidence;
+- source-specific peer-cohort membership evidence passing the frozen
+  source-consensus gate;
 - current market evidence for price and a scale profile;
-- at least one raw actual growth or profitability/economics profile;
+- at least one raw actual growth or profitability/economics profile, with the
+  observation retained separately from the fact that the profile exists;
 - common-period annual EPS and/or BVPS evidence;
 - CNINFO annual-publication proof for the same fiscal year;
 - explicit currency, units, retrieval time, and current-only PIT status;
@@ -658,9 +724,9 @@ than globally rejecting a peer because one metric is unavailable.
 ### 11.1 Current-only automatic scope
 
 Automatic peer resolution is permitted only when `asOf` is omitted. It may use
-current source-specific peer cohorts, current scale/profile observations, and
-the latest common annual financial period whose publication evidence is
-available.
+current source-specific peer cohorts and current scale/profile observations,
+but the subject fiscal-year anchor is fixed by the already-selected D3-001
+`ValuationBasis.fiscalYear`.
 
 When `asOf` is explicitly supplied, automatic peer resolution returns
 `AUTO_COMPS_HISTORICAL_UNAVAILABLE` unless versioned industry membership,
@@ -670,18 +736,15 @@ board constituents must never be projected backward into a historical universe.
 Caller-supplied historical `CompsValuationInput` remains governed by its
 existing contract and gates.
 
-### 11.2 Latest common fiscal year
+### 11.2 Subject fiscal-year anchor
 
-The proposed period is the latest fiscal year in the intersection of:
-
-- the target's annual EPS/BVPS rows;
-- every candidate's annual EPS/BVPS rows;
-- publication-eligible CNINFO annual reports for the target and every accepted
-  peer.
-
-Every accepted peer and the subject must use the same `FYyyyy` period. A peer
-cannot independently choose its own latest fiscal year and still enter the same
-peer median.
+The automatic path must use the subject's already-selected D3-001
+`ValuationBasis.fiscalYear`. It must not recompute a latest intersection and
+must not automatically backshift the subject or peer period. Every accepted
+peer must provide EPS and/or BVPS for that exact subject FY plus CNINFO
+publication proof for an annual report covering the same FY. A peer with a
+different year, missing same-FY metric, or missing same-FY publication proof is
+rejected for the affected metric (and cannot enter that metric's median).
 
 Current market price may be latest observable current-mode price, but the
 result remains `CURRENT_VALUE_ONLY`; CNINFO publication proves disclosure
@@ -689,11 +752,11 @@ availability, not a historical version of EastMoney's numeric value.
 
 ### 11.3 Market timing choice
 
-The preferred future choice is reuse of D3-001's `historicalMarketData()` path
-for peer prices, in omitted-`asOf` current mode, because it preserves the
-existing daily-close normalization and retrieval semantics. The dedicated raw
-scale comparison route can supply the scale profile, so
-`stock_zh_a_spot_em` is not a hard candidate-prefilter dependency.
+The canonical peer price is the D3-001 `historicalMarketData()` current-mode
+latest normalized daily close. A spot price is not canonical, and a direct
+comparison-endpoint PE/PB field is not canonical. The dedicated raw scale
+comparison route can supply the scale profile, so `stock_zh_a_spot_em` is not a
+hard candidate-prefilter dependency.
 
 The future result must record the actual retrieval timestamp and must not label a
 current snapshot as strict historical PIT. Fixed-asOf automatic peer resolution
@@ -728,37 +791,70 @@ No synthetic one-source peer record may hide those lineages. No EastMoney
 numeric observation may be relabelled as CNINFO authority, and no AKShare
 retrieval may become the publisher.
 
-## 13. Conditional narrow calculation contract
+## 13. Frozen narrow execution contract
 
-The supplemental probe supports, but does not implement, an additive contract
-narrower than `ComparableCompanyInput` and metric-specific. A conceptual shape
-is:
+The automatic path uses a new narrow additive contract. It must never adapt an
+automatic peer into the legacy `ComparableCompanyInput`, because that would
+invite fabricated `grossDebt`, `cash`, `netDebt`, `shares`, `EBITDA`, or
+`revenue` fields. The conceptual shapes are:
 
 ```text
-ComparableEquityMultiplePeer {
-  identity: { companyId, ticker, exchange, name }
-  method: PE | PB
-  multiple: number
-  period: { kind: FY, label: FYyyyy, fiscalYear }
-  currency: CNY
-  asOf: current retrieval timestamp / current-run marker
-  pitStatus: CURRENT_VALUE_ONLY
-  sourceRefs: identity + market + financial + publication + comparability
-  comparabilityEvidence: peerCohortMembership + scaleProfile + one actual growth/profitability profile
+AutomaticComparablePeer {
+  identity
+  cohortMemberships[]
+  cohortFamilyCount
+  scaleProfile
+  growthProfile?
+  profitabilityProfile?
+  price
+  priceDate
+  fiscalYear
+  eps?
+  bvps?
+  publicationProof
+  pitStatus = CURRENT_VALUE_ONLY
+  sourceRefs[]
+}
+
+AutomaticComparableSubject {
+  identity
+  valuationDate
+  fiscalYear = selected D3-001 ValuationBasis.fiscalYear
+  eps?
+  bvps?
+  sourceRefs[]
+}
+
+AutomaticEquityCompsResult {
+  fiscalYear
+  acceptedPeers
+  rejectedPeers
+  peSummary?
+  pbSummary?
+  peImpliedPrice?
+  pbImpliedPrice?
+  sourceRefs
+  diagnostics
+  availability
 }
 ```
 
-The calculation input would also need the subject's existing D3-001 EPS/BVPS
-and price basis, rather than reacquiring target financial evidence. The exact
-TypeScript type is deliberately not frozen; the design is implementable with
-this narrow contract only after Sol approves the raw-parser and gate details.
+The deterministic automatic operation belongs in the existing
+`skills/comps_valuation/` Skill as a narrow additive PE/PB operation,
+conceptually `executeEquityMultipleComps(...)`. It does not call
+`executeCompsValuation()` with fake fields. `executeCompsValuation()` remains
+the unchanged caller-supplied legacy seam.
 
-The contract must remain additive:
+The automatic contract is additive and metric-specific:
 
 - existing caller-supplied `CompsValuationInput` remains valid;
-- legacy EV/Revenue, EV/EBITDA, and FCF callers are not migrated;
-- automatic v0.1 emits only PE/PB;
-- no generic `PeerDataEngine`, `PeerService`, or Knowledge peer graph is added.
+- legacy `executeCompsValuation()` behavior and EV/Revenue, EV/EBITDA, and FCF
+  callers remain unchanged;
+- automatic v0.1 emits only recomputed PE/PB;
+- no generic `PeerDataEngine`, `PeerService`, provider layer, or Knowledge peer
+  graph is added;
+- no fake debt, cash, net debt, shares, EBITDA, or revenue fields are required
+  or permitted.
 
 ## 14. PE and PB calculation proposals
 
@@ -772,7 +868,8 @@ peerPE = peerCurrentPrice / peerCommonFYAnnualEPS
 
 Required: positive finite price, positive finite annual EPS, common FY period,
 CNY units, current-mode timestamp, peer-cohort/scale/profile comparability
-evidence, and CNINFO publication proof.
+evidence, and CNINFO publication proof. At least three valid PE peers are
+required; fewer returns `INSUFFICIENT_VALID_PEERS`.
 
 The peer median is the deterministic selected multiple. The subject implied
 price is:
@@ -793,7 +890,8 @@ peerPB = peerCurrentPrice / peerCommonFYAnnualBVPS
 
 Required: positive finite price, positive finite annual BVPS, common FY period,
 CNY units, current-mode timestamp, peer-cohort/scale/profile comparability
-evidence, and CNINFO publication proof.
+evidence, and CNINFO publication proof. At least three valid PB peers are
+required; fewer returns `INSUFFICIENT_VALID_PEERS`.
 
 The subject implied price is:
 
@@ -816,8 +914,8 @@ caller input.comps supplied
 
 caller comps absent + asOf omitted
   -> attempt bounded automatic current peer resolver
-  -> build narrow PE/PB summary if all gates pass
-  -> expose existing comps_valuation crosscheck
+  -> run narrow deterministic PE/PB operation inside existing comps_valuation Skill
+  -> expose its pre-adapted result through the existing comps_valuation crosscheck
 
 caller comps absent + fixed asOf supplied
   -> AUTO_COMPS_HISTORICAL_UNAVAILABLE
@@ -832,19 +930,34 @@ ResearchService
   -> runValuation
   -> existing D3-001 target basis
   -> bounded current-only peer resolver
-  -> narrow PE/PB comparable input
-  -> deterministic peer median
-  -> existing execute/crosscheck path
+  -> AutomaticComparableSubject + AutomaticComparablePeer[]
+  -> executeEquityMultipleComps(...)
+  -> existing/minimally extended crosscheck seam
 ```
 
 This does not authorize a generic Company or Industry service, a new provider
 layer, or an Agent Runtime. The resolver remains a bounded Workflow-owned
 acquisition step using the existing D3-001 seams.
 
-`buildValuationCrosscheck()` should remain the integration seam. It should
-receive a compatible valuation method result or a narrow adapter result; its
-basis compatibility, disagreement diagnostics, and `automaticAveraging: false`
-behavior must not be redesigned.
+`buildValuationCrosscheck()` should remain the integration seam. It may receive
+the narrow automatic result through a minimal pre-adaptation of the selected
+method result; its basis compatibility, disagreement diagnostics, and
+`automaticAveraging: false` behavior must not be redesigned.
+
+Automatic crosscheck method selection is frozen to the existing Valuation
+assumption plan's `primaryMethod`:
+
+- `primaryMethod = PE` selects the automatic PE peer-median implied price when
+  PE has at least three valid peers;
+- `primaryMethod = PB` selects the automatic PB peer-median implied price when
+  PB has at least three valid peers;
+- any other primary method makes the automatic PE/PB crosscheck unavailable;
+- PE and PB are never averaged;
+- the automatic path never falls back to the alternate PE/PB method;
+- if the selected method is unavailable, the crosscheck remains unavailable.
+
+Caller-supplied `input.comps` always wins. The caller path and automatic path
+must not both populate the crosscheck.
 
 Automatic comps must remain a cross-check. It must not replace the selected
 primary scenario method or silently change investment conclusions.
@@ -859,13 +972,14 @@ unavailable.
 
 Therefore `601398` does not authorize a bank peer result. A future acceptance
 run must separately prove that the target and accepted bank peers pass the same
-identity, period, publication, metric, and comparability gates. A bank sector
-gate may be needed, but no bank-specific generic debt or EBITDA path belongs in
-D3-002.
+identity, period, publication, metric, and comparability gates. There is no
+bank-specific relaxation: the same source-consensus rule, actual profile
+requirement, minimum of three valid peers per metric, and current-only PIT rule
+apply. No bank-specific generic debt or EBITDA path belongs in D3-002.
 
 ## 17. Candidate and peer-count policy
 
-Proposed future defaults, pending Sol approval:
+The following automatic peer-count policy is frozen for the narrow contract:
 
 - minimum valid peers per metric: `3`;
 - maximum accepted peers per metric: `8`;
@@ -875,10 +989,9 @@ Proposed future defaults, pending Sol approval:
 - no dynamic lowering of the minimum;
 - PE and PB counts remain metric-specific.
 
-The supplemental probe shows more than three source candidates in each raw
-family, but it did not validate final accepted counts because normalized price
-and the future code-owned gates were not run. These remain design hypotheses,
-not accepted runtime behavior.
+The expensive validation cap is applied only after cheap identity,
+source-consensus, actual-profile, and scale gates. The final accepted peer set
+is capped at eight per metric. The minimum is never lowered dynamically.
 
 If independently valid sources disagree, the future resolver must preserve both
 observations and their provenance, emit a deterministic conflict diagnostic, and
@@ -887,10 +1000,16 @@ unaffected metric may remain usable only when its own evidence is independently
 complete and conflict-free. This applies to price, market cap, EPS, BVPS,
 peer-cohort membership, publication, profile, and identity observations.
 
-Automatic selection is not investment ranking: no best peer, winner, attractive
-PE, attractive PB, stock-performance, return, or momentum selection is allowed.
-The cap may be applied only after identity/cohort/scale/profile gates and source
-stability are established, using stable ticker ordering for bounded work.
+Before the expensive-validation cap, candidates are ordered deterministically by:
+
+1. descending `cohortFamilyCount`;
+2. ascending `abs(log(peerMarketCap / targetMarketCap))`;
+3. ascending canonical ticker.
+
+After validation, no more than eight valid peers are accepted per metric. This
+ordering is a work/comparability ordering only. It is never investment ranking:
+no best peer, winner, attractive PE, attractive PB, stock-performance, return,
+or momentum selection is allowed.
 
 ## 18. Future D0 requirements
 
@@ -925,10 +1044,13 @@ must use:
 - no caller-supplied comps input;
   - exact source-specific peer-cohort membership proof;
   - scale profile and at least one actual growth/profitability profile per accepted peer;
+- frozen source consensus: at least two families, including growth or DuPont;
 - at least three accepted peers for PE and/or PB;
-- common fiscal year across subject and accepted peers;
+- the subject's selected D3-001 fiscal year across subject and accepted peers;
 - separate market, financial, CNINFO, identity, and comparability source refs;
 - deterministic peer median and existing `comps_valuation` crosscheck;
+- crosscheck selection by the existing `primaryMethod`, with no PE/PB averaging
+  or alternate-method fallback;
 - no debt/cash/netDebt/shares/EBITDA acquisition;
 - fixed-asOf negative control returning `AUTO_COMPS_HISTORICAL_UNAVAILABLE`.
 
@@ -965,36 +1087,34 @@ source path is now feasible for a narrow additive PE/PB design:
 3. Representative candidates have common-FY EPS/BVPS rows and CNINFO FY2025
    publication proof through the existing D3-001 seams.
 4. A deliberately narrow contract can require peer-cohort membership, scale,
-   one actual growth/profitability profile, common-FY D3-001 evidence, current
+   one actual growth/profitability profile, subject-FY D3-001 evidence, current
    normalized price, and CNINFO publication proof.
 5. Direct comparison-endpoint PE/PB remains non-canonical because denominator,
    period, share-basis, and update semantics are not sufficiently established.
 6. The legacy contract remains too broad; debt, cash, net debt, and shares stay
    deferred, and the automatic path emits only recomputed PE/PB.
+7. The source-consensus gate, peer-count policy, candidate ordering, subject FY
+   anchor, current normalized-close price rule, legacy/automatic contract
+   boundary, and primary-method crosscheck rule are now frozen.
 
-The implementation decision is design-level only. Sol must approve the raw
-parser, source-specific cohort contract, no-frozen-round-number scale policy,
-minimum peer rule, and current-only PIT behavior before runtime work begins.
+The implementation decision is design-level only. Sol review is still required
+before runtime work begins, but no further design choice is left open in this
+document for the comparability gate or narrow PE/PB execution contract.
 Caller-supplied comps retain precedence, and fixed-`asOf` automatic comps remain
 unavailable.
 
-## 21. Open/blocking questions
+## 21. Remaining Sol/runtime questions
 
-- Can a governed runtime expose the dedicated `datacenter` comparison route
+These are implementation or deployment questions only; they do not reopen the
+frozen comparability or execution contract:
+
+- Can the governed runtime expose the dedicated `datacenter` comparison route
   through a thin Workflow-owned acquisition seam without adding a provider
   layer?
-- Should the narrow contract require one actual growth/economics profile, or
-  require two independent profile families when both are available?
-- What stable candidate cap should Sol approve for the source-ranked samples?
-- Should peer price use the D3-001 latest daily close or another current price
-  route, and how should the two source timestamps be compared?
-- Which fiscal-year intersection rule should be frozen when a peer lacks the
-  latest annual row or CNINFO publication proof?
-- Is a separate bank-sector comparability gate required for `601398`?
-- How should metric-specific peer summaries be represented without coupling
-  legacy EV fields to automatic PE/PB?
-- What exact D0 policies and acceptance labels should be added after live
-  transport and comparability are proven?
+- What exact D0 policies, source adapters, and acceptance labels should be
+  added when runtime implementation is separately authorized?
+- What transport and environment configuration is required for authenticated
+  live acceptance beyond this design/probe environment?
 
 ## 22. Changed files and validation
 
