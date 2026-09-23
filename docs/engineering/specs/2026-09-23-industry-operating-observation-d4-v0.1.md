@@ -5,7 +5,7 @@
 **Branch:** `codex/d4-001-industry-operating-observation-design`
 **Worktree:** `C:\Users\Administrator\Desktop\ResearchHub_Lite_worktrees\D4_001`
 **Date:** 2026-09-23
-**Status:** **DESIGN READY / SOURCE FEASIBILITY PROBED / SOL REVIEW PENDING**
+**Status:** **SOURCE FEASIBILITY CLOSED / SOL REVIEW PENDING**
 
 ## 1. Scope and non-goals
 
@@ -22,12 +22,12 @@ The D0 worktree remains outside this worktree and is not part of this change. It
 The evidence supports a small common observation contract because both representative industries have at least one repeatable, attributable operating metric with explicit value, unit, period, geography, publisher, and publication timing:
 
 - Lithium battery: MIIT recurring official industry pages provide production and product/material price observations, with repeated annual/YTD reporting and explicit publication timestamps.
-- Household air conditioners: NBS provides statutory production observations and publication-backed historical output; the China Household Electrical Appliances Association provides a quarterly production observation; Customs provides a statutory trade table surface, although the currently probed static table still requires header/HS validation before accepting an export-volume observation.
+- Household air conditioners: NBS provides statutory production observations; the China Household Electrical Appliances Association provides recurring production and GACC-sourced household-air-conditioner export-volume tables with explicit headers, units, periods, and publication dates.
 
 The contract must remain narrow. This is not evidence for a universal industrial data platform, a generic provider layer, daily breadth, a new taxonomy, or automatic numeric extraction from arbitrary prose. The first proven vocabulary is:
 
 - `PRODUCTION` — supported for NBS/MIIT/association observations when product scope and unit are explicit.
-- `EXPORT_VOLUME` — conditionally supported for Customs/association observations only after exact product/HS identity and table headers are proven. It is not accepted from an export-value-only source.
+- `TRADE` — freeze only with a specific metric key such as `air_conditioner.export_volume`; the proven household scope is the CHEAA label `家用空调器`, with the report identifying GACC as the data source. It is not accepted from an export-value-only source.
 - `PRICE` — supported for an explicitly scoped industry/material average price, but must not be mislabeled as futures, spot, or ASP.
 
 `SALES_VOLUME`, `SHIPMENTS`, `INVENTORY`, `CAPACITY`, `CAPACITY_UTILIZATION`, `OPERATING_RATE`, `IMPORT_VOLUME`, `ORDERS`, and `BACKLOG` remain probe-supported only in isolated or non-representative cases, or unsupported for the current representative acceptance path. They are not frozen as generally usable classes.
@@ -126,7 +126,7 @@ The requested candidate classes were evaluated as follows:
 | `PRICE` | Freeze narrowly | Industry/material average price is allowed only with explicit product, average method, unit, and period. It is not automatically spot, futures, or ASP. |
 | `ASP` | Not frozen | Requires explicit average selling price semantics and numerator/denominator scope. |
 | `IMPORT_VOLUME` | Conditional | Exact product/HS, unit, geography, period, and customs table headers required. |
-| `EXPORT_VOLUME` | Conditional | Same Customs identity requirements; export value is not export volume. |
+| `TRADE` / export volume | Freeze narrowly by metric key | Use `TRADE` with a product-specific key such as `air_conditioner.export_volume`; export value is not export volume. |
 | `ORDERS` | Not proven | Requires order definition and period. |
 | `BACKLOG` | Not proven | Requires explicit backlog stock definition and period-end date. |
 
@@ -186,7 +186,7 @@ The probe evaluated monthly, quarterly, annual, and daily/weekly availability:
 
 - `MONTHLY`: evidenced by NBS's major industrial product publication model and by association/CAAM monthly publication patterns, but the exact NBS interactive series endpoint was not isolated in this probe. Support is `PARTIAL` until the endpoint/table identifier is captured.
 - `QUARTERLY`: evidenced by the CHEAA Q1 2024 air-conditioner production observation and CAAM Q1 2025 reporting. Support is `PARTIAL` because these are article/report observations rather than a common structured API.
-- `ANNUAL`: evidenced by the NBS 2025 industrial product table and Customs annual static tables. Support is the strongest for production; trade identity still needs exact header/HS validation.
+- `ANNUAL`: evidenced by the NBS 2025 industrial product table and Customs annual static tables. Production and broad trade headers are proven; household trade scope is proven through the recurring CHEAA/GACC-backed table, while direct GACC HS-coded retrieval remains a future improvement.
 - `DAILY/WEEKLY`: not evidenced for representative industry operating metrics. Existing AKShare does not expose a commodity/futures/spot operation in this Industry boundary. Do not add daily breadth in D4.
 
 MIIT also exposes recurring YTD/H1 and Jan-to-month reporting. `YTD` is an aggregation qualifier, not a substitute for a monthly frequency. A YTD observation must not be treated as a standalone monthly point. A half-year report should retain its H1 period and source wording rather than being silently labeled quarterly or annual.
@@ -239,7 +239,9 @@ The table records live source evidence, not fixtures. `Usable` means usable for 
 |---|---|---|---|---:|---|---|---|---|---|---|---|
 | Household air conditioner | `PRODUCTION` | NBS, S0_STATUTORY | Official annual statistical PDF/table | 26,697.5 | 万台 | 2025-01-01–2025-12-31 / PERIOD | China national / `房间空气调节器` | 2026-03-02 report publication | Annual 2025; NBS explains monthly historical series exists. Publication PIT only; value-version unverified. | Direct HTTPS 200; PDF 1,734,666 bytes. | Yes for annual evidence-backed design; exact series endpoint still pending. |
 | Household air conditioner | `PRODUCTION` | China Household Electrical Appliances Association, S2_PROFESSIONAL | Official association HTML article | 6,878 | 万台 | 2024-Q1 / PERIOD | China national / air-conditioner category | 2024-05-24 | Q1 point; article-level history only; publication PIT only. | Direct HTTPS 200; HTML 33,620 bytes. | Partial; accepted as association evidence, not statutory replacement. |
-| Household air conditioner | candidate `EXPORT_VOLUME` | Customs, S0_STATUTORY | Official English static annual table | Row exposes `481`, `669,343`, `6,159`, `8,987,530`, `32.5`, `35.0` with unit label `10000N`; table header interpretation not proven in this probe. | `10000N` plus table-specific value fields | 2024 Jan–Dec table / likely monthly and cumulative columns, not frozen | China export table / `Air conditioners`; exact HS not frozen | Table page is public; publication timestamp not captured from the static page | Historical annual table; exact version/PIT and headers pending. | Direct HTTPS failed local certificate validation (`SSL_ERROR`); official page was available via web search/open index. | Partial only; do not emit observation until headers and HS identity are verified. |
+| Household air conditioner | `TRADE` / `air_conditioner.export_volume` | Customs, S0_STATUTORY | Official English static annual table | 6,159 | `10000N` | 2024-01-01–2024-12-31 / PERIOD; table also exposes Dec quantity 481 | China export table / exact source label `Air conditioners`; no HS code in this summary table, so do not relabel as household-only | 2025-01-23 | Header is explicit: `Commodity | Quantity Unit | 12 | 1to12 | Percentage Change` and paired `Quantity | Value`; publication PIT only; value-version unverified. | Direct HTTPS certificate validation failed (`SSL_ERROR`); official page/search exposed the table. | Yes for broad GACC `Air conditioners` trade evidence; not sufficient alone for household-only scope. |
+| Household air conditioner | `TRADE` / `air_conditioner.export_volume` | CHEAA publication, S2_PROFESSIONAL; data source stated as GACC | Official CHEAA PDF, recurring monthly table | 4,039,692 | 台 | 2024-09 / PERIOD; cumulative 66,841,194台 also shown | China national export / exact source label `家用空调器` | 2024-11-08 issue publication | Monthly table; same methodology also observed for 2023-09, 2024-05, 2024-11, 2024-12, and 2025-07. Publication PIT only; value-version unverified. | Direct HTTPS 200; PDF 6,045,707 bytes. | Yes as recurring household-specific S2/GACC-backed evidence; no HS code is supplied by the report. |
+| Household air conditioner | `TRADE` / `air_conditioner.export_volume` | CHEAA publication, S2_PROFESSIONAL; data source stated as GACC | Official CHEAA PDF, recurring monthly table | 5,133,858 | 台 | 2025-07 / PERIOD; cumulative 61,001,511台 also shown | China national export / exact source label `家用空调器` | 2025-09-08 issue publication | Same explicit headers and methodology as 2024-09; publication PIT only; value-version unverified. | Direct HTTPS 200; PDF 7,916,822 bytes. | Yes; establishes a second comparable monthly period for the same household export-volume metric. |
 | Lithium battery | `PRODUCTION` | MIIT Electronics Information Department, S1_OFFICIAL | Official MIIT HTML article | `>1,240` | GWh | 2026-01-01–2026-06-30 / H1/YTD | China national / total lithium-ion battery industry | 2026-09-15 14:43 | Recurring MIIT history: 2024 annual, 2024 Jan–Oct, 2025 Jan–Apr, 2026 H1; publication PIT only; value-version unverified. | Direct curl 403 access gate; web reader/search retrieved explicit article. Raw `HTTP_403_ACCESS_GATE`; not treated as source failure. | Yes as evidence-backed lower-bound observation, not exact authoritative point value. |
 | Lithium battery | `PRICE` | MIIT Electronics Information Department, S1_OFFICIAL | Same official HTML article | 16.3 / 15.3 | 万元/吨 | 2026 H1 article period / PERIOD | China national / battery-grade lithium carbonate and lithium hydroxide | 2026-09-15 14:43 | Same recurring article family; publication PIT only; value-version unverified. | Same MIIT access gate. | Partial/yes for explicitly scoped industry/material average price; not spot/futures/ASP. |
 | Lithium battery | `PRODUCTION` | MIIT, S1_OFFICIAL | Official HTML article | 1,170 | GWh | 2024-01-01–2024-12-31 / PERIOD | China national / total lithium-ion battery industry | 2025-02-27 15:06 | Annual comparison with later H1/YTD reports; publication PIT only. | Direct curl 403 access gate; indexed official page available. | Yes as evidence-backed annual observation. |
@@ -261,9 +263,17 @@ The source identity used by the table is preserved here as a direct URL/report i
 - Customs public portal: `https://online.customs.gov.cn/ocgb/`.
 - Customs 2024 major export commodities static table: `https://english.customs.gov.cn/Statics/0422513d-3184-40e0-a0f4-fec49e8f5d77.html`.
 - Customs 2023 major export commodities static table: `https://english.customs.gov.cn/Statics/504dd159-162d-488d-981d-621e1a781284.html`.
+- Customs monthly statistics index: `https://english.customs.gov.cn/Statistics/Statistics?ColumnId=1`.
+- Customs monthly bulletin index: `https://english.customs.gov.cn/statics/report/monthly.html`.
+- Customs 2025 December major export table: `https://english.customs.gov.cn/Statics/7367d7db-7fbd-42a5-8f75-442a7f989e64.html`.
+- Customs statistical explanatory notes: `https://english.customs.gov.cn/Statics/33529d38-1c0f-4e03-9d35-b34519f799f4.html`.
 - Customs HS4 index lead: `https://english.customs.gov.cn/Statics/40b4521b-9118-4de2-9142-c3c293a81a7d.html`.
 - CHEAA 2024 air-conditioner committee article: `https://www.cheaa.org/contents/329/11201.html`.
 - CHEAA companion article with the explicit Q1 production statement: `https://www.cheaa.org/contents/329/11203.html`.
+- CHEAA July 2024 household-appliance export table: `https://www.cheaa.org/upload/file/20240923/6386270329028309632265539.pdf`.
+- CHEAA September 2024 household-appliance export table: `https://www.cheaa.org/upload/file/20241210/6386944728591111044948028.pdf`.
+- CHEAA December 2024 household-appliance export table: `https://www.cheaa.org/upload/file/20250314/6387755356284024054836551.pdf`.
+- CHEAA July 2025 household-appliance export table: `https://www.cheaa.org/upload/file/20250928/6389465323530752764793788.pdf`.
 - CAAM 2025 March production/sales article: `https://www.caam.org.cn/chn/4/cate_32/con_5236697.html`.
 - Eastmoney bounded board endpoint used only as a transport/control probe: `https://push2.eastmoney.com/api/qt/clist/get` with the bounded query recorded in the probe command, not as operating evidence.
 
@@ -307,21 +317,34 @@ The direct local HTTP probe received HTTP 403 on the official MIIT pages, while 
 
 ### 5.4 Customs
 
-Customs is the correct statutory authority for import/export observations, but the probe did not prove a complete current machine-readable product series for either representative industry.
+Customs is the statutory authority for import/export observations. The probe now proves the physical-quantity field and its header in the official major-export table. The 2024 annual table is titled `Major Export Commodities in Quantity and Value,1-12.2024`, published 2025-01-23, and explicitly declares:
 
-The official Customs public portal was reachable at `https://online.customs.gov.cn/ocgb/`. The official English static table for major export commodities exposes an air-conditioner row with unit label `10000N` and multiple numeric columns for the 2024 Jan–Dec table. Because the table header mapping and exact column semantics were not captured in the live probe, the row is not yet accepted as an `EXPORT_VOLUME` observation. It is a usable source lead, not a parsed truth.
+```text
+Unit: US$1,000
+Commodity | Quantity Unit | 12 | 1to12 | Percentage Change
+           Quantity | Value | Quantity | Value | Quantity | Value
+Air conditioners | 10000N | 481 | 669,343 | 6,159 | 8,987,530 | 32.5 | 35.0
+```
+
+The annual GACC row therefore proves `6,159 × 10,000 units` for the `1to12` quantity field and separately exposes the export value. The exact source label is `Air conditioners`, not `household air conditioners`; because no HS code is supplied in this summary table, it must not be relabeled as household-only.
 
 The official HS4 index exposes `8415` for air conditioners and `8507` for accumulators. This does not freeze an exact lithium-battery HS taxonomy. Exact HS6/product mapping must remain source-specific and explicit. D4 does not build a taxonomy.
 
-The local direct TLS probe for the English static pages failed certificate validation (`SSL_ERROR`), while official search/open access returned the pages. This is a local transport fact. It must not be converted into `SOURCE_NOT_AVAILABLE`. The future live acceptance path needs a reproducible official retrieval method, exact headers, product/HS identity, units, period, geography, and publication/version behavior.
+The official Customs statistics index and monthly bulletin establish that the same `Major Exports by Quantity and Value` table is recurring monthly. The 2025 September official page, published 2025-10-08, exposes the same quantity/value headers and `1-9 Total` comparison structure; the 2025 December page, published 2026-01-08, exposes the same annual structure. The local direct TLS probe for the English static pages failed certificate validation (`SSL_ERROR`), while official search/open access returned the pages. This is a local transport fact and must not be converted into `SOURCE_NOT_AVAILABLE`.
+
+For household-specific scope and a directly retrievable recurring numeric series, the probe uses the official CHEAA monthly tables whose rows are explicitly labeled `家用空调器` and whose footer says `数据来源：海关总署` (data source: General Administration of Customs). The September 2024 and July 2025 reports expose the same headers, the physical unit `台`, monthly quantity, cumulative quantity, and cumulative quantity growth. This is a reproducible S2 publication path with GACC source attribution, and it proves the narrow household export-volume class without inventing an HS code that the report does not provide.
+
+The future live acceptance path should prefer a direct GACC retrieval when the TLS/query path is resolved, but it may retain the CHEAA/GACC-backed source with accurate S2 authority and origin/source attribution. It must preserve the broader direct GACC `Air conditioners` scope separately from the household-specific `家用空调器` scope.
 
 Customs export value must not be stored as `EXPORT_VOLUME`. MIIT's lithium export value is likewise document evidence, not a volume observation.
 
 ### 5.5 Association evidence
 
-The China Household Electrical Appliances Association is a high-quality professional association source for the air-conditioner control path. Its official 2024 air-conditioner committee article is dated 2024-05-24 and states that 2024 Q1 air-conditioner production reached 68.78 million units and grew by 16.5% year over year. A second official association page reproduces the same Q1 production and describes retail-volume/retail-value context.
+The China Household Electrical Appliances Association is a high-quality professional association source for the air-conditioner path. Its official 2024 air-conditioner committee article is dated 2024-05-24 and states that 2024 Q1 air-conditioner production reached 68.78 million units and grew by 16.5% year over year. A second official association page reproduces the same Q1 production and describes retail-volume/retail-value context.
 
-This is a clear association observation with a professional, not statutory, authority. The article does not expose a machine-readable series or a complete raw-source lineage beyond its association information department analysis. It is suitable for `EVIDENCE_BACKED_NUMERIC` and conflict/corroboration testing, not as a replacement for NBS statutory output.
+The association's official magazine also publishes a recurring monthly export table. The September 2024 issue, published 2024-11-08, reports `家用空调器` monthly export quantity `4,039,692 台`, cumulative quantity `66,841,194 台`, and cumulative quantity YoY `26.66%`; the July 2025 issue, published 2025-09-08, reports `5,133,858 台`, cumulative quantity `61,001,511 台`, and cumulative quantity YoY `6.05%`. Both tables explicitly separate quantity from dollar amount and state that the data source is GACC. Additional same-method periods were found for 2023-09, 2024-05, 2024-11, and 2024-12.
+
+This is a clear S2 professional observation with an explicit household product label, physical unit, recurring periods, publication dates, and GACC source attribution. It is accepted as `TRADE` with `metricKey=air_conditioner.export_volume`, determinism `EVIDENCE_BACKED_NUMERIC`, and `PUBLICATION_PIT_ONLY` / `VALUE_VERSION_UNVERIFIED`. It is not promoted to S0 statutory authority and does not claim an HS code that the report does not expose.
 
 CAAM was also probed as a control association. Its official 2025 March article provides monthly and Q1 automobile production/sales figures. It is not a representative lithium or air-conditioner source and must not be used to inflate D4 support claims.
 
@@ -344,8 +367,8 @@ No AKShare dependency or operation is added in D4. If price becomes a required l
 |---|---|---|---|---|---|---|
 | NBS | S0_STATUTORY | Industrial product production; manufacturing PMI control | Official portal, release pages, PDF/table | Monthly capability explained; annual table proven; history available in portal | Interactive table identifier/schema and revision behavior not captured | Narrow official-statistics operation; strong candidate for production |
 | MIIT | S1_OFFICIAL | Lithium output, segment output, material output, explicitly scoped average prices; broader electronics/household-appliance releases | Official HTML, sometimes PDF/prose | Recurring annual/YTD/H1 pages with explicit publication dates | HTML prose; lower-bound qualifiers; local direct 403; mixed enterprise/association methodology | Narrow evidence-backed MIIT operation, not generic API parsing |
-| Customs | S0_STATUTORY | Official air-conditioner trade table lead; HS4 index | Official portal/static table | Annual static table visible; exact publication/version not captured | Headers, exact HS/product mapping, current query/reproducibility, local SSL | Narrow exact-HS trade operation only after table contract is proven |
-| China Household Electrical Appliances Association | S2_PROFESSIONAL | Air-conditioner Q1 production; retail context | Official HTML article | Article date explicit; recurrence visible but no structured series | Professional methodology and raw-source lineage need preservation | Evidence-backed association fallback/cross-check |
+| Customs | S0_STATUTORY | Physical quantity/value headers and broad `Air conditioners` annual trade row; HS4 index | Official portal/static table and monthly bulletin index | 2024 annual row published 2025-01-23; recurring monthly/annual table family; value-version unverified | Local TLS, direct query/session path, and exact household HS mapping remain unresolved | Broad S0 trade evidence; direct GACC runtime contract still needs a bounded transport task |
+| China Household Electrical Appliances Association | S2_PROFESSIONAL; data source GACC | Air-conditioner Q1 production plus recurring household-air-conditioner export quantity | Official HTML and directly retrievable PDFs | 2023-09 through 2025-07 comparable monthly tables; issue publication dates explicit | No HS code in the household table; preserve S2 origin and GACC data-source attribution | Proven narrow household `TRADE`/`air_conditioner.export_volume` fallback |
 | CAAM control | S2_PROFESSIONAL | Automobile monthly/Q1 production and sales | Official HTML article | Recurring article pages; local TLS issue | Not representative for D4 industries | Control only |
 | Existing AKShare | S3 wrapper/host, underlying source varies | Industry board snapshot and market/index operations | Existing in-repo wrapper boundary | No operating-series evidence in current interface | No commodity/futures/spot operation; wrapper/source distinction | Do not expand without a new scoped task |
 
@@ -389,7 +412,7 @@ Examples of acceptable narrow identities:
 - `room_air_conditioner.production` + product label `房间空气调节器` + unit `万台`;
 - `lithium_battery.total_output` + product label `锂离子电池` + unit `GWh`;
 - `lithium_battery.material_average_price` + `battery-grade lithium carbonate` + unit `万元/吨`;
-- `air_conditioner.export_volume` only after exact Customs headers and HS/product mapping are proven.
+- `air_conditioner.export_volume` for the explicit `家用空调器` source label, with CHEAA/GACC provenance retained; a direct GACC HS-coded contract remains a separate improvement.
 
 `all lithium battery`, `power`, `storage`, and `consumer` are different scopes. A power-battery observation must not be merged into total lithium-battery output. Domestic production, global production, domestic sales, and exports are different geographies/scope combinations.
 
@@ -456,17 +479,17 @@ The lithium path is `OPERATING_OBSERVATION_READY` for a narrow evidence-backed s
 
 Thus the live acceptance result should be recorded as **PARTIAL**, not as a complete lithium operating-series capability.
 
-### Household air conditioner: PARTIAL / production-ready, trade pending
+### Household air conditioner: AIR_CONDITIONER_SECOND_CLASS_PROVEN
 
-The air-conditioner path is `OPERATING_OBSERVATION_READY` for annual production evidence and `PARTIAL` for a broader operating series:
+The air-conditioner path now has two proven recurring metric classes for the narrow contract:
 
 - `PRODUCTION`: supported by NBS 2025 annual output with explicit unit and period; monthly NBS capability is documented but exact table/API identity remains to be captured.
 - association production: supported as S2 cross-check for 2024 Q1, with explicit date and unit.
-- `EXPORT_VOLUME`: Customs static row is promising but not accepted until headers, exact product/HS mapping, and publication/version semantics are verified.
+- `TRADE` / `air_conditioner.export_volume`: supported for the exact CHEAA report label `家用空调器`, with monthly quantity in `台`, explicit quantity/value headers, two comparable periods (2024-09 and 2025-07), publication dates, direct PDF retrieval, and explicit GACC data-source attribution. The direct GACC annual `Air conditioners` row independently proves the statutory quantity/value header and broad trade class, but is not relabeled as household-only.
 - retail sales/shipment data: association reports distinguish retail context from production, but no common absolute sales series is frozen.
 - capacity/utilization/inventory/backlog: not proven.
 
-Thus the live acceptance result should be recorded as **PARTIAL**, with a strong annual production path and a pending exact trade path.
+Thus the air-conditioner result is **AIR_CONDITIONER_SECOND_CLASS_PROVEN**. The source is `EVIDENCE_BACKED_NUMERIC`, `S2_PROFESSIONAL` for the recurring household table, with `PUBLICATION_PIT_ONLY` and `VALUE_VERSION_UNVERIFIED`. Runtime implementation remains unauthorized pending Sol review.
 
 ### Banking control
 
@@ -504,10 +527,10 @@ The first runtime implementation should be accepted only through the normal Indu
 ### Air-conditioner acceptance
 
 - Run one normal Industry research request for a canonical household-air-conditioner target.
-- Require one accepted NBS `PRODUCTION` observation and, if the Customs contract is complete by then, one accepted `EXPORT_VOLUME` observation.
+- Require one accepted NBS `PRODUCTION` observation and one accepted `TRADE` observation with `metricKey=air_conditioner.export_volume` for the explicit `家用空调器` scope.
 - Require the CHEAA Q1 observation to remain S2 professional evidence and not override NBS without a diagnosed conflict/corroboration decision.
 - Confirm exact product labels and units remain visible.
-- Confirm Customs ambiguity fails closed rather than becoming a synthetic export volume.
+- Confirm the direct GACC broad `Air conditioners` row is not silently relabeled as household air conditioners, and that the CHEAA/GACC-backed household table retains its S2 authority and source-method provenance.
 - Confirm the report distinguishes production, trade, retail sales, and shipment terminology.
 
 ### Cross-cutting acceptance
@@ -524,7 +547,7 @@ The first runtime implementation should be accepted only through the normal Indu
 
 - Runtime `OperatingObservation` TypeScript contracts and validators.
 - Exact NBS machine-readable table identifiers and revision/version probe.
-- Exact Customs query endpoint/session behavior, table headers, HS6 mapping, and current trade-series acceptance.
+- Exact direct GACC query endpoint/session behavior, HS-coded household mapping, and direct S0 runtime retrieval; the narrow household trade class is already proven through recurring CHEAA/GACC-backed tables.
 - MIIT HTML parser and lower-bound/qualifier representation.
 - Association source normalization and raw-source lineage rules.
 - Commodity/futures/spot price integration.
@@ -533,100 +556,102 @@ The first runtime implementation should be accepted only through the normal Indu
 - Any new generic provider abstraction, Agent Runtime, or direct Knowledge mutation route.
 - Bank-specific operating metrics.
 
-## 13. D4-001 DESIGN + SOURCE PROBE REPORT
+## 13. D4-001-FIX-001 REPORT
 
-**Baseline**
+**Status:** `SOURCE FEASIBILITY CLOSED / SOL REVIEW PENDING`
 
-`main == origin/main == 2b9ddac3cf68432177ee2c6210a466885cf53706`.
+**Baseline:**
 
-**Architecture**
+- required HEAD: `444e65f1f176f04f9c9fdd7e2a22102beee7c4de`
+- starting HEAD: `444e65f1f176f04f9c9fdd7e2a22102beee7c4de`
+- origin/main: `2b9ddac3cf68432177ee2c6210a466885cf53706`
 
-Existing Workflow owns deterministic control and routing; Industry Skill owns semantic methodology; acquisition Plugins own external source integration; the Knowledge Production Gateway remains the only canonical mutation path. No new runtime layer is required.
+**Current proven classes:**
 
-**Observation model**
+- lithium: `PRODUCTION`, `PRICE`
+- air conditioner: `PRODUCTION`, `TRADE` with `metricKey=air_conditioner.export_volume`
 
-Use the narrow conceptual contract in Section 4.2. Freeze only `PRODUCTION`, conditional `EXPORT_VOLUME`, and narrow `PRICE`. Preserve original unit/value, period, aggregation, geography, product scope, publisher, retrieval provider, source authority, determinism, PIT, qualifiers, and source references.
+**Customs probe:**
 
-**Source governance**
+- official source: General Administration of Customs of the People's Republic of China, official English statistics; recurring major-export quantity/value tables.
+- exact table/report: `Major Export Commodities in Quantity and Value,1-12.2024`, published 2025-01-23; recurring monthly bulletin family also exposed through the official statistics index.
+- exact commodity: direct GACC table label `Air conditioners`; household-specific recurring report label `家用空调器`.
+- HS code: no HS code is supplied in the accepted summary rows; do not invent one or relabel broad GACC `Air conditioners` as household-only. HS4 `8415` remains a broad lead, not the frozen household identity.
+- field/header: `Commodity | Quantity Unit | 12 | 1to12 | Percentage Change`, with paired `Quantity | Value` fields. CHEAA household tables use `产品名称 | 当月数量（台） | 累计数量（台） | 数量累计同比增长（%） | 当月金额（美元） | 累计金额（美元） | 金额累计同比增长（%）`.
+- quantity/value/index: physical quantity is explicit and separate from dollar value; percentage fields are YoY comparison fields, not quantity values.
+- numeric value: direct GACC annual broad row `1to12 quantity = 6,159` in `10000N`; household rows `4,039,692台` for 2024-09 and `5,133,858台` for 2025-07.
+- unit: direct GACC `10000N`; household recurring table `台`.
+- period: direct GACC 2024-01-01 through 2024-12-31; household recurring periods 2024-09 and 2025-07, with cumulative fields retained separately.
+- aggregation: `PERIOD` for monthly/annual observations; cumulative fields are source-reported cumulative/YTD values and are not converted to monthly values.
+- geography: China national exports.
+- publishedAt: direct GACC annual table 2025-01-23; CHEAA issue publication 2024-11-08 for the 2024-09 row and 2025-09-08 for the 2025-07 row.
+- retrieval: direct stable public CHEAA PDF URLs returned HTTP 200; official GACC pages/search/index exposed the exact statutory headers and annual row. The local direct GACC HTTPS path failed certificate validation (`SSL_ERROR`), so the accepted household recurring path retains CHEAA as retrieval provider and GACC as stated data source.
+- recurring periods: same CHEAA/GACC-backed methodology observed for 2023-09, 2024-05, 2024-09, 2024-11, 2024-12, and 2025-07; at least two comparable monthly periods are proven.
+- authentication/session: no authentication or cookie required for the accepted CHEAA PDF retrieval; direct GACC session/query behavior remains unverified.
+- transport: CHEAA PDFs HTTP 200; direct GACC English static pages local `SSL_ERROR`; official web/index access returned source content.
+- usable: `YES` for narrow S2/GACC-backed household `TRADE`/`air_conditioner.export_volume`; direct S0 GACC HS-coded runtime path remains a future transport/mapping improvement.
 
-Prefer NBS/Customs S0 and MIIT S1 for primary evidence; use CHEAA/CAAM S2 as accurately labeled corroboration/fallback; do not treat AKShare as publisher; preserve raw transport diagnostics; do not average conflicts.
+**Alternative probe if Customs volume failed:**
 
-**NBS**
+- source: not required; the exact recurring household export-volume class was proven through CHEAA reports explicitly sourced to GACC.
+- metric class: `TRADE` / `air_conditioner.export_volume`.
+- reason evaluated: the direct GACC page transport was locally certificate-blocked and the broad official summary row did not expose household HS mapping, so the recurring S2 publication was used with authority and source-method provenance preserved.
+- usable: `YES`, as `EVIDENCE_BACKED_NUMERIC`, not as an S0 HS-coded claim.
 
-NBS directly proves annual room-air-conditioner production (`26,697.5 万台` for 2025) and documents a monthly product-output publication/time-series path. The exact interactive table/API identity remains a future probe.
+**Air-conditioner result:**
 
-**MIIT**
+- `PRODUCTION`: proven through NBS annual output and CHEAA production cross-check.
+- second metric class: `TRADE`.
+- second class proven: `YES` — `air_conditioner.export_volume`.
+- source: CHEAA official recurring PDFs, with explicit `家用空调器` product label and `数据来源：海关总署`; direct GACC annual table is corroborating statutory evidence for the broader `Air conditioners` label.
+- recurring: `YES` — monthly tables with 2023-09 through 2025-07 examples, including 2024-09 and 2025-07 numeric points.
+- PIT quality: `PUBLICATION_PIT_ONLY`; `VALUE_VERSION_UNVERIFIED`.
 
-Official recurring HTML pages prove evidence-backed lithium output and explicitly scoped material average prices. H1 2026 reports `>1,240 GWh` total output and average prices of `16.3` and `15.3 万元/吨` for battery-grade lithium carbonate/hydroxide. The page's mixed methodology and lower-bound language must be preserved.
+**Implementation-ready gate:**
 
-**Customs**
+- lithium >=2: `YES` — `PRODUCTION` + `PRICE`.
+- air conditioner >=2: `YES` — `PRODUCTION` + `TRADE/air_conditioner.export_volume`.
+- original threshold lowered: `NO`.
 
-Official portal/static tables are reachable as source leads. Air-conditioner trade rows and HS4 references were observed, but exact headers/product-HS identity/current reproducibility are not yet sufficient for an accepted `EXPORT_VOLUME` observation.
+**Observation vocabulary:**
 
-**Association**
+- `TRADE`: retained as the narrow class for trade observations; do not freeze a universal `EXPORT_VOLUME` top-level class without product-specific scope.
+- `metricKey`: `air_conditioner.export_volume`.
+- source scope retained: direct GACC broad `Air conditioners` remains distinct from CHEAA/GACC-backed `家用空调器`; original units, monthly/annual periods, cumulative fields, publication dates, S2 authority, GACC origin, and transport provider remain visible.
 
-CHEAA official article dated 2024-05-24 reports 2024 Q1 air-conditioner production of `6,878 万台`, up 16.5%. It is S2 professional evidence, not statutory truth.
+**Final D4 decision:**
 
-**Price**
+- A / PARTIAL: **A. IMPLEMENTABLE_WITH_NARROW_OBSERVATION_CONTRACT**, with source feasibility closed for the two-class gate but runtime implementation still awaiting Sol review/authorization.
+- exact justification: lithium and household air conditioners each have two recurring, attributable metric classes. The common contract remains narrow; the household trade class is accepted as evidence-backed S2/GACC-sourced data, while direct GACC HS-coded transport is not overclaimed.
 
-The current AKShare Industry boundary has no commodity/futures/spot operation. MIIT material average prices are usable only as explicitly scoped evidence-backed `PRICE` observations; no market-price path is added.
+**Future live acceptance:**
 
-**Lithium outcome**
+- lithium required classes: `PRODUCTION` + `PRICE`.
+- air-conditioner required classes: `PRODUCTION` + `TRADE/air_conditioner.export_volume` for `家用空调器`.
 
-`PARTIAL`: production and narrow material price evidence are ready for design; export volume, monthly history, revision/value-version PIT, inventory, and capacity are not currently proven.
+**Changed files:**
 
-**Air conditioner outcome**
+- `docs/engineering/specs/2026-09-23-industry-operating-observation-d4-v0.1.md`
 
-`PARTIAL`: annual production is ready for design and the association provides a quarterly cross-check; Customs export volume and exact monthly machine-readable NBS retrieval remain pending.
+**Validation:**
 
-**Bank control**
+- diff check: required `git diff --check` to be run after this documentation update.
+- runtime files changed: `NO`.
+- temporary files removed: `YES`; no temporary probe files were created.
 
-Negative control only. No manufacturing observation vocabulary is forced onto banking.
+**Git:**
 
-**Mapping**
+- commit: pending this FIX-001 documentation amendment.
+- remote branch: `origin/codex/d4-001-industry-operating-observation-design`.
+- local == remote: to be verified after push.
+- worktree clean: to be verified after commit.
 
-Reuse existing canonical industry mapping. Do not add an IndustryIdRegistry, ontology, or taxonomy framework. Keep metric keys stable and narrow and preserve product/segment identity.
+**D4 runtime implementation started:**
 
-**Integration hypothesis**
+- no.
 
-Module-driven Workflow acquisition requests narrow observation kinds; source operations remain under the existing acquisition boundary; accepted structured observations become attributable Evidence; the Skill reasons over them; reports show provenance and explicit partial/unavailable states; Knowledge remains Gateway/Writer controlled.
+**Notes for Sol:**
 
-**Calculations**
-
-Future deterministic calculations may include comparable-period YoY/MoM, rolling direction, inventory delta, price delta, and aligned production-versus-sales spread. No calculation is implemented in D4; no missing absolute is reverse-engineered.
-
-**Quality/failure**
-
-Use `AVAILABLE`, `PARTIAL`, `UNAVAILABLE`, `TRANSPORT_UNAVAILABLE`, `SCOPE_UNSUPPORTED`, and `PIT_UNVERIFIED`. Preserve the required transport diagnostics, plus raw HTTP statuses when they do not map safely. Distinguish zero, not reported, not applicable, source unavailable, transport unavailable, scope unsupported, and PIT unverified.
-
-**Architecture decision**
-
-**A. IMPLEMENTABLE_WITH_NARROW_OBSERVATION_CONTRACT.** Two representative industries share enough truth/provenance/period/unit/scope semantics for a small common contract, while source-specific interpretation remains narrow. This decision is not a claim that all candidate classes or frequencies are currently available.
-
-**Future live acceptance**
-
-Run one normal lithium Industry research request and one normal air-conditioner Industry research request without injected observations. Require the accepted source-bound observations and fail-closed semantics in Section 11. Confirm report/module lineage and canonical Gateway/Writer behavior.
-
-**Deferred**
-
-All runtime contracts, source clients/parsers, table/HS resolution, price integration, persistence, Knowledge expansion, daily breadth, and implementation work listed in Section 12.
-
-**Changed files**
-
-Exactly one design/probe document: `docs/engineering/specs/2026-09-23-industry-operating-observation-d4-v0.1.md`.
-
-**Validation**
-
-The required validation is `git diff --check`, `git diff --name-only origin/main...HEAD`, and `git status --short`. No runtime tests are required for this design-only task. Before commit, status must show only this document.
-
-**Git**
-
-Branch: `codex/d4-001-industry-operating-observation-design`. Suggested commit: `docs: design and probe industry operating observation closure`. Push to `origin/codex/d4-001-industry-operating-observation-design`. Keep this worktree for Sol review; do not merge to main.
-
-**D4 runtime implementation started**
-
-No.
-
-**Notes for Sol**
-
-The browser-harness executable was unavailable because the Python module was not installed. Read-only web search/open access and direct HTTPS probes were used instead. Direct transport differences are recorded: NBS and CHEAA returned HTTP 200; MIIT returned HTTP 403 from local curl while the official HTML was readable through web access; Customs English static pages encountered local certificate validation failure; CAAM encountered a local TLS handshake failure; Eastmoney returned HTTP 200 JSON. These are transport observations, not permission to broaden source scope. The next approval gate is Sol review of the narrow contract and whether the evidence-backed A decision should proceed to a separately authorized runtime task.
+- The second air-conditioner class is now proven without changing the accepted architecture. It is a narrow `TRADE` observation with `metricKey=air_conditioner.export_volume`, explicit household product label, physical quantity, recurring monthly periods, publication dates, direct PDF retrieval, and GACC data-source attribution.
+- The direct GACC summary table proves quantity/value headers and a broad annual row but does not expose an HS code or household-only scope. The document keeps this limitation explicit and does not promote it to an HS-coded household claim.
+- The browser-harness executable remained unavailable; live evidence was obtained through official web search/open results and direct read-only HTTPS checks. No runtime implementation was started.
