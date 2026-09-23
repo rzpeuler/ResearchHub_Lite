@@ -3,8 +3,8 @@
 - Task: `RHL-D3-002-DESIGN`
 - Status: `DESIGN ACCEPTED / RUNTIME IMPLEMENTATION NOT STARTED`
 - Checked: `2026-09-23`
-- Branch: `codex/d3-002-comparable-input-design`
-- Worktree: `C:\Users\Administrator\Desktop\ResearchHub_Lite_worktrees\D3_002`
+- Branch: `codex/d3-002-period-alignment-fix`
+- Worktree: `C:\Users\Administrator\Desktop\ResearchHub_Lite_worktrees\D3_002_PERIOD_FIX`
 - Accepted design chain: `6a7bcde` → `fc19a155` → `7e7aaa75` → `c24a0c249458965a1dcc085c0a4e7f8dc002624a`
 - Existing D0 worktree: preserved and untouched
 
@@ -46,14 +46,19 @@ This is a design-feasibility result, not runtime authorization. The narrow
 future direction is a bounded current-only resolver that preserves dedicated
 EastMoney cohort provenance, requires structured scale plus at least one actual
 growth/economics profile, reuses D3-001 price/EPS/BVPS/publication evidence,
-and computes peer PE/PB from price and common-period EPS/BVPS. No runtime
-D3-002 implementation is authorized by this document.
+and computes peer PE/PB from current price and the common D3-001 multiple-basis
+FY EPS/BVPS. The resulting peer median is applied to the existing deterministic
+target-year `baseScenario.forecastMetric`; it does not independently forecast
+the target. No runtime D3-002 implementation is authorized by this document.
 
 The final hardening state is:
 
 - `SOURCE FEASIBILITY = CLOSED`;
 - `COMPARABILITY GATE = FROZEN`;
+- `MULTIPLE BASIS PERIOD = FROZEN`;
+- `TARGET VALUATION PERIOD = FROZEN`;
 - `NARROW EXECUTION CONTRACT = FROZEN`;
+- `CROSSCHECK PERIOD ALIGNMENT = FROZEN`;
 - `RUNTIME IMPLEMENTATION = NOT STARTED`.
 
 ## 2. Forcing function and hard scope
@@ -159,7 +164,7 @@ claim that all existing comparability dimensions are proven.
 
 | Dimension | Option A — legacy full financials | Option B — direct observed PE/PB | Option C — recomputed per-share PE/PB |
 |---|---|---|---|
-| New data required | Market cap, debt, cash, revenue/EBITDA or net income/book equity, and shares as applicable | Current price, source PE/PB, and hidden source denominator semantics | Current price plus common-period EPS/BVPS and publication evidence |
+| New data required | Market cap, debt, cash, revenue/EBITDA or net income/book equity, and shares as applicable | Current price, source PE/PB, and hidden source denominator semantics | Current price plus multiple-basis-FY EPS/BVPS and publication evidence |
 | Debt/cash/shares required | Yes; reopens deferred scope | Not necessarily, but source may embed an unknown share basis | No for peer multiples or subject implied price |
 | Denominator semantics | Explicit only if all full financials share one basis | Not established for `市盈率-动态`; PB basis also unproven | Explicit annual EPS/BVPS period and units |
 | Source authority | EastMoney numeric would remain S3; CNINFO still needed for publication | EastMoney S3 only unless separately crosswalked | EastMoney numeric S3, AKShare retrieval, CNINFO S0 publication proof |
@@ -191,17 +196,19 @@ BVPS as canonical peer multiples.
 The mathematically coherent future shape is:
 
 ```text
-peer PE = peer current price / peer common-period annual EPS
-peer PB = peer current price / peer common-period annual BVPS
+peer PE = peer current price / peer multiple-basis-FY annual EPS
+peer PB = peer current price / peer multiple-basis-FY annual BVPS
 
-subject PE implied price = subject common-period EPS × selected peer PE
-subject PB implied price = subject common-period BVPS × selected peer PB
+subject PE implied price = baseScenario.forecastMetric × selected peer PE
+subject PB implied price = baseScenario.forecastMetric × selected peer PB
 ```
 
 This avoids debt, cash, and diluted shares, but only if period, unit, currency,
 price timing, and publication/value-version semantics are explicit. The
 supplemental probe establishes a bounded source candidate path and a narrow
-comparability gate; runtime authorization still requires Sol review.
+comparability gate. The peer denominator remains the D3-001 basis FY, while
+the target input is the existing deterministic scenario's target-FY forecast
+metric; runtime authorization still requires Sol review.
 
 ## 6. Mathematical equivalence and limitation
 
@@ -529,7 +536,7 @@ exact target identity
    -> current market-cap availability
    -> scale profile, without a frozen round-number band
   -> section-17 deterministic ordering and cap of 12 expensive candidates
-  -> common-period EPS/BVPS and publication checks
+  -> multiple-basis-FY EPS/BVPS and publication checks
   -> deterministic comparability gate
   -> 3–8 accepted metric-specific peers
 ```
@@ -556,7 +563,7 @@ exact target identity
   -> exclude target and aggregate rows
   -> targeted raw scale profile for each bounded candidate
   -> require at least one raw actual growth or profitability/economics profile
-  -> subject-FY D3-001 EPS/BVPS and normalized current price
+  -> multiple-basis-FY D3-001 EPS/BVPS and normalized current price
   -> CNINFO publication proof
   -> deterministic PE/PB recomputation and existing crosscheck
 ```
@@ -664,11 +671,11 @@ scale comparison query; all scale rows reported `REPORT_TYPE=2026年中报`.
 | `601398` | `601128 常熟银行` | valuation + growth + DuPont; growth 8.29/9.67/15.11; ROE 13.96 | 0.0079 | 1.27 / 9.46 CNY | found | candidate evidence complete except normalized price |
 | `601398` | `601665 齐鲁银行` | valuation + growth; 3Y EPS/revenue/net-profit growth 11.06/5.89/16.31 | 0.0145 | 1.00 / 7.96 CNY | found | candidate evidence complete except normalized price |
 
-The sample proves common-FY EPS/BVPS and CNINFO feasibility for representative
-candidate rows, but it does not prove current normalized price feasibility for
-every row: only a subset of the historical-price calls returned rows in the
-normal environment. That remains a runtime acquisition gate, not a reason to
-consume direct comparison-endpoint PE/PB.
+The sample proves common multiple-basis-FY EPS/BVPS and CNINFO feasibility for
+representative candidate rows, but it does not prove current normalized price
+feasibility for every row: only a subset of the historical-price calls
+returned rows in the normal environment. That remains a runtime acquisition
+gate, not a reason to consume direct comparison-endpoint PE/PB.
 
 ## 10. Comparability design
 
@@ -683,7 +690,8 @@ code-own:
   temporally separate;
 - raw 3Y actual growth fields anchored to `REPORT_DATE`;
 - raw 3Y-average ROE, net margin, and asset-turnover observations;
-- common annual reporting period and currency after D3-001 normalization.
+- common multiple-basis annual reporting period and currency after D3-001
+  normalization.
 
 The probe still did not establish deterministic product/service, customer,
 business-model, capital-intensity, or geography evidence. CNINFO text may
@@ -701,8 +709,8 @@ A future peer must have, independently:
 - current market evidence for price and a scale profile;
 - at least one raw actual growth or profitability/economics profile, with the
   observation retained separately from the fact that the profile exists;
-- common-period annual EPS and/or BVPS evidence;
-- CNINFO annual-publication proof for the same fiscal year;
+- multiple-basis-FY annual EPS and/or BVPS evidence;
+- CNINFO annual-publication proof for that same multiple-basis FY;
 - explicit currency, units, retrieval time, and current-only PIT status;
 - a non-empty, code-owned comparability evidence set.
 
@@ -730,8 +738,9 @@ than globally rejecting a peer because one metric is unavailable.
 
 Automatic peer resolution is permitted only when `asOf` is omitted. It may use
 current source-specific peer cohorts and current scale/profile observations,
-but the subject fiscal-year anchor is fixed by the already-selected D3-001
-`ValuationBasis.fiscalYear`.
+but it must preserve both the already-selected D3-001 multiple-basis fiscal
+year and the existing Valuation target fiscal year. These are distinct period
+concepts.
 
 When `asOf` is explicitly supplied, automatic peer resolution returns
 `AUTO_COMPS_HISTORICAL_UNAVAILABLE` unless versioned industry membership,
@@ -741,15 +750,41 @@ board constituents must never be projected backward into a historical universe.
 Caller-supplied historical `CompsValuationInput` remains governed by its
 existing contract and gates.
 
-### 11.2 Subject fiscal-year anchor
+### 11.2 Frozen two-period model
 
-The automatic path must use the subject's already-selected D3-001
-`ValuationBasis.fiscalYear`. It must not recompute a latest intersection and
-must not automatically backshift the subject or peer period. Every accepted
-peer must provide EPS and/or BVPS for that exact subject FY plus CNINFO
-publication proof for an annual report covering the same FY. A peer with a
-different year, missing same-FY metric, or missing same-FY publication proof is
-rejected for the affected metric (and cannot enter that metric's median).
+The automatic contract carries two explicit periods and must never collapse
+them into one ambiguous `fiscalYear`:
+
+```text
+multipleBasisFiscalYear
+  = D3-001 ValuationBasis.basisFiscalYear
+
+targetFiscalYear
+  = ValuationAssumptionPlan.targetFiscalYear
+```
+
+`multipleBasisFiscalYear` is the period for peer denominator evidence. Every
+accepted peer must provide EPS and/or BVPS for exactly that subject D3-001
+basis FY, plus CNINFO publication proof for an annual report covering the same
+FY. The peer multiples are therefore:
+
+```text
+peer price / peer EPS[multipleBasisFiscalYear]
+peer price / peer BVPS[multipleBasisFiscalYear]
+```
+
+`targetFiscalYear` is the period of the target price compared with
+`scenario_base`. The automatic target price consumes the existing deterministic
+`baseScenario.forecastMetric` for that target FY. It does not use the subject
+basis-FY EPS/BVPS as the target price input and it does not independently
+forecast the target. For example, the peer multiple basis may be FY2025 while
+the existing scenario target price is for FY2026.
+
+There is no latest-period intersection and no automatic FY backshift. A peer
+whose basis FY differs from `multipleBasisFiscalYear`, lacks the same-FY metric,
+or lacks same-FY CNINFO publication proof is rejected for the affected metric.
+The target scenario is unavailable if `baseScenario.targetFiscalYear` differs
+from `plan.targetFiscalYear`.
 
 Current market price may be latest observable current-mode price, but the
 result remains `CURRENT_VALUE_ONLY`; CNINFO publication proves disclosure
@@ -774,7 +809,7 @@ The future resolver should reuse, not duplicate:
 | Future peer datum | Existing seam | Provenance rule |
 |---|---|---|
 | Peer price | `AkshareDataAdapter.historicalMarketData()` | EastMoney origin; AKShare retrieval; current-mode availability |
-| Peer EPS/BVPS | `valuationFinancialIndicators()` | EastMoney numeric `S3_AGGREGATOR`; report date and notice date preserved |
+| Peer basis-FY EPS/BVPS | `valuationFinancialIndicators()` | EastMoney numeric `S3_AGGREGATOR`; report date and notice date preserved; exact `multipleBasisFiscalYear` required |
 | Peer publication | `CninfoOfficialDisclosureClient.resolveAnnualReportPublication()` | CNINFO origin and `S0_STATUTORY` publication authority |
 | Peer identity | existing company identity normalization | no name-only or fuzzy identity |
 | Peer cohort | future bounded raw EastMoney comparison acquisition | `EASTMONEY_PEER_COHORT_MEMBERSHIP`; S3 aggregator evidence, not statutory fact |
@@ -813,7 +848,7 @@ AutomaticComparablePeer {
   profitabilityProfile?
   price
   priceDate
-  fiscalYear
+  multipleBasisFiscalYear
   eps?
   bvps?
   publicationProof
@@ -824,25 +859,40 @@ AutomaticComparablePeer {
 AutomaticComparableSubject {
   identity
   valuationDate
-  fiscalYear = selected D3-001 ValuationBasis.fiscalYear
-  eps?
-  bvps?
+  multipleBasisFiscalYear = D3-001 ValuationBasis.basisFiscalYear
+  targetFiscalYear = ValuationAssumptionPlan.targetFiscalYear
+  primaryMethod: PE | PB
+  forecastMetric = baseScenario.forecastMetric
   sourceRefs[]
 }
 
 AutomaticEquityCompsResult {
-  fiscalYear
+  multipleBasisFiscalYear
+  targetFiscalYear
+  selectedMethod
   acceptedPeers
   rejectedPeers
   peSummary?
   pbSummary?
-  peImpliedPrice?
-  pbImpliedPrice?
+  selectedPeerMedian?
+  targetForecastMetric?
+  impliedTargetPrice?
+  multipleBasisPeriod
   sourceRefs
   diagnostics
   availability
 }
 ```
+
+Every accepted peer metric must satisfy:
+
+```text
+peer.multipleBasisFiscalYear == subject.multipleBasisFiscalYear
+```
+
+No peer uses `targetFiscalYear` as its denominator period. The result retains
+both periods and records `multipleBasisPeriod = FY${multipleBasisFiscalYear}`
+separately from its target valuation period.
 
 The deterministic automatic operation belongs in the existing
 `skills/comps_valuation/` Skill as a narrow additive PE/PB operation,
@@ -855,7 +905,8 @@ The automatic contract is additive and metric-specific:
 - existing caller-supplied `CompsValuationInput` remains valid;
 - legacy `executeCompsValuation()` behavior and EV/Revenue, EV/EBITDA, and FCF
   callers remain unchanged;
-- automatic v0.1 emits only recomputed PE/PB;
+- automatic v0.1 emits only recomputed PE/PB and a target price when the
+  selected primary method and deterministic target metric are valid;
 - no generic `PeerDataEngine`, `PeerService`, provider layer, or Knowledge peer
   graph is added;
 - no fake debt, cash, net debt, shares, EBITDA, or revenue fields are required
@@ -868,41 +919,74 @@ The automatic contract is additive and metric-specific:
 For each accepted PE peer:
 
 ```text
-peerPE = peerCurrentPrice / peerCommonFYAnnualEPS
+peerPE = peerCurrentPrice / peerAnnualEPS[multipleBasisFiscalYear]
 ```
 
-Required: positive finite price, positive finite annual EPS, common FY period,
-CNY units, current-mode timestamp, peer-cohort/scale/profile comparability
-evidence, and CNINFO publication proof. At least three valid PE peers are
-required; fewer returns `INSUFFICIENT_VALID_PEERS`.
+Required: positive finite price, positive finite annual EPS for the exact
+`multipleBasisFiscalYear`, CNY units, current-mode timestamp,
+peer-cohort/scale/profile comparability evidence, and CNINFO publication proof.
+At least three valid PE peers are required; fewer returns
+`INSUFFICIENT_VALID_PEERS`.
 
 The peer median is the deterministic selected multiple. The subject implied
-price is:
+target price is computed only when:
 
 ```text
-subjectCommonFYAnnualEPS × peerMedianPE
+plan.primaryMethod == PE
+baseScenario exists
+baseScenario.primaryMethod == plan.primaryMethod
+baseScenario.targetFiscalYear == plan.targetFiscalYear
+baseScenario.forecastMetric is positive and finite
 ```
 
-No diluted shares are required.
+The formula is:
+
+```text
+baseScenario.forecastMetric × peerMedianPE
+```
+
+The automatic comps operation consumes this deterministic upstream metric. It
+does not forecast EPS, apply its own growth rate, call an LLM or D1
+expectations, or derive target-year EPS independently.
 
 ### PB
 
 For each accepted PB peer:
 
 ```text
-peerPB = peerCurrentPrice / peerCommonFYAnnualBVPS
+peerPB = peerCurrentPrice / peerAnnualBVPS[multipleBasisFiscalYear]
 ```
 
-Required: positive finite price, positive finite annual BVPS, common FY period,
-CNY units, current-mode timestamp, peer-cohort/scale/profile comparability
-evidence, and CNINFO publication proof. At least three valid PB peers are
-required; fewer returns `INSUFFICIENT_VALID_PEERS`.
+Required: positive finite price, positive finite annual BVPS for the exact
+`multipleBasisFiscalYear`, CNY units, current-mode timestamp,
+peer-cohort/scale/profile comparability evidence, and CNINFO publication proof.
+At least three valid PB peers are required; fewer returns
+`INSUFFICIENT_VALID_PEERS`.
 
-The subject implied price is:
+The target price is computed only when:
 
 ```text
-subjectCommonFYAnnualBVPS × peerMedianPB
+plan.primaryMethod == PB
+baseScenario exists
+baseScenario.primaryMethod == plan.primaryMethod
+baseScenario.targetFiscalYear == plan.targetFiscalYear
+baseScenario.forecastMetric is positive and finite
 ```
+
+The formula is:
+
+```text
+baseScenario.forecastMetric × peerMedianPB
+```
+
+The automatic comps operation consumes this deterministic upstream metric. It
+does not forecast BVPS, apply its own growth rate, call an LLM or D1
+expectations, or derive target-year BVPS independently.
+
+If the primary method is PE, a PB summary may remain available for diagnostics,
+but PB must not produce a target price or enter the crosscheck. The same rule
+applies symmetrically when the primary method is PB. PE/PB are never averaged
+and there is no fallback to the alternate method.
 
 No debt, cash, net debt, or diluted shares are required.
 
@@ -918,9 +1002,11 @@ caller input.comps supplied
   -> preserve existing executeCompsValuation path
 
 caller comps absent + asOf omitted
+  -> after plan/computation, require primaryMethod PE or PB and valid baseScenario
   -> attempt bounded automatic current peer resolver
   -> run narrow deterministic PE/PB operation inside existing comps_valuation Skill
-  -> expose its pre-adapted result through the existing comps_valuation crosscheck
+  -> apply selected peer median to baseScenario.forecastMetric
+  -> expose target-FY pre-adapted result through the existing comps_valuation crosscheck
 
 caller comps absent + fixed asOf supplied
   -> AUTO_COMPS_HISTORICAL_UNAVAILABLE
@@ -933,10 +1019,15 @@ should remain narrow and explicit:
 ```text
 ResearchService
   -> runValuation
-  -> existing D3-001 target basis
-  -> bounded current-only peer resolver
+  -> D3-001 target basis
+  -> Valuation assumption design
+  -> deterministic calculateValuation()
+  -> baseScenario available
+  -> if caller comps, existing legacy path
+  -> else if current mode and primaryMethod = PE/PB, bounded current-only peer resolver
   -> AutomaticComparableSubject + AutomaticComparablePeer[]
   -> executeEquityMultipleComps(...)
+  -> apply peer median to baseScenario.forecastMetric
   -> existing/minimally extended crosscheck seam
 ```
 
@@ -957,15 +1048,88 @@ assumption plan's `primaryMethod`:
 - `primaryMethod = PB` selects the automatic PB peer-median implied price when
   PB has at least three valid peers;
 - any other primary method makes the automatic PE/PB crosscheck unavailable;
+- automatic target-price computation also requires an existing `baseScenario`
+  whose `primaryMethod` and `targetFiscalYear` match the plan and whose
+  `forecastMetric` is positive and finite;
 - PE and PB are never averaged;
 - the automatic path never falls back to the alternate PE/PB method;
 - if the selected method is unavailable, the crosscheck remains unavailable.
+
+The pre-adapted automatic `ValuationMethodResult` uses:
+
+```text
+period = FY${targetFiscalYear}
+```
+
+because its value is a target-FY target price. It must not use
+`FY${multipleBasisFiscalYear}` as its result period. The underlying result
+must retain `multipleBasisPeriod = FY${multipleBasisFiscalYear}` and disclose
+the semantic carry-forward:
+
+```text
+FY2025 peer observed multiple
+applied to
+FY2026 deterministic target forecast metric
+```
+
+Consequently, `scenario_base.period` and the automatic comps result period
+both equal `FY${plan.targetFiscalYear}`. Existing crosscheck period
+compatibility remains unchanged; `compatible()` is not weakened and
+`PERIOD_MISMATCH` is not removed. A difference between multiple-basis FY and
+target FY is not itself an error. Errors are a peer basis mismatch or an
+automatic target FY mismatch with the scenario.
 
 Caller-supplied `input.comps` always wins. The caller path and automatic path
 must not both populate the crosscheck.
 
 Automatic comps must remain a cross-check. It must not replace the selected
 primary scenario method or silently change investment conclusions.
+
+### 15.1 Frozen workflow ordering and call gate
+
+Automatic peer acquisition happens only after the deterministic target scenario
+is known:
+
+```text
+D3-001 target basis
+        ↓
+Valuation assumption design
+        ↓
+deterministic calculateValuation()
+        ↓
+baseScenario available
+        ↓
+if caller comps:
+    existing legacy executeCompsValuation()
+else if current mode
+     AND primaryMethod in {PE, PB}
+     AND matching valid baseScenario:
+    D3-002 automatic peer acquisition
+        ↓
+    source-consensus gate
+        ↓
+    12 validation cap
+        ↓
+    D3-001 peer evidence
+        ↓
+    executeEquityMultipleComps
+        ↓
+    peer median multiple
+        ↓
+    baseScenario.forecastMetric × peerMedian
+        ↓
+    target-FY automatic comps value
+        ↓
+    comps_valuation crosscheck
+else:
+    automatic comps unavailable
+```
+
+If the primary method is not PE/PB, or the matching deterministic scenario and
+positive finite forecast metric are unavailable, automatic peer source calls
+must be zero. Caller-supplied `input.comps` always wins and suppresses
+automatic peer acquisition. There must never be both legacy and automatic
+comps observations in one crosscheck.
 
 ## 16. Banks and sector control
 
@@ -1016,6 +1180,49 @@ ordering is a work/comparability ordering only. It is never investment ranking:
 no best peer, winner, attractive PE, attractive PB, stock-performance, return,
 or momentum selection is allowed.
 
+### 17.1 Period and target-metric negative cases
+
+The automatic path fails closed as follows:
+
+```text
+peer.multipleBasisFiscalYear != subject.multipleBasisFiscalYear
+  -> reject peer metric
+
+baseScenario.targetFiscalYear != plan.targetFiscalYear
+  -> AUTO_COMPS_TARGET_METRIC_UNAVAILABLE
+
+baseScenario.primaryMethod != plan.primaryMethod
+  -> AUTO_COMPS_TARGET_METRIC_UNAVAILABLE
+
+primaryMethod not in {PE, PB}
+  -> AUTO_COMPS_TARGET_METRIC_UNAVAILABLE
+
+forecastMetric non-positive or non-finite
+  -> AUTO_COMPS_TARGET_METRIC_UNAVAILABLE
+
+valid peers < 3
+  -> INSUFFICIENT_VALID_PEERS
+```
+
+There is no fallback to another method or fiscal year. A
+`multipleBasisFiscalYear != targetFiscalYear` difference is valid and expected
+when the deterministic scenario carries the target-year forecast metric; it is
+not a period error by itself.
+
+### 17.2 Required period transparency in reports
+
+Future reports must disclose both semantic periods, for example:
+
+```text
+Peer multiple basis: FY2025 actual
+Target metric period: FY2026 forecast
+```
+
+The report must not label the result only as `FY2026 comps` without showing the
+multiple basis period. Target forecast lineage remains the existing Valuation
+scenario and assumption evidence; peer source refs cover peer cohort,
+scale/profile, market price, basis-FY EPS/BVPS, and CNINFO publication only.
+
 ## 18. Future D0 requirements
 
 If a later task authorizes runtime implementation, a future D0 design should
@@ -1051,7 +1258,10 @@ must use:
   - scale profile and at least one actual growth/profitability profile per accepted peer;
 - frozen source consensus: at least two families, including growth or DuPont;
 - at least three accepted peers for PE and/or PB;
-- the subject's selected D3-001 fiscal year across subject and accepted peers;
+- exact `multipleBasisFiscalYear` across subject and accepted peers;
+- exact `targetFiscalYear` match between plan, `baseScenario`, and automatic
+  result period;
+- positive finite `baseScenario.forecastMetric` for the selected method;
 - separate market, financial, CNINFO, identity, and comparability source refs;
 - deterministic peer median and existing `comps_valuation` crosscheck;
 - crosscheck selection by the existing `primaryMethod`, with no PE/PB averaging
@@ -1064,7 +1274,9 @@ Negative acceptance must fail closed for:
 ```text
 peer cohort unresolved
 too few qualified peers
-period mismatch
+peer multiple-basis period mismatch
+scenario target-year mismatch
+target forecast metric unavailable
 missing source or dangling source ref
 source after cutoff
 metric unavailable
@@ -1089,18 +1301,20 @@ source path is now feasible for a narrow additive PE/PB design:
 2. The raw families provide target-relative cohort membership, raw report dates,
    growth/economics observations, and current scale observations. Their cohort
    differences are explicit and can be preserved rather than intersected.
-3. Representative candidates have common-FY EPS/BVPS rows and CNINFO FY2025
-   publication proof through the existing D3-001 seams.
+3. Representative candidates have common multiple-basis-FY EPS/BVPS rows and
+   CNINFO FY2025 publication proof through the existing D3-001 seams.
 4. A deliberately narrow contract can require peer-cohort membership, scale,
-   one actual growth/profitability profile, subject-FY D3-001 evidence, current
-   normalized price, and CNINFO publication proof.
+   one actual growth/profitability profile, exact multiple-basis-FY D3-001
+   evidence, current normalized price, and CNINFO publication proof, then apply
+   the result to the existing target-FY forecast metric.
 5. Direct comparison-endpoint PE/PB remains non-canonical because denominator,
    period, share-basis, and update semantics are not sufficiently established.
 6. The legacy contract remains too broad; debt, cash, net debt, and shares stay
    deferred, and the automatic path emits only recomputed PE/PB.
-7. The source-consensus gate, peer-count policy, candidate ordering, subject FY
-   anchor, current normalized-close price rule, legacy/automatic contract
-   boundary, and primary-method crosscheck rule are now frozen.
+7. The source-consensus gate, peer-count policy, candidate ordering, multiple
+   basis FY, target valuation FY, current normalized-close price rule,
+   legacy/automatic contract boundary, target forecast metric source, and
+   primary-method crosscheck rule are now frozen.
 
 The implementation decision is design-level only. Sol review is still required
 before runtime work begins, but no further design choice is left open in this
@@ -1120,7 +1334,16 @@ CLOSED
 Comparability gate:
 FROZEN
 
+Multiple basis period:
+FROZEN
+
+Target valuation period:
+FROZEN
+
 Narrow execution contract:
+FROZEN
+
+Crosscheck period alignment:
 FROZEN
 
 Runtime implementation:
