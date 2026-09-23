@@ -31,6 +31,15 @@ test('MIIT parser preserves lower bound and article-period average prices', () =
   assert.equal(observations.find((item) => item.metricKey.endsWith('carbonate_average_price'))?.value, 16.3); assert.equal(observations.some((item) => /export/i.test(item.metricKey)), false)
 })
 
+test('MIIT annual parser accepts the official alias and paired price sentence', () => {
+  const text = '2024年全国锂离子电池行业运行情况。全国锂电池总产量1170GWh。1－12月电池级碳酸锂和氢氧化锂均价分别为9.0万元/吨和8.7万元/吨。'
+  const observations = parseMiitLithiumOperatingObservations(text, { ...context('miit-annual-fixture'), metadata: { period: '2024' } })
+  assert.equal(observations.find((item) => item.metricKey === 'lithium_battery.total_output')?.value, 1170)
+  assert.equal(observations.find((item) => item.metricKey.endsWith('carbonate_average_price'))?.value, 9)
+  assert.equal(observations.find((item) => item.metricKey.endsWith('hydroxide_average_price'))?.value, 8.7)
+  assert.equal(observations.find((item) => item.metricKey === 'lithium_battery.total_output')?.frequency, 'ANNUAL')
+})
+
 test('CHEAA parser reads monthly quantity, not cumulative or money columns', () => {
   const text = '产品名称 | 当月数量（台） | 累计数量（台） | 数量累计同比增长（%） | 当月金额（美元） | 累计金额（美元）\n家用空调器 | 4,039,692 | 66,841,194 | 26.66 | 100 | 200\n'
   const observation = parseCheaaHouseholdAirConditionerExport(text, { ...context('cheaa-fixture'), originPublisher: 'CHEAA', hostPlatform: 'CHEAA official web/PDF host', sourceAuthority: 'S2_PROFESSIONAL', metadata: { period: '2024-09' } }, '2024-09')

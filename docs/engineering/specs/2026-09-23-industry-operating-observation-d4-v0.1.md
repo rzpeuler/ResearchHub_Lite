@@ -773,9 +773,8 @@ Live acceptance evidence on 2026-09-23:
 - Lithium accepted both required classes: MIIT `PRODUCTION` and `PRICE`.
 - Household air conditioner accepted NBS `PRODUCTION` and CHEAA/GACC-backed
   `TRADE`, including source references bound by the Gateway and report output.
-- The optional MIIT annual fallback reported parser drift, but the required
-  H1 disclosure satisfied the lithium acceptance gate; the implementation
-  preserves that diagnostic rather than hiding it.
+- The MIIT annual fallback also parses the official alias and paired annual
+  price sentence; both lithium sources complete without parser drift.
 
 Validation performed for this appendix includes focused parser/workflow tests,
 TypeScript typecheck, the default and enabled real harnesses, and the complete
