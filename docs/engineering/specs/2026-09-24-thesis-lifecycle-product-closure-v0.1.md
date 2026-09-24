@@ -158,6 +158,41 @@ For `REFRESH`, canonical identity is resolved in this order:
    create a review-required resolution; never allocate a new Claim merely due to
    a new run.
 
+The current Gateway has a separate endpoint-binding limitation. Its local
+`boundRef()` resolves only a local proposal key to a canonical ref produced by
+the current Gateway submission (`knowledge/production/gateway.ts:98,177`). It
+does not resolve an arbitrary existing `claim:`, `observation:`, or `thesis:`
+ref supplied as a ReasoningEdge endpoint. Consequently, the current Gateway
+cannot truthfully express either of these REFRESH operations without creating a
+fake local proposal first:
+
+```text
+existing Observation --challenges--> existing proposition Claim
+existing proposition Claim --qualifies--> existing Thesis
+```
+
+The implementation phase adds the following minimal producer-only fields to
+`SemanticProductionProposal` for `kind: 'reasoning_edge'`:
+
+```text
+existingSourceRef?: CanonicalKnowledgeRefV04
+existingTargetRef?: CanonicalKnowledgeRefV04
+```
+
+For an edge, exactly one logical source selector is required: the existing local
+selector (`sourceProposalId`/`subjectKey`) or `existingSourceRef`. Exactly one
+logical target selector is required: `targetKey` or `existingTargetRef`.
+Supplying both, or neither, is blocked; the Gateway must not silently prefer one.
+The fields are server/producer-owned and are never client-supplied mutation
+commands.
+
+When an existing ref is selected, the Gateway resolves it from the current
+canonical Knowledge revision, verifies existence, lifecycle validity, endpoint
+kind (`Observation|Claim` for source and `Claim|Thesis` for target), and edge
+type before constructing the ChangeSet. The Writer remains downstream of the
+Gateway. CREATE continues to use local proposal bindings; the extension exists
+primarily for REFRESH and current-Knowledge ACCEPT rebinding.
+
 The producer-side convention, when a stable key is needed for a proposal, is:
 
 ```text
@@ -171,7 +206,16 @@ identity and persisted ID allocation do not use it as a universal identity
 Therefore every refresh proposal must also carry the exact canonical Claim in
 `existingKnowledgeRefs` when updating, superseding, or contradicting. An
 ambiguous key or a key that disagrees with the current `qualifies` binding is a
-ReviewCase, not an automatic rebind.
+ReviewCase, not an automatic rebind. For a reviewed Thesis update, the selected
+canonical Thesis is resolved before proposal construction; the computed
+`subjectRefs + title` Thesis identity must equal the selected `thesisRef`, with
+unchanged subjects and title. Title drift is outside TL-001.
+
+For a reviewed proposition update/supersession/contradiction, exactly one
+currently valid canonical Claim is required in `existingKnowledgeRefs`. A
+semantic resolver cannot override that explicit reviewed binding. The generic
+Gateway's in-place `update` behavior is not an automatic Thesis-proposition
+semantic update; it is usable only inside the reviewed, revalidated bundle.
 
 ## Claim Graph
 
@@ -191,15 +235,16 @@ evidence Claim may create a ReasoningEdge to the proposition Claim:
 
 | Refresh relation | Canonical impact representation |
 | --- | --- |
-| `supports` | `ReasoningEdge(type: 'supports')` |
-| `weakens` | `ReasoningEdge(type: 'challenges')` |
-| `contradicts` | `ReasoningEdge(type: 'contradicts')` |
+| `supports` | report classification; `supports` edge only when AUTO_SAFE |
+| `weakens` | report classification; `challenges` edge only when ACCEPTed |
+| `contradicts` | report classification; `contradicts` edge only when ACCEPTed |
 | `context` | source/provenance only unless a truthful qualifying edge exists |
 | `irrelevant` | no proposition impact edge |
 
 `weakens` remains the refresh vocabulary; v0.4 has no `weakens` edge, so
-`challenges` is the truthful canonical approximation. `invalidates` is reserved
-for an objectively met invalidation condition, not ordinary model disagreement.
+`challenges` is the truthful canonical approximation when the reviewed action is
+accepted. `challenges`, `contradicts`, and `invalidates` are not automatically
+written merely because the refresh classifier produced those labels.
 
 ## Thesis Linkage
 
@@ -213,11 +258,14 @@ Claim(proposition) --qualifies--> Thesis
 does not assert that the proposition supports the Thesis. A risk Claim can
 therefore qualify a Thesis without being incorrectly marked as supportive.
 
-The Gateway validator already permits a Claim or Observation as a ReasoningEdge
-source and a Claim or Thesis as target
+The schema and Gateway endpoint validator permit a Claim or Observation as a
+ReasoningEdge source and a Claim or Thesis as target
 (`knowledge/schema/domain-v04.ts:220-232`; `knowledge/production/gateway.ts:177`).
-The edge ID is deterministic from edge type, source, and target in the Gateway,
-so membership is reconstructable and idempotent.
+The current Gateway can only reach those endpoints through current-submission
+local bindings; the minimal `existingSourceRef`/`existingTargetRef` producer
+extension makes the canonical endpoint explicit for REFRESH. The edge ID is
+deterministic from edge type, source, and target in the Gateway, so membership is
+reconstructable and idempotent once the endpoint is resolved.
 
 CREATE emits one Thesis, one Claim per proposition, Claim relationship links,
 and one `qualifies` edge per proposition in the same production proposal set.
@@ -285,15 +333,14 @@ START
   -> RECONSTRUCT_SNAPSHOT
   -> ADMIT_AND_PIT_FILTER_EVIDENCE
   -> RUN_REFRESH
-  -> SPLIT_PROPOSALS
-       |-- no semantic change ----------------------> COMPLETE
-       |-- safe additive evidence only -------------> GATEWAY -> WRITER -> RELOAD -> COMPLETE
-       |-- material proposition/thesis change ------> REVIEW_OPEN
+   -> SPLIT_PROPOSALS
+       |-- AUTO_SAFE -------------------------------> GATEWAY -> WRITER -> RELOAD -> COMPLETE
+       |-- REVIEW_REQUIRED -------------------------> REVIEW_OPEN
        |                                                |-- ACCEPT -> REBIND_CURRENT -> GATEWAY
        |                                                |             -> WRITER -> RELOAD -> COMPLETE
-       |                                                |-- REJECT -> RELOAD/REPORT -> COMPLETE
+       |                                                |-- REJECT -> REPORT -> COMPLETE
        |                                                |-- DEFER  -> REPORT -> COMPLETED_WITH_REVIEW
-       |-- blocked prerequisite ---------------------> BLOCKED
+       |-- NO_WRITE / blocked ----------------------> REPORT -> BLOCKED or COMPLETE
 ```
 
 `refreshThesis()` remains the only source of refresh semantics. Its outputs
@@ -307,11 +354,22 @@ state is separate: `NO_CHANGE`, `AUTO_APPLIED`, `REVIEW_REQUIRED`, `ACCEPTED`,
 `REJECTED`, `DEFERRED`, `STALE`, or `BLOCKED`. An open ReviewCase makes the run
 `completed_with_review`; it must not be disguised as ordinary completion.
 
-Automatic canonical writes are limited to source/observation admission,
-additive non-disputed evidence, a new non-disputed factual Claim, and
-idempotent impact/membership edges when they do not change a load-bearing
-proposition or Thesis status. The system never auto-supersedes a load-bearing
-Claim merely because a semantic resolver says it is weakened.
+Every REFRESH proposal is placed in exactly one bucket:
+
+* `AUTO_SAFE`: accepted new Source and raw provenance, evidence merge on an
+  unchanged Claim, a semantically non-disputed `supports` edge, or a new
+  non-Thesis evidence Claim. These actions must not change proposition
+  membership, proposition semantics, or Thesis status.
+* `REVIEW_REQUIRED`: a new Thesis proposition, any proposition semantic change,
+  load-bearing weakening, a reviewed `challenges`/`contradicts`/`invalidates`
+  edge, supersession, membership change, Thesis status change, kill/invalidation,
+  or archive.
+* `NO_WRITE`: future or unknown-publication decisive evidence, irrelevant
+  evidence, REJECT, DEFER, or stale decision. The report may retain the proposed
+  classification, but canonical Knowledge is not mutated.
+
+The system never auto-supersedes a load-bearing Claim or writes a reviewed
+impact edge merely because a semantic resolver says it is weakened.
 
 ## Kill Criterion Semantics
 
@@ -343,7 +401,10 @@ Only an explicit human ACCEPT of the scoped ReviewCase may commit aggregate
 | support/weakening/contradiction classification | system + existing deterministic skill | output only; preserve refresh vocabulary |
 | kill calculation | system | condition assessment only |
 | new additive source/Observation/evidence Claim | system | only if non-disputed and no status change |
-| `qualifies`, support, challenge, or contradiction edge | system | safe when endpoints and semantics are unambiguous; invalidation is review-gated |
+| evidence classification in the refresh report | system + existing deterministic skill | preserves the existing refresh vocabulary; report-only until accepted |
+| `supports` impact edge | system | AUTO_SAFE only when semantically non-disputed and no proposition/Thesis state changes |
+| `challenges`, `contradicts`, or `invalidates` impact edge | human approval required | part of the reviewed action bundle; written only on ACCEPT |
+| `qualifies` membership edge | human approval required on REFRESH | CREATE may establish initial membership; REFRESH membership changes are semantic |
 | proposition text update | human approval required | ACCEPT must identify current Claim and intended update |
 | proposition supersession | human approval required | never automatic for load-bearing Claims |
 | Thesis `active`/`strengthening`/`weakening`/`challenged` | human approval required on refresh | system emits recommendation only |
@@ -360,8 +421,11 @@ semantic status mutation during REFRESH.
 | Trigger | Review? | Reason |
 | --- | --- | --- |
 | no eligible new evidence | no | report `NO_CHANGE` |
-| exact unchanged proposition with additive evidence | normally no | add evidence/impact edge only |
-| unique new non-load-bearing factual Claim | normally no | additive, no Thesis status change |
+| exact unchanged proposition with additive evidence | normally no | source/provenance merge; safe `supports` only when non-disputed |
+| new non-Thesis factual evidence Claim | normally no | additive evidence object with no Thesis membership |
+| new Claim plus `qualifies` edge to existing Thesis | yes | creates a new Thesis proposition |
+| proposition statement/type/temporal/structured-basis change | yes | semantic proposition change |
+| proposition membership add/remove/replace | yes | Thesis structure changes |
 | existing proposition contradiction | yes | semantic meaning changes |
 | existing proposition supersession | yes | identity and historical continuity change |
 | load-bearing proposition weakened/challenged | yes | material thesis meaning risk |
@@ -374,10 +438,31 @@ semantic status mutation during REFRESH.
 
 The current ReviewCase model has only `entity`, `relation`, and `claim` root
 proposal kinds (`knowledge/review/contracts.ts:4-10`). The lifecycle uses a
-Claim-backed case: the affected proposition Claim is the root, and a minimal
-Thesis scope (`thesisRef`, affected proposition refs, candidate transition, and
-base revision) is attached to the case context. No generic Thesis root or
-generic ReviewDecision engine is introduced.
+Claim-backed case: the affected proposition Claim is the root, and the existing
+scalar context fields are used exactly as follows:
+
+```text
+resolutionContext.context.thesisRef = canonical Thesis ref
+resolutionContext.context.candidateTransition = bounded scalar state
+resolutionContext.knowledgeBaseRevisionAtCreation = base revision
+impact.affectedProposalRefs = canonical proposition Claim refs
+```
+
+`ReviewCaseResolutionContext.context` currently permits only scalar string,
+number, boolean, or null values (`knowledge/review/contracts.ts:72-76`). The
+design does not claim that arbitrary Thesis scope fits there, does not encode
+arrays as JSON strings, and does not add a generic Thesis root. Any additional
+scalar must fit the current contract; affected Claim refs belong in
+`impact.affectedProposalRefs`.
+
+A Thesis-scoped ReviewCase also requires at least one truthful accepted evidence
+binding. Current ReviewCase evidence is a `raw_document_block` with a real
+`rawRef` (`knowledge/review/contracts.ts:11-17`), so canonical Observation/Claim
+evidence must resolve through `Observation/Claim -> provenance -> Source ->
+rawRef`. No synthetic rawRef or fabricated raw-document block is allowed. If no
+real archived rawRef is available, construction fails closed with
+`REVIEW_EVIDENCE_BINDING_UNAVAILABLE` unless a separately reviewed operational
+evidence-binding extension is approved.
 
 ## Thesis-Scoped ReviewDecision
 
@@ -396,82 +481,116 @@ boundary:
 <knowledge-base>/reviews/runs/<producerRunId>/decisions/<reviewCaseId>.yaml
 ```
 
-The new record is not a Knowledge asset and does not create a new store. It
-contains `version`, `reviewCaseId`, `producerRunId`, `knowledgeBaseId`,
-`decision`, `actor: local_user`, `decisionAt`, the ReviewCase hash/base
-revision, current Knowledge revision, terminal outcome, canonical result refs,
-and diagnostics. Writes use the existing ReviewCase store’s path safety,
-atomic-temp-rename, deterministic replay, and mutation-lock conventions
+The new record is not a Knowledge asset and does not create a new store. It is a
+decision-state record with append-only events:
+
+```text
+ReviewDecisionRecord {
+  version
+  reviewCaseId
+  producerRunId
+  knowledgeBaseId
+  currentState: OPEN | DEFERRED | ACCEPTED | REJECTED | STALE
+  revision
+  events[]
+}
+```
+
+Each event contains only bounded fields: `decision` (`ACCEPT|REJECT|DEFER`),
+`actor: local_user`, optional note, `decisionAt`, observed Knowledge revision,
+ReviewCase hash, outcome, optional canonical result refs, and diagnostics. The
+valid transitions are `OPEN -> ACCEPTED|REJECTED|DEFERRED`,
+`DEFERRED -> ACCEPTED|REJECTED|DEFERRED`, subject to revalidation. ACCEPTED,
+REJECTED, and STALE are terminal; a stale case requires a new ReviewCase from a
+new refresh.
+
+DEFERRED is unresolved and still actionable, not terminal. Decision events are
+append-only within the record. Updating a deferred record uses expected-current
+hash/revision compare-and-write protection, the existing path safety, mutation
+lock, atomic temp-write/rename, and deterministic replay conventions
 (`knowledge/review/store.ts:29-70,90-95`).
 
-`ReviewCaseStatus` is currently only `open` and therefore is not overloaded.
-The decision record supplies terminal state while preserving the original case;
-list/get projections join the decision record and report `open`, `accepted`,
-`rejected`, `deferred`, or `stale` as an application view.
+`ReviewCaseStatus` is currently only `open` and the historical case file remains
+unchanged. The application projection must overlay the decision record:
+
+```text
+ReviewService/application list-get projection = ReviewCase + ReviewDecisionRecord
+```
+
+Actionable cases are `OPEN` and `DEFERRED`; resolved/non-actionable cases are
+`ACCEPTED`, `REJECTED`, and `STALE`. Existing `listOpenReviewCases()` and
+`countOpenReviewCases()` cannot expose raw `state.status` as user-facing truth
+after this feature. They must become decision-aware projections, or clearly
+named decision-aware methods must be added and all product consumers migrated.
+Accepted/rejected/stale cases must not remain in the actionable UI listing.
 
 ## ACCEPT Semantics
 
 ACCEPT is a server-side command, not approval of a stale ChangeSet:
 
-1. Load the immutable ReviewCase and its decision record.
-2. Reject if already accepted with a different payload, or return the durable
-   prior result for an identical replay.
-3. Reload current Knowledge and compare revision, Thesis status, proposition
-   Claim lifecycle, `qualifies` edge, supersession, and source eligibility.
-4. Reconstruct the current proposition binding and rerun the applicable
-   deterministic refresh/proposal builder. Do not trust client-supplied or
-   stale proposal payloads.
-5. If the case is no longer applicable, persist `STALE_REVIEW_DECISION` with no
-   semantic write and require a new refresh.
-6. Otherwise create the current proposal set and route it through Gateway,
-   validated ChangeSet, and Writer.
-7. Reload canonical Knowledge, verify expected Thesis/Claim/edge refs and
-   revision, then persist the decision as `applied` with canonical result refs
-   and lifecycle report.
+1. Load the immutable ReviewCase and decision history.
+2. Reject a conflicting replay against ACCEPTED or return the durable result for
+   an identical event replay.
+3. Reload current Knowledge and compare revision, selected Thesis identity,
+   Thesis status, proposition Claim lifecycle, `qualifies` edge, supersession,
+   evidence provenance/PIT, and source eligibility.
+4. Resolve the selected Thesis and current proposition Claims again. Require
+   the reviewed Claim binding to remain exactly one valid canonical Claim and
+   require the selected Thesis `subjectRefs + title` identity to remain equal to
+   `thesisRef`.
+5. Re-run the applicable deterministic proposal builder. Do not trust client,
+   stored stale Gateway proposals, or semantic resolver overrides.
+6. Build current Gateway proposals. Reviewed impact and membership edges use
+   `existingSourceRef`/`existingTargetRef`; existing Observations/Claims are not
+   re-proposed solely to obtain local IDs.
+7. If the case is no longer applicable, append a STALE outcome with no semantic
+   write and require a new refresh.
+8. Otherwise submit through Gateway, validated ChangeSet, and Writer.
+9. Reload canonical Knowledge, verify expected Thesis/Claim/edge refs and
+   revision, then append ACCEPTED with canonical result refs and report.
 
 ACCEPT may update a proposition Claim, create an accepted replacement with
-`supersedes`/`supersededBy`, add an impact edge, or update the Thesis aggregate
-status only for the exact reviewed scope. It cannot perform arbitrary graph
-mutation.
+`supersedes`/`supersededBy`, add the reviewed impact/membership edge, or update
+the Thesis aggregate status only for the exact reviewed scope. It cannot perform
+arbitrary graph mutation.
 
 ## REJECT Semantics
 
-REJECT durably records actor, time, bounded note, base revision, and
-`rejected` outcome. It closes the semantic decision in the application view but
-does not write a proposed Claim, Thesis status, supersession, or impact edge.
-The original evidence and report remain inspectable. A later refresh may
-produce a new ReviewCase if new eligible evidence changes the assessment.
+REJECT appends an event and sets current state `REJECTED`, after current-case
+applicability/revision checks. It writes no proposed Claim, Thesis status,
+supersession, `qualifies`, `challenges`, `contradicts`, or `invalidates` edge.
+The original evidence and report remain inspectable. A later evidence change
+requires a new REFRESH/new ReviewCase.
 
 An identical replay returns `already_resolved` and the stored rejection; a
 different decision payload for the same resolved case is a conflict.
 
 ## DEFER Semantics
 
-DEFER durably records actor, time, bounded note, base revision, and `deferred`
-outcome without canonical semantic mutation. The case remains inspectable and
-eligible for later reconsideration, but ACCEPT later must still reload and
-rebind current Knowledge. A deferred case cannot be accepted using its stale
-proposal bundle.
+DEFER appends an event and sets current state `DEFERRED`, without canonical
+semantic mutation. The lifecycle run may finish `completed_with_review`, while
+the case remains actionable. Later ACCEPT or REJECT is valid only after current
+Knowledge reload, Thesis/Claim rebind, evidence/PIT revalidation, and
+compare-and-write protection. It may not reuse a stored Gateway proposal set.
 
-Repeated identical DEFER is idempotent. A later decision may move a deferred
-case to ACCEPT or REJECT only through the current-revision revalidation path;
-otherwise it becomes `STALE` and requires a new lifecycle refresh.
+Repeated identical DEFER is idempotent and appends no duplicate event. A
+materially stale attempted decision appends STALE instead of silently rebasing.
 
 ## Stale Revision / Replay
 
-Every lifecycle report, ReviewCase, decision, ChangeSet, and Writer attempt
-records the Knowledge revision it observed. Any revision mismatch before ACCEPT
-causes current-Knowledge rebind; a mismatch that changes the reviewed Thesis,
-Claim, membership edge, source eligibility, or case condition returns
-`STALE_REVIEW_DECISION` without a semantic write. There is no automatic semantic
-rebase.
+Every lifecycle report, ReviewCase, decision event, ChangeSet, and Writer
+attempt records the Knowledge revision it observed. Any mismatch that changes
+the reviewed Thesis, Claim, membership edge, source eligibility, or case
+condition appends STALE, makes the case non-actionable, and writes no semantic
+edge or Claim. There is no automatic semantic rebase.
 
-Replay keys are producer run plus deterministic proposal/case identity and
-canonical endpoint identity. Replaying the same run or decision must not create
-duplicate Source, Claim, ReasoningEdge, Thesis mutation, ReviewCase, or
-ReviewDecision records. The Gateway’s existing deterministic identity and
-`bound_existing` behavior are reused (`knowledge/production/gateway.ts:42-45,
-148-179`).
+Replay keys are producer run plus deterministic proposal/case identity, decision
+event payload, prior decision revision, and canonical endpoint identity.
+Identical replay returns the durable result and creates no duplicate event or
+canonical mutation. A conflicting replay against ACCEPTED or REJECTED is
+`CONFLICT`; ACCEPTED and REJECTED cannot transition further. The Gateway’s
+existing deterministic identity and `bound_existing` behavior are reused
+(`knowledge/production/gateway.ts:42-45,148-179`).
 
 ## CREATE Product Path
 
@@ -509,10 +628,16 @@ REFRESH is the first implementation priority:
 5. Server calls `refreshThesis()` with the reconstructed snapshot and eligible
    evidence. Its unchanged refs, deltas, kill assessments, candidate transition,
    and diagnostics are retained.
-6. Server splits safe additive actions from review actions using the trigger
-   matrix. It persists ReviewCases before returning `completed_with_review`.
-7. Safe actions go through Gateway/ChangeSet/Writer/reload. Review actions wait
-   for ACCEPT, REJECT, or DEFER as defined above.
+6. Server splits actions into `AUTO_SAFE`, `REVIEW_REQUIRED`, and `NO_WRITE`.
+   Before creating a Thesis-scoped ReviewCase it verifies that accepted evidence
+   has a real archived rawRef; otherwise it blocks with
+   `REVIEW_EVIDENCE_BINDING_UNAVAILABLE`. It persists valid ReviewCases before
+   returning `completed_with_review`.
+7. AUTO_SAFE actions go through Gateway/ChangeSet/Writer/reload. Reviewed
+   impact/membership edges wait for ACCEPT, REJECT, or DEFER as defined above.
+   Existing evidence Observations/Claims are bound with
+   `existingSourceRef`/`existingTargetRef`, not re-proposed solely to obtain
+   local IDs.
 
 `PriorThesisSnapshot` is therefore an internal adapter output, not a caller
 contract. Its `propositionId` values are canonical Claim refs in REFRESH, even
@@ -612,9 +737,10 @@ Application/Workflow proposal
 
 The client, Pi, skills, reports, and semantic model cannot write canonical
 objects directly. Review governance state is durable operational state, not
-Knowledge. This preserves the existing Gateway behavior for exact Claim
-resolution, Thesis object creation/update, ReasoningEdge endpoint validation,
-and ReviewCase persistence (`knowledge/production/gateway.ts:148-179`).
+Knowledge. The implementation adds only the minimal producer-contract endpoint
+extension described above; it does not bypass the Gateway or inject direct
+ChangeSet operations. The Gateway still validates endpoint types, lifecycle,
+revision, and edge type before Writer (`knowledge/production/gateway.ts:98,148-179`).
 
 ## Real E2E Design
 
@@ -674,13 +800,18 @@ The future implementation is limited to:
 3. PIT-safe evidence adapter and deterministic `refreshThesis()` invocation.
 4. Canonical proposal builder for Claims, impact edges, Thesis updates, and
    bounded supersession.
-5. Minimal Thesis scope metadata on Claim-backed ReviewCases, if current
-   payload/context cannot carry the refs safely.
-6. Adjacent durable `ReviewDecision` persistence in existing review storage.
-7. ACCEPT/REJECT/DEFER service commands with revision/replay protection.
-8. Gateway → ChangeSet → Writer → reload verification and report persistence.
-9. HTTP/UI/Pi surface using existing ApplicationService and scoped Pi patterns.
-10. Real configured-Pi E2E and the negative no-mutation decision test.
+5. Minimal Gateway producer-contract extension for existing canonical source and
+   target endpoint binding, with type/lifecycle/revision validation.
+6. Thesis-scoped ReviewCase construction using scalar context, canonical Claim
+   refs in impact, and real raw provenance enforcement.
+7. Adjacent durable `ReviewDecision` history/state persistence in existing
+   review storage, with decision-aware ReviewService projections.
+8. ACCEPT/REJECT/DEFER service commands with revision/replay/compare-write
+   protection and valid DEFER transitions.
+9. Gateway → ChangeSet → Writer → reload verification and report persistence.
+10. HTTP/UI/Pi surface using existing ApplicationService and scoped Pi patterns.
+11. Real configured-Pi E2E and the mandatory endpoint, decision-state, rawRef,
+    listing, membership, and no-mutation tests in the acceptance gate.
 
 The implementation must first prove v0.4 `qualifies` persistence and
 reconstruction. If that proof fails, stop with `DESIGN_SCHEMA_GAP`; do not
@@ -728,17 +859,30 @@ demonstrated on the real configured-Pi path:
 * live accepted evidence E2E with one unchanged and one weakened/challenged
   proposition;
 * negative DEFER or REJECT E2E proving no canonical semantic mutation;
+* Gateway existing Observation→Claim and Claim→Thesis `qualifies` endpoint
+  binding, including invalid type, missing endpoint, and deleted/superseded
+  endpoint rejection;
+* DEFER→ACCEPT and DEFER→REJECT after current revalidation;
+* ACCEPT second-decision conflict and REJECT later-ACCEPT conflict;
+* accepted/rejected/stale cases absent from actionable listings while deferred
+  cases remain actionable;
+* ReviewCase without a real rawRef fails closed;
+* new evidence Claim without membership may auto-write, while Claim plus new
+  `qualifies` membership requires review;
+* REJECT/DEFER do not persist reviewed challenge/contradiction edges, while
+  ACCEPT persists exactly the current-revalidated reviewed edge;
 * `git diff --check` and `npm run typecheck` passing with no runtime/test/schema
   changes in this design task.
 
-# RHL-TL-001 DESIGN REPORT
+# RHL-TL-001-FIX-001 REPORT
 
 Status:
 DESIGN_COMPLETE / SOL REVIEW PENDING
 
 Baseline:
+- required HEAD: `723a6ed73edfd007e07335ec86366121bcdcdb88`
+- starting HEAD: `723a6ed73edfd007e07335ec86366121bcdcdb88`
 - origin/main: `0a0d2b1b50b293b2a8e666a8344e8d073af7fab5`
-- starting HEAD: `0a0d2b1b50b293b2a8e666a8344e8d073af7fab5`
 - branch: `codex/tl-001-thesis-lifecycle-product-design`
 - worktree: `C:\Users\Administrator\Desktop\ResearchHub_Lite_worktrees\TL_001`
 
@@ -749,6 +893,56 @@ Canonical model:
 - proposition identity: active Claim refs reconstructed from deterministic Claim→Thesis `qualifies` edges; local `propositionId` is not identity.
 - proposition → thesis linkage: `ReasoningEdgeV04(type: 'qualifies')` from Claim to Thesis.
 - dependency linkage: Claim `dependsOnClaimRefs`, `supportsClaimRefs`, `contradictsClaimRefs`; accepted replacements use `supersedes`/`supersededBy`.
+
+Gateway:
+- current limitation: `boundRef()` resolves only local proposal keys from the current submission; it does not resolve arbitrary existing canonical endpoint refs.
+- minimal producer-contract extension: `existingSourceRef?: CanonicalKnowledgeRefV04` and `existingTargetRef?: CanonicalKnowledgeRefV04` for reasoning edges.
+- existing source endpoint: exactly one of local `sourceProposalId`/`subjectKey` or `existingSourceRef`; must be current, lifecycle-valid Observation or Claim.
+- existing target endpoint: exactly one of local `targetKey` or `existingTargetRef`; must be current, lifecycle-valid Claim or Thesis.
+- direct Writer bypass: prohibited.
+- CREATE behavior: local proposal bindings remain preferred.
+- REFRESH behavior: current canonical Observation/Claim/Thesis refs bind directly through the Gateway extension; existing assets are not re-proposed solely for endpoint IDs.
+
+Thesis identity:
+- selected Thesis guard: resolve the selected canonical Thesis first; computed `subjectRefs + title` identity must equal `thesisRef` before Gateway submission.
+- title drift: unchanged/required; title change is out of scope.
+- subject drift: unchanged/required; drift blocks rather than creating a second Thesis.
+
+Review scope:
+- thesisRef location: scalar `resolutionContext.context.thesisRef`.
+- affected proposition refs location: canonical Claim refs in `impact.affectedProposalRefs`.
+- base revision: `resolutionContext.knowledgeBaseRevisionAtCreation`.
+- candidate transition: scalar `resolutionContext.context.candidateTransition`.
+
+Review evidence:
+- rawRef required: yes; a real archived rawRef must be reachable through Source/provenance.
+- synthetic rawRef allowed: no.
+- missing raw provenance behavior: `BLOCK / REVIEW_EVIDENCE_BINDING_UNAVAILABLE`.
+
+Decision model:
+- OPEN: actionable initial state.
+- DEFERRED: unresolved and actionable; no canonical semantic mutation.
+- ACCEPTED: terminal after current rebind and Writer verification.
+- REJECTED: terminal with no canonical semantic mutation.
+- STALE: terminal, non-actionable; requires a new refresh.
+- terminal states: ACCEPTED, REJECTED, STALE.
+- actionable states: OPEN, DEFERRED.
+- decision history: append-only events in `decisions/<reviewCaseId>.yaml`.
+- compare/write protection: expected current hash/revision with atomic locked write.
+
+Decision transitions:
+- OPEN→DEFER: allowed; current state DEFERRED.
+- DEFER→ACCEPT: allowed only after current Knowledge revalidation.
+- DEFER→REJECT: allowed only after current Knowledge revalidation.
+- ACCEPT→other: prohibited; conflicting replay.
+- REJECT→other: prohibited; conflicting replay.
+
+Review projections:
+- immutable ReviewCase: historical case file remains `state.status = open`.
+- decision overlay: ReviewService/application joins ReviewCase with ReviewDecisionRecord.
+- actionable listing: OPEN and DEFERRED only.
+- resolved listing: ACCEPTED, REJECTED, and STALE.
+- count semantics: `countOpenReviewCases()` must be decision-aware or be replaced/migrated to a clearly named actionable projection.
 
 Claim mapping:
 - business_driver: fact / viewpoint / assumption for verified evidence / inference / hypothesis.
@@ -766,6 +960,31 @@ System-owned:
 
 Human-owned:
 - semantic proposition changes, load-bearing weakening/contradiction, supersession, all refresh-driven Thesis status changes, invalidation, and archive.
+
+Automatic writes:
+- safe support: AUTO_SAFE only when non-disputed, additive, and no proposition or Thesis state changes.
+- evidence Claim: a new non-Thesis evidence Claim may auto-write with source/raw provenance.
+- new Thesis proposition: REVIEW_REQUIRED; new Claim plus `qualifies` membership is not AUTO_SAFE.
+- challenges: report classification only until ACCEPT; reviewed edge is ACCEPT-only.
+- contradicts: report classification only until ACCEPT; reviewed edge is ACCEPT-only.
+- invalidates: ACCEPT-only after objective kill condition and current revalidation.
+- qualifies membership changes: REVIEW_REQUIRED during REFRESH; CREATE may establish initial membership.
+
+REJECT:
+- canonical semantic mutation: none; append REJECTED decision event.
+- impact edge: no reviewed `qualifies`, `challenges`, `contradicts`, or `invalidates` edge.
+
+DEFER:
+- canonical semantic mutation: none; append DEFERRED decision event.
+- impact edge: none.
+- later decision: ACCEPT or REJECT remains valid only after current reload/rebind, evidence/PIT checks, and compare-and-write protection.
+
+ACCEPT:
+- current Knowledge reload: mandatory before proposal construction.
+- current rebind: selected Thesis, proposition Claims, membership, endpoint refs, evidence provenance, and PIT are revalidated.
+- proposal rebuild: deterministic builder reruns; stored stale Gateway proposals are not reused.
+- Gateway: uses existing canonical endpoint fields for reviewed edges, validates types/lifecycle/revision, and produces the ChangeSet.
+- Writer: only downstream of Gateway; reload and verify canonical refs/revision before recording ACCEPTED.
 
 Thesis statuses:
 - active: human approval required for REFRESH status changes; allowed as explicit CREATE result.
@@ -818,8 +1037,24 @@ Schema sufficiency:
 - v0.4 sufficient: yes, if `qualifies` is persisted and reconstructable as defined.
 - DESIGN_SCHEMA_GAP: none identified; implementation must stop if the convention cannot be truthfully persisted.
 
+Schema conclusion:
+- Knowledge schema: SUFFICIENT; unchanged v0.4 Thesis/Claim/ReasoningEdge primitives.
+- Production contract: MINIMAL EXTENSION REQUIRED for existing canonical ReasoningEdge endpoint binding.
+- Review operational contract: MINIMAL EXTENSION REQUIRED for decision history/state projection and raw provenance enforcement.
+- DESIGN_SCHEMA_GAP: none.
+
+Future acceptance additions:
+- existing Observation→Claim and Claim→Thesis `qualifies` edges through Gateway;
+- invalid/missing/deleted/superseded canonical endpoint rejection;
+- DEFER→ACCEPT and DEFER→REJECT after revalidation;
+- ACCEPT second decision conflict and REJECT later ACCEPT conflict;
+- accepted/rejected/stale absent from actionable listing and deferred remaining actionable;
+- ReviewCase without real rawRef fails closed;
+- evidence Claim without membership may auto-write, while new membership requires review;
+- REJECT/DEFER do not write reviewed impact edges and ACCEPT writes exactly the current-revalidated edge.
+
 Implementation scope:
-- bounded REFRESH-first ApplicationService, deterministic snapshot/PIT/refresh adapter, canonical proposal/review path, adjacent decision persistence, HTTP/Pi/UI surface, reports, replay/stale protections, and real E2E.
+- bounded REFRESH-first ApplicationService, deterministic snapshot/PIT/refresh adapter, minimal Gateway endpoint binding, Thesis-scoped ReviewCase/rawRef enforcement, decision history/projections, canonical proposal/review path, HTTP/Pi/UI surface, reports, replay/stale protections, and real E2E.
 
 Explicit non-goals:
 - generic engines/platforms/stores/schedulers, Prediction, portfolio/trading, new Agent/Planner/Provider, direct mutation, and LLM-owned canonical writes.
@@ -831,8 +1066,8 @@ Files changed:
 - `docs/engineering/specs/2026-09-24-thesis-lifecycle-product-closure-v0.1.md` only.
 
 Validation:
-- diff check: pending after document creation.
-- typecheck: pending after document creation.
+- diff check: pending after reconciliation commit.
+- typecheck: pending after reconciliation commit.
 
 Git:
 - commit: pending.
