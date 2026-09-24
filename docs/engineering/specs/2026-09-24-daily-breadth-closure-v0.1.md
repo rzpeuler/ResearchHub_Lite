@@ -191,15 +191,39 @@ calendar injection used by the real harness is a test seam only and marks the
 requested trade date as manual so an external calendar outage cannot prevent
 lane execution.
 
-Offline validation completed on the D5 worktree: 28 client tests, 1,470 Node
+Offline validation completed on the D5 worktree: 28 client tests, 1,473 Node
 tests, server typecheck, client typecheck, client production build, and
 `git diff --check`.
 
-The gated real harness was executed for 2026-09-23 through Morning and Evening.
-It made 36 ordinary network fetches and 14 AKShare bridge calls, produced
-completed fail-soft briefs, 14 structured signals per brief, D1 and D4 usable
-lanes, and no fabricated fallback. The run remains partial because the live
-environment returned GDELT HTTP 429, unavailable CNINFO managed parser runtime,
-AKShare index response errors, and AKShare institutional endpoint errors. The
-default no-network harness mode reports `REAL_DAILY_BREADTH_NOT_RUN` and
-`networkCalls=0`.
+## D5-FIX-001 evidence
+
+The market adapter now keeps logical index identity separate from the provider
+transport map: `000001→sh000001`, `399001→sz399001`, `399006→sz399006`, and
+`000688→sh000688`. It uses Shanghai close availability at 15:00, accepts the
+same-day row only at or after that boundary, and records Sina Finance as the
+origin publisher with AKShare as retrieval provider. Epoch-encoded provider
+dates are normalized before PIT selection.
+
+The institutional adapter sends a bounded seven-day Shanghai lookback as
+`YYYYMMDD`, admits only event and publication dates available at `asOf`,
+normalizes date-only publication to Shanghai end-of-day, supports the actual
+AKShare columns (`代码`, `名称`, `调研机构`, `调研日期`, `公告日期`), and excludes
+retrieval/request time from stable identity. It records returned, PIT-rejected,
+accepted, and limit-dropped row counts.
+
+D1 snapshots now use `expectation_snapshot`; only non-zero estimate changes use
+`expectation_revision`. D4 Daily signals use
+`kind=industry_observation, category=industry`. Enrichment freezes categories
+for structured D5 lanes, and Morning/Evening routing keeps activity in IR
+sections, views in Institutional Views, and D4 observations out of market
+sections.
+
+The corrected gated harness was executed for 2026-09-23 through Morning and
+Evening. It made 36 ordinary network fetches and 14 AKShare bridge calls. Both
+briefs completed; market returned 4/4 indexes, institutional activity returned
+1,709 rows with 61 PIT-rejected, 10 accepted, and 1,638 additional valid rows
+dropped by the bounded output limit; D1 and D4 lanes succeeded, PIT was safe,
+and no fabricated fallback was used. The run remains partial only
+for CNINFO managed parser availability and GDELT responses (HTTP 429/invalid
+provider response). The default no-network harness mode reports
+`REAL_DAILY_BREADTH_NOT_RUN` with `networkCalls=0`.

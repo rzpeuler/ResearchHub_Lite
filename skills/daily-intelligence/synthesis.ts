@@ -137,7 +137,8 @@ function sectionMatches(section: string, signal: DailyResearchSignal, assessment
   if (/overnight global/.test(s)) return signal.category === 'news' && signal.kind === 'market'
   if (/macro\/policy/.test(s)) return signal.category === 'macro'
   if (/a-share important announcements|^announcements$|important events/.test(s)) return signal.kind === 'announcement' || ['announcement', 'earnings', 'performance_forecast'].includes(signal.category)
-  if (/institution|ir/.test(s)) return signal.kind === 'institutional_view' || signal.category === 'institutional_research' || signal.category === 'investor_relations'
+  if (/public institutional views|^institutional views$/.test(s)) return signal.kind === 'institutional_view' || signal.category === 'institutional_research'
+  if (/ir\/institution research|^ir$/.test(s)) return signal.kind === 'institutional_activity' || signal.category === 'institutional_activity' || signal.category === 'investor_relations'
   if (/community|narrative|sentiment/.test(s)) return signal.kind === 'community' || signal.kind === 'social_attention'
   if (/market\/futures\/major asset|^a-share summary$/.test(s)) return signal.kind === 'market' || signal.category === 'market'
   if (/ai\/technology\/industry|sector\/industry\/theme/.test(s)) return ['technology', 'industry'].includes(signal.category)
