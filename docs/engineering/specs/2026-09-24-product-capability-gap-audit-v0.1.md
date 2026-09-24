@@ -1,7 +1,7 @@
 # RHL-NEXT-001 Product Capability Gap Audit v0.1
 
 Date: 2026-09-24
-Status: `AUDIT_COMPLETE / SOL REVIEW PENDING`
+Status: `AUDIT_RECONCILED / SOL REVIEW PENDING`
 Baseline: `main == origin/main == e5b3b5dc7fe938b59442ef9a631365e669afaf38`
 Audit branch: `codex/next-product-capability-gap-audit`
 Audit worktree: `C:\Users\Administrator\Desktop\ResearchHub_Lite_worktrees\NEXT_AUDIT`
@@ -23,17 +23,30 @@ are implemented and tested.
 
 The largest product break is the transition from research output to maintained
 investment knowledge. Thesis formalization and refresh calculations exist, and
-Daily change assessment can safely project existing Claims. However, a normal
-user journey does not yet connect new earnings/Daily/event evidence to a
-durable thesis refresh, an explicit ReviewDecision, and a user-visible
-resolution/learning outcome. `thesis_lifecycle` is registered but dispatched
-directly to a deterministic function; it has no normal ResearchService-backed
-durable run or dedicated HTTP/Pi launch path. ReviewCases are durable and
-readable, but ReviewDecision execution remains explicitly deferred.
+Daily change assessment can safely project existing Claims. However, the
+unresolved chain is:
+
+```text
+research evidence
+  → thesis proposition delta
+  → ?? canonical proposition representation
+  → ?? proposition-to-Thesis binding
+  → review-required semantic decision
+  → current-Knowledge rebind
+  → Gateway / ChangeSet / Writer
+  → canonical thesis status / proposition state
+```
+
+`thesis_lifecycle` is registered but dispatched directly to a deterministic
+function; it has no normal ResearchService-backed durable run or dedicated
+HTTP/Pi launch path. ReviewCases are durable and readable, but their current
+root proposal contract is limited to Entity, Relation, and Claim, and full
+ReviewDecision execution remains explicitly deferred.
 
 Prediction and outcome evaluation are also absent as a product capability.
-The schema has forecast semantics, but the repository does not provide a
-prediction creation, outcome acquisition, scoring, or evaluation loop.
+Schema primitives exist for `claimType=forecast`, `probability`, and temporal
+fields, but the repository does not provide a prediction workflow, outcome
+acquisition, scoring, or evaluation loop.
 
 Recommended next phase: **Thesis Lifecycle Product Closure**, kept thin and
 Workflow-owned. It should connect existing thesis refresh, Daily change
@@ -75,12 +88,12 @@ labels the Knowledge graph and review surfaces read-only.
 | Company Research | `POST /api/production/research-company` → ResearchService → report/proposals | Workflow, quality gate, bounded acquisition, report validation | Business model, drivers, unit economics, quality, management, capital allocation, market structure, expectation gap, thesis formalization | Public A-share path; bounded provider failures remain explicit | Gateway/Writer path and canonical Source/Claim/Relation effects | Final validation inventory records fresh real Pi Company completion | Strong company profile and evidence-backed starting point | `FUNCTIONALLY_READY` | No automatic thesis maintenance or prediction loop after the report |
 | Industry Research | `POST /api/production/research-industry` → bounded seven-provider workflow | Eight-module workflow, strict evidence classification, report-only quarantine | Market structure, supply/demand/cycle, competitive map | Real bounded TEST-054: 24 qualified public items; provider failures and 21 gaps retained | One Gateway/Writer ChangeSet, reload, and 16-section report acceptance | `INDUSTRY_PRODUCT_QUALITY_READY` artifact and acceptance report | Real industry context without promoting unsupported conclusions | `PRODUCT_READY` | Coverage is bounded; broader provider breadth remains external/data work |
 | Earnings Review | `POST /api/production/review-earnings` with exact fiscal period | Period/PIT checks, variance and quality gates, report construction | Consensus, variance, guidance, financial quality, revisions, expectation gap, thesis refresh | Public filings and configured adapters; consensus/revision inputs are not universally available | Report and Source/Claim proposal path; no automatic thesis refresh commit | Final validation inventory records fresh real Pi Earnings completion | Period-specific post-earnings diagnosis | `FUNCTIONALLY_READY` | No durable post-earnings thesis transition or outcome tracking |
-| Valuation | `POST /api/production/analyze-valuation` | Bounded PE/PB/EV_EBITDA methods, scenario/quality checks, report validation | DCF, reverse DCF, comps, scenario semantic analysis | Market/financial observations depend on configured public sources | Report and Source/Claim proposal path | Final validation inventory records fresh real Pi Valuation completion | Explicit valuation scenarios and expectation decoding | `FUNCTIONALLY_READY` | Method set is intentionally narrow; no accepted end-to-end advanced valuation phase |
+| Valuation | `POST /api/production/analyze-valuation` | PE/PB deterministic product path; EV_EBITDA calculator contract exists but accepted live basis is unclosed; automatic PE/PB comps accepted | DCF/reverse-DCF remain semantic/deferred; comps interpretation and scenario reasoning are bounded | PE/PB basis uses accepted D3-001/D3 evidence; EV/EBITDA needs EBITDA, net debt, and shares not closed by the accepted basis path | Report and Source/Claim proposal path for accepted PE/PB/scenario outputs | Real Pi valuation evidence proves PE selection, deterministic recompute, report, and durable proposal; it does not make EV/EBITDA or DCF product-ready | Reproducible PE/PB valuation and bounded expectation decoding | `PARTIAL` | EV/EBITDA is not accepted real product-ready; DCF/reverse-DCF are not deterministic executable engines |
 | Thesis | Red-team HTTP path; lifecycle is registry/chat-dispatch path | Formalize/refresh PIT, dependency, kill, unchanged-preservation, quality gate | Thesis formalize, refresh, expectation gap, red team, catalyst map | Requires caller-supplied snapshot/evidence and configured research evidence | Gateway supports Thesis/ReasoningEdge types, but lifecycle does not itself complete the durable path | Focused lifecycle tests; real Pi red-team completion recorded | Maintain a falsifiable investment thesis | `PARTIAL` | Lifecycle is not a normal durable product workflow; no canonical refresh-to-review loop |
 | Continuous Research | Bounded Daily scheduler and `startBrief` path | Daily acquisition, dedup, enrichment, assessment, synthesis, optional Gateway | Catalyst/expectation/thesis-refresh semantics where evidence is available | Working fail-soft lanes; D5 records real partial provider coverage | Existing Claim update/contradict/review projection path with replay protection | V1 Daily maintenance report: real Pi FIX-003 passed; D5 breadth is explicit partial coverage | Ongoing monitoring of tracked company evidence | `FUNCTIONALLY_READY` | General cross-workflow continuity is out of scope; no automatic thesis decision closure |
-| Daily | Morning/evening HTTP routes, scheduler, brief/report stores | PIT, stable identity, bounded lanes, ranking, assessment, synthesis | Bounded semantic synthesis and change interpretation | D5 accepted explicit partial coverage; CNINFO usable, other lanes may be unavailable | Runtime signals are not canonical automatically; eligible proposals use existing Gateway | D5 spec and prior real FIX-003 evidence; current status remains provider-bounded | Daily attention and change awareness | `PARTIAL` | Source breadth and user action/closure remain incomplete |
-| Prediction | No dedicated product route or workflow | No prediction lifecycle, scoring, or outcome evaluator found | Forecast is a schema concept, not an end-to-end capability | No governed outcome-acquisition path | No prediction/outcome projection path | No real acceptance evidence | Convert research views into testable forecasts | `MISSING` | Need prediction definition, PIT issuance, outcome binding, scoring, and review |
-| Review / Evaluation | GET-only `/api/reviews` and `/api/review-cases`; read-only client Inbox | Durable ReviewCase construction, dependencies, projections, limits | Advisory fields may be present; no executed decision skill | Review inputs are generated from production proposals | ReviewCases durable; ReviewDecision → rebind → Diff/Resolution → ChangeSet → Validation → Writer is specified, not implemented | Acceptance inventory marks ReviewDecision writes `DESIGN_ONLY_DEFERRED` | Human governance and conflict resolution | `PARTIAL` | No user decision, re-evaluation, canonical resolution, or outcome evaluation |
+| Daily | Morning/evening HTTP routes, scheduler, brief/report stores | PIT, stable identity, bounded lanes, ranking, assessment, synthesis | Bounded semantic synthesis and change interpretation | Accepted D5 live record: Morning and Evening completed; market 4/4, D1 5, institutional 10, D4 9 per brief; PIT safe; fabricated fallback false | Runtime signals are not canonical automatically; eligible proposals use existing Gateway | D5 real run classified `REAL_DAILY_BREADTH_PARTIAL`; remaining blockers are CNINFO managed parser unavailable and GDELT fetch failure | Daily attention and change awareness | `PARTIAL` | Structured breadth works; document/news breadth remains externally partial; decision closure remains incomplete |
+| Prediction | No dedicated product route or workflow | No prediction lifecycle, scoring, or outcome evaluator found | Forecast semantics are schema primitives, not an end-to-end capability | No governed outcome-acquisition path | No prediction/outcome projection path | No real acceptance evidence | Convert research views into testable forecasts | `MISSING` | Need prediction issuance, PIT rules, outcome binding, scoring, and evaluation |
+| Review / Evaluation | GET-only `/api/reviews` and `/api/review-cases`; read-only client Inbox | Durable ReviewCase construction, dependencies, projections, limits | Advisory fields may be present; no executed decision skill | Review inputs are generated from production proposals | ReviewCases durable; current-Knowledge rebind → Diff/Resolution → ChangeSet → Validation → Writer is specified, not implemented | Acceptance inventory marks ReviewDecision writes `DESIGN_ONLY_DEFERRED` | Human governance and conflict resolution | `PARTIAL` | Root proposal kinds exclude Thesis; no thesis-scoped decision, re-evaluation, canonical resolution, or outcome evaluation |
 | Knowledge | Knowledge search/object/graph/read status plus Production path | Schema validation, ChangeSet, Writer, idempotency, stale revision, reload | Semantic proposals are bounded and validated | Depends on mounted Knowledge Base and source evidence | Canonical boundary is implemented and accepted | Industry and Daily records include Gateway/Writer/reload evidence | Durable provenance and queryable context | `PRODUCT_READY` | Lifecycle consumers do not yet close the full research → decision → learning loop |
 | Reports | List/get report routes and client Reports page | Type/subject/time/revision/source/claim validation and persistence | Section content is model-assisted but bounded by contracts | Report truth is limited by acquired evidence | Reports retain source/claim refs and Knowledge revision | Industry 16-section report and report validation tests | Reviewable research artifacts | `FUNCTIONALLY_READY` | Reports are mostly terminal artifacts; user actions do not feed back into the workflow |
 | Runtime / CLI / HTTP / Pi | Local runtime, CLI, HTTP/SSE, React client, direct Pi SDK | Bounded dispatch, workflow status, cancellation, persistence policy | Pi reasoning host for semantic operations | Configured host/provider dependent | Mounted KB and services are runtime-gated | Real Pi Company/Earnings/Valuation/Event/Thesis/Daily recorded | Usable local research application | `FUNCTIONALLY_READY` | Capability-specific closure surfaces are uneven, especially thesis and review |
@@ -124,14 +137,27 @@ remain dependent on configured public source availability.
 
 ## Valuation
 
-Valuation is a bounded product capability. The current Workflow exposes PE,
-PB, and EV/EBITDA methods and composes DCF, reverse-DCF, comps, and scenario
-Skills under the quality gate. Real configured-Pi completion is recorded.
+Valuation is a partial but useful product capability. The accepted real basis
+path is PE/PB; the current provider outcome deliberately reports
+`evEbitdaEligible=false`. The valuation workflow and report may mention
+EV/EBITDA, but the accepted D3 real basis does not close the required EBITDA,
+net debt, and shares inputs. DCF and reverse DCF are semantic methodology or
+Skill-level reasoning paths, not accepted deterministic executable valuation
+engines.
 
-Advanced valuation breadth is a research-method candidate, not the highest
-leverage next phase. The current product can already expose a bounded valuation
-artifact; it cannot yet connect valuation assumptions to a maintained thesis or
-an evaluated forecast.
+| Method | Current repository truth | Product status |
+| --- | --- | --- |
+| PE | Deterministic executable; accepted basis path; real Pi product evidence | Accepted |
+| PB | Deterministic executable; accepted basis path; real Pi product evidence | Accepted |
+| EV_EBITDA | Calculator/contract exists, but requires EBITDA + net debt + shares; current accepted basis sets `evEbitdaEligible=false` | Not accepted as real product-ready |
+| Comps | Deterministic executable; accepted D3 automatic comps path is PE/PB-based | Accepted in the PE/PB scope |
+| DCF | Semantic methodology / Skill-level reasoning where applicable | Not accepted as deterministic executable |
+| Reverse DCF | Semantic methodology / Skill-level reasoning where applicable | Not accepted as deterministic executable |
+
+Advanced valuation breadth remains a research-method candidate, not the highest
+leverage next phase. The current product can expose an accepted PE/PB valuation
+artifact, but it cannot yet connect valuation assumptions to a maintained thesis
+or an evaluated forecast.
 
 ## Thesis
 
@@ -150,6 +176,45 @@ quality-gate input also has no sources by construction, and missing red-team or
 other optional inputs are represented as skipped/diagnostic states rather than
 an integrated product path.
 
+## Thesis Canonical Mapping Gap
+
+The methodology layer and canonical Knowledge layer currently use different
+representations. `FormalizedThesisResult` contains `thesisId`, `summary`,
+`propositions[]`, `dependencies[]`, and each proposition has a local
+`propositionId`. This is a valid deterministic methodology result, but the
+local proposition IDs are not themselves canonical Knowledge refs.
+
+`KnowledgeThesisV04` currently contains `id`, `subjectRefs`, `title`,
+`statement`, `status`, `createdAt`, `lastReviewedAt`, `updatedAt`, and lifecycle
+metadata. It does not directly contain `propositionRefs`.
+
+`KnowledgeClaimV04` already supports `claimType` values including `thesis`,
+`assumption`, `forecast`, `risk`, and `catalyst`, plus
+`supportsClaimRefs`, `dependsOnClaimRefs`, and `contradictsClaimRefs`.
+`KnowledgeReasoningEdgeV04` already supports Observation or Claim → Claim or
+Thesis endpoints and `supports`, `contradicts`, `depends_on`, `qualifies`,
+`invalidates`, and `challenges` edge types.
+
+The smallest reuse-first direction is a recommendation for the next design
+phase, not existing behavior:
+
+```text
+KnowledgeThesis
+  = thesis identity / summary / aggregate status
+thesis propositions
+  = canonical Claims
+proposition relationships
+  = existing Claim links and/or ReasoningEdges
+evidence impact
+  = Observation/Claim → proposition Claim via ReasoningEdge
+proposition-to-Thesis relationship
+  = ReasoningEdge targeting KnowledgeThesis
+```
+
+The next design phase must validate this mapping against all formalize, refresh,
+dependency, unchanged-preservation, kill, source, and review semantics before
+any code or schema change.
+
 ## Continuous Research
 
 Continuous Research is intentionally bounded to Daily Intelligence. The
@@ -167,10 +232,17 @@ ReviewCase is required, and how the user closes it.
 Morning and Evening are durable report surfaces with an existing scheduler and
 bounded acquisition composition. D5 preserves the existing orchestrator and
 adds explicit market, expectations, institutional-activity, and exact D4
-industry lanes when truthful. The current real evidence is deliberately
-partial: CNINFO is usable while other lanes can be empty, rate-limited, or
-bridge-blocked. This is represented as unavailable material rather than
-synthetic coverage.
+industry lanes when truthful. The accepted D5 live record has both Morning and
+Evening completed, 4/4 market indexes per brief, 5 D1 signals per brief, 10
+institutional signals per brief, and 9 D4 signals per brief. PIT was safe and
+fabricated fallback was false; the classification is
+`REAL_DAILY_BREADTH_PARTIAL`.
+
+The remaining current blockers are CNINFO managed parser unavailable and GDELT
+fetch failure. Structured breadth works. Document/news breadth remains
+externally partial, and product decision closure remains incomplete. Daily is
+not partial because the AKShare structured lanes are broken; the accepted D5
+record shows those lanes completed.
 
 Daily is therefore operationally useful but not a complete user learning loop.
 Signals can safely support/update/contradict/review existing Claims, but there
@@ -180,9 +252,10 @@ is no product-level thesis decision or prediction outcome closure.
 
 No dedicated prediction workflow, launch route, durable prediction object,
 outcome-ingestion path, scoring calculation, or evaluation report was found in
-the source tree or acceptance inventory. The Knowledge schema distinguishes a
-forecast from confidence, which is a useful foundation, but schema vocabulary
-is not a product capability.
+the source tree or acceptance inventory. The Knowledge schema provides
+`claimType=forecast`, `probability`, and temporal fields, which are useful
+schema primitives. They are not a prediction workflow, outcome-acquisition
+path, scoring implementation, or evaluation loop.
 
 Prediction should remain out of the recommended phase unless the forcing
 question below shows that thesis maintenance cannot be useful without it.
@@ -195,15 +268,48 @@ them read-only. The architecture specifies the required future sequence:
 current Knowledge reload, proposal re-binding, applicable Diff/Resolution,
 ResolutionIntent, ChangeSet, Validation, and Writer.
 
+The actual ReviewCase contract is narrower than the future governance sequence.
+`ReviewProposalKind` is exactly `entity | relation | claim`; a Thesis is not a
+root proposal kind. ReviewCase production currently primarily exists for
+unresolved or review-required Claim proposals. A Thesis proposal can be
+created/updated through Gateway semantics when complete, but the generic
+ReviewCase contract does not itself provide a thesis-decision path.
+
 The same governance document explicitly defers full ReviewDecision execution.
 The final external validation inventory marks ReviewDecision writes
-`DESIGN_ONLY_DEFERRED`. This is a real product gap, but implementation must
-preserve the current Writer boundary and must not turn the ReviewCase reader
-into direct canonical mutation.
+`DESIGN_ONLY_DEFERRED`. A full generic ReviewDecision engine is therefore not
+necessarily a prerequisite for the recommended phase; a bounded thesis-scoped
+human decision action may be sufficient. Any such action must preserve the
+current Writer boundary and must not turn the ReviewCase reader into direct
+canonical mutation.
 
 There is also no evaluation loop for whether a prior forecast, thesis
 proposition, or catalyst was correct. Review currently means governed
 knowledge resolution, not measured investment-learning evaluation.
+
+## Human-Owned Decision Boundary
+
+System-owned deterministic actions may include:
+
+- PIT filtering and evidence admission;
+- proposition delta calculation and unchanged preservation;
+- kill-criterion calculation;
+- proposal construction and source/claim binding;
+- thesis-scoped ReviewCase creation;
+- replay/idempotency and stale-revision detection.
+
+Human-owned semantic decisions presumptively include:
+
+- accepting, rejecting, or deferring a disputed proposition change;
+- approving thesis invalidation when semantic judgment is required;
+- approving archive or terminal thesis state;
+- resolving an unresolved contradiction.
+
+The LLM is not the decision owner. The next phase must distinguish an
+objective deterministic threshold from semantic contradiction or uncertain
+evidence. A deterministic kill predicate may derive an
+`invalidation_condition_met` recommendation; whether canonical Thesis state
+becomes `invalidated` must follow the frozen next-phase governance policy.
 
 ## Knowledge
 
@@ -214,8 +320,9 @@ Writer, and reloads the canonical handle. Existing Claim update, supersede,
 contradict, and review resolutions are present for the Daily path.
 
 The gap is lifecycle ownership by consumers. Thesis lifecycle results are not
-yet carried through the same durable product chain, and ReviewDecision is not
-yet implemented as a current-Knowledge re-evaluation before Writer execution.
+yet carried through the same durable product chain, the proposition-to-Thesis
+mapping is not frozen, and ReviewDecision is not yet implemented as a
+current-Knowledge re-evaluation before Writer execution.
 
 ## Reports
 
@@ -238,24 +345,28 @@ case reading. It does not yet support the complete journey:
 ```text
 select target
   → research / monitor
-  → identify thesis or expectation impact
-  → propose a bounded canonical change
-  → user resolves or defers ReviewCase
-  → refresh current Knowledge
-  → record prediction/outcome learning
+  → thesis proposition delta
+  → ?? canonical proposition representation
+  → ?? proposition-to-Thesis binding
+  → review-required semantic decision
+  → current-Knowledge rebind
+  → Gateway / ChangeSet / Writer
+  → canonical thesis status / proposition state
 ```
 
 The missing interaction is not a general dashboard issue. It is the explicit
-decision and lifecycle handoff between existing evidence surfaces.
+decision and lifecycle handoff between existing evidence surfaces, including
+the two unresolved canonical mapping boundaries marked `??`.
 
 ## External Constraints
 
 - Industry has an accepted bounded real-data result: CNINFO, MIIT, and CPCA
   supplied qualified evidence while GDELT, Eastmoney, and AKShare remained
   explicit failure/empty outcomes.
-- Daily remains `PARTIAL_EXTERNAL_PROVIDER_COVERAGE`; current evidence includes
-  usable CNINFO and bounded failures or empties for GDELT, RSS, institutional,
-  community, and AKShare probes.
+- Daily’s accepted D5 result is `REAL_DAILY_BREADTH_PARTIAL`: Morning and
+  Evening completed; market 4/4, D1 5, institutional 10, and D4 9 per brief;
+  PIT was safe and fabricated fallback was false. Current blockers are CNINFO
+  managed parser unavailable and GDELT fetch failure.
 - Provider credentials, login, CAPTCHA/MFA, paid APIs, broker accounts, and
   trading execution remain out of scope.
 - Configured-Pi validation is real evidence for completed workflows, but it is
@@ -284,16 +395,17 @@ first prove that a surface is not a contract or test seam.
 
 ## Gap Classification
 
-Counts below are distinct material findings; one finding may have more than one
-classification. They are not counts of files or test failures.
+Counts below are descriptive findings; one finding may have more than one
+classification. They are not additive project metrics, file counts, or test
+failures.
 
 | Gap type | Count | Material findings |
 | --- | ---: | --- |
-| `RESEARCH_METHOD_GAP` | 2 | No prediction/outcome evaluation method; valuation method breadth remains bounded |
-| `PRODUCT_WORKFLOW_GAP` | 4 | Thesis lifecycle launch/durability; post-earnings/Daily thesis handoff; ReviewDecision execution; prediction learning loop |
-| `KNOWLEDGE_LIFECYCLE_GAP` | 3 | Thesis refresh is not durably projected; review resolution is not executed; prediction outcomes are not canonical/evaluable |
+| `RESEARCH_METHOD_GAP` | 2 | No prediction/outcome evaluation method; valuation methods beyond accepted PE/PB remain bounded or semantic |
+| `PRODUCT_WORKFLOW_GAP` | 5 | Thesis lifecycle launch/durability; proposition mapping; thesis-scoped decision; post-earnings/Daily handoff; prediction learning loop |
+| `KNOWLEDGE_LIFECYCLE_GAP` | 4 | Proposition-to-Thesis mapping; thesis refresh projection; review resolution; prediction outcomes |
 | `DATA_GAP` | 3 | Daily provider breadth; earnings expectations/revisions; governed prediction outcome data |
-| `SOURCE_RELIABILITY_GAP` | 2 | External Daily lanes; source availability/authority for expectations and outcomes |
+| `SOURCE_RELIABILITY_GAP` | 2 | CNINFO/GDELT Daily blockers; source authority for expectations and outcomes |
 | `INTERACTION_GAP` | 2 | Read-only review interaction; no report-to-thesis decision handoff |
 | `OBSERVABILITY_GAP` | 1 | No accepted end-to-end telemetry for evidence → thesis decision → outcome learning |
 | `DOCUMENTATION_ONLY` | 0 | No material gap is documentation-only; the remaining issues have runtime/product consequences |
@@ -303,9 +415,11 @@ classification. They are not counts of files or test failures.
 ### 1. Thesis Lifecycle Product Closure
 
 Connect existing `thesis_lifecycle`, `thesis_refresh`, Earnings, Daily Change
-Assessment, ReviewCase, report, and Gateway/Writer semantics into one bounded
-normal product path. Add only the minimum durable run, proposal, review, and
-runtime interaction needed to make the current thesis maintainable.
+Assessment, canonical Claim/ReasoningEdge/Thesis primitives, report, and
+Gateway/Writer semantics into one bounded normal product path. Add only the
+minimum durable run, canonical proposition mapping, proposal, and
+thesis-scoped human decision interaction needed to make the current thesis
+maintainable.
 
 Value: closes the central user journey with the least architectural expansion.
 Risk: requires a precise decision about which inputs are mandatory and which
@@ -315,9 +429,10 @@ direct client canonical writes.
 
 ### 2. ReviewDecision and Governed Resolution Closure
 
-Implement the specified current-Knowledge re-evaluation and user decision
-sequence for selected ReviewCase categories, ending in the existing Gateway,
-ChangeSet, Validation, and Writer path.
+Implement the smallest thesis-scoped current-Knowledge re-evaluation and user
+decision sequence needed by Candidate 1, ending in the existing Gateway,
+ChangeSet, Validation, and Writer path. A full generic ReviewDecision engine is
+not assumed to be a prerequisite.
 
 Value: makes human governance operational.
 Risk: larger interaction and governance surface; should follow or be paired
@@ -345,8 +460,11 @@ decision loop.
 
 ### 5. Advanced Valuation Method Closure
 
-Add one narrowly selected valuation method with source-backed assumptions and
-acceptance evidence, reusing the existing valuation Workflow and report path.
+Close one specifically selected method beyond the accepted PE/PB scope, with
+source-backed assumptions and acceptance evidence, reusing the existing
+valuation Workflow and report path. EV/EBITDA remains blocked until EBITDA,
+net debt, and shares are closed; DCF/reverse-DCF remain semantic/deferred until
+their deterministic basis is separately accepted.
 
 Value: improves analytical depth.
 Risk: lower product leverage than thesis/review closure and should not create a
@@ -356,61 +474,68 @@ generic method/provider abstraction.
 
 `RECOMMENDED_NEXT_PHASE: THESIS_LIFECYCLE_PRODUCT_CLOSURE`
 
+Scope: normal durable Thesis lifecycle + canonical proposition mapping + a
+bounded thesis-scoped review decision where necessary. This is not a full
+generic ReviewDecision framework and not Prediction/Evaluation.
+
 The next phase should make one target journey complete:
 
 ```text
 company / thesis selected
   → bounded Earnings, Daily, Event, or explicit refresh evidence
   → thesis proposition delta and unchanged-preservation result
+  → canonical Claim/ReasoningEdge proposition mapping
   → quality-gated proposal and report
-  → ReviewCase when binding/decision is unresolved
+  → thesis-scoped review decision when binding/semantic decision is unresolved
   → current-Knowledge re-evaluation
   → existing Gateway → validated ChangeSet → Writer → reload
+  → canonical thesis status / proposition state
   → visible status, refs, and next action
 ```
 
 The phase should reuse existing contracts and preserve fail-closed behavior.
-It should not implement prediction scoring, broad ReviewDecision categories,
-new provider infrastructure, a generic continuous engine, or a new Knowledge
-store in the same phase.
+It should not implement prediction scoring, broad cross-domain ReviewDecision
+categories, new provider infrastructure, a generic continuous engine, or a new
+Knowledge store in the same phase.
 
 ## Forcing Question
 
-When new evidence contradicts a tracked thesis, what exact user-visible and
-canonical state transition must occur without manual file/API intervention—and
-which decision must remain human-owned?
+When new PIT-safe evidence changes or contradicts a tracked thesis proposition,
+how is that proposition represented and linked in canonical Knowledge, which
+transitions may the system apply deterministically, and which Thesis or
+proposition state changes require explicit human accept/reject/defer before the
+existing Writer may commit them?
 
 The phase should not begin implementation until this is answered for one
 bounded target journey, including the behavior for unavailable evidence,
-stale Knowledge revision, unresolved identity, and an explicit user defer.
+stale Knowledge revision, unresolved identity, objective kill thresholds versus
+semantic contradiction, and an explicit user defer.
 
 ## Provisional Completion Gate
 
 The recommended phase is provisionally complete only when all of the following
 are evidenced on the configured product path:
 
-1. A user can select an existing company/thesis and launch a normal, tracked
-   thesis refresh; the run is not a direct in-memory-only function call.
-2. The refresh consumes dated evidence with explicit source refs and PIT
-   filtering, returns proposition deltas, unchanged propositions, kill
-   assessments, diagnostics, and a validated report.
-3. A supported update/contradict/review proposal reaches the existing Gateway,
-   validated ChangeSet, Writer, reload, and revision path; no client or Skill
-   writes canonical Knowledge directly.
-4. Unresolved identity, stale revision, missing required evidence, unavailable
-   provider lanes, and replay are fail-closed or explicitly unavailable with
-   durable diagnostics.
-5. An actionable ReviewCase is durable before successful completion, and the
-   user can inspect the case and its evidence/dependencies. If a decision
-   action is included, it must re-bind against current Knowledge before Writer.
-6. At least one real configured-Pi run demonstrates the complete bounded
-   journey using live accepted evidence; fixtures remain offline regression
-   support only.
-7. Tests cover deterministic PIT/no-drift/kill behavior, Gateway/Writer
-   integration, replay/idempotency, stale revision, unavailable evidence, and
-   the HTTP/client launch and status path.
-8. `npm run typecheck`, the applicable focused/full validation, and
-   `git diff --check` pass, with no architecture-boundary violations.
+1. An existing canonical Thesis can be selected.
+2. Existing thesis propositions have a deterministic mapping to canonical
+   Knowledge without a new parallel store.
+3. New PIT-safe evidence produces bounded proposition deltas.
+4. Unchanged propositions remain unchanged.
+5. Proposition effects map through existing Claim, ReasoningEdge, and Thesis
+   primitives where semantically sufficient.
+6. A review-required transition produces a durable, attributable review object
+   supported by the chosen thesis-scoped decision design.
+7. Human accept/reject/defer is explicit for the transitions designated
+   human-owned.
+8. An accepted action reloads current Knowledge before resolution and fails
+   closed on stale revision.
+9. Canonical writes still use Gateway → validated ChangeSet → Writer → reload.
+10. No Skill, LLM, UI, or client directly mutates canonical Knowledge.
+11. A real configured-Pi normal product path demonstrates one complete
+    evidence → refresh → decision → canonical state journey.
+12. Replay/idempotency, PIT, stale revision, unavailable evidence, unresolved
+    identity, and defer are covered.
 
-This gate does not require a generic cross-workflow scheduler, all Daily
-providers, prediction scoring, or full ReviewDecision category coverage.
+This gate does not require generic Prediction/Evaluation, a generic
+cross-workflow scheduler, all Daily providers, or full cross-domain
+ReviewDecision category coverage.
