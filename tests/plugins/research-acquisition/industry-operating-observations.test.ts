@@ -8,7 +8,7 @@ const context = (sourceCandidateId: string, extra: Record<string, unknown> = {})
 test('industry observation IDs are deterministic and numeric zero remains valid', () => {
   const input = { metricKey: 'test.metric', observationClass: 'PRODUCTION' as const, value: 0, qualifier: 'EXACT' as const, unit: 'units', originalValue: 0, originalUnit: 'units', periodStart: '2025-01-01T00:00:00.000Z', periodEnd: '2025-12-31T23:59:59.999Z', frequency: 'ANNUAL', aggregation: 'PERIOD' as const, geography: 'China national', productOrSegment: 'fixture', publishedAt: '2026-01-01T00:00:00.000Z', retrievedAt: '2026-01-02T00:00:00.000Z', originPublisher: 'Fixture', hostPlatform: 'Fixture', retrievalProvider: 'Fixture', sourceAuthority: 'S1_OFFICIAL' as const, determinismClass: 'EVIDENCE_BACKED_NUMERIC' as const, sourceCandidateId: 'fixture-0', publicationPit: 'VERIFIED' as const, valueVersionPit: 'UNVERIFIED' as const, metadata: {} }
   const first = createIndustryOperatingObservation(input); const second = createIndustryOperatingObservation(input)
-  assert.equal(first.value, 0); assert.equal(first.observationId, second.observationId); assert.equal(first.observationId, deterministicIndustryObservationId(first)); assert.throws(() => validateIndustryOperatingObservation({ ...first, value: Number.NaN }), /finite/)
+  assert.equal(first.value, 0); assert.equal(first.observationId, second.observationId); assert.equal(first.observationId, deterministicIndustryObservationId(first)); assert.throws(() => validateIndustryOperatingObservation({ ...first, value: Number.NaN }), /finite/); assert.throws(() => validateIndustryOperatingObservation({ ...first, frequency: 'WEEKLY' }), /frequency/)
 })
 
 test('NBS parser requires the target row, header, unit, and year', () => {
@@ -28,7 +28,7 @@ test('MIIT parser preserves lower bound and article-period average prices', () =
   const text = '2026年上半年，锂离子电池产量超过1240 GWh。电池级碳酸锂平均价格为16.3万元/吨，氢氧化锂平均价格为15.3万元/吨。锂电池出口额3370亿元。'
   const observations = parseMiitLithiumOperatingObservations(text, context('miit-fixture'))
   assert.equal(observations.length, 3); const production = observations.find((item) => item.observationClass === 'PRODUCTION')!; assert.equal(production.value, 1240); assert.equal(production.qualifier, 'LOWER_BOUND'); assert.equal(production.unit, 'GWh')
-  assert.equal(observations.find((item) => item.metricKey.endsWith('carbonate_average_price'))?.value, 16.3); assert.equal(observations.some((item) => /export/i.test(item.metricKey)), false)
+  const price = observations.find((item) => item.metricKey.endsWith('carbonate_average_price'))!; assert.equal(price.value, 16.3); assert.equal(price.unit, '万元/吨'); assert.equal(price.frequency, 'H1'); assert.equal(price.aggregation, 'PERIOD'); assert.equal(observations.some((item) => /export/i.test(item.metricKey)), false)
 })
 
 test('MIIT annual parser accepts the official alias and paired price sentence', () => {
@@ -37,7 +37,13 @@ test('MIIT annual parser accepts the official alias and paired price sentence', 
   assert.equal(observations.find((item) => item.metricKey === 'lithium_battery.total_output')?.value, 1170)
   assert.equal(observations.find((item) => item.metricKey.endsWith('carbonate_average_price'))?.value, 9)
   assert.equal(observations.find((item) => item.metricKey.endsWith('hydroxide_average_price'))?.value, 8.7)
-  assert.equal(observations.find((item) => item.metricKey === 'lithium_battery.total_output')?.frequency, 'ANNUAL')
+  const production = observations.find((item) => item.metricKey === 'lithium_battery.total_output')!; assert.equal(production.frequency, 'ANNUAL'); assert.equal(production.qualifier, 'EXACT')
+})
+
+test('MIIT price parser preserves a source-reported yuan-per-tonne unit', () => {
+  const observations = parseMiitLithiumOperatingObservations('2026年上半年，锂离子电池产量超过1240 GWh。电池级碳酸锂平均价格为163000元/吨。', context('miit-unit-fixture'))
+  const price = observations.find((item) => item.metricKey.endsWith('carbonate_average_price'))!
+  assert.equal(price.value, 163000); assert.equal(price.unit, '元/吨'); assert.equal(price.originalValue, '163000'); assert.equal(price.originalUnit, '元/吨')
 })
 
 test('CHEAA parser reads monthly quantity, not cumulative or money columns', () => {
@@ -56,8 +62,19 @@ test('CHEAA parser aligns the vertical PDF export table and keeps GACC attributi
 test('unsupported targets perform no D4 network calls', async () => {
   let calls = 0
   const acquisition = new IndustryOperatingObservationAcquisition({ fetchImpl: async () => { calls++; return new Response('') } })
-  const result = await acquisition.acquire({ target: { name: 'PCB' }, asOf: '2026-09-23', now: () => '2026-09-23T00:00:00.000Z' })
-  assert.equal(result.status, 'SCOPE_UNSUPPORTED'); assert.deepEqual(result.observations, []); assert.equal(calls, 0)
+  for (const name of ['Household appliance industry', 'HVAC', '家电', '锂电材料', 'PCB']) {
+    const result = await acquisition.acquire({ target: { name }, asOf: '2026-09-23', now: () => '2026-09-23T00:00:00.000Z' })
+    assert.equal(result.status, 'SCOPE_UNSUPPORTED', name); assert.deepEqual(result.observations, []); assert.equal(calls, 0, name)
+  }
+  for (const name of ['Lithium battery industry', 'lithium-ion battery', '家用空调器', 'room air conditioner']) assert.notEqual((await acquisition.acquire({ target: { name }, asOf: '2026-09-23', now: () => '2026-09-23T00:00:00.000Z' })).status, 'SCOPE_UNSUPPORTED')
+})
+
+test('D4 normalized source content is parser text while raw bytes remain retained', async () => {
+  const normalized = '2026年上半年，锂离子电池产量超过1240 GWh。电池级碳酸锂平均价格为16.3万元/吨。'
+  const raw = '<html>raw source markup</html>'
+  const acquisition = new IndustryOperatingObservationAcquisition({ fetchImpl: async () => new Response(raw, { headers: { 'content-type': 'text/html' } }), documentResolver: { parse: async () => ({ normalizedText: normalized } as never) } })
+  const result = await acquisition.acquire({ target: { name: 'Lithium battery industry' }, asOf: '2026-09-23', now: () => '2026-09-23T00:00:00.000Z' })
+  assert.equal(result.sources.length, 2); assert.ok(result.sources.every((source) => source.content === normalized)); assert.ok(result.sources.every((source) => source.rawBytes?.length === new TextEncoder().encode(raw).length)); assert.ok(result.observations.length >= 2)
 })
 
 test('D4 transport observes publication PIT before fetching', async () => {

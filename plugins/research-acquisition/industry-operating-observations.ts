@@ -92,6 +92,7 @@ export interface ObservationParserContext {
 
 const AUTHORITIES: readonly SourceAuthority[] = ['S0_STATUTORY', 'S1_OFFICIAL', 'S2_PROFESSIONAL', 'S3_AGGREGATOR', 'S4_COMMUNITY']
 const DETERMINISM: readonly DataDeterminismClass[] = ['AUTHORITATIVE_NUMERIC', 'EVIDENCE_BACKED_NUMERIC', 'SEMANTIC_QUALITATIVE']
+const FREQUENCIES = new Set(['ANNUAL', 'H1', 'QUARTERLY', 'MONTHLY'])
 const HTTPS = /^https:\/\//i
 const TRACKING_PARAMETERS = new Set(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'spm', 'from', 'source', 'share'])
 const DEFAULT_URLS = {
@@ -145,6 +146,7 @@ export function validateIndustryOperatingObservation(value: unknown): IndustryOp
   if (!['PRODUCTION', 'TRADE', 'PRICE'].includes(String(value.observationClass))) throw new TypeError('Unsupported observationClass')
   if (!['EXACT', 'LOWER_BOUND', 'UPPER_BOUND'].includes(String(value.qualifier))) throw new TypeError('Unsupported qualifier')
   if (!['PERIOD', 'YTD', 'POINT_IN_TIME'].includes(String(value.aggregation))) throw new TypeError('Unsupported aggregation')
+  if (!FREQUENCIES.has(String(value.frequency))) throw new TypeError('Unsupported frequency')
   if (!Number.isFinite(value.value)) throw new TypeError('Observation value must be finite')
   if (typeof value.originalValue !== 'string' && typeof value.originalValue !== 'number') throw new TypeError('originalValue is required')
   if (!AUTHORITIES.includes(value.sourceAuthority as SourceAuthority)) throw new TypeError('Unsupported sourceAuthority')
@@ -251,7 +253,8 @@ function miitPeriod(text: string, periodHint = ''): { readonly periodStart: stri
 }
 function miitNumber(text: string, pattern: RegExp): { readonly value: number; readonly raw: string; readonly qualifier: IndustryObservationQualifier } | undefined {
   const match = pattern.exec(text); if (!match) return undefined; const value = parseNumber(match[1]!.replace(/[>＞]/g, '')); if (value === undefined) return undefined
-  return { value, raw: match[1]!, qualifier: /[>＞]|超过|above|more than|over/i.test(match[0]!) ? 'LOWER_BOUND' : /[<＜]|低于|below|less than/i.test(match[0]!) ? 'UPPER_BOUND' : 'EXACT' }
+  const valueIndex = match[0]!.lastIndexOf(match[1]!); const localText = match[0]!.slice(Math.max(0, valueIndex - 40), valueIndex + match[1]!.length + 12)
+  return { value, raw: match[1]!, qualifier: /[>＞]|超过|above|more than|over/i.test(localText) ? 'LOWER_BOUND' : /[<＜]|低于|below|less than/i.test(localText) ? 'UPPER_BOUND' : 'EXACT' }
 }
 
 export function parseMiitLithiumOperatingObservations(text: string, context?: ObservationParserContext): readonly IndustryOperatingObservation[] {
@@ -259,7 +262,7 @@ export function parseMiitLithiumOperatingObservations(text: string, context?: Ob
   const period = miitPeriod(text, String(context?.metadata?.period ?? '')); if (!period) return []
   const ctx = textContext(context); const output: IndustryOperatingObservation[] = []
   const production = miitNumber(text, /(?:锂离子电池|锂电池|lithium[- ]ion battery)[\s\S]{0,220}?(?:产量|产出|output)[\s\S]{0,100}?(?:超过|大于|above|over|>)?\s*([0-9][0-9,]*(?:\.\d+)?)\s*(GWh|吉瓦时)/i)
-  if (production) output.push(base(ctx, { metricKey: 'lithium_battery.total_output', observationClass: 'PRODUCTION', value: production.value, qualifier: production.qualifier === 'EXACT' ? 'LOWER_BOUND' : production.qualifier, unit: 'GWh', originalValue: production.raw, originalUnit: 'GWh', ...period, geography: 'China national', productOrSegment: '锂离子电池', metadata: { ...(ctx.metadata ?? {}), sourceMethod: 'MIIT official article', qualifierText: 'article-reported output threshold' } }))
+  if (production) output.push(base(ctx, { metricKey: 'lithium_battery.total_output', observationClass: 'PRODUCTION', value: production.value, qualifier: production.qualifier, unit: 'GWh', originalValue: production.raw, originalUnit: 'GWh', ...period, geography: 'China national', productOrSegment: '锂离子电池', metadata: { ...(ctx.metadata ?? {}), sourceMethod: 'MIIT official article', qualifierText: 'article-reported output threshold' } }))
   const price = (label: RegExp, metricKey: string, productOrSegment: string): IndustryOperatingObservation | undefined => {
     let match = label.exec(text); let raw = match?.[1]; let matchedText = match?.[0] ?? ''
     if (period.frequency === 'ANNUAL') {
@@ -271,8 +274,7 @@ export function parseMiitLithiumOperatingObservations(text: string, context?: Ob
     const numeric = parseNumber(raw); if (numeric === undefined) return undefined
     const unit = /万元\/吨|10,?000 yuan\/tonne|10000 yuan\/tonne/i.test(matchedText) ? '万元/吨' : /元\/吨|yuan\/tonne/i.test(matchedText) ? '元/吨' : undefined
     if (!unit) return undefined
-    const value = unit === '元/吨' ? numeric / 10000 : numeric
-    return base(contextWith(ctx, { priceMethod: 'article-period average price', priceNot: ['spot', 'futures', 'ASP', 'daily'] }), { metricKey, observationClass: 'PRICE', value, qualifier: 'EXACT', unit: '万元/吨', originalValue: raw, originalUnit: unit, periodStart: period.periodStart, periodEnd: period.periodEnd, frequency: period.frequency, aggregation: period.aggregation, geography: 'China national', productOrSegment })
+    return base(contextWith(ctx, { priceMethod: 'article-period average price', priceNot: ['spot', 'futures', 'ASP', 'daily'] }), { metricKey, observationClass: 'PRICE', value: numeric, qualifier: 'EXACT', unit, originalValue: raw, originalUnit: unit, periodStart: period.periodStart, periodEnd: period.periodEnd, frequency: period.frequency, aggregation: 'PERIOD', geography: 'China national', productOrSegment })
   }
   const carbonate = price(/(?:电池级)?(?:碳酸锂|lithium carbonate)[\s\S]{0,180}?(?:平均价格|均价|average price)[^\d]{0,30}([0-9][0-9,.]*)\s*(万元\/吨|元\/吨|10,?000 yuan\/tonne|yuan\/tonne)/i, 'lithium_battery.lithium_carbonate_average_price', 'battery-grade lithium carbonate')
   const hydroxide = price(/(?:氢氧化锂|lithium hydroxide)[\s\S]{0,180}?(?:平均价格|均价|average price)[^\d]{0,30}([0-9][0-9,.]*)\s*(万元\/吨|元\/吨|10,?000 yuan\/tonne|yuan\/tonne)/i, 'lithium_battery.lithium_hydroxide_average_price', 'lithium hydroxide')
@@ -341,12 +343,14 @@ export class IndustryOperatingObservationAcquisition implements IndustryOperatin
     this.fetchImpl = options.fetchImpl ?? fetch; this.now = options.now ?? (() => new Date().toISOString()); this.timeoutMs = Math.min(30_000, Math.max(1, options.timeoutMs ?? 15_000)); this.maxPayloadBytes = Math.min(16 * 1024 * 1024, Math.max(1024, options.maxPayloadBytes ?? 12 * 1024 * 1024)); this.resolver = options.documentResolver ?? new DocumentInputResolver(); this.urls = { ...DEFAULT_URLS, ...(options.urls ?? {}) }
   }
   private specs(target: IndustryTargetInput): readonly OperatingSourceSpec[] {
-    const text = [target.name, ...(target.aliases ?? [])].join(' ').toLowerCase()
-    if (/lithium|锂电|锂离子电池/.test(text)) return [
+    const labels = [target.name, ...(target.aliases ?? [])].map((value) => value.trim().replace(/\s+/g, ' ').toLowerCase())
+    const lithiumTarget = labels.some((label) => /^(?:锂电池|锂离子电池)(?:行业)?$/.test(label) || /^lithium(?:-ion)? battery(?: industry)?$/.test(label))
+    if (lithiumTarget) return [
       { key: 'miitH1', candidate: candidate({ id: `d4-miit-h1-${sha256(canonicalUrl(this.urls.miitH1)).slice(0, 16)}`, url: this.urls.miitH1, title: 'MIIT 2026 H1 lithium-ion battery industry operation', provider: 'miit-d4', kind: 'official_disclosure', tier: 1, publishedAt: '2026-09-15T14:43:00.000Z', metadata: { originPublisher: 'MIIT', period: '2026-H1' } }), originPublisher: 'MIIT', hostPlatform: 'MIIT official web', sourceAuthority: 'S1_OFFICIAL', determinismClass: 'EVIDENCE_BACKED_NUMERIC', expected: 'html' },
       { key: 'miitAnnual', candidate: candidate({ id: `d4-miit-annual-${sha256(canonicalUrl(this.urls.miitAnnual)).slice(0, 16)}`, url: this.urls.miitAnnual, title: 'MIIT 2024 annual lithium-ion battery industry operation', provider: 'miit-d4', kind: 'official_disclosure', tier: 1, publishedAt: '2025-02-27T15:06:00.000Z', metadata: { originPublisher: 'MIIT', period: '2024' } }), originPublisher: 'MIIT', hostPlatform: 'MIIT official web', sourceAuthority: 'S1_OFFICIAL', determinismClass: 'EVIDENCE_BACKED_NUMERIC', expected: 'html' },
     ]
-    if (/air conditioner|air-conditioning|household appliance|空调|空气调节器/.test(text)) return [
+    const airConditionerTarget = labels.some((label) => /^(?:家用空调器|家用空调|房间空气调节器)(?:行业)?$/.test(label) || /^(?:household air conditioner|room air conditioner|air conditioner)(?: industry)?$/.test(label))
+    if (airConditionerTarget) return [
       { key: 'nbs', candidate: candidate({ id: `d4-nbs-annual-${sha256(canonicalUrl(this.urls.nbs)).slice(0, 16)}`, url: this.urls.nbs, title: 'NBS 2025 annual statistical report', provider: 'nbs-d4', kind: 'official_disclosure', tier: 1, publishedAt: '2026-03-02T15:59:59.999Z', metadata: { originPublisher: 'National Bureau of Statistics', period: '2025' } }), originPublisher: 'National Bureau of Statistics', hostPlatform: 'NBS official web/PDF host', sourceAuthority: 'S0_STATUTORY', determinismClass: 'EVIDENCE_BACKED_NUMERIC', expected: 'pdf' },
       { key: 'cheaaSeptember2024', period: '2024-09', candidate: candidate({ id: `d4-cheaa-2024-09-${sha256(canonicalUrl(this.urls.cheaaSeptember2024)).slice(0, 16)}`, url: this.urls.cheaaSeptember2024, title: 'CHEAA September 2024 household air-conditioner export table', provider: 'cheaa-d4', kind: 'official_disclosure', tier: 2, publishedAt: '2024-11-08T15:59:59.999Z', metadata: { originPublisher: 'CHEAA', period: '2024-09', upstreamDataSource: 'GACC' } }), originPublisher: 'CHEAA', hostPlatform: 'CHEAA official web/PDF host', sourceAuthority: 'S2_PROFESSIONAL', determinismClass: 'EVIDENCE_BACKED_NUMERIC', expected: 'pdf' },
       { key: 'cheaaJuly2025', period: '2025-07', candidate: candidate({ id: `d4-cheaa-2025-07-${sha256(canonicalUrl(this.urls.cheaaJuly2025)).slice(0, 16)}`, url: this.urls.cheaaJuly2025, title: 'CHEAA July 2025 household air-conditioner export table', provider: 'cheaa-d4', kind: 'official_disclosure', tier: 2, publishedAt: '2025-09-08T15:59:59.999Z', metadata: { originPublisher: 'CHEAA', period: '2025-07', upstreamDataSource: 'GACC' } }), originPublisher: 'CHEAA', hostPlatform: 'CHEAA official web/PDF host', sourceAuthority: 'S2_PROFESSIONAL', determinismClass: 'EVIDENCE_BACKED_NUMERIC', expected: 'pdf' },
@@ -378,7 +382,7 @@ export class IndustryOperatingObservationAcquisition implements IndustryOperatin
     for (const spec of specs.slice(0, 6)) {
       abortIfNeeded(request.signal); if (spec.candidate.publishedAt && !isPublishedBy(spec.candidate.publishedAt, request.asOf)) { diagnostics.push(`PIT_SOURCE_NOT_FETCHED:${spec.candidate.candidateId}`); continue }
       try {
-        const source = await this.fetchSource(spec, request.signal); sources.push(source); const text = await this.documentText(source, spec.expected); const ctx: ObservationParserContext = { sourceCandidateId: source.candidate.candidateId, publishedAt: source.candidate.publishedAt ?? request.now(), retrievedAt: source.retrievedAt, originPublisher: spec.originPublisher, hostPlatform: spec.hostPlatform, retrievalProvider: 'ResearchHub direct HTTPS', sourceAuthority: spec.sourceAuthority, determinismClass: spec.determinismClass, metadata: { ...(source.candidate.metadata ?? {}), canonicalUrl: source.canonicalUrl } }
+        const fetchedSource = await this.fetchSource(spec, request.signal); const text = await this.documentText(fetchedSource, spec.expected); const source = { ...fetchedSource, content: text }; sources.push(source); const ctx: ObservationParserContext = { sourceCandidateId: source.candidate.candidateId, publishedAt: source.candidate.publishedAt ?? request.now(), retrievedAt: source.retrievedAt, originPublisher: spec.originPublisher, hostPlatform: spec.hostPlatform, retrievalProvider: 'ResearchHub direct HTTPS', sourceAuthority: spec.sourceAuthority, determinismClass: spec.determinismClass, metadata: { ...(source.candidate.metadata ?? {}), canonicalUrl: source.canonicalUrl } }
         const parsed = spec.key === 'nbs' ? (parseNbsAnnualAirConditionerProduction(text, ctx) ? [parseNbsAnnualAirConditionerProduction(text, ctx)!] : []) : spec.key.startsWith('miit') ? parseMiitLithiumOperatingObservations(text, ctx) : (parseCheaaHouseholdAirConditionerExport(text, ctx, spec.period) ? [parseCheaaHouseholdAirConditionerExport(text, ctx, spec.period)!] : [])
         if (!parsed.length) diagnostics.push(`PARSER_SCHEMA_DRIFT:${source.candidate.candidateId}`); observations.push(...parsed)
       } catch (error) { const message = error instanceof Error ? error.message : String(error); diagnostics.push(`${spec.candidate.candidateId}:${message}`); if (message === 'WORKFLOW_CANCELLED') throw error }

@@ -747,8 +747,10 @@ Implementation facts:
   diagnostics. It does not introduce a provider registry, generic metric
   repository, or new Knowledge schema.
 - Lithium uses official MIIT disclosures for `PRODUCTION` and `PRICE`.
-  Production preserves the article's lower-bound qualifier; price observations
-  are article-period averages and retain `valueVersionPit=UNVERIFIED`.
+  Production preserves the qualifier detected in the article (`LOWER_BOUND`
+  for the H1 `超过1240 GWh` statement and `EXACT` for the annual `1170 GWh`
+  statement); price observations are article-period averages and retain
+  `valueVersionPit=UNVERIFIED`.
 - Household air conditioner production uses the NBS official PDF. Trade uses
   CHEAA official PDFs with `metadata.upstreamDataSource=GACC`; CHEAA remains
   `originPublisher` and `S2_PROFESSIONAL`, while ResearchHub remains the
@@ -759,7 +761,19 @@ Implementation facts:
   D4 and ordinary evidence by canonical URL/content hash, routes observations
   only to the market/supply/synthesis Industry modules, and renders the
   code-owned observation table in the existing `Key Metrics & Monitoring`
-  report section. Numeric truth is not delegated to the Skill or model.
+  report section. Numeric truth is not delegated to the Skill or model. Source
+  admission precedes observation admission, injected observations are checked
+  for source identity and publication/value-version PIT, and observations
+  without a canonical Gateway source reference are excluded from persisted
+  output.
+- D4 `NormalizedResearchSource.content` is the same normalized document text
+  consumed by the deterministic parser; PDF/HTML raw bytes and their content
+  hash remain available for raw provenance. The report table preserves
+  publisher, authority, upstream data source, retrieval provider, frequency /
+  aggregation, qualifiers, and canonical `source:` references.
+- Target activation is exact-scope: explicit lithium-battery and household /
+  room-air-conditioner labels activate D4, while generic household-appliance,
+  HVAC, 家电, and 锂电材料 labels remain zero-call `SCOPE_UNSUPPORTED` cases.
 - The normal runtime injects the acquisition port through application runtime
   construction. Unknown targets return `SCOPE_UNSUPPORTED` without D4 network
   calls, and the default real-acceptance harness is network-disabled unless
@@ -771,8 +785,13 @@ Live acceptance evidence on 2026-09-23:
 - Enabled harness: `D4_INDUSTRY_OPERATING_REAL_PRODUCT_PATH_VERIFIED`,
   `networkCalls=5`, no secrets or raw response bodies emitted.
 - Lithium accepted both required classes: MIIT `PRODUCTION` and `PRICE`.
+- Lithium qualifier truth is preserved: live H1 production is `LOWER_BOUND`,
+  live 2024 annual production is `EXACT`, H1 prices use `H1 / PERIOD`, and
+  source-reported price units are not converted.
 - Household air conditioner accepted NBS `PRODUCTION` and CHEAA/GACC-backed
   `TRADE`, including source references bound by the Gateway and report output.
+- Both generated reports passed the hardened metric, qualifier/provenance,
+  canonical-source, and GACC-attribution checks.
 - The MIIT annual fallback also parses the official alias and paired annual
   price sentence; both lithium sources complete without parser drift.
 
