@@ -191,7 +191,7 @@ calendar injection used by the real harness is a test seam only and marks the
 requested trade date as manual so an external calendar outage cannot prevent
 lane execution.
 
-Offline validation completed on the D5 worktree: 28 client tests, 1,473 Node
+Offline validation completed on the D5 worktree: 28 client tests, 1,475 Node
 tests, server typecheck, client typecheck, client production build, and
 `git diff --check`.
 
@@ -207,9 +207,20 @@ dates are normalized before PIT selection.
 The institutional adapter sends a bounded seven-day Shanghai lookback as
 `YYYYMMDD`, admits only event and publication dates available at `asOf`,
 normalizes date-only publication to Shanghai end-of-day, supports the actual
-AKShare columns (`代码`, `名称`, `调研机构`, `调研日期`, `公告日期`), and excludes
-retrieval/request time from stable identity. It records returned, PIT-rejected,
-accepted, and limit-dropped row counts.
+AKShare columns (`代码`, `名称`, `调研机构`, `调研日期`, `公告日期`), and derives
+identity from a fixed stable allowlist: company identity, institution, event and
+publication dates, institution type, researchers, reception method/staff/location,
+and activity description. Volatile quote fields, retrieval/request time, and row
+index are excluded. Telemetry separates PIT rejection, invalid/unusable rows,
+deduplication, accepted rows, and bounded-limit drops.
+
+Daily composition now treats the catalog's `akshare` entry as the activation
+authority for all three AKShare-dependent lanes: market, D1 expectations, and
+institutional activity. `active` enables them; `blocked`, `metadata_only`,
+`experimental`, and absent entries enable none. D4 remains independently
+available, and inactive compositions omit the AKShare trading-calendar provider
+so the normal calendar falls back to manual/cache/weekday behavior without a
+bridge call.
 
 D1 snapshots now use `expectation_snapshot`; only non-zero estimate changes use
 `expectation_revision`. D4 Daily signals use
@@ -221,9 +232,10 @@ sections.
 The corrected gated harness was executed for 2026-09-23 through Morning and
 Evening. It made 36 ordinary network fetches and 14 AKShare bridge calls. Both
 briefs completed; market returned 4/4 indexes, institutional activity returned
-1,709 rows with 61 PIT-rejected, 10 accepted, and 1,638 additional valid rows
-dropped by the bounded output limit; D1 and D4 lanes succeeded, PIT was safe,
-and no fabricated fallback was used. The run remains partial only
-for CNINFO managed parser availability and GDELT responses (HTTP 429/invalid
-provider response). The default no-network harness mode reports
-`REAL_DAILY_BREADTH_NOT_RUN` with `networkCalls=0`.
+1,717 rows with 62 PIT-rejected, 0 invalid/unusable, 0 deduplicated, 10
+accepted, and 1,645 additional valid rows dropped by the bounded output limit;
+the accounting invariant is `1717 = 62 + 0 + 0 + 10 + 1645`. D1 and D4 lanes
+succeeded, PIT was safe, and no fabricated fallback was used. The run remains
+partial only for CNINFO managed parser availability and GDELT fetch failure.
+The default no-network harness mode reports `REAL_DAILY_BREADTH_NOT_RUN` with
+`networkCalls=0`.

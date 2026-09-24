@@ -96,7 +96,7 @@ test('D5 D1 lane emits a snapshot, one real revision, and no future point', asyn
 
 test('D5 institutional lane preserves activity semantics, date, company attribution, and dedup', async () => {
   const row = { 证券代码: '600519', 证券简称: '贵州茅台', 机构名称: 'Fixture Fund', 调研日期: '2026-09-23', 公告日期: '2026-09-23' }
-  const calls: string[] = []; const lane = new AkshareInstitutionalActivityAcquisition(fakeAkshare({ institutionalResearchDetail: async (request) => { calls.push(request.date); return [row, { ...row }, { ...row, 调研日期: '2026-09-25' }, { ...row, 公告日期: '2026-09-25' }] } }))
+  const calls: string[] = []; const lane = new AkshareInstitutionalActivityAcquisition(fakeAkshare({ institutionalResearchDetail: async (request) => { calls.push(request.date); return [row, { ...row }, { ...row, 调研日期: '2026-09-25' }, { ...row, 公告日期: '2026-09-25' }, { invalid: 'row' }] } }))
   const candidates = await lane.discover({ company: { symbol: 'BROAD_SCOPE' }, asOf: '2026-09-24T04:00:00.000Z' })
   assert.equal(candidates.length, 1)
   assert.deepEqual(calls, ['20260917'])
@@ -106,12 +106,31 @@ test('D5 institutional lane preserves activity semantics, date, company attribut
   assert.equal(candidates[0]?.publishedAt, '2026-09-23T15:59:59.999Z')
   assert.equal(candidates[0]?.metadata?.companySymbol, '600519')
   assert.notEqual(candidates[0]?.metadata?.dailySignalKind, 'institutional_view')
+  assert.equal(lane.lastTelemetry?.rowsReturned, 5)
+  assert.equal(lane.lastTelemetry?.rowsPitRejected, 2)
+  assert.equal(lane.lastTelemetry?.rowsInvalidOrUnusable, 1)
+  assert.equal(lane.lastTelemetry?.rowsDeduplicated, 1)
+  assert.equal(lane.lastTelemetry?.rowsAccepted, 1)
+  assert.equal(lane.lastTelemetry?.rowsLimitDropped, 0)
+  assert.equal((lane.lastTelemetry?.rowsPitRejected ?? 0) + (lane.lastTelemetry?.rowsInvalidOrUnusable ?? 0) + (lane.lastTelemetry?.rowsDeduplicated ?? 0) + (lane.lastTelemetry?.rowsAccepted ?? 0) + (lane.lastTelemetry?.rowsLimitDropped ?? 0), lane.lastTelemetry?.rowsReturned)
+  let quoteRow: Record<string, unknown> = { ...row, 机构类型: '公募', 调研人员: 'Analyst A', 接待方式: '现场', 最新价: 100, 涨跌幅: 1.2 }
+  const quoteLane = new AkshareInstitutionalActivityAcquisition(fakeAkshare({ institutionalResearchDetail: async () => [quoteRow] }))
+  const quoteFirst = await quoteLane.discover({ company: { symbol: 'BROAD_SCOPE' }, asOf: '2026-09-24T04:00:00.000Z' })
+  quoteRow = { ...quoteRow, 最新价: 130, 涨跌幅: -2.4 }
+  const quoteSecond = await quoteLane.discover({ company: { symbol: 'BROAD_SCOPE' }, asOf: '2026-09-24T05:00:00.000Z' })
+  assert.equal(quoteFirst[0]?.candidateId, quoteSecond[0]?.candidateId)
+  assert.equal(quoteFirst[0]?.metadata?.providerObjectId, quoteSecond[0]?.metadata?.providerObjectId)
+  quoteRow = { ...quoteRow, 接待方式: '电话' }
+  const distinctEvent = await quoteLane.discover({ company: { symbol: 'BROAD_SCOPE' }, asOf: '2026-09-24T05:00:00.000Z' })
+  assert.notEqual(quoteSecond[0]?.candidateId, distinctEvent[0]?.candidateId)
   const noPublication = { ...row, 公告日期: undefined }
   const stableLane = new AkshareInstitutionalActivityAcquisition(fakeAkshare({ institutionalResearchDetail: async () => [noPublication] }))
   const first = await stableLane.discover({ company: { symbol: 'BROAD_SCOPE' }, asOf: '2026-09-24T04:00:00.000Z' })
   const second = await stableLane.discover({ company: { symbol: 'BROAD_SCOPE' }, asOf: '2026-09-24T05:00:00.000Z' })
   assert.equal(first[0]?.candidateId, second[0]?.candidateId)
   assert.equal(stableLane.lastTelemetry?.rowsPitRejected, 0)
+  assert.equal(stableLane.lastTelemetry?.rowsInvalidOrUnusable, 0)
+  assert.equal(stableLane.lastTelemetry?.rowsDeduplicated, 0)
   const akshareRow = { 代码: '600519', 名称: '贵州茅台', 调研机构: 'Fixture Fund', 调研日期: 1790121600000, 公告日期: 1790121600000 }
   const numericLane = new AkshareInstitutionalActivityAcquisition(fakeAkshare({ institutionalResearchDetail: async () => [akshareRow] }))
   const numeric = await numericLane.discover({ company: { symbol: 'BROAD_SCOPE' }, asOf: '2026-09-24T04:00:00.000Z' })

@@ -76,25 +76,32 @@ export async function createDailyIntelligenceComposition(options: DailyIntellige
       tier: entry.reliabilityTier,
     }))
   const activePlatforms = new Set(active.map((entry) => entry.platform))
+  const akshareActive = activePlatforms.has('akshare')
   const core: ResearchAcquisitionPlugin[] = []
   if (activePlatforms.has('cninfo')) core.push(new OfficialDisclosureResearchPlugin(new CninfoOfficialDisclosureClient()))
   if (activePlatforms.has('gdelt')) core.push(new GdeltResearchPlugin())
   if (activePlatforms.has('gov.cn')) core.push(new RssResearchPlugin({ feedUrls: ['https://www.gov.cn/rss/zhengce.xml'] }))
-  if (activePlatforms.has('akshare')) core.push(new AkshareDailyMarketAcquisition(akshare))
-  const breadth: ResearchAcquisitionPlugin[] = [new DailyExpectationRevisionAcquisition(new AkshareEarningsExpectationsSource({ akshare })), new AkshareInstitutionalActivityAcquisition(akshare), new DailyIndustryObservationAcquisition(options.industryOperatingObservationAcquisition ?? new IndustryOperatingObservationAcquisition())]
+  if (akshareActive) core.push(new AkshareDailyMarketAcquisition(akshare))
+  const breadth: ResearchAcquisitionPlugin[] = []
+  if (akshareActive) {
+    breadth.push(new DailyExpectationRevisionAcquisition(new AkshareEarningsExpectationsSource({ akshare })), new AkshareInstitutionalActivityAcquisition(akshare))
+  }
+  breadth.push(new DailyIndustryObservationAcquisition(options.industryOperatingObservationAcquisition ?? new IndustryOperatingObservationAcquisition()))
   const providers: readonly ResearchAcquisitionPlugin[] = [...core, ...breadth, ...institutional, ...community]
   const overrides = await readCalendarOverrides(join(cwd, 'config', 'trading-calendar-overrides.yaml'))
   const calendar = options.calendar ?? new TradingCalendarService({
     cachePath: join(runtimeRoot, 'trading-calendar.json'),
     manualHolidays: overrides.manualHolidays,
     manualTradingDays: overrides.manualTradingDays,
-    provider: async (date) => {
-      try {
-        const value = await akshare.tradingCalendar?.({ symbol: 'calendar', startDate: date, endDate: date })
-        if (!Array.isArray(value)) return undefined
-        return value.some((row) => row && typeof row === 'object' && Object.values(row as Record<string, unknown>).some((field) => String(field).startsWith(date)))
-      } catch { return undefined }
-    },
+    ...(akshareActive ? {
+      provider: async (date: string) => {
+        try {
+          const value = await akshare.tradingCalendar?.({ symbol: 'calendar', startDate: date, endDate: date })
+          if (!Array.isArray(value)) return undefined
+          return value.some((row) => row && typeof row === 'object' && Object.values(row as Record<string, unknown>).some((field) => String(field).startsWith(date)))
+        } catch { return undefined }
+      },
+    } : {}),
   })
   const service = new DailyIntelligenceService({
     cwd,

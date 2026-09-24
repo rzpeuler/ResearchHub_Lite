@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { mkdtemp } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { DailyIntelligenceSignalEnrichmentSkill } from '../../skills/daily-intelligence/enrichment.ts'
@@ -10,6 +10,7 @@ import { createDailyIntelligenceComposition } from '../../app/services/daily-int
 import { WorkflowService } from '../../app/services/workflow-service.ts'
 import { loadSourceCatalog } from '../../plugins/daily-intelligence/config.ts'
 import { TradingCalendarService } from '../../plugins/daily-intelligence/calendar.ts'
+import type { AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
 import type { DailyResearchSignal, DailySignalCluster } from '../../plugins/daily-intelligence/contracts.ts'
 
 const capabilities = () => ({ maxContextTokens: 20_000, maxOutputTokens: 4_000, structuredOutputSupport: true, maxConcurrency: 2 })
@@ -33,4 +34,32 @@ test('FIX-002 synthesis rejects an announcement from filling Overnight Global', 
 })
 test('FIX-002 source catalog exposes operational counts without activating metadata-only entries', async () => { const catalog = await loadSourceCatalog(); assert.equal(catalog.length, 43); assert.ok(catalog.filter((item) => item.operationalStatus === 'metadata_only').length > 0); assert.ok(catalog.filter((item) => item.operationalStatus === 'active').every((item) => item.operationalStatus === 'active')) })
 test('FIX-002 shared composition returns one calendar and the explicit D5 lane graph', async () => { const root = await mkdtemp(join(tmpdir(), 'rhl-daily-composition-')); const composition = await createDailyIntelligenceComposition({ cwd: process.cwd(), workflowService: new WorkflowService(), runtimeRoot: root }); assert.equal(composition.service.calendar, composition.calendar); assert.equal(composition.catalog.length, 43); assert.deepEqual(composition.providers.map((provider) => provider.name), ['official-disclosure-research-acquisition', 'gdelt-research-acquisition', 'akshare-daily-market-acquisition', 'd1-daily-expectation-revisions', 'akshare-institutional-activity', 'd4-daily-industry-observations']) })
+test('FIX-002 AKShare catalog state gates all AKShare Daily lanes while D4 remains independent', async () => {
+  const states = ['active', 'blocked', 'metadata_only', 'absent'] as const
+  for (const state of states) {
+    const root = await mkdtemp(join(tmpdir(), `rhl-daily-catalog-${state}-`))
+    try {
+      const catalogPath = join(root, 'catalog.yaml')
+      const fixture = state === 'absent' ? [] : [{ platform: 'akshare', accountId: 'fixture', category: 'official', acquisitionMode: 'python_bridge', catalogRole: 'active_feed', operationalStatus: state, enabled: state === 'active' }]
+      await writeFile(catalogPath, JSON.stringify(fixture), 'utf8')
+      const providerNames = (await createDailyIntelligenceComposition({ cwd: process.cwd(), catalogPath, workflowService: new WorkflowService(), runtimeRoot: root, industryOperatingObservationAcquisition: { acquire: async () => ({ status: 'SCOPE_UNSUPPORTED', observations: [], sources: [], diagnostics: [] }) } })).providers.map((provider) => provider.name)
+      const akshareLanes = ['akshare-daily-market-acquisition', 'd1-daily-expectation-revisions', 'akshare-institutional-activity']
+      assert.equal(providerNames.includes('d4-daily-industry-observations'), true, state)
+      assert.deepEqual(providerNames.filter((name) => akshareLanes.includes(name)), state === 'active' ? akshareLanes : [], state)
+    } finally { await rm(root, { recursive: true, force: true }) }
+  }
+})
+test('FIX-002 inactive AKShare composition makes no AKShare or calendar bridge calls on Daily execution', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-daily-inactive-akshare-')); const catalogPath = join(root, 'catalog.yaml'); await writeFile(catalogPath, JSON.stringify([{ platform: 'akshare', accountId: 'fixture', category: 'official', acquisitionMode: 'python_bridge', catalogRole: 'active_feed', operationalStatus: 'blocked', enabled: false }]), 'utf8')
+  let akshareCalls = 0; let calendarCalls = 0
+  const counted = (): unknown[] => { akshareCalls += 1; return [] }
+  const client: AkshareDataClient = { companyBasic: async () => counted(), financialData: async () => counted(), historicalMarketData: async () => counted(), indexDaily: async () => counted(), institutionalResearchDetail: async () => counted(), tradingCalendar: async () => { calendarCalls += 1; return [] } }
+  try {
+    const composition = await createDailyIntelligenceComposition({ cwd: process.cwd(), catalogPath, workflowService: new WorkflowService(), runtimeRoot: root, akshare: client, industryOperatingObservationAcquisition: { acquire: async () => ({ status: 'SCOPE_UNSUPPORTED', observations: [], sources: [], diagnostics: [] }) } })
+    const result = await composition.service.startBrief({ workflowRunId: 'fix-002-inactive-akshare', briefType: 'morning', tradeDate: '2026-09-23', asOf: '2026-09-24T04:00:00.000Z', forceRefresh: true }).completion
+    assert.ok(['completed', 'blocked', 'failed'].includes(result.status))
+    assert.equal(akshareCalls, 0)
+    assert.equal(calendarCalls, 0)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
 test('FIX-002 manual calendar overrides take precedence over provider and cache', async () => { const root = await mkdtemp(join(tmpdir(), 'rhl-calendar-override-')); const calendar = new TradingCalendarService({ cachePath: join(root, 'calendar.json'), manualHolidays: ['2026-09-08'], provider: async () => true }); const result = await calendar.isTradingDay('2026-09-08'); assert.equal(result.isTradingDay, false); assert.equal(result.calendarConfidence, 'manual') })
