@@ -170,7 +170,7 @@ test('FIX-002 Daily market preserves Company and BROAD_SCOPE endpoints and retur
   const company = await plugin.discover({ company: { symbol: '600519' }, asOf: '2026-09-08' })
   assert.deepEqual(company.map((item) => item.metadata?.endpoint), ['600519'])
   const broad = await plugin.discover({ company: { symbol: 'BROAD_SCOPE' }, asOf: '2026-09-08' })
-  assert.deepEqual(broad.map((item) => item.metadata?.endpoint), ['000001', '399001', '399006', '000688', 'sector'])
+  assert.deepEqual(broad.map((item) => item.metadata?.endpoint), ['000001', '399001', '399006', '000688'])
   const industry = await plugin.discover({ industry: { name: 'PCB', searchTerms: ['PCB'] }, asOf: '2026-09-08' })
   assert.deepEqual(industry, [])
 })

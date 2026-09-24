@@ -1,8 +1,8 @@
 import type { ResearchAcquisitionPlugin, ResearchCompanyIdentity, ResearchSourceCandidate } from '../research-acquisition/contracts.ts'
 
 export type DailyBriefType = 'morning' | 'evening'
-export type DailySignalKind = 'news' | 'announcement' | 'institutional_view' | 'market' | 'community' | 'social_attention'
-export type DailySignalCategory = 'announcement' | 'earnings' | 'performance_forecast' | 'investor_relations' | 'institutional_research' | 'management_guidance' | 'macro' | 'market' | 'community' | 'technology' | 'industry' | 'news'
+export type DailySignalKind = 'news' | 'announcement' | 'institutional_view' | 'institutional_activity' | 'expectation' | 'market' | 'community' | 'social_attention'
+export type DailySignalCategory = 'announcement' | 'earnings' | 'performance_forecast' | 'investor_relations' | 'institutional_research' | 'institutional_activity' | 'expectation_revision' | 'management_guidance' | 'macro' | 'market' | 'community' | 'technology' | 'industry' | 'news'
 export type DailyProviderStatus = 'succeeded' | 'empty' | 'blocked' | 'failed'
 export type DailyCatalogRole = 'identity' | 'active_feed' | 'discovery_source' | 'reference_only'
 export type DailyOperationalStatus = 'active' | 'blocked' | 'metadata_only' | 'experimental'
@@ -53,6 +53,7 @@ export interface DailyResearchSignal {
   readonly sourceAccountRef?: string
   readonly source: ResearchSourceCandidate
   readonly publishedAt?: string
+  readonly eventDate?: string
   readonly discoveredAt: string
   readonly entities: readonly string[]
   readonly themes: readonly string[]

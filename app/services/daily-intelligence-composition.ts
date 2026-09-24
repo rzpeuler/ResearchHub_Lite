@@ -3,11 +3,17 @@ import { readFile } from 'node:fs/promises'
 import type { ModelRuntime } from '@earendil-works/pi-coding-agent'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import type { ResearchAcquisitionPlugin } from '../../plugins/research-acquisition/contracts.ts'
-import { AkshareDataAdapter } from '../../plugins/research-acquisition/akshare.ts'
+import { AkshareDataAdapter, type AkshareDataClient } from '../../plugins/research-acquisition/akshare.ts'
 import { CninfoOfficialDisclosureClient, OfficialDisclosureResearchPlugin } from '../../plugins/research-acquisition/official.ts'
 import { GdeltResearchPlugin } from '../../plugins/research-acquisition/gdelt.ts'
 import { RssResearchPlugin } from '../../plugins/research-acquisition/rss.ts'
 import { AkshareDailyMarketAcquisition } from '../../plugins/daily-intelligence/market.ts'
+import { DailyExpectationRevisionAcquisition } from '../../plugins/daily-intelligence/expectations.ts'
+import { AkshareInstitutionalActivityAcquisition } from '../../plugins/daily-intelligence/institutional.ts'
+import { DailyIndustryObservationAcquisition } from '../../plugins/daily-intelligence/industry.ts'
+import { IndustryOperatingObservationAcquisition } from '../../plugins/research-acquisition/industry-operating-observations.ts'
+import type { IndustryOperatingObservationAcquisitionPort } from '../../plugins/research-acquisition/industry-operating-observations.ts'
+import { AkshareEarningsExpectationsSource } from '../../workflows/earnings-review/expectations-acquisition.ts'
 import { CommunitySignalAcquisition, PublicInstitutionalViewAcquisition } from '../../plugins/daily-intelligence/acquisition.ts'
 import { loadSourceCatalog } from '../../plugins/daily-intelligence/config.ts'
 import { TradingCalendarService } from '../../plugins/daily-intelligence/calendar.ts'
@@ -24,6 +30,9 @@ export interface DailyIntelligenceCompositionOptions {
   readonly catalogPath?: string
   readonly runtimeRoot?: string
   readonly mountedKnowledgeBaseRoot?: string
+  readonly industryOperatingObservationAcquisition?: IndustryOperatingObservationAcquisitionPort
+  readonly akshare?: AkshareDataClient
+  readonly calendar?: TradingCalendarService
 }
 
 export interface DailyIntelligenceComposition {
@@ -42,7 +51,7 @@ export async function createDailyIntelligenceComposition(options: DailyIntellige
   const runtimeRoot = resolve(options.runtimeRoot ?? join(cwd, 'runtime-data'))
   const [catalog, akshare] = await Promise.all([
     loadSourceCatalog(catalogPath).catch(() => []),
-    Promise.resolve(new AkshareDataAdapter()),
+    Promise.resolve(options.akshare ?? new AkshareDataAdapter()),
   ])
   const active = catalog.filter((entry) => entry.operationalStatus === 'active')
   const institutional = active
@@ -72,9 +81,10 @@ export async function createDailyIntelligenceComposition(options: DailyIntellige
   if (activePlatforms.has('gdelt')) core.push(new GdeltResearchPlugin())
   if (activePlatforms.has('gov.cn')) core.push(new RssResearchPlugin({ feedUrls: ['https://www.gov.cn/rss/zhengce.xml'] }))
   if (activePlatforms.has('akshare')) core.push(new AkshareDailyMarketAcquisition(akshare))
-  const providers: readonly ResearchAcquisitionPlugin[] = [...core, ...institutional, ...community]
+  const breadth: ResearchAcquisitionPlugin[] = [new DailyExpectationRevisionAcquisition(new AkshareEarningsExpectationsSource({ akshare })), new AkshareInstitutionalActivityAcquisition(akshare), new DailyIndustryObservationAcquisition(options.industryOperatingObservationAcquisition ?? new IndustryOperatingObservationAcquisition())]
+  const providers: readonly ResearchAcquisitionPlugin[] = [...core, ...breadth, ...institutional, ...community]
   const overrides = await readCalendarOverrides(join(cwd, 'config', 'trading-calendar-overrides.yaml'))
-  const calendar = new TradingCalendarService({
+  const calendar = options.calendar ?? new TradingCalendarService({
     cachePath: join(runtimeRoot, 'trading-calendar.json'),
     manualHolidays: overrides.manualHolidays,
     manualTradingDays: overrides.manualTradingDays,

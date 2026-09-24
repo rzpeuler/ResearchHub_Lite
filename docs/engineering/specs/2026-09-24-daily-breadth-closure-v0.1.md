@@ -1,6 +1,6 @@
 # Daily Intelligence Breadth Closure — D5 v0.1
 
-Status: approved implementation design; D5 branch only
+Status: implemented candidate; D5 branch only; Sol acceptance pending
 
 ## Scope and baseline
 
@@ -175,3 +175,31 @@ git diff --check
 
 The D5 branch is pushed for Sol review and is not merged into main by this
 task.
+
+## Implementation evidence
+
+The catalog audit is explicit at runtime: 43 entries resolve to 3 active feeds
+(CNINFO, GDELT, AKShare), 39 metadata-only reference entries, and 1 blocked
+gov.cn entry. The gov.cn entry is retained as `reference_only` with its audited
+RSS 404 reason; it is not attempted by composition.
+
+The default provider graph is the existing CNINFO/GDELT path plus four bounded
+Daily lanes: AKShare market, D1 expectations, AKShare institutional activity,
+and D4 industry observations. The normal composition exposes one shared
+calendar and the existing scheduler/service path remains unchanged. The
+calendar injection used by the real harness is a test seam only and marks the
+requested trade date as manual so an external calendar outage cannot prevent
+lane execution.
+
+Offline validation completed on the D5 worktree: 28 client tests, 1,470 Node
+tests, server typecheck, client typecheck, client production build, and
+`git diff --check`.
+
+The gated real harness was executed for 2026-09-23 through Morning and Evening.
+It made 36 ordinary network fetches and 14 AKShare bridge calls, produced
+completed fail-soft briefs, 14 structured signals per brief, D1 and D4 usable
+lanes, and no fabricated fallback. The run remains partial because the live
+environment returned GDELT HTTP 429, unavailable CNINFO managed parser runtime,
+AKShare index response errors, and AKShare institutional endpoint errors. The
+default no-network harness mode reports `REAL_DAILY_BREADTH_NOT_RUN` and
+`networkCalls=0`.
