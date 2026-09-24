@@ -39,3 +39,25 @@ boundaries.
 
 Engineering completion must be reviewed against the repository state, the
 approved task, and the applicable architecture documents.
+
+## Codex engineering delegation
+
+For work in this repository, use `gpt-6-sol` with high reasoning effort as the
+primary agent for requirements analysis, product and architecture decisions,
+task planning, scope control, and final acceptance. Use `gpt-6-luna` with high
+reasoning effort as a subagent for bounded implementation, debugging, test
+execution, and test repair. Specify the subagent model and effort explicitly
+when spawning it; do not rely on model inheritance.
+
+The primary agent should give the subagent a concrete task, relevant contracts,
+allowed files, and validation expectations. The primary agent reviews the
+resulting diff and test evidence, resolves scope or architecture questions, and
+owns the final user-facing report and Git delivery. If implementation reveals
+an unresolved product, architecture, security, or data-loss decision, return
+that decision to the primary agent before continuing.
+
+Do not spawn a subagent for a read-only explanation or another task with no
+engineering execution. If subagents or the requested model are unavailable,
+report that limitation instead of silently claiming the preferred split was
+used. Explicit user instructions for a particular task take precedence over
+these defaults.
