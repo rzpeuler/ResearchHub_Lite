@@ -8,6 +8,7 @@ import type { IndustryOperatingObservation } from "../../plugins/research-acquis
 import {
   INDUSTRY_MODULES,
   INDUSTRY_CLAIM_TYPES,
+  INDUSTRY_STRUCTURED_VALUE_COMPARATORS,
   INDUSTRY_RESEARCH_DESIGN_CONTRACT,
   createIndustryModuleResultContract,
   createIndustrySynthesisContract,
@@ -570,6 +571,11 @@ function operatingObservationProjection(observations: readonly IndustryOperating
 function observationPeriodTags(observation: IndustryOperatingObservation): Set<string> {
   return new Set([observation.periodStart.slice(0, 4), observation.periodStart.slice(0, 7), observation.periodStart.slice(0, 10), String(observation.metadata.period ?? ''), `${observation.periodStart.slice(0, 4)}-${observation.frequency}`].filter(Boolean))
 }
+const observationComparatorByQualifier = {
+  EXACT: 'eq',
+  LOWER_BOUND: 'gte',
+  UPPER_BOUND: 'lte',
+} as const
 export function observationBackedProposalIsDeterministic(proposal: SemanticProductionProposal, observations: readonly IndustryOperatingObservation[]): boolean {
   const structured = proposal.structuredValue as Record<string, unknown> | undefined
   const semanticKey = typeof structured?.semanticKey === 'string' ? structured.semanticKey : undefined
@@ -580,9 +586,8 @@ export function observationBackedProposalIsDeterministic(proposal: SemanticProdu
   if (period === undefined || !observationPeriodTags(observation).has(period)) return false
   const sourceIds = proposal.sourceCandidateIds ?? []
   if (!sourceIds.includes(observation.sourceCandidateId) && !sourceIds.includes(`evidence-${observation.sourceCandidateId}`)) return false
-  if (observation.qualifier === 'LOWER_BOUND' && !['>=', 'gte', 'at_least', 'greater_than_or_equal'].includes(String(structured.comparator))) return false
-  if (observation.qualifier === 'UPPER_BOUND' && !['<=', 'lte', 'at_most', 'less_than_or_equal'].includes(String(structured.comparator))) return false
-  return true
+  const expectedComparator = observationComparatorByQualifier[observation.qualifier]
+  return INDUSTRY_STRUCTURED_VALUE_COMPARATORS.includes(expectedComparator) && structured.comparator === expectedComparator
 }
 function enforceObservationClaims(result: IndustryModuleResult, observations: readonly IndustryOperatingObservation[] | undefined): IndustryModuleResult {
   if (!observations?.length) return result

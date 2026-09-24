@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   IndustryResearchSkill,
   INDUSTRY_MODULES,
+  observationBackedProposalIsDeterministic,
   validateIndustryModuleResult,
   validateIndustryResearchDesign,
   validateCrossModuleSynthesis,
@@ -18,6 +19,7 @@ import {
   INDUSTRY_LOCAL_ID_MAX_LENGTH,
   isValidIndustryLocalId,
 } from "../../../skills/industry-research/contracts.ts";
+import { createIndustryOperatingObservation } from "../../../plugins/research-acquisition/industry-operating-observations.ts";
 const design = {
   definitionHypothesis: "A bounded manufacturing industry.",
   targetKind: "industry",
@@ -79,6 +81,101 @@ function moduleOutput(module: (typeof INDUSTRY_MODULES)[number]) {
     },
   };
 }
+
+function comparatorObservation(qualifier: "EXACT" | "LOWER_BOUND" | "UPPER_BOUND", value: number) {
+  return createIndustryOperatingObservation({
+    metricKey: "lithium_battery.total_output",
+    observationClass: "PRODUCTION",
+    value,
+    qualifier,
+    unit: "GWh",
+    originalValue: String(value),
+    originalUnit: "GWh",
+    periodStart: "2024-01-01T00:00:00.000Z",
+    periodEnd: "2024-12-31T23:59:59.999Z",
+    frequency: "ANNUAL",
+    aggregation: "PERIOD",
+    geography: "China national",
+    productOrSegment: "锂离子电池",
+    publishedAt: "2025-02-27T15:06:00.000Z",
+    retrievedAt: "2026-09-23T00:00:00.000Z",
+    originPublisher: "MIIT",
+    hostPlatform: "MIIT official web",
+    retrievalProvider: "ResearchHub direct HTTPS",
+    sourceAuthority: "S1_OFFICIAL",
+    determinismClass: "EVIDENCE_BACKED_NUMERIC",
+    sourceCandidateId: "s1",
+    publicationPit: "VERIFIED",
+    valueVersionPit: "UNVERIFIED",
+    metadata: { period: "2024" },
+  });
+}
+
+function comparatorProposal(observation: ReturnType<typeof comparatorObservation>, comparator: string) {
+  return {
+    proposalId: "observation-proposal",
+    kind: "claim" as const,
+    subjectKey: "local",
+    claimType: "fact" as const,
+    statement: "The observation is true.",
+    sourceCandidateIds: [`evidence-${observation.sourceCandidateId}`],
+    structuredValue: {
+      metric: observation.metricKey,
+      value: observation.value,
+      unit: observation.unit,
+      comparator,
+      period: "2024",
+      semanticKey: `observation:${observation.observationId}`,
+    },
+  };
+}
+
+test("Observation-backed structured claims require the exact Schema comparator for each qualifier", () => {
+  const exact = comparatorObservation("EXACT", 1170);
+  const lower = comparatorObservation("LOWER_BOUND", 1240);
+  const upper = comparatorObservation("UPPER_BOUND", 1300);
+  assert.equal(observationBackedProposalIsDeterministic(comparatorProposal(exact, "eq"), [exact]), true);
+  for (const comparator of ["gte", "gt", "lte", "lt", "approx"]) assert.equal(observationBackedProposalIsDeterministic(comparatorProposal(exact, comparator), [exact]), false);
+  assert.equal(observationBackedProposalIsDeterministic(comparatorProposal(lower, "gte"), [lower]), true);
+  for (const comparator of ["eq", "gt", "lte", "lt", "approx"]) assert.equal(observationBackedProposalIsDeterministic(comparatorProposal(lower, comparator), [lower]), false);
+  assert.equal(observationBackedProposalIsDeterministic(comparatorProposal(upper, "lte"), [upper]), true);
+  for (const comparator of ["eq", "gt", "gte", "lt", "approx"]) assert.equal(observationBackedProposalIsDeterministic(comparatorProposal(upper, comparator), [upper]), false);
+});
+
+test("Industry module rejects an observation-backed comparator mismatch without repair", async () => {
+  const observation = comparatorObservation("LOWER_BOUND", 1240);
+  const proposal = comparatorProposal(observation, "eq");
+  const candidate = {
+    ...moduleOutput("supply_demand_analysis"),
+    evidenceIds: ["evidence-s1"],
+    proposals: [proposal],
+    reportMaterial: { markdown: "Observation-backed.", evidenceIds: ["evidence-s1"], proposalIds: [proposal.proposalId] },
+  };
+  assert.doesNotThrow(() => validateIndustryModuleResult(candidate, "supply_demand_analysis", ["evidence-s1"]));
+  let calls = 0;
+  const skill = new IndustryResearchSkill({
+    ...executor(null),
+    execute: async (request) => {
+      calls++;
+      return {
+        operation: request.operation,
+        output: {
+          ...candidate,
+        },
+      };
+    },
+  });
+  const result = await skill.analyze("supply_demand_analysis", {
+    target: { name: "Fixture" },
+    evidence: [{ evidenceId: "evidence-s1", source }],
+    operatingObservations: [observation],
+    existingKnowledge: [],
+    localReferences: [],
+  });
+  assert.equal(result.proposals.length, 0);
+  assert.equal(calls, 1);
+});
+
 test("Industry Skill emits structured operation contracts and operation-specific bounded instructions", async () => {
   const requests: any[] = [];
   const fake: ReasoningExecutor = {
