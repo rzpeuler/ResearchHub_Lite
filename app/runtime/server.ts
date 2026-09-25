@@ -366,6 +366,21 @@ export class ResearchHubRuntimeServer {
     const method = request.method ?? 'GET'
     const path = url.pathname
     if (method === 'GET' && (path === '/api/researchhub/status' || path === '/api/status')) { await this.sendJson(response, 200, await this.status()) ; return }
+    if (method === 'GET' && path === '/api/knowledge/theses') {
+      const service = this.runtime!.services.thesisQueryService
+      if (!service) throw new ApplicationServiceError('no_kb_mounted', 'Thesis queries require a mounted Schema 0.4 Knowledge Base')
+      const limit = positiveInteger(url.searchParams.get('limit'))
+      if (Number.isNaN(limit)) throw new ApplicationServiceError('invalid_input', 'limit must be a positive integer')
+      if (limit !== undefined && limit > 50) throw new ApplicationServiceError('invalid_input', 'limit must be at most 50')
+      await this.sendJson(response, 200, await service.listTheses(limit)); return
+    }
+    if (method === 'GET' && path.startsWith('/api/knowledge/theses/')) {
+      const pieces = path.split('/')
+      if (pieces.length !== 5 || pieces[4] === '') throw new ApplicationServiceError('not_found', 'Thesis route not found')
+      const service = this.runtime!.services.thesisQueryService
+      if (!service) throw new ApplicationServiceError('no_kb_mounted', 'Thesis queries require a mounted Schema 0.4 Knowledge Base')
+      await this.sendJson(response, 200, await service.getThesis(decodeSegment(pieces[4]!))); return
+    }
     if ((method === 'GET' || method === 'POST') && (path === '/api/knowledge/search' || path === '/api/search-knowledge')) { const input = (method === 'GET' ? this.searchInputFromQuery(url) : await this.readJson(request)) as KnowledgeSearchInput; await this.sendJson(response, 200, await this.runtime!.knowledgeService.searchKnowledge(input)); return }
     if (method === 'GET' && (path === '/api/knowledge/object' || path === '/api/knowledge/get')) { await this.sendJson(response, 200, await this.runtime!.knowledgeService.getKnowledgeObject(url.searchParams.get('ref') ?? '', positiveInteger(url.searchParams.get('relatedLimit')))); return }
     if (method === 'GET' && path === '/api/knowledge/directory') { await this.sendJson(response, 200, await this.runtime!.knowledgeGraphService.getDirectoryProjection(positiveInteger(url.searchParams.get('limit')))); return }
@@ -389,6 +404,17 @@ export class ResearchHubRuntimeServer {
     if (method === 'POST' && (path === '/api/workflows/cancel' || /^\/api\/workflows\/[^/]+\/cancel$/.test(path))) { const body = await this.readJson(request); const runId = path === '/api/workflows/cancel' ? this.stringField(body, 'runId') : decodeSegment(path.split('/')[3]!); await this.sendJson(response, 200, this.runtime!.workflowService.cancelWorkflow(runId)); return }
     if (method === 'GET' && (path === '/api/reviews' || path === '/api/review-cases')) { await this.sendJson(response, 200, await this.runtime!.reviewService.listOpenReviewCases(this.reviewInputFromQuery(url))); return }
     if (method === 'GET' && (path.startsWith('/api/reviews/') || path.startsWith('/api/review-cases/'))) { const pieces = path.split('/'); await this.sendJson(response, 200, await this.runtime!.reviewService.getReviewCase(decodeSegment(pieces[3] ?? ''), positiveInteger(url.searchParams.get('dependentLimit')))); return }
+    if (method === 'POST' && /^\/api\/review-cases\/[^/]+\/decision$/.test(path)) {
+      const body = await this.readJson(request)
+      if (Object.keys(body).some((key) => !['decision', 'note'].includes(key))) throw new ApplicationServiceError('invalid_input', 'decision request accepts only decision and note')
+      const decision = this.stringField(body, 'decision', 20)
+      if (!['ACCEPT', 'REJECT', 'DEFER'].includes(decision)) throw new ApplicationServiceError('invalid_input', 'decision must be ACCEPT, REJECT, or DEFER')
+      const note = this.optionalString(body, 'note', 1000)
+      const reviewCaseId = decodeSegment(path.split('/')[3]!)
+      const service = this.runtime!.services.thesisDecisionService
+      if (!service) throw new ApplicationServiceError('no_kb_mounted', 'Thesis decisions require a mounted Schema 0.4 Knowledge Base')
+      await this.sendJson(response, 200, await service.decide({ reviewCaseId, decision: decision as 'ACCEPT' | 'REJECT' | 'DEFER', ...(note === undefined ? {} : { note }) })); return
+    }
     if (method === 'GET' && (path === '/api/conversations' || path === '/api/conversation/list')) { await this.sendJson(response, 200, { conversations: await this.runtime!.sessionRuntime.listConversations() }); return }
     if (method === 'GET' && (path === '/api/conversations/current' || path === '/api/conversation/current')) { await this.sendJson(response, 200, this.sessionState()); return }
     if (method === 'GET' && (path === '/api/conversations/messages' || path === '/api/conversation/messages')) { await this.sendJson(response, 200, { conversationId: this.sessionState().conversationId, messages: this.runtime!.sessionRuntime.getCurrentMessages() }); return }
@@ -401,6 +427,8 @@ export class ResearchHubRuntimeServer {
     if (method === 'POST' && (path === '/api/attachments' || path === '/api/attachments/upload')) { const contentType = request.headers['content-type']; if (typeof contentType !== 'string') throw new ApplicationServiceError('invalid_input', 'multipart Content-Type is required'); const length = Number(request.headers['content-length']); if (Number.isFinite(length) && length > (this.attachmentService?.maxBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES) + 1024 * 1024) throw new ApplicationServiceError('invalid_input', 'attachment request is too large'); const attachment = await this.attachmentService!.upload(request, contentType); await this.sendJson(response, 201, { attachment }); return }
     if (method === 'GET' && path.startsWith('/api/attachments/')) { const pieces = path.split('/'); const id = decodeSegment(pieces[3] ?? ''); if (pieces[4] === 'content') { await this.streamAttachment(response, id); return } await this.sendJson(response, 200, { attachment: await this.attachmentService!.getAttachment(id) }); return }
     if (method === 'POST' && (path === '/api/production/ingest' || path === '/api/production/ingest-document' || path === '/api/production/start-ingest' || path === '/api/workflows/ingest' || path === '/api/ingest-document' || path === '/api/ingestion')) { await this.startIngestion(request, response); return }
+    if (method === 'POST' && path === '/api/production/thesis-lifecycle/create') { await this.startThesisLifecycleCreate(request, response); return }
+    if (method === 'POST' && path === '/api/production/thesis-lifecycle/refresh') { await this.startThesisLifecycleRefresh(request, response); return }
     if (method === 'POST' && (path === '/api/production/research-company' || path === '/api/research-company')) { await this.startCompanyResearch(request, response); return }
     if (method === 'POST' && (path === '/api/production/research-industry' || path === '/api/research-industry')) { await this.startIndustryResearch(request, response); return }
     if (method === 'POST' && (path === '/api/production/review-earnings' || path === '/api/review-earnings')) { await this.startEarningsReview(request, response); return }
@@ -478,6 +506,47 @@ export class ResearchHubRuntimeServer {
     const controller = new AbortController()
     const started = this.runtime!.productionService.startIngestDocument(input, controller.signal)
     this.trackBackground(started.completion, () => { controller.abort() })
+    await this.sendJson(response, 202, { accepted: true, runId: started.runId, workflow: this.runtime!.workflowService.getWorkflowStatus(started.runId) })
+  }
+  private async startThesisLifecycleRefresh(request: IncomingMessage, response: ServerResponse): Promise<void> {
+    const service = this.runtime!.researchService
+    if (!service) throw new ApplicationServiceError('failed', 'Thesis lifecycle refresh is not configured for this runtime')
+    const body = await this.readJson(request)
+    if (Object.keys(body).some((key) => !['thesisRef', 'asOf', 'evidenceRefs'].includes(key))) throw new ApplicationServiceError('invalid_input', 'Thesis refresh accepts only thesisRef, asOf, and evidenceRefs')
+    this.ensureRunning()
+    const thesisRef = this.stringField(body, 'thesisRef', 500)
+    if (!/^thesis:[A-Za-z0-9._-]+$/.test(thesisRef)) throw new ApplicationServiceError('invalid_input', 'thesisRef must be an exact canonical Thesis reference')
+    const asOf = this.stringField(body, 'asOf', 100)
+    if (!Number.isFinite(Date.parse(asOf))) throw new ApplicationServiceError('invalid_input', 'asOf must be a valid date-time')
+    let evidenceRefs: string[] | undefined
+    if (body.evidenceRefs !== undefined) {
+      if (!Array.isArray(body.evidenceRefs) || body.evidenceRefs.length > 80 || body.evidenceRefs.some((ref) => typeof ref !== 'string' || !/^(observation|claim):[A-Za-z0-9._-]+$/.test(ref))) throw new ApplicationServiceError('invalid_input', 'evidenceRefs must contain at most 80 canonical Observation or Claim references')
+      evidenceRefs = [...new Set(body.evidenceRefs as string[])]
+    }
+    const controller = new AbortController()
+    const started = service.startThesisLifecycleRefresh({ thesisRef, asOf, ...(evidenceRefs === undefined ? {} : { evidenceRefs }) }, controller.signal)
+    this.trackBackground(started.completion, () => controller.abort())
+    await this.sendJson(response, 202, { accepted: true, runId: started.runId, workflow: this.runtime!.workflowService.getWorkflowStatus(started.runId) })
+  }
+  private async startThesisLifecycleCreate(request: IncomingMessage, response: ServerResponse): Promise<void> {
+    const service = this.runtime!.researchService
+    if (!service) throw new ApplicationServiceError('failed', 'Thesis lifecycle CREATE is not configured for this runtime')
+    const body = await this.readJson(request)
+    if (Object.keys(body).some((key) => !['workflowRunId', 'companyRef', 'thesisTitle', 'narrative', 'evidenceRefs', 'asOf'].includes(key))) throw new ApplicationServiceError('invalid_input', 'Thesis CREATE accepts only workflowRunId, companyRef, thesisTitle, narrative, evidenceRefs, and asOf')
+    this.ensureRunning()
+    const workflowRunId = this.optionalString(body, 'workflowRunId', 96) ?? `thesis-create-${randomUUID()}`
+    const companyRef = this.stringField(body, 'companyRef', 240)
+    if (!/^entity:[A-Za-z0-9][A-Za-z0-9._-]*$/.test(companyRef)) throw new ApplicationServiceError('invalid_input', 'companyRef must be an exact canonical company Entity reference')
+    const thesisTitle = this.stringField(body, 'thesisTitle', 240)
+    const narrative = this.stringField(body, 'narrative', 8_000)
+    const asOf = this.stringField(body, 'asOf', 100)
+    if (!Number.isFinite(Date.parse(asOf))) throw new ApplicationServiceError('invalid_input', 'asOf must be a valid date-time')
+    if (!Array.isArray(body.evidenceRefs) || body.evidenceRefs.length === 0 || body.evidenceRefs.length > 40 || body.evidenceRefs.some((ref) => typeof ref !== 'string' || !/^(claim|observation):[A-Za-z0-9][A-Za-z0-9._-]*$/.test(ref))) throw new ApplicationServiceError('invalid_input', 'evidenceRefs must contain 1 to 40 canonical Claim or Observation references')
+    const evidenceRefs = body.evidenceRefs as string[]
+    if (new Set(evidenceRefs).size !== evidenceRefs.length) throw new ApplicationServiceError('invalid_input', 'evidenceRefs must be unique')
+    const controller = new AbortController()
+    const started = service.startThesisLifecycleCreate({ workflowRunId, companyRef: companyRef as `entity:${string}`, thesisTitle, narrative, evidenceRefs: evidenceRefs as (`claim:${string}` | `observation:${string}`)[], asOf }, controller.signal)
+    this.trackBackground(started.completion, () => controller.abort())
     await this.sendJson(response, 202, { accepted: true, runId: started.runId, workflow: this.runtime!.workflowService.getWorkflowStatus(started.runId) })
   }
   private async startCompanyResearch(request: IncomingMessage, response: ServerResponse): Promise<void> {

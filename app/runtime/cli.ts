@@ -1,6 +1,7 @@
 import { createResearchHubRuntimeServer } from './server.ts'
 
-const server = await createResearchHubRuntimeServer({ cwd: process.cwd() })
+const mountedKnowledgeBaseRoot = process.env.RESEARCHHUB_KNOWLEDGE_BASE_ROOT?.trim() || undefined
+const server = await createResearchHubRuntimeServer({ cwd: process.cwd(), mountedKnowledgeBaseRoot })
 const info = server.address!
 process.stdout.write(`${info.origin}\n`)
 

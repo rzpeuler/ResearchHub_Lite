@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { KnowledgeBaseRegistry } from '../../../knowledge/registry/registry.ts'
@@ -315,5 +315,189 @@ test('one submit commits at most one ChangeSet and replay does not advance revis
   try {
     await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-one-commit', now: clock() }); const gateway = new KnowledgeProductionGateway(); const first = await gateway.submit({ ...(await input(root, 'one-commit-1')), proposals: [claim('one', 1)] }); assert.equal(first.status, 'committed'); assert.equal(first.knowledgeBaseRevision, first.baseRevision + 1); assert.equal(first.changeSetId !== undefined, true)
     const replay = await gateway.submit({ ...(await input(root, 'one-commit-2')), proposals: [claim('one-replay', 1)] }); assert.equal(replay.status, 'no_changes'); assert.equal(replay.knowledgeBaseRevision, first.knowledgeBaseRevision); assert.equal(replay.changeSetId, undefined)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('ReasoningEdges bind existing canonical Observation, Claim, and Thesis endpoints', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-existing-reasoning-endpoints-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-existing-reasoning-endpoints', now: clock() })
+    const gateway = new KnowledgeProductionGateway()
+    const seeded = await gateway.submit({ ...(await input(root, 'reasoning-endpoint-seed')), proposals: [
+      { proposalId: 'revenue-observation', kind: 'observation', subjectKey: 'company', observationType: 'metric', metricRef: 'metric:revenue', value: 100, sourceCandidateIds: ['structured-600519'] },
+      { proposalId: 'revenue-claim', kind: 'claim', subjectKey: 'company', claimType: 'fact', statement: 'Revenue reached 100 CNY', sourceCandidateIds: ['structured-600519'] },
+      { proposalId: 'revenue-thesis', kind: 'thesis', subjectKey: 'company', thesisTitle: 'Revenue growth thesis', statement: 'Revenue growth is durable', thesisStatus: 'active' }
+    ] })
+    assert.equal(seeded.status, 'committed', seeded.errors.join('; '))
+    const result = await gateway.submit({ ...(await input(root, 'reasoning-endpoint-bind')), proposals: [
+      { proposalId: 'observation-challenges-claim', kind: 'reasoning_edge', existingSourceRef: seeded.observationRefsByProposalId?.['revenue-observation'] as `observation:${string}`, existingTargetRef: seeded.claimRefsByProposalId['revenue-claim'] as `claim:${string}`, edgeType: 'challenges' },
+      { proposalId: 'claim-qualifies-thesis', kind: 'reasoning_edge', existingSourceRef: seeded.claimRefsByProposalId['revenue-claim'] as `claim:${string}`, existingTargetRef: seeded.thesisRefsByProposalId?.['revenue-thesis'] as `thesis:${string}`, edgeType: 'qualifies' }
+    ] })
+    assert.equal(result.status, 'committed', result.errors.join('; '))
+    const edges = (await readCanonicalV04Assets(root)).objects.filter((item) => item.kind === 'reasoning_edge').map((item) => item.value as { type: string; sourceRef: string; targetRef: string })
+    assert.deepEqual(edges.map((edge) => [edge.sourceRef, edge.type, edge.targetRef]).sort(), [
+      [seeded.observationRefsByProposalId?.['revenue-observation'], 'challenges', seeded.claimRefsByProposalId['revenue-claim']],
+      [seeded.claimRefsByProposalId['revenue-claim'], 'qualifies', seeded.thesisRefsByProposalId?.['revenue-thesis']]
+    ].sort())
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('ReasoningEdge selectors and invalid canonical endpoints fail closed', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-invalid-reasoning-endpoints-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-invalid-reasoning-endpoints', now: clock() })
+    const gateway = new KnowledgeProductionGateway()
+    const seeded = await gateway.submit({ ...(await input(root, 'invalid-reasoning-seed')), proposals: [
+      { proposalId: 'valid-claim', kind: 'claim', subjectKey: 'company', claimType: 'fact', statement: 'A canonical fact', sourceCandidateIds: ['structured-600519'] },
+      { proposalId: 'valid-thesis', kind: 'thesis', subjectKey: 'company', thesisTitle: 'An archived thesis', statement: 'Old thesis', thesisStatus: 'archived' },
+      { proposalId: 'valid-observation', kind: 'observation', subjectKey: 'company', observationType: 'metric', metricRef: 'metric:revenue', value: 100, sourceCandidateIds: ['structured-600519'] }
+    ] })
+    assert.equal(seeded.status, 'committed', seeded.errors.join('; '))
+    const observationRef = seeded.observationRefsByProposalId?.['valid-observation'] as `observation:${string}`
+    const claimRef = seeded.claimRefsByProposalId['valid-claim']
+    const priorClaim = await gateway.submit({ ...(await input(root, 'invalid-reasoning-prior-claim')), proposals: [claim('prior-eps', 42)] })
+    assert.equal(priorClaim.status, 'committed', priorClaim.errors.join('; '))
+    const supersededClaim = await gateway.submit({ ...(await input(root, 'invalid-reasoning-superseding-claim')), proposals: [claim('new-eps', 41, undefined, 'supersede')] })
+    assert.equal(supersededClaim.status, 'committed', supersededClaim.errors.join('; '))
+    const priorClaimRef = priorClaim.claimRefsByProposalId['prior-eps'] as `claim:${string}`
+    const invalids = [
+      { proposalId: 'missing-source-selector', kind: 'reasoning_edge' as const, existingTargetRef: claimRef, edgeType: 'challenges' as const },
+      { proposalId: 'missing-target-selector', kind: 'reasoning_edge' as const, existingSourceRef: observationRef, edgeType: 'challenges' as const },
+      { proposalId: 'missing-source', kind: 'reasoning_edge' as const, existingSourceRef: 'observation:missing' as `observation:${string}`, existingTargetRef: claimRef, edgeType: 'challenges' as const },
+      { proposalId: 'missing-target', kind: 'reasoning_edge' as const, existingSourceRef: observationRef, existingTargetRef: 'claim:missing' as `claim:${string}`, edgeType: 'challenges' as const },
+      { proposalId: 'wrong-source-kind', kind: 'reasoning_edge' as const, existingSourceRef: seeded.thesisRefsByProposalId?.['valid-thesis'] as `thesis:${string}`, existingTargetRef: claimRef, edgeType: 'qualifies' as const },
+      { proposalId: 'inactive-thesis', kind: 'reasoning_edge' as const, existingSourceRef: claimRef, existingTargetRef: seeded.thesisRefsByProposalId?.['valid-thesis'] as `thesis:${string}`, edgeType: 'qualifies' as const },
+      { proposalId: 'superseded-claim', kind: 'reasoning_edge' as const, existingSourceRef: observationRef, existingTargetRef: priorClaimRef, edgeType: 'challenges' as const },
+      { proposalId: 'both-source-modes', kind: 'reasoning_edge' as const, subjectKey: 'valid-claim', existingSourceRef: claimRef, existingTargetRef: seeded.thesisRefsByProposalId?.['valid-thesis'] as `thesis:${string}`, edgeType: 'qualifies' as const },
+      { proposalId: 'conflicting-local-source-aliases', kind: 'reasoning_edge' as const, sourceProposalId: 'valid-claim', subjectKey: 'different-local-source', existingTargetRef: seeded.thesisRefsByProposalId?.['valid-thesis'] as `thesis:${string}`, edgeType: 'qualifies' as const },
+      { proposalId: 'both-target-modes', kind: 'reasoning_edge' as const, existingSourceRef: claimRef, targetKey: 'valid-claim', existingTargetRef: claimRef, edgeType: 'qualifies' as const },
+      { proposalId: 'invalid-edge-type', kind: 'reasoning_edge' as const, existingSourceRef: claimRef, existingTargetRef: claimRef, edgeType: 'made_up' }
+    ]
+    const before = (await readCanonicalV04Assets(root)).objects.filter((item) => item.kind === 'reasoning_edge').length
+    for (const proposal of invalids) {
+      const result = await gateway.submit({ ...(await input(root, `invalid-${proposal.proposalId}`)), proposals: [proposal] as never[] })
+      assert.ok(result.status === 'blocked' || result.status === 'no_changes', `${proposal.proposalId}: ${result.status}`)
+      assert.equal(result.reasoningEdgeRefsByProposalId?.[proposal.proposalId], undefined)
+    }
+    const after = (await readCanonicalV04Assets(root)).objects.filter((item) => item.kind === 'reasoning_edge').length
+    assert.equal(after, before)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('existing canonical Source/Raw bindings merge into Claim provenance and ReasoningEdge source refs', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-existing-evidence-reuse-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-existing-evidence-reuse', now: clock() })
+    const gateway = new KnowledgeProductionGateway()
+    const original = { ...source('600519', 'evidence-original', 'original archived bytes'), rights: { ...source('600519', 'evidence-original', 'original archived bytes').rights, policyBasis: 'personal_noncommercial_research' as const } }
+    const current = { ...source('600519', 'evidence-current', 'current archived bytes'), title: 'Secondary financial fixture', candidate: { ...source('600519', 'evidence-current', 'current archived bytes').candidate, title: 'Secondary financial fixture' } }
+    const seeded = await gateway.submit({ ...(await input(root, 'existing-evidence-seed', '600519', [], [original, current])) })
+    assert.equal(seeded.status, 'committed', seeded.errors.join('; '))
+    const sourceAssets = (await readCanonicalV04Assets(root)).objects.filter((item) => item.kind === 'source').map((item) => item.value as unknown as { id: string; rawRefs: string[]; rights: Record<string, unknown>; usagePolicy: Record<string, unknown> })
+    const originalAsset = sourceAssets.find((item) => item.id === seeded.sourceRefsByLocalId['evidence-original'])!
+    const currentAsset = sourceAssets.find((item) => item.id === seeded.sourceRefsByLocalId['evidence-current'])!
+    assert.equal(originalAsset.rights.retentionAllowed, true)
+    assert.equal(originalAsset.rights.aiProcessingAllowed, true)
+    assert.equal(originalAsset.rights.derivativeKnowledgeAllowed, true)
+    assert.equal(originalAsset.rights.policyBasis, 'personal_noncommercial_research')
+    assert.equal(originalAsset.usagePolicy.retainRaw, true)
+    assert.equal(originalAsset.usagePolicy.allowAiProcessing, true)
+    assert.equal(originalAsset.usagePolicy.allowDerivedKnowledge, true)
+    const claimResult = await gateway.submit({ ...(await input(root, 'existing-evidence-claim', '600519', [
+      { proposalId: 'combined-provenance', kind: 'claim', subjectKey: 'company', claimType: 'fact', statement: 'Claim with reused and current evidence', sourceCandidateIds: ['evidence-current'], existingEvidenceBindings: [{ sourceRef: originalAsset.id as `source:${string}`, rawRef: originalAsset.rawRefs[0] as `raw-sha256-${string}` }] }
+    ], [current])) })
+    assert.equal(claimResult.status, 'committed', claimResult.errors.join('; '))
+    const claimRef = claimResult.claimRefsByProposalId['combined-provenance']
+    const claimAsset = (await readCanonicalV04Assets(root)).objects.find((item) => item.value.id === claimRef)!.value as { sourceRefs: string[]; provenance: Array<{ sourceRef: string; rawRef: string }> }
+    assert.deepEqual(claimAsset.sourceRefs, [originalAsset.id, currentAsset.id].sort())
+    assert.deepEqual(claimAsset.provenance.map((item) => `${item.sourceRef}|${item.rawRef}`).sort(), [`${originalAsset.id}|${originalAsset.rawRefs[0]}`, `${currentAsset.id}|${currentAsset.rawRefs[0]}`].sort())
+
+    const secondClaim = await gateway.submit({ ...(await input(root, 'existing-evidence-second-claim')), proposals: [
+      { proposalId: 'edge-target-claim', kind: 'claim', subjectKey: 'company', claimType: 'fact', statement: 'Separate claim for evidence edge', sourceCandidateIds: ['structured-600519'] }
+    ] })
+    assert.equal(secondClaim.status, 'committed', secondClaim.errors.join('; '))
+    const edgeResult = await gateway.submit({ ...(await input(root, 'existing-evidence-edge', '600519', [
+      { proposalId: 'reused-evidence-edge', kind: 'reasoning_edge', existingSourceRef: claimRef as `claim:${string}`, existingTargetRef: secondClaim.claimRefsByProposalId['edge-target-claim'] as `claim:${string}`, edgeType: 'supports', sourceCandidateIds: ['evidence-current'], existingEvidenceBindings: [{ sourceRef: originalAsset.id as `source:${string}`, rawRef: originalAsset.rawRefs[0] as `raw-sha256-${string}` }] }
+    ], [current])) })
+    assert.equal(edgeResult.status, 'committed', edgeResult.errors.join('; '))
+    const edge = (await readCanonicalV04Assets(root)).objects.find((item) => item.kind === 'reasoning_edge')!.value as { sourceRefs: string[] }
+    assert.deepEqual(edge.sourceRefs, [originalAsset.id, currentAsset.id].sort())
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('invalid existing canonical Source/Raw evidence blocks semantic writes', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rhl-invalid-existing-evidence-'))
+  try {
+    await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-invalid-existing-evidence', now: clock() })
+    const gateway = new KnowledgeProductionGateway()
+    const original = source('600519', 'existing-evidence-a', 'archived bytes a')
+    const secondaryBase = source('600519', 'existing-evidence-b', 'archived bytes b')
+    const secondary = { ...secondaryBase, title: 'Secondary archived source', candidate: { ...secondaryBase.candidate, title: 'Secondary archived source' } }
+    const seeded = await gateway.submit({ ...(await input(root, 'invalid-existing-evidence-seed', '600519', [], [original, secondary])) })
+    assert.equal(seeded.status, 'committed', seeded.errors.join('; '))
+    const assets = await readCanonicalV04Assets(root)
+    const sourceAsset = assets.objects.find((item) => item.value.id === seeded.sourceRefsByLocalId['existing-evidence-a'])!
+    const otherSource = assets.objects.find((item) => item.value.id === seeded.sourceRefsByLocalId['existing-evidence-b'])!
+    const sourceValue = sourceAsset.value as unknown as { id: string; rawRefs: string[]; lifecycle: Record<string, unknown>; rights: Record<string, unknown>; usagePolicy: Record<string, unknown> }
+    const otherRawRef = (otherSource.value as { rawRefs: string[] }).rawRefs[0]
+    const originalText = await readFile(sourceAsset.filePath, 'utf8')
+    const originalValue = structuredClone(sourceValue)
+    const noClaimsBefore = assets.objects.filter((item) => item.kind === 'claim').length
+    const rawRegistryBefore = await readFile(join(root, 'registry', 'raw.yaml'), 'utf8')
+    for (const [run, rights] of [
+      ['new-retention-denied', { ...original.rights, retentionAllowed: false }],
+      ['new-ai-denied', { ...original.rights, aiProcessingAllowed: false }],
+      ['new-derivative-denied', { ...original.rights, derivativeKnowledgeAllowed: false }],
+      ['new-access-restricted', { ...original.rights, accessScope: 'restricted' as const }]
+    ] as const) {
+      const forbidden = { ...original, candidate: { ...original.candidate, candidateId: run }, rights }
+      const result = await gateway.submit({ ...(await input(root, run, '600519', [], [forbidden])) })
+      assert.equal(result.status, 'blocked', `${run}: ${result.errors.join('; ')}`)
+      assert.equal(await readFile(join(root, 'registry', 'raw.yaml'), 'utf8'), rawRegistryBefore)
+    }
+    const inputFor = (run: string, sourceRef = sourceValue.id, rawRef = sourceValue.rawRefs[0]) => input(root, run, '600519', [
+      { proposalId: `claim-${run}`, kind: 'claim' as const, subjectKey: 'company', claimType: 'fact' as const, statement: `Must not write ${run}`, existingEvidenceBindings: [{ sourceRef: sourceRef as `source:${string}`, rawRef: rawRef as `raw-sha256-${string}` }] }
+    ], [])
+    const assertBlocked = async (run: string, sourceRef = sourceValue.id, rawRef = sourceValue.rawRefs[0]) => {
+      const beforeRevision = (await new KnowledgeBaseRegistry().mount(root)).revision
+      const result = await gateway.submit(await inputFor(run, sourceRef, rawRef))
+      assert.equal(result.status, 'blocked', `${run}: ${result.errors.join('; ')}`)
+      assert.deepEqual(result.createdIds, [])
+      const afterAssets = await readCanonicalV04Assets(root)
+      assert.equal((await new KnowledgeBaseRegistry().mount(root)).revision, beforeRevision)
+      assert.equal(afterAssets.objects.filter((item) => item.kind === 'claim').length, noClaimsBefore)
+    }
+    await assertBlocked('missing-source', 'source:missing')
+    await assertBlocked('wrong-source-raw', sourceValue.id, otherRawRef)
+    const mutateSource = async (mutate: (value: typeof originalValue) => void) => {
+      const updated = structuredClone(originalValue)
+      mutate(updated)
+      await writeFile(sourceAsset.filePath, `${JSON.stringify(updated)}\n`, 'utf8')
+    }
+    const unregisteredRaw = `raw-sha256-${'f'.repeat(64)}`
+    await mutateSource((value) => { value.rawRefs.push(unregisteredRaw) })
+    await assertBlocked('unregistered-raw', sourceValue.id, unregisteredRaw)
+    await mutateSource((value) => { value.lifecycle.status = 'expired' })
+    await assertBlocked('inactive-source')
+    await mutateSource((value) => { value.lifecycle.validUntil = '2026-09-07T00:00:00.000Z' })
+    await assertBlocked('expired-lifecycle-window')
+    await mutateSource((value) => { value.rights.expiresAt = '2026-09-07T00:00:00.000Z' })
+    await assertBlocked('expired-rights-window')
+    await mutateSource((value) => { value.rights.retentionAllowed = false })
+    await assertBlocked('retention-denied')
+    await mutateSource((value) => { value.rights.aiProcessingAllowed = false })
+    await assertBlocked('ai-denied')
+    await mutateSource((value) => { value.rights.derivativeKnowledgeAllowed = false })
+    await assertBlocked('derivative-denied')
+    await mutateSource((value) => { value.usagePolicy.allowDerivedKnowledge = false })
+    await assertBlocked('usage-policy-denied')
+    await mutateSource((value) => { value.rights.derivativeKnowledgeAllowed = false; value.usagePolicy.allowDerivedKnowledge = false })
+    const reingested = { ...original, content: 'new bytes must not relax an old explicit denial' }
+    const reacquisition = await gateway.submit({ ...(await input(root, 'reacquire-denied-source', '600519', [], [reingested])) })
+    assert.equal(reacquisition.status, 'committed', reacquisition.errors.join('; '))
+    const retainedDenial = (await readCanonicalV04Assets(root)).objects.find((item) => item.value.id === sourceValue.id)!.value as unknown as { rights: { derivativeKnowledgeAllowed: boolean }; usagePolicy: { allowDerivedKnowledge: boolean } }
+    assert.equal(retainedDenial.rights.derivativeKnowledgeAllowed, false)
+    assert.equal(retainedDenial.usagePolicy.allowDerivedKnowledge, false)
+    await writeFile(sourceAsset.filePath, originalText, 'utf8')
   } finally { await rm(root, { recursive: true, force: true }) }
 })

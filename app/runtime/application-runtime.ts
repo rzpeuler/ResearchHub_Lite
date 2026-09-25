@@ -32,6 +32,45 @@ import { FileResearchBundleStore } from '../services/research-bundle.ts'
 import { SourceLibraryService } from '../services/source-library.ts'
 import { createResearchSkillRegistry } from '../services/skill-registry.ts'
 import { loadOnboardedResearchSkillDefinitions, SkillOnboardingService } from '../services/skill-onboarding.ts'
+import { ThesisQueryService } from '../services/thesis-query-service.ts'
+import { ThesisDecisionService } from '../services/thesis-decision-service.ts'
+import { loadReviewCase } from '../../knowledge/review/store.ts'
+import { loadReviewDecision } from '../../knowledge/review/decision-store.ts'
+
+const DURABLE_THESIS_DECISION_STATES = new Set(['ACCEPTED', 'REJECTED', 'DEFERRED', 'STALE'])
+type DurableThesisDecisionState = 'ACCEPTED' | 'REJECTED' | 'DEFERRED' | 'STALE'
+interface ThesisDecisionReportUpdate { readonly status: 'updated' | 'not_found' | 'failed'; readonly reportId: string; readonly errors: readonly string[] }
+const RESULT_STATE: Readonly<Record<string, DurableThesisDecisionState | undefined>> = { accepted: 'ACCEPTED', rejected: 'REJECTED', deferred: 'DEFERRED', stale: 'STALE' }
+
+function withThesisDecisionReportSync(service: ThesisDecisionService, researchService: ResearchService | undefined, mountedKnowledgeBaseRoot: string): ThesisDecisionService {
+  return new Proxy(service, { get(target, property, receiver) {
+    const method = Reflect.get(target, property, receiver)
+    if (property !== 'decide' || typeof method !== 'function') return method
+    return async (...args: Parameters<ThesisDecisionService['decide']>) => {
+      const result = await Reflect.apply(method, target, args) as Awaited<ReturnType<ThesisDecisionService['decide']>>
+      if (!result.decisionState) return result
+      const recorder = researchService as (ResearchService & { recordThesisLifecycleDecision?: (value: { readonly producerRunId: string; readonly reviewCaseId: string; readonly decisionState: DurableThesisDecisionState; readonly writerRunId?: string; readonly knowledgeBaseRevision: number; readonly committedRevision?: number; readonly diagnostics?: readonly string[] }) => Promise<ThesisDecisionReportUpdate> }) | undefined
+      try {
+        const input = args[0]
+        const reviewCase = await loadReviewCase(mountedKnowledgeBaseRoot, input.reviewCaseId)
+        if (!reviewCase) return result
+        const persistedDecision = await loadReviewDecision(mountedKnowledgeBaseRoot, reviewCase.producerRunId, reviewCase.reviewCaseId)
+        const decisionState = persistedDecision?.state
+        if (!decisionState || !DURABLE_THESIS_DECISION_STATES.has(decisionState)) return result
+        // A conflict can report the already-persisted terminal state while
+        // carrying no Writer metadata. Never let that response replace the
+        // report for the successful decision that established the state.
+        if (RESULT_STATE[result.status] !== decisionState) return result
+        if (!recorder?.recordThesisLifecycleDecision) return { ...result, reportUpdate: { status: 'failed', reason: 'REPORT_UPDATE_UNAVAILABLE' } }
+        const knowledgeBaseRevision = result.committedRevision ?? result.knowledgeBaseRevision ?? reviewCase.resolutionContext.knowledgeBaseRevisionAtCreation
+        const update = await recorder.recordThesisLifecycleDecision({ producerRunId: reviewCase.producerRunId, reviewCaseId: reviewCase.reviewCaseId, decisionState: decisionState as DurableThesisDecisionState, ...(result.writerRunId === undefined ? {} : { writerRunId: result.writerRunId }), knowledgeBaseRevision, ...(result.committedRevision === undefined ? {} : { committedRevision: result.committedRevision }), diagnostics: result.errors })
+        return { ...result, reportUpdate: { status: update.status, reportId: update.reportId, errors: update.errors } }
+      } catch {
+        return DURABLE_THESIS_DECISION_STATES.has(result.decisionState) ? { ...result, reportUpdate: { status: 'failed', errors: ['REPORT_UPDATE_FAILED'] } } : result
+      }
+    }
+  } })
+}
 
 export class ResearchHubApplicationRuntime {
   readonly cwd: string
@@ -86,6 +125,17 @@ export class ResearchHubApplicationRuntime {
     const knowledgeService = new KnowledgeService(mountedKnowledgeBaseRoot)
     const knowledgeGraphService = new KnowledgeGraphService(mountedKnowledgeBaseRoot)
     const reviewService = new ReviewService(mountedKnowledgeBaseRoot)
+    let thesisQueryService: ThesisQueryService | undefined
+    let thesisDecisionService: ThesisDecisionService | undefined
+    if (mountedKnowledgeBaseRoot !== undefined) {
+      try {
+        const manifest = await loadKnowledgeBaseManifest(mountedKnowledgeBaseRoot)
+        if (manifest.schemaVersion === '0.4' && manifest.storageFormatVersion === '1') {
+          thesisQueryService = new ThesisQueryService(mountedKnowledgeBaseRoot)
+          thesisDecisionService = new ThesisDecisionService({ mountedKnowledgeBaseRoot })
+        }
+      } catch { /* Thesis projections and decisions require a readable Schema 0.4 Knowledge Base. */ }
+    }
     const workflowService = new WorkflowService()
     const productionService = new ProductionService({ mountedKnowledgeBaseRoot, workspaceRoot, cwd, reasoningExecutor, workflowService })
     let researchService = options.researchService
@@ -99,11 +149,12 @@ export class ResearchHubApplicationRuntime {
     if (researchService === undefined && mountedKnowledgeBaseRoot !== undefined) {
       try { const manifest = await loadKnowledgeBaseManifest(mountedKnowledgeBaseRoot); if (manifest.schemaVersion === '0.4' && manifest.storageFormatVersion === '1') { const dailySignalStore = new FileDailySignalStore(join(cwd, 'runtime-data', 'daily-signals.jsonl')); const cninfo = new CninfoOfficialDisclosureClient(); const akshare = new AkshareDataAdapter(); researchService = new ResearchService({ mountedKnowledgeBaseRoot, cwd, workflowService, reasoningExecutor, industryReasoningExecutorFactory, industryOperatingObservationAcquisition: options.industryOperatingObservationAcquisition ?? new IndustryOperatingObservationAcquisition(), signalStore: new FileResearchSignalStore(join(cwd, 'runtime-data', 'research-signals.jsonl')), dailySignalStore, acquisitionPlugins: [new OfficialDisclosureResearchPlugin(cninfo), new GdeltResearchPlugin()], industryAcquisitionPlugins: options.industryAcquisitionPlugins ?? [new MiitIndustryResearchPlugin(), new GovCnIndustryResearchPlugin(), new EastmoneyIndustryResearchPlugin(), new CpcaIndustryResearchPlugin()], akshare, officialDisclosure: cninfo, managementCommunicationSources: createManagementCommunicationSources(cninfo, akshare) }) } } catch { /* the normal v0.3 runtime remains available without Company Research */ }
     }
+    if (thesisDecisionService !== undefined && mountedKnowledgeBaseRoot !== undefined) thesisDecisionService = withThesisDecisionReportSync(thesisDecisionService, researchService, mountedKnowledgeBaseRoot)
     const skillRegistry = createResearchSkillRegistry(); for (const definition of await loadOnboardedResearchSkillDefinitions(join(cwd, 'runtime-data', 'skill-onboarding'))) { try { skillRegistry.register(definition) } catch { /* duplicate or invalid external records remain excluded */ } }
     const sourceLibraryService = new SourceLibraryService(join(cwd, 'runtime-data', 'source-library'))
     const skillOnboardingService = new SkillOnboardingService(join(cwd, 'runtime-data', 'skill-onboarding', 'installed'), join(cwd, 'runtime-data', 'skill-onboarding'))
     const researchDispatchService = new ResearchDispatchService({ researchService, dailyIntelligenceService, workflowService, skillRegistry, bundleStore: new FileResearchBundleStore(join(cwd, 'runtime-data', 'research-bundles')), sourceLibraryService, mountedKnowledgeBaseRoot, reasoningExecutor })
-    const services = { knowledgeService, knowledgeGraphService, reviewService, workflowService, productionService, researchDispatchService, sourceLibraryService, skillOnboardingService, ...(researchService === undefined ? {} : { researchService }), dailyIntelligenceService }
+    const services = { knowledgeService, knowledgeGraphService, reviewService, workflowService, productionService, researchDispatchService, sourceLibraryService, skillOnboardingService, ...(researchService === undefined ? {} : { researchService }), ...(thesisQueryService === undefined ? {} : { thesisQueryService }), ...(thesisDecisionService === undefined ? {} : { thesisDecisionService }), dailyIntelligenceService }
     const sessionManager = options.sessionManager ?? SessionManager.create(cwd, options.sessionDir)
     try {
       const sessionRuntime = await createResearchHubSessionRuntime({ cwd, agentDir, modelRuntime, sessionManager, applicationServices: services, mountedKnowledgeBaseRoot, workspaceRoot, model: selectedModel, reasoningExecutor, settingsManager: options.settingsManager, resourceLoader: options.resourceLoader, researchService, dailyIntelligenceService })

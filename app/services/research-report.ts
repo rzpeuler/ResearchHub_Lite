@@ -4,7 +4,7 @@ import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 export interface ResearchReportSection { readonly id: string; readonly title: string; readonly markdown: string; readonly sourceRefs?: readonly string[]; readonly claimRefs?: readonly string[]; readonly relationRefs?: readonly string[]; readonly signalRefs?: readonly string[]; readonly evidenceLinks?: readonly string[] }
 export interface ResearchReport {
   readonly reportId: string
-  readonly reportType: 'company_research' | 'daily_brief' | 'earnings_review' | 'valuation' | 'event_research' | 'thesis_red_team' | 'industry_research'
+  readonly reportType: 'company_research' | 'daily_brief' | 'earnings_review' | 'valuation' | 'event_research' | 'thesis_red_team' | 'industry_research' | 'thesis_lifecycle'
   readonly subjectRefs: readonly string[]
   readonly generatedAt: string
   readonly asOf: string
@@ -33,12 +33,13 @@ export interface ResearchReportSummary {
 const safeId = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 const inside = (root: string, candidate: string): boolean => { const rel = relative(resolve(root), resolve(candidate)); return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`)) }
 const ref = (value: string): boolean => /^(?:entity|relation|claim|source|theme-group|module):[^\s]+$/.test(value)
+const thesisRef = (value: string): boolean => /^thesis:[^\s]+$/.test(value)
 
 export function validateResearchReport(report: ResearchReport): ResearchReport {
   if (!report || typeof report !== 'object') throw new TypeError('ResearchReport must be an object')
   if (!safeId.test(report.reportId)) throw new TypeError('reportId must be a safe deterministic identifier')
-  if (report.reportType !== 'company_research' && report.reportType !== 'daily_brief' && report.reportType !== 'earnings_review' && report.reportType !== 'valuation' && report.reportType !== 'event_research' && report.reportType !== 'thesis_red_team' && report.reportType !== 'industry_research') throw new TypeError('Unsupported reportType')
-  if (!Array.isArray(report.subjectRefs) || (report.reportType !== 'daily_brief' && report.subjectRefs.length === 0) || report.subjectRefs.some((item) => !ref(item))) throw new TypeError('subjectRefs must contain canonical references')
+  if (report.reportType !== 'company_research' && report.reportType !== 'daily_brief' && report.reportType !== 'earnings_review' && report.reportType !== 'valuation' && report.reportType !== 'event_research' && report.reportType !== 'thesis_red_team' && report.reportType !== 'industry_research' && report.reportType !== 'thesis_lifecycle') throw new TypeError('Unsupported reportType')
+  if (!Array.isArray(report.subjectRefs) || (report.reportType !== 'daily_brief' && report.subjectRefs.length === 0) || report.subjectRefs.some((item) => thesisRef(item) ? report.reportType !== 'thesis_lifecycle' : !ref(item))) throw new TypeError('subjectRefs must contain canonical references valid for the report type')
   if (Number.isNaN(Date.parse(report.generatedAt)) || Number.isNaN(Date.parse(report.asOf))) throw new TypeError('generatedAt and asOf must be valid dates')
   if (!safeId.test(report.workflowRunId) || !Number.isInteger(report.knowledgeBaseRevision) || report.knowledgeBaseRevision < 0) throw new TypeError('Invalid workflow/revision metadata')
   if (!report.sourceRefs || report.sourceRefs.some((item: string) => !/^source:[^\s]+$/.test(item))) throw new TypeError('sourceRefs must contain Source references')
@@ -70,7 +71,7 @@ export function summarizeResearchReport(report: ResearchReport): ResearchReportS
 }
 
 export function renderResearchReport(report: ResearchReport): string {
-  const title = report.reportType === 'daily_brief' ? 'Daily Intelligence Brief' : report.reportType === 'earnings_review' ? 'Earnings Review' : report.reportType === 'valuation' ? 'Valuation' : report.reportType === 'event_research' ? 'Event Research' : report.reportType === 'thesis_red_team' ? 'Thesis Red Team' : report.reportType === 'industry_research' ? 'Industry Research' : 'Company Research'
+  const title = report.reportType === 'daily_brief' ? 'Daily Intelligence Brief' : report.reportType === 'earnings_review' ? 'Earnings Review' : report.reportType === 'valuation' ? 'Valuation' : report.reportType === 'event_research' ? 'Event Research' : report.reportType === 'thesis_red_team' ? 'Thesis Red Team' : report.reportType === 'industry_research' ? 'Industry Research' : report.reportType === 'thesis_lifecycle' ? 'Thesis Lifecycle' : 'Company Research'
   const lines = [`# ${title}`, '', `- Report: ${report.reportId}`, `- As of: ${report.asOf}`, `- Knowledge revision: ${report.knowledgeBaseRevision}`, '', `Methodology: ${report.methodology}`, '']
   for (const section of report.sections) { lines.push(`## ${section.title}`, '', section.markdown.trim(), ''); if (section.sourceRefs?.length) lines.push(`Sources: ${section.sourceRefs.join(', ')}`, ''); if (section.relationRefs?.length) lines.push(`Relations: ${section.relationRefs.join(', ')}`, ''); if (section.claimRefs?.length) lines.push(`Claims: ${section.claimRefs.join(', ')}`, '') }
   return `${lines.join('\n').trim()}\n`

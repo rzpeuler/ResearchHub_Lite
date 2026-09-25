@@ -1,5 +1,7 @@
 import type { KnowledgeClaimV03, KnowledgeEntityV03, KnowledgeRelationV03 } from '../schema/domain.ts'
+import type { ClaimTypeV04, ThesisStatusV04 } from '../schema/domain-v04.ts'
 import type { ClaimCandidate, EntityCandidate, RelationCandidate } from '../../skills/knowledge-curation/contracts.ts'
+import type { KillCriterionAssessment, RefreshEvidenceRelation, ThesisRefreshTransition } from '../../skills/thesis_refresh/contracts.ts'
 
 export type ReviewCaseStatus = 'open'
 export type ReviewCaseProducerType = string
@@ -14,13 +16,22 @@ export interface RawDocumentBlockEvidenceBinding {
   readonly documentId: string
   readonly blockId: string
 }
-export type ReviewEvidenceBinding = RawDocumentBlockEvidenceBinding
+export interface CanonicalResearchEvidenceBinding {
+  readonly kind: 'canonical_research_evidence'
+  readonly sourceRef: string
+  readonly rawRef: string
+  readonly evidenceRef?: string
+  readonly locator?: string
+}
+export type ReviewEvidenceBinding = RawDocumentBlockEvidenceBinding | CanonicalResearchEvidenceBinding
 
-export type ReviewSemanticPayload = EntityCandidate | RelationCandidate | ClaimCandidate
+export type ReviewClaimType = ClaimCandidate['claimType'] | Extract<ClaimTypeV04, 'assumption' | 'catalyst'>
+export type ReviewClaimCandidate = Omit<ClaimCandidate, 'claimType'> & { readonly claimType: ReviewClaimType }
+export type ReviewSemanticPayload = EntityCandidate | RelationCandidate | ReviewClaimCandidate
 export interface ReviewSemanticProposal {
   readonly proposalId: string
   readonly proposalKind: ReviewProposalKind
-  readonly semanticType: EntityCandidate['entityType'] | RelationCandidate['relationType'] | ClaimCandidate['claimType']
+  readonly semanticType: EntityCandidate['entityType'] | RelationCandidate['relationType'] | ReviewClaimType
   readonly semanticPayload: ReviewSemanticPayload
   readonly evidenceBindings: readonly ReviewEvidenceBinding[]
   readonly dependencyRefs: readonly string[]
@@ -79,6 +90,22 @@ export interface ReviewCaseImpact {
   readonly dependentProposalCount: number
   readonly affectedProposalRefs: readonly string[]
 }
+export interface ThesisReviewScope {
+  readonly thesisRef: string
+  readonly rootClaimRef: `claim:${string}`
+  readonly affectedClaimRefs: readonly string[]
+  readonly evidenceRefs: readonly string[]
+  readonly reviewedEvidence: readonly ThesisReviewedEvidence[]
+  readonly candidateTransition: ThesisRefreshTransition
+  readonly asOf: string
+  readonly proposedThesisStatus?: ThesisStatusV04
+  readonly killCriterionAssessments?: readonly KillCriterionAssessment[]
+}
+export interface ThesisReviewedEvidence {
+  readonly evidenceRef: string
+  readonly relation: RefreshEvidenceRelation
+  readonly targetClaimRefs: readonly string[]
+}
 export interface ReviewCaseAttributeConflict {
   readonly fields: readonly string[]
   readonly left: Readonly<Record<string, unknown>>
@@ -106,6 +133,7 @@ export interface ReviewCase {
   readonly suspendedProposalBundle: { readonly dependentProposals: readonly ReviewSemanticProposal[] }
   readonly resolutionContext: ReviewCaseResolutionContext
   readonly impact: ReviewCaseImpact
+  readonly thesisScope?: ThesisReviewScope
   readonly advisory?: ReviewCaseAdvisory
   readonly state: ReviewCaseState
 }

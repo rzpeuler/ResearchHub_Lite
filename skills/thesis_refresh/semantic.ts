@@ -55,13 +55,15 @@ export async function executeThesisRefresh(input: ThesisRefreshSemanticInput, ex
   if (!executor) return { status: 'blocked', diagnostics: ['reasoning_executor_missing'], telemetry: telemetry(false, false, false, true, 0, ['reasoning_executor_missing']) }
   let firstOutput: unknown
   let priorDiagnostics: readonly string[] = []
-  const run = async (repair: boolean): Promise<ThesisRefreshResult> => {
+  const run = async (repair: boolean): Promise<{ readonly result: ThesisRefreshResult; readonly classifications: readonly RefreshEvidence[] }> => {
     const response = await executor.execute({ operation: 'thesis_refresh_semantic', instruction: repair ? 'Repair the thesis refresh classification. Use only supplied evidence and prior proposition refs; preserve point-in-time fields.' : 'Classify each supplied evidence item against the prior thesis. Identify target propositions and relation without inventing refs, dates, metrics, or thresholds.', input: repair ? { context: boundedInput(input), previousOutput: boundedOutput(firstOutput), diagnostics: priorDiagnostics.slice(0, 16) } : boundedInput(input), outputContract: contract() })
     if (!repair) firstOutput = response.output
-    return refreshThesis({ priorSnapshot: input.priorSnapshot, currentAsOf: input.currentAsOf, evidence: validateEvidence(response.output, input), killCriteria: input.killCriteria })
+    const classifications = validateEvidence(response.output, input)
+    const result = refreshThesis({ priorSnapshot: input.priorSnapshot, currentAsOf: input.currentAsOf, evidence: classifications, killCriteria: input.killCriteria })
+    return { result, classifications }
   }
-  try { const result = await run(false); return { status: 'complete', result, diagnostics: [], telemetry: telemetry(true, true, true, false, 0, []) } }
+  try { const outcome = await run(false); return { status: 'complete', result: outcome.result, classifications: outcome.classifications, diagnostics: [], telemetry: telemetry(true, true, true, false, 0, []) } }
   catch (error) { priorDiagnostics = diagnostics(error) }
-  try { const result = await run(true); return { status: 'complete', result, diagnostics: [], telemetry: telemetry(true, true, true, false, 1, []) } }
+  try { const outcome = await run(true); return { status: 'complete', result: outcome.result, classifications: outcome.classifications, diagnostics: [], telemetry: telemetry(true, true, true, false, 1, []) } }
   catch (error) { const finalDiagnostics = diagnostics(error); return { status: 'blocked', diagnostics: finalDiagnostics, telemetry: telemetry(true, false, false, true, 1, finalDiagnostics) } }
 }

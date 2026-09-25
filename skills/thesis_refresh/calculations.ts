@@ -31,13 +31,13 @@ function evaluateCriterion(criterion: KillCriterion, evidence: readonly RefreshE
   const targetRefs = new Set(refs(criterion.targetPropositionRefs))
   const candidates = evidence.filter((item) => refs(item.targetPropositionRefs).some((ref) => targetRefs.has(ref)) && (criterion.observableMetric === undefined || item.metric === criterion.observableMetric) && (criterion.period === undefined || item.period === criterion.period))
   if (criterion.deadline !== undefined && Date.parse(currentAsOf) < Date.parse(criterion.deadline) && candidates.length === 0) return { conditionId: criterion.conditionId, status: 'not_yet_observable', targetPropositionRefs: refs(criterion.targetPropositionRefs), evidenceRefs: [], rationale: 'The deadline has not arrived and no matching observation is available.' }
-  if (criterion.threshold === undefined || criterion.operator === undefined || criterion.observableMetric === undefined) return { conditionId: criterion.conditionId, status: 'threshold_pending_evidence', targetPropositionRefs: refs(criterion.targetPropositionRefs), evidenceRefs: candidates.flatMap((item) => refs(item.sourceRefs)), rationale: 'No evidence-backed deterministic threshold was supplied.' }
+  if (criterion.threshold === undefined || criterion.operator === undefined || criterion.observableMetric === undefined) return { conditionId: criterion.conditionId, status: 'threshold_pending_evidence', targetPropositionRefs: refs(criterion.targetPropositionRefs), evidenceRefs: candidates.map((item) => item.evidenceId), rationale: 'No evidence-backed deterministic threshold was supplied.' }
   const observed = candidates.find((item) => finite(item.value))
-  if (!observed) return { conditionId: criterion.conditionId, status: 'inconclusive', targetPropositionRefs: refs(criterion.targetPropositionRefs), evidenceRefs: candidates.flatMap((item) => refs(item.sourceRefs)), rationale: 'A matching source exists but no finite observation value is available.' }
+  if (!observed) return { conditionId: criterion.conditionId, status: 'inconclusive', targetPropositionRefs: refs(criterion.targetPropositionRefs), evidenceRefs: candidates.map((item) => item.evidenceId), rationale: 'A matching source exists but no finite observation value is available.' }
   const value = observed.value!
   const threshold = criterion.threshold
   const met = criterion.operator === 'eq' ? value === threshold : criterion.operator === 'gt' ? value > threshold : criterion.operator === 'gte' ? value >= threshold : criterion.operator === 'lt' ? value < threshold : value <= threshold
-  return { conditionId: criterion.conditionId, status: met ? 'met' : 'not_met', targetPropositionRefs: refs(criterion.targetPropositionRefs), evidenceRefs: refs(observed.sourceRefs), rationale: `Observed ${value} ${criterion.operator} ${threshold} for ${criterion.observableMetric}.` }
+  return { conditionId: criterion.conditionId, status: met ? 'met' : 'not_met', targetPropositionRefs: refs(criterion.targetPropositionRefs), evidenceRefs: [observed.evidenceId], rationale: `Observed ${value} ${criterion.operator} ${threshold} for ${criterion.observableMetric}.` }
 }
 
 function candidateForRelation(relation: RefreshEvidence['relation']): PropositionRefreshDelta['candidateStatus'] {

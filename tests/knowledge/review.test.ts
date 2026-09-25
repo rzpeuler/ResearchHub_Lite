@@ -146,6 +146,68 @@ test('ReviewCase and manifest validation reject inconsistent semantic and impact
   assert.throws(() => validateReviewRunManifest({ version: '0.1', knowledgeBaseId: 'kb', producerType: 'producer', producerRunId: 'run', reviewCaseCount: 2, caseIds: ['case-b', 'case-a'], deterministicSetHash: 'sha256:' + '0'.repeat(64), createdAt: '2026-09-06T00:00:00.000Z', schemaVersionAtCreation: '0.3', knowledgeBaseRevisionAtCreation: 0 }), /unsorted/)
 })
 
+test('v0.4 thesis ReviewCases accept bounded scope and truthful canonical research bindings', () => {
+  const { cases } = fixtureCases()
+  const thesisCase = structuredClone(cases[0]!) as any
+  thesisCase.producerType = 'thesis_lifecycle'
+  thesisCase.resolutionContext.schemaVersionAtCreation = '0.4'
+  thesisCase.rootProposal.proposalKind = 'claim'
+  thesisCase.rootProposal.semanticType = 'assumption'
+  thesisCase.rootProposal.semanticPayload = { candidateId: thesisCase.rootProposal.proposalId, claimType: 'assumption', statement: 'Demand remains durable.', subjectRefs: [{ candidateRef: 'e-root', mention: 'Acme' }], evidenceBlockRefs: ['research-source-1'], reason: 'review' }
+  thesisCase.rootProposal.evidenceBindings = [
+    { kind: 'canonical_research_evidence', sourceRef: 'source:filing-1', rawRef: `raw-sha256-${'a'.repeat(64)}`, evidenceRef: 'observation:revenue-1', locator: 'page 4' },
+    { kind: 'canonical_research_evidence', sourceRef: 'source:filing-2', rawRef: `raw-sha256-${'b'.repeat(64)}`, evidenceRef: 'claim:estimate-1' },
+  ]
+  thesisCase.thesisScope = { thesisRef: 'thesis:acme-demand', rootClaimRef: 'claim:demand', affectedClaimRefs: ['claim:demand'], evidenceRefs: ['observation:revenue-1', 'claim:estimate-1'], reviewedEvidence: [{ evidenceRef: 'observation:revenue-1', relation: 'weakens', targetClaimRefs: ['claim:demand'] }, { evidenceRef: 'claim:estimate-1', relation: 'supports', targetClaimRefs: ['claim:demand'] }], candidateTransition: 'weakened', asOf: '2026-09-24T12:00:00.000Z', proposedThesisStatus: 'weakening' }
+  thesisCase.impact.affectedProposalRefs = thesisCase.suspendedProposalBundle.dependentProposals.map((item: any) => item.proposalId)
+  validateReviewCase(thesisCase)
+
+  const catalystCase: any = structuredClone(thesisCase)
+  catalystCase.rootProposal.semanticType = 'catalyst'
+  catalystCase.rootProposal.semanticPayload.claimType = 'catalyst'
+  validateReviewCase(catalystCase)
+
+  const badV03: any = structuredClone(thesisCase)
+  badV03.resolutionContext.schemaVersionAtCreation = '0.3'
+  assert.throws(() => validateReviewCase(badV03), /claim payload does not match/)
+  const duplicatedScopeRef: any = structuredClone(thesisCase)
+  duplicatedScopeRef.thesisScope.evidenceRefs.push('observation:revenue-1')
+  assert.throws(() => validateReviewCase(duplicatedScopeRef), /must not contain duplicates/)
+  const excessiveScope: any = structuredClone(thesisCase)
+  excessiveScope.thesisScope.affectedClaimRefs = Array.from({ length: 65 }, (_, index) => `claim:affected-${index}`)
+  assert.throws(() => validateReviewCase(excessiveScope), /between 1 and 64 canonical references/)
+  const emptyAffectedClaims: any = structuredClone(thesisCase)
+  emptyAffectedClaims.thesisScope.affectedClaimRefs = []
+  assert.throws(() => validateReviewCase(emptyAffectedClaims), /affectedClaimRefs must contain between 1 and 64/)
+  const emptyEvidenceRefs: any = structuredClone(thesisCase)
+  emptyEvidenceRefs.thesisScope.evidenceRefs = []
+  assert.throws(() => validateReviewCase(emptyEvidenceRefs), /evidenceRefs must contain between 1 and 64/)
+  const unboundEvidenceRef: any = structuredClone(thesisCase)
+  unboundEvidenceRef.rootProposal.evidenceBindings.pop()
+  assert.throws(() => validateReviewCase(unboundEvidenceRef), /evidenceRefs must be represented by canonical evidence bindings/)
+  const onlyRawDocumentBinding: any = structuredClone(thesisCase)
+  onlyRawDocumentBinding.rootProposal.evidenceBindings = [{ kind: 'raw_document_block', rawRef: `raw-sha256-${'a'.repeat(64)}`, documentId: 'doc-1', blockId: 'block-1' }]
+  assert.throws(() => validateReviewCase(onlyRawDocumentBinding), /requires canonical research evidence binding/)
+  const incoherentClaimRoot: any = structuredClone(thesisCase)
+  incoherentClaimRoot.rootProposal.semanticType = 'fact'
+  assert.throws(() => validateReviewCase(incoherentClaimRoot), /claim payload does not match its semantic kind/)
+  const emptyReviewedEvidence: any = structuredClone(thesisCase)
+  emptyReviewedEvidence.thesisScope.reviewedEvidence = []
+  assert.throws(() => validateReviewCase(emptyReviewedEvidence), /reviewedEvidence must contain between 1 and 64/)
+  const unlistedReviewedEvidence: any = structuredClone(thesisCase)
+  unlistedReviewedEvidence.thesisScope.reviewedEvidence[0].evidenceRef = 'observation:unlisted'
+  assert.throws(() => validateReviewCase(unlistedReviewedEvidence), /evidenceRef must be listed in evidenceRefs/)
+  const unlistedTarget: any = structuredClone(thesisCase)
+  unlistedTarget.thesisScope.reviewedEvidence[0].targetClaimRefs = ['claim:unaffected']
+  assert.throws(() => validateReviewCase(unlistedTarget), /targetClaimRefs must be listed in affectedClaimRefs/)
+  const badBinding: any = structuredClone(thesisCase)
+  badBinding.rootProposal.evidenceBindings[0].rawRef = 'raw-not-a-canonical-reference'
+  assert.throws(() => validateReviewCase(badBinding), /canonical Raw reference/)
+  const wrongProducer: any = structuredClone(thesisCase)
+  wrongProducer.producerType = 'other_producer'
+  assert.throws(() => validateReviewCase(wrongProducer), /only valid for a v0.4 thesis_lifecycle/)
+})
+
 test('ReviewCase store is atomic, reloadable, idempotent, and rejects conflicting runs', async () => {
   const root = await mkdtemp(join(tmpdir(), 'rhl-review-case-'))
   try {

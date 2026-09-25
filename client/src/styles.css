@@ -276,3 +276,41 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .research-controls .check-field { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
 .execution-summary { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-bottom: 12px; padding: 9px 12px; border-left: 3px solid var(--accent, #5267d8); background: var(--surface-muted, #f7f9fc); color: var(--text-muted, #5d6675); font-size: 12px; }
 .execution-summary strong { color: var(--text, #202735); }
+.thesis-page { overflow: auto; }
+.thesis-layout, .thesis-review-layout { display: grid; grid-template-columns: minmax(300px, .95fr) minmax(360px, 1.05fr); gap: 18px; max-width: 1180px; }
+.thesis-panel, .thesis-result { min-width: 0; padding: 16px; border: 1px solid #2b4148; border-radius: 8px; background: #111d24; }
+.thesis-field { display: grid; gap: 6px; margin: 12px 0; color: #b8cbd0; font-size: 11px; }
+.thesis-field > span { display: flex; justify-content: space-between; gap: 10px; color: #8fa5ad; font-size: 10px; }
+.thesis-field small { color: #657d86; font-size: 9px; font-weight: 400; }
+.thesis-field input, .thesis-field select, .thesis-field textarea { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid #344653; border-radius: 6px; color: #dce8ed; background: #121d25; font: inherit; }
+.thesis-field textarea { resize: vertical; line-height: 1.5; }
+.thesis-summary { margin-top: 18px; padding-top: 14px; border-top: 1px solid #273a45; }
+.thesis-summary h3 { margin: 9px 0; color: #dce9ed; font-size: 15px; }
+.thesis-summary > p { color: #a8bbc3; font-size: 11px; line-height: 1.6; }
+.thesis-summary > small, .thesis-panel > small { color: #718591; font-size: 9px; overflow-wrap: anywhere; }
+.thesis-propositions { display: grid; gap: 7px; margin-top: 12px; max-height: 340px; overflow: auto; }
+.thesis-propositions article { padding: 9px; border: 1px solid #273a45; border-radius: 6px; background: #101a21; }
+.thesis-propositions strong { color: #78cbbf; font-size: 9px; text-transform: uppercase; }
+.thesis-propositions p { margin: 5px 0; color: #b9cbd0; font-size: 10px; line-height: 1.45; }
+.thesis-propositions small { color: #647c86; font-family: ui-monospace, monospace; font-size: 8px; overflow-wrap: anywhere; }
+.thesis-refresh-form { display: grid; align-content: start; gap: 8px; }
+.thesis-refresh-form .primary-action, .thesis-decision-buttons button { min-height: 34px; padding: 8px 12px; border: 1px solid #5bb9aa; border-radius: 6px; color: #0e211f; background: #72d2c4; font-size: 10px; font-weight: 750; cursor: pointer; }
+.thesis-refresh-form button:disabled, .thesis-decision-buttons button:disabled { cursor: not-allowed; opacity: .55; }
+.thesis-error { max-width: 1180px; margin-top: 16px; border-color: #70464a; background: #2c1d22; }
+.thesis-result, .thesis-review-area { max-width: 1180px; margin-top: 18px; }
+.thesis-result > p { color: #9fb3bb; font-size: 10px; line-height: 1.5; }
+.thesis-result .section-title small { color: #6e858f; font-family: ui-monospace, monospace; font-size: 9px; overflow-wrap: anywhere; }
+.thesis-diagnostic { color: #e2a2a2 !important; }
+.thesis-report-markdown { max-height: 320px; margin: 8px 0; padding: 10px; overflow: auto; border: 1px solid #293d47; border-radius: 5px; color: #a9c2c9; background: #101a21; font: 10px/1.55 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.thesis-review-area > .section-title { margin: 22px 0 12px; }
+.thesis-review-layout { grid-template-columns: minmax(270px, .8fr) minmax(350px, 1.2fr); }
+.thesis-review-layout .review-detail { min-width: 0; }
+.thesis-review-layout .review-item strong { font-family: ui-monospace, monospace; font-size: 9px; }
+.thesis-review-layout .review-item.selected { border-color: #72d2c4; background: #173633; }
+.thesis-history { margin-top: 14px; padding-top: 10px; border-top: 1px solid #273a45; color: #89aaa5; font-size: 10px; }
+.thesis-history p { font-size: 9px; overflow-wrap: anywhere; }
+.thesis-decision-controls { margin-top: 16px; padding-top: 12px; border-top: 1px solid #273a45; }
+.thesis-decision-buttons { display: flex; flex-wrap: wrap; gap: 7px; }
+.thesis-decision-buttons .secondary-action { color: #c1d4d7; background: #1a292f; border-color: #40515a; }
+.thesis-decision-buttons .danger-action { color: #f0d6d6; background: #492b30; border-color: #855057; }
+@media (max-width: 850px) { .thesis-layout, .thesis-review-layout { grid-template-columns: 1fr; } }

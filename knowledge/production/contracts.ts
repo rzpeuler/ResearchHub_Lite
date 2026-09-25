@@ -1,6 +1,6 @@
 import type { KnowledgeBaseHandle } from '../storage/handle.ts'
 import type { NormalizedResearchSource } from '../../plugins/research-acquisition/contracts.ts'
-import type { EventTypeV04, ObservationTypeV04, ReasoningEdgeTypeV04, ThesisStatusV04, ExternalIdentifierV04 } from '../schema/domain-v04.ts'
+import type { CanonicalKnowledgeRefV04, EventTypeV04, ObservationTypeV04, ReasoningEdgeTypeV04, ThesisStatusV04, ExternalIdentifierV04 } from '../schema/domain-v04.ts'
 
 export type SemanticProductionClaimType = 'fact' | 'forecast' | 'viewpoint' | 'trend' | 'risk' | 'assumption' | 'thesis' | 'catalyst'
 
@@ -43,10 +43,16 @@ export interface SemanticProductionProposal {
   readonly thesisStatus?: ThesisStatusV04
   readonly edgeType?: ReasoningEdgeTypeV04
   readonly sourceProposalId?: string
+  /** Producer-owned binding to an existing canonical ReasoningEdge source endpoint. */
+  readonly existingSourceRef?: CanonicalKnowledgeRefV04
+  /** Producer-owned binding to an existing canonical ReasoningEdge target endpoint. */
+  readonly existingTargetRef?: CanonicalKnowledgeRefV04
   readonly attributes?: Readonly<Record<string, unknown>>
   readonly sourceCandidateIds?: readonly string[]
   /** Optional producer-owned binding to an existing canonical Claim. */
   readonly existingKnowledgeRefs?: readonly string[]
+  /** Producer-owned bindings to existing canonical Source and Raw evidence. */
+  readonly existingEvidenceBindings?: readonly { readonly sourceRef: `source:${string}`; readonly rawRef: `raw-sha256-${string}` }[]
   readonly temporal?: unknown
   readonly structuredValue?: Readonly<Record<string, unknown>> | null
   readonly confidence?: number
@@ -58,6 +64,11 @@ export interface SemanticProductionProposal {
   /** Explicit generic intent to update one existing canonical Claim in place. */
   readonly resolution?: 'update' | 'supersede' | 'contradict' | 'review'
 }
+
+export type ReasoningEdgeProductionProposal = Omit<SemanticProductionProposal, 'kind' | 'subjectKey'> & { readonly kind: 'reasoning_edge'; readonly subjectKey?: string }
+export type SemanticProductionInputProposal =
+  | ReasoningEdgeProductionProposal
+  | (Omit<SemanticProductionProposal, 'kind' | 'subjectKey'> & { readonly kind: Exclude<SemanticProductionProposal['kind'], 'reasoning_edge'>; readonly subjectKey: string })
 
 export interface SemanticResolutionDecision {
   readonly outcome: 'equivalent' | 'supersedes' | 'contradicts' | 'uncertain'
@@ -94,7 +105,7 @@ export interface KnowledgeProductionInput {
   readonly producerRunId: string
   readonly schemaProfile: { readonly schemaVersion: '0.4'; readonly storageFormatVersion: '1'; readonly requiresRawProvenance: true }
   readonly entity: ProductionEntityInput
-  readonly proposals: readonly SemanticProductionProposal[]
+  readonly proposals: readonly SemanticProductionInputProposal[]
   readonly evidenceBindings: readonly ProductionEvidenceBinding[]
   readonly asOf?: string
   readonly now?: () => string

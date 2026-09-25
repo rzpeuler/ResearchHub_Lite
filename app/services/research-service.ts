@@ -1,4 +1,5 @@
-import { readdir } from 'node:fs/promises'
+import { readdir, lstat } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { join, resolve } from 'node:path'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { runCompanyDeepResearch } from '../../workflows/company-deep-research/workflow.ts'
@@ -15,11 +16,61 @@ import { AkshareIndustryResearchPlugin } from '../../plugins/research-acquisitio
 import { IndustryAcquisitionComposition } from '../../plugins/research-acquisition/industry-composition.ts'
 import { ApplicationServiceError, type ApplicationEarningsReviewResult, type ApplicationEventResearchResult, type ApplicationResearchResult, type ApplicationValuationResult, type ApplicationThesisRedTeamResult, type ApplicationIndustryResearchResult, type EarningsReviewInput, type EventResearchInput, type IndustryResearchInput, type ResearchCompanyInput, type ThesisRedTeamInput, type ValuationInput } from './contracts.ts'
 import { WorkflowService } from './workflow-service.ts'
-import { readResearchReport, summarizeResearchReport, type ResearchReportSummary } from './research-report.ts'
+import { readResearchReport, summarizeResearchReport, validateResearchReport, writeResearchReport, type ResearchReport, type ResearchReportSummary } from './research-report.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import { withSourceLibraryContext } from './reasoning-context.ts'
 import type { ManagementCommunicationAcquisitionSources } from '../../workflows/management-communication-acquisition/contracts.ts'
 import type { IndustryOperatingObservationAcquisitionPort } from '../../plugins/research-acquisition/industry-operating-observations.ts'
+import { ThesisLifecycleService, type ThesisLifecycleRefreshInput, type ApplicationThesisLifecycleResult, type ThesisLifecycleDecisionReportInput, type ThesisLifecycleDecisionReportResult } from './thesis-lifecycle-service.ts'
+import { ThesisCreateService, type ThesisCreateInput, type ThesisCreateServiceResult } from './thesis-create-service.ts'
+
+export type ThesisLifecycleCreateInput = ThesisCreateInput
+export interface ApplicationThesisLifecycleCreateResult extends ThesisCreateServiceResult {
+  readonly summary?: string
+  readonly errorSummary?: string
+  readonly reportId?: string
+  readonly reportPath?: string
+}
+
+interface PersistedThesisCreateResult { readonly inputFingerprint: string; readonly result: ApplicationThesisLifecycleCreateResult }
+
+const CREATE_RESULT_MARKER = /<!-- THESIS_LIFECYCLE_CREATE_RESULT_V1:([A-Za-z0-9_-]+) -->/
+const createFingerprint = (input: ThesisLifecycleCreateInput): string => createHash('sha256').update(JSON.stringify({ ...input, thesisTitle: input.thesisTitle.trim(), narrative: input.narrative.trim(), evidenceRefs: [...input.evidenceRefs].sort() })).digest('hex')
+const encodeCreateResult = (value: PersistedThesisCreateResult): string => `<!-- THESIS_LIFECYCLE_CREATE_RESULT_V1:${Buffer.from(JSON.stringify(value), 'utf8').toString('base64url')} -->`
+
+function decodeCreateResult(report: ResearchReport): PersistedThesisCreateResult | undefined {
+  const markdown = report.sections.find((section) => section.id === 'create-run-result')?.markdown
+  const match = markdown?.match(CREATE_RESULT_MARKER)
+  if (!match) return undefined
+  try {
+    const value = JSON.parse(Buffer.from(match[1]!, 'base64url').toString('utf8')) as PersistedThesisCreateResult
+    return value && typeof value.inputFingerprint === 'string' && value.result?.mode === 'CREATE' && value.result.status === 'completed' && value.result.runId === report.workflowRunId ? value : undefined
+  } catch { return undefined }
+}
+
+function buildThesisCreateReport(input: ThesisLifecycleCreateInput, result: ThesisCreateServiceResult, fingerprint: string, generatedAt: string): ResearchReport {
+  const reportId = `thesis-lifecycle-${input.workflowRunId}`
+  const sourceRefs = [...new Set(result.evidenceDecisions.flatMap((decision) => decision.sourceBindings.map((binding) => binding.sourceRef)))].sort()
+  const claimRefs = [...new Set(Object.values(result.claimRefsByPropositionRef))].sort()
+  const evidence = result.evidenceDecisions.map((decision) => `- ${decision.evidenceRef}: ${decision.decision}${decision.publishedAt ? `; published ${decision.publishedAt}` : ''}${decision.reason ? `; ${decision.reason}` : ''}${decision.sourceBindings.length ? `; ${decision.sourceBindings.map((binding) => `${binding.sourceRef} -> ${binding.rawRef}`).join(', ')}` : ''}`).join('\n') || 'No canonical evidence decisions were recorded.'
+  const propositions = Object.entries(result.claimRefsByPropositionRef).sort(([a], [b]) => a.localeCompare(b)).map(([propositionRef, claimRef]) => `- ${propositionRef} -> ${claimRef}${result.qualifiesEdgeRefsByPropositionRef[propositionRef] ? ` via ${result.qualifiesEdgeRefsByPropositionRef[propositionRef]}` : ''}; evidence ${(result.evidenceRefsByPropositionRef[propositionRef] ?? []).join(', ') || 'none'}`).join('\n') || 'No canonical propositions were committed.'
+  const gaps = result.researchGaps.map((gap) => `- ${gap.gapId}: ${gap.statement}${gap.affectedPropositionRefs.length ? ` (affects ${gap.affectedPropositionRefs.join(', ')})` : ''}`).join('\n') || 'No research gaps were identified.'
+  const runResult: ApplicationThesisLifecycleCreateResult = { ...result, reportId, reportPath: `${reportId}.md`, summary: `Thesis CREATE ${result.status} for ${input.companyRef}` }
+  return validateResearchReport({
+    reportId, reportType: 'thesis_lifecycle', subjectRefs: [input.companyRef], generatedAt, asOf: input.asOf, workflowRunId: input.workflowRunId,
+    knowledgeBaseRevision: result.committedRevision ?? result.baseRevision ?? 0, sourceRefs, claimRefs,
+    methodology: 'Thesis CREATE uses Thesis Formalize semantic reasoning over explicitly selected canonical, active, company-scoped, source-bound evidence at the requested point in time. Canonical Thesis, Claim, and qualifies membership writes are validated and committed through Knowledge Production Gateway and Writer.',
+    sections: [
+      { id: 'thesis-created', title: 'Thesis Created', markdown: `Company: ${result.companyRef}\n\nTitle: ${result.thesisTitle}\n\nThesis: ${result.thesisRef ?? 'Not created'}\n\nInitial status: ${result.thesisInitialStatus ?? 'Not created'}\n\nSummary: ${result.thesisSummary ?? 'No canonical Thesis summary was produced.'}` },
+      { id: 'propositions', title: 'Canonical Propositions and Membership', markdown: propositions, claimRefs },
+      { id: 'evidence-pit', title: 'Evidence and Point-in-Time Bindings', markdown: evidence, sourceRefs },
+      { id: 'research-gaps', title: 'Research Gaps', markdown: gaps },
+      { id: 'writer-state', title: 'Gateway and Writer State', markdown: `Knowledge Base: ${result.knowledgeBaseId ?? 'unavailable'}\n\nBase revision: ${result.baseRevision ?? 'unavailable'}\n\nCommitted revision: ${result.committedRevision ?? 'no canonical write'}\n\nWriter run: ${result.writerRunId ?? 'no canonical write'}\n\nMembership convention: ${result.membershipBindingConvention}` },
+      { id: 'create-run-result', title: 'CREATE Result Metadata', markdown: encodeCreateResult({ inputFingerprint: fingerprint, result: runResult }) },
+      { id: 'diagnostics', title: 'Diagnostics', markdown: result.diagnostics.length ? result.diagnostics.slice(0, 24).map((item) => `- ${item}`).join('\n') : 'None.' },
+    ], outputPath: `${reportId}.md`,
+  })
+}
 
 export interface ResearchServiceOptions {
   readonly mountedKnowledgeBaseRoot: string
@@ -40,8 +91,87 @@ export interface ResearchServiceOptions {
 
 export class ResearchService {
   private readonly registry = new KnowledgeBaseRegistry()
+  private readonly thesisLifecycleService: ThesisLifecycleService
+  private readonly thesisCreateService: ThesisCreateService
+  private readonly thesisCreateStarts = new Map<string, { readonly fingerprint: string; readonly completion: Promise<ApplicationThesisLifecycleCreateResult> }>()
 
-  constructor(private readonly options: ResearchServiceOptions) {}
+  constructor(private readonly options: ResearchServiceOptions) {
+    this.thesisLifecycleService = new ThesisLifecycleService({ mountedKnowledgeBaseRoot: options.mountedKnowledgeBaseRoot, reportRoot: options.reportRoot, cwd: options.cwd, workflowService: options.workflowService, reasoningExecutor: options.reasoningExecutor })
+    this.thesisCreateService = new ThesisCreateService({ mountedKnowledgeBaseRoot: options.mountedKnowledgeBaseRoot, reasoningExecutor: options.reasoningExecutor })
+  }
+
+  startThesisLifecycleRefresh(input: ThesisLifecycleRefreshInput, callerSignal?: AbortSignal): { readonly runId: string; readonly completion: Promise<ApplicationThesisLifecycleResult> } {
+    return this.thesisLifecycleService.startRefresh(input, callerSignal)
+  }
+
+  startThesisLifecycleCreate(input: ThesisLifecycleCreateInput, callerSignal?: AbortSignal): { readonly runId: string; readonly completion: Promise<ApplicationThesisLifecycleCreateResult> } {
+    if (!input || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(input.workflowRunId) || input.workflowRunId.includes('..') || !/^entity:[A-Za-z0-9][A-Za-z0-9._-]*$/.test(input.companyRef) || typeof input.thesisTitle !== 'string' || !input.thesisTitle.trim() || typeof input.narrative !== 'string' || !input.narrative.trim() || !Array.isArray(input.evidenceRefs) || input.evidenceRefs.length === 0 || input.evidenceRefs.length > 40 || input.evidenceRefs.some((ref) => typeof ref !== 'string' || !/^(claim|observation):[A-Za-z0-9][A-Za-z0-9._-]*$/.test(ref)) || new Set(input.evidenceRefs).size !== input.evidenceRefs.length || !Number.isFinite(Date.parse(input.asOf))) throw new ApplicationServiceError('invalid_input', 'Thesis CREATE requires a safe run ID, company Entity, title, narrative, canonical Claim/Observation refs, and valid asOf')
+    const normalized: ThesisLifecycleCreateInput = { ...input, thesisTitle: input.thesisTitle.trim(), narrative: input.narrative.trim(), evidenceRefs: [...input.evidenceRefs].sort() }
+    const fingerprint = createFingerprint(normalized)
+    const previous = this.thesisCreateStarts.get(normalized.workflowRunId)
+    if (previous) {
+      if (previous.fingerprint !== fingerprint) throw new ApplicationServiceError('conflict', 'runId is already bound to a different Thesis CREATE input')
+      return { runId: normalized.workflowRunId, completion: previous.completion }
+    }
+
+    const runId = normalized.workflowRunId
+    this.options.workflowService.register({ runId, workflowType: 'thesis_lifecycle', objective: `Create Thesis ${normalized.thesisTitle}` })
+    const completion = this.options.workflowService.start(runId, async (signal) => {
+      if (signal.aborted || callerSignal?.aborted) throw new ApplicationServiceError('cancelled', `Thesis CREATE cancelled: ${runId}`)
+      const reportRoot = resolve(this.options.reportRoot ?? join(this.options.cwd ?? process.cwd(), 'runtime-data', 'reports'))
+      const reportId = `thesis-lifecycle-${runId}`
+      const reportPath = join(reportRoot, `${reportId}.md.json`)
+      try {
+        const existing = await readResearchReport(reportPath)
+        const persisted = decodeCreateResult(existing)
+        if (existing.reportId !== reportId || existing.reportType !== 'thesis_lifecycle' || existing.workflowRunId !== runId || existing.subjectRefs[0] !== normalized.companyRef || existing.asOf !== normalized.asOf || !persisted) return this.thesisCreateFailure(normalized, ['THESIS_CREATE_REPLAY_REPORT_INVALID'])
+        if (persisted.inputFingerprint !== fingerprint) return this.thesisCreateFailure(normalized, ['THESIS_CREATE_REPLAY_INPUT_CONFLICT'])
+        await writeResearchReport(existing, reportRoot)
+        return persisted.result
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          if (error instanceof ApplicationServiceError) return this.thesisCreateFailure(normalized, [`THESIS_CREATE_REPLAY_${error.code.toUpperCase()}`])
+          return this.thesisCreateFailure(normalized, ['THESIS_CREATE_REPLAY_REPORT_UNREADABLE'])
+        }
+      }
+
+      // A Writer log without its CREATE report means the canonical write may
+      // have committed. Fail closed before Pi formalization to avoid a new
+      // semantic result being compared against or duplicating that write.
+      try {
+        await lstat(join(resolve(this.options.mountedKnowledgeBaseRoot), 'logs', 'research', `${runId}.yaml`))
+        return this.thesisCreateFailure(normalized, ['THESIS_CREATE_COMMITTED_WITHOUT_DURABLE_REPORT'])
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return this.thesisCreateFailure(normalized, ['THESIS_CREATE_WRITER_LOG_STATE_UNAVAILABLE'])
+      }
+
+      const result = await this.thesisCreateService.create(normalized)
+      if (result.status !== 'completed') return { ...result, summary: `Thesis CREATE ${result.status} for ${normalized.companyRef}`, ...(result.status === 'failed' ? { errorSummary: result.diagnostics.join('; ').slice(0, 500) } : {}) }
+      const report = buildThesisCreateReport(normalized, result, fingerprint, new Date().toISOString())
+      try {
+        const writtenPath = await writeResearchReport(report, reportRoot)
+        // JSON is the catalog's durable record. Validate it after writing
+        // before allowing WorkflowService to publish a completed outcome.
+        const persisted = await readResearchReport(`${writtenPath}.json`)
+        const decoded = decodeCreateResult(persisted)
+        if (persisted.reportId !== reportId || decoded?.inputFingerprint !== fingerprint || decoded.result.status !== 'completed') return this.thesisCreateFailure(normalized, ['THESIS_CREATE_REPORT_COMMIT_VERIFY_FAILED'], result)
+        return decoded.result
+      } catch {
+        return this.thesisCreateFailure(normalized, ['THESIS_CREATE_REPORT_PERSISTENCE_FAILED'], result)
+      }
+    }).then((outcome) => outcome as ApplicationThesisLifecycleCreateResult)
+    completion.catch(() => undefined)
+    this.thesisCreateStarts.set(runId, { fingerprint, completion })
+    return { runId, completion }
+  }
+
+  private thesisCreateFailure(input: ThesisLifecycleCreateInput, diagnostics: readonly string[], prior?: ThesisCreateServiceResult): ApplicationThesisLifecycleCreateResult {
+    return { mode: 'CREATE', runId: input.workflowRunId, asOf: input.asOf, status: 'failed', companyRef: input.companyRef, thesisTitle: input.thesisTitle, claimRefsByPropositionRef: prior?.claimRefsByPropositionRef ?? {}, qualifiesEdgeRefsByPropositionRef: prior?.qualifiesEdgeRefsByPropositionRef ?? {}, evidenceRefsByPropositionRef: prior?.evidenceRefsByPropositionRef ?? {}, membershipBindingConvention: 'claim_to_thesis_qualifies', evidenceDecisions: prior?.evidenceDecisions ?? [], researchGaps: prior?.researchGaps ?? [], ...(prior?.knowledgeBaseId === undefined ? {} : { knowledgeBaseId: prior.knowledgeBaseId }), ...(prior?.baseRevision === undefined ? {} : { baseRevision: prior.baseRevision }), ...(prior?.committedRevision === undefined ? {} : { committedRevision: prior.committedRevision }), ...(prior?.writerRunId === undefined ? {} : { writerRunId: prior.writerRunId }), diagnostics, summary: `Thesis CREATE failed for ${input.companyRef}`, errorSummary: diagnostics.join('; ').slice(0, 500) }
+  }
+
+  recordThesisLifecycleDecision(input: ThesisLifecycleDecisionReportInput): Promise<ThesisLifecycleDecisionReportResult> {
+    return this.thesisLifecycleService.updateDecisionReport(input)
+  }
 
   startResearchCompany(input: ResearchCompanyInput, callerSignal?: AbortSignal): { readonly runId: string; readonly completion: Promise<ApplicationResearchResult> } {
     if (!input || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(input.workflowRunId) || !/^\d{6}$/.test(input.symbol)) {

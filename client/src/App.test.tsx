@@ -104,4 +104,77 @@ describe('Homepage shell', () => {
     expect(screen.queryByText('Approve')).toBeNull()
     expect(screen.queryByText('Reject')).toBeNull()
   })
+
+  it('refreshes a canonical Thesis, loads its persisted report, and lets a scoped case be decided', async () => {
+    window.history.replaceState({}, '', '/theses')
+    let refreshStarted = false
+    let accepted = false
+    const thesisSummary = { thesisRef: 'thesis:value-driver', title: 'Value driver', statement: 'Growth supports value', status: 'active', companySubject: { companyRef: 'entity:company-acme', name: 'Acme' }, lastReviewedAt: null, propositionCount: 1 }
+    const thesisDetail = { ...thesisSummary, propositions: [{ claimRef: 'claim:driver', statement: 'Margins will expand', claimType: 'forecast', sourceRefs: ['source:annual-report'], membershipEdgeRef: 'reasoning-edge:qualifies' }], propositionRefs: ['claim:driver'], membershipEdgeRefs: ['reasoning-edge:qualifies'], revision: 7 }
+    const reviewDetail = () => ({ reviewCaseId: 'review-thesis-1', producerRunId: 'refresh-thesis-1', producerType: 'thesis_lifecycle', createdAt: '2026-09-24T10:00:00.000Z', classification: { rationale: 'Evidence challenges the load-bearing claim' }, rootProposal: { proposalKind: 'update', semanticType: 'claim' }, evidenceBindings: [{ kind: 'canonical_research_evidence', sourceRef: 'source:annual-report', rawRef: 'raw-sha256-abc' }], existingKnowledgeProjections: [], impact: {}, thesisScope: { thesisRef: 'thesis:value-driver', rootClaimRef: 'claim:driver', affectedClaimRefs: ['claim:driver'], evidenceRefs: ['observation:revenue'], reviewedEvidence: [{ evidenceRef: 'observation:revenue', relation: 'weakens', targetClaimRefs: ['claim:driver'] }], candidateTransition: 'weakening', asOf: '2026-09-24T10:00:00.000Z' }, decision: { state: accepted ? 'ACCEPTED' : 'OPEN', revision: accepted ? 1 : 0, actionable: !accepted, events: [], totalEvents: 0, eventsTruncated: false }, state: { status: 'open' }, totalDependentProposals: 0, dependentProposalSamples: [], dependentProposals: [], dependentsTruncated: false })
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input)
+      if (path === '/api/bootstrap') return json({ runtime: { origin: 'http://127.0.0.1:1234', runtimeToken: 'b'.repeat(64) }, origin: 'http://127.0.0.1:1234', session: { conversationId: 'c1', isStreaming: false, isIdle: true, pendingMessageCount: 0, thinkingLevel: 'off' }, conversations: [], knowledgeBase: { knowledgeBaseId: 'kb-1', rootRef: 'root:kb', revision: 7, status: 'active', schemaVersion: '0.4', storageFormatVersion: '1', counts: {} }, openReviewCases: 1 })
+      if (path === '/api/research/workflows') return json({ workflows: [] })
+      if (path === '/api/conversations/current') return json({ conversationId: 'c1', isStreaming: false, isIdle: true, pendingMessageCount: 0, thinkingLevel: 'off' })
+      if (path === '/api/conversations/messages') return json({ conversationId: 'c1', messages: [] })
+      if (path === '/api/conversations') return json({ conversations: [] })
+      if (path === '/api/knowledge/directory') return json({ themeGroups: [], industries: { items: [], total: 0, limit: 30, truncated: false }, companies: { items: [{ ref: 'entity:company-acme', name: 'Acme' }], total: 1, limit: 30, truncated: false }, products: { items: [], total: 0, limit: 30, truncated: false }, technologies: { items: [], total: 0, limit: 30, truncated: false } })
+      if (path === '/api/knowledge/theses?limit=50') return json({ theses: [thesisSummary], total: 1, limit: 50, truncated: false, revision: 7 })
+      if (path === '/api/knowledge/theses/thesis%3Avalue-driver') return json(thesisDetail)
+      if (path === '/api/reviews') return json(accepted ? { cases: [], total: 0, limit: 50, truncated: false } : { cases: [{ reviewCaseId: 'review-thesis-1', producerRunId: 'refresh-thesis-1', producerType: 'thesis_lifecycle', createdAt: '2026-09-24T10:00:00.000Z', category: 'semantic_conflict', actionability: 'actionable', origin: 'thesis_refresh', rationale: 'Evidence challenges the load-bearing claim', proposalKind: 'update', semanticType: 'claim', dependentProposalCount: 0, status: 'open', decisionState: 'OPEN' }], total: 1, limit: 50, truncated: false })
+      if (path === '/api/production/thesis-lifecycle/refresh') { refreshStarted = true; return json({ accepted: true, runId: 'refresh-thesis-1' }, 202) }
+      if (path === '/api/workflows/refresh-thesis-1') return json({ runId: 'refresh-thesis-1', workflowType: 'thesis_lifecycle', objective: 'Refresh Thesis', status: 'completed_with_review', startedAt: '2026-09-24T10:00:00.000Z', updatedAt: '2026-09-24T10:01:00.000Z', completedAt: '2026-09-24T10:01:00.000Z', reviewCount: 1 })
+      if (path === '/api/research-reports?limit=50') return json({ reports: refreshStarted ? [{ reportId: 'thesis-lifecycle-refresh-thesis-1', reportType: 'thesis_lifecycle', subjectRefs: ['thesis:value-driver'], generatedAt: '2026-09-24T10:01:00.000Z', asOf: '2026-09-24T10:00:00.000Z', workflowRunId: 'refresh-thesis-1', knowledgeBaseRevision: 7, sourceCount: 1, claimCount: 1, sectionCount: 3, methodology: 'Canonical PIT refresh' }] : [] })
+      if (path === '/api/research-reports/thesis-lifecycle-refresh-thesis-1') return json({ reportId: 'thesis-lifecycle-refresh-thesis-1', reportType: 'thesis_lifecycle', subjectRefs: ['thesis:value-driver'], generatedAt: '2026-09-24T10:01:00.000Z', asOf: '2026-09-24T10:00:00.000Z', workflowRunId: 'refresh-thesis-1', knowledgeBaseRevision: 7, sourceCount: 1, claimCount: 1, sectionCount: 3, methodology: 'Canonical PIT refresh', sourceRefs: ['source:annual-report'], claimRefs: ['claim:driver'], sections: [{ id: 'evidence-pit', title: 'Evidence and Point-in-Time Decisions', markdown: 'PIT accepted observation:revenue' }] })
+      if (path === '/api/review-cases/review-thesis-1') return json(reviewDetail())
+      if (path === '/api/review-cases/review-thesis-1/decision') { accepted = JSON.parse(String(init?.body)).decision === 'ACCEPT'; return json({ status: 'accepted', reviewCaseId: 'review-thesis-1', decisionState: 'ACCEPTED', committedRevision: 8, errors: [] }) }
+      return json({ code: 'not_found', error: 'not found' }, 404)
+    }) as typeof fetch
+
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Thesis Lifecycle' })).toBeTruthy()
+    expect(await screen.findByText('Growth supports value')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Thesis' }))
+    expect(await screen.findByText('thesis-lifecycle-refresh-thesis-1')).toBeTruthy()
+    expect(await screen.findByText('PIT accepted observation:revenue')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /review-thesis-1/ }))
+    expect((await screen.findAllByText('claim:driver', { selector: 'p' })).length).toBeGreaterThan(0)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Decision note' }), { target: { value: 'Confirmed after source review' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Accept reviewed changes' }))
+    await waitFor(() => expect(screen.getByText('This case is resolved or is no longer actionable.')).toBeTruthy())
+  })
+
+  it('submits Thesis CREATE with a canonical company and explicit evidence refs', async () => {
+    window.history.replaceState({}, '', '/theses')
+    let createBody: Record<string, unknown> | undefined
+    const report = { reportId: 'thesis-lifecycle-create-ui-1', reportType: 'thesis_lifecycle', subjectRefs: ['entity:company-acme'], generatedAt: '2026-09-24T10:01:00.000Z', asOf: '2026-09-24T10:00:00.000Z', workflowRunId: 'create-ui-1', knowledgeBaseRevision: 3, sourceRefs: ['source:annual'], claimRefs: ['claim:new-driver'], methodology: 'Governed Thesis CREATE', sections: [{ id: 'thesis-created', title: 'Thesis Created', markdown: 'Thesis: thesis:durable-growth' }] }
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input)
+      if (path === '/api/bootstrap') return json({ runtime: { origin: 'http://127.0.0.1:1234', runtimeToken: 'b'.repeat(64) }, origin: 'http://127.0.0.1:1234', session: { conversationId: 'c1', isStreaming: false, isIdle: true, pendingMessageCount: 0, thinkingLevel: 'off' }, conversations: [], knowledgeBase: { knowledgeBaseId: 'kb-1', rootRef: 'root:kb', revision: 2, status: 'active', schemaVersion: '0.4', storageFormatVersion: '1', counts: {} }, openReviewCases: 0 })
+      if (path === '/api/research/workflows') return json({ workflows: [] })
+      if (path === '/api/conversations/current') return json({ conversationId: 'c1', isStreaming: false, isIdle: true, pendingMessageCount: 0, thinkingLevel: 'off' })
+      if (path === '/api/conversations/messages') return json({ conversationId: 'c1', messages: [] })
+      if (path === '/api/conversations') return json({ conversations: [] })
+      if (path === '/api/knowledge/directory') return json({ themeGroups: [], industries: { items: [], total: 0, limit: 30, truncated: false }, companies: { items: [{ ref: 'entity:company-acme', name: 'Acme' }], total: 1, limit: 30, truncated: false }, products: { items: [], total: 0, limit: 30, truncated: false }, technologies: { items: [], total: 0, limit: 30, truncated: false } })
+      if (path === '/api/knowledge/theses?limit=50') return json({ theses: [], total: 0, limit: 50, truncated: false, revision: 2 })
+      if (path === '/api/reviews') return json({ cases: [], total: 0, limit: 50, truncated: false })
+      if (path === '/api/production/thesis-lifecycle/create') { createBody = JSON.parse(String(init?.body)); return json({ accepted: true, runId: 'create-ui-1' }, 202) }
+      if (path === '/api/workflows/create-ui-1') return json({ runId: 'create-ui-1', workflowType: 'thesis_lifecycle', objective: 'Create Thesis', status: 'completed', startedAt: '2026-09-24T10:00:00.000Z', updatedAt: '2026-09-24T10:01:00.000Z', completedAt: '2026-09-24T10:01:00.000Z' })
+      if (path === '/api/research-reports?limit=50') return json({ reports: [report] })
+      if (path === '/api/research-reports/thesis-lifecycle-create-ui-1') return json(report)
+      return json({ code: 'not_found', error: 'not found' }, 404)
+    }) as typeof fetch
+
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Thesis Lifecycle' })).toBeTruthy()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Thesis title' }), { target: { value: 'Durable growth' } })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Thesis narrative' }), { target: { value: 'Capacity expansion should support sustained growth.' } })
+    fireEvent.change(screen.getByRole('textbox', { name: 'CREATE evidence refs' }), { target: { value: 'claim:accepted-capacity' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create Thesis' }))
+    await waitFor(() => expect(createBody).toBeDefined())
+    expect(createBody).toMatchObject({ companyRef: 'entity:company-acme', thesisTitle: 'Durable growth', narrative: 'Capacity expansion should support sustained growth.', evidenceRefs: ['claim:accepted-capacity'] })
+    expect(createBody).not.toHaveProperty('rawPath')
+    expect(await screen.findByText('Thesis: thesis:durable-growth')).toBeTruthy()
+  })
 })

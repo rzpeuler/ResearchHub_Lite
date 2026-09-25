@@ -70,7 +70,7 @@ test('Schema 0.4 Gateway fails closed on denied derivative rights', async () => 
     const denied = normalizedSource('denied', 'Restricted evidence', 'Restricted evidence body.')
     const result = await new KnowledgeProductionGateway(f.registry).submit({ ...knowledgeV04Input(handle, 'rights-denied-001'), evidenceBindings: [{ localSourceId: 'denied', source: { ...denied, rights: { ...denied.rights, derivativeKnowledgeAllowed: false } } }], proposals: [{ proposalId: 'denied-claim', kind: 'claim', claimType: 'fact', subjectKey: 'company', statement: 'This must not be canonicalized.', sourceCandidateIds: ['denied'], structuredValue: { metric: 'revenue', value: 1, unit: 'CNY', comparator: 'eq' } }] })
     assert.equal(result.status, 'blocked')
-    assert.match(result.errors.join('\n'), /rights prohibit derived canonical Knowledge/i)
+    assert.match(result.errors.join('\n'), /rights.*derived canonical Knowledge/i)
     assert.equal((await readCanonicalV04Assets(f.root)).objects.length, 0)
   } finally {
     await rm(f.root, { recursive: true, force: true })

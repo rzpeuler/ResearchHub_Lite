@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { MockReasoningExecutor } from '../../plugins/reasoning/mock/executor.ts'
+import { ReasoningExecutorError } from '../../plugins/reasoning/errors.ts'
 import { executeThesisFormalize } from '../../skills/thesis_formalize/semantic.ts'
 import { executeCatalystMap } from '../../skills/catalyst_map/semantic.ts'
 import { executeThesisRefresh } from '../../skills/thesis_refresh/semantic.ts'
@@ -64,4 +65,54 @@ test('refresh semantic stage preserves PIT safeguards for future evidence', asyn
   assert.equal(result.status, 'complete')
   assert.equal(result.result?.candidateTransition, 'unchanged')
   assert.ok(result.result?.diagnostics.includes('future_evidence_was_not_applied'))
+})
+
+test('thesis_formalize exposes known formalization codes without exposing error text', async () => {
+  const executor = new MockReasoningExecutor({ capabilities, responses: {
+    thesis_formalize_semantic: {
+      propositions: [{ propositionId: 'p-demand', statement: 'Demand supports growth.', propositionType: 'business_driver', basis: 'verified_evidence', timeHorizon: 'near_term', sourceRefs: [] }],
+    },
+  } })
+  const result = await executeThesisFormalize({ narrative: 'Demand supports growth.', evidence: [] }, executor)
+  assert.equal(result.status, 'blocked')
+  assert.deepEqual(result.diagnostics, ['VERIFIED_PROPOSITION_SOURCE_MISSING'])
+  assert.deepEqual(result.telemetry.diagnostics, ['VERIFIED_PROPOSITION_SOURCE_MISSING'])
+
+  const unsafeMessageExecutor = new MockReasoningExecutor({ capabilities, failures: {
+    thesis_formalize_semantic: new Error('provider detail: api-key=abc'),
+  } })
+  const unsafeMessageResult = await executeThesisFormalize({ narrative: 'Demand supports growth.', evidence: [] }, unsafeMessageExecutor)
+  assert.equal(unsafeMessageResult.status, 'blocked')
+  assert.deepEqual(unsafeMessageResult.diagnostics, ['executor_reasoning_execution_failed'])
+  assert.equal(JSON.stringify(unsafeMessageResult).includes('api-key=abc'), false)
+})
+
+test('thesis_formalize prefixes only typed reasoning executor codes', async () => {
+  const executor = new MockReasoningExecutor({ capabilities, failures: {
+    thesis_formalize_semantic: new ReasoningExecutorError('reasoning_timeout', 'provider detail must stay private'),
+  } })
+  const result = await executeThesisFormalize({ narrative: 'Demand supports growth.', evidence: [] }, executor)
+  assert.equal(result.status, 'blocked')
+  assert.deepEqual(result.diagnostics, ['executor_reasoning_timeout'])
+  assert.equal(JSON.stringify(result).includes('provider detail'), false)
+})
+
+test('thesis_formalize accepts future verification checkpoints but rejects malformed dates', async () => {
+  const futureCheckpoint = new MockReasoningExecutor({ capabilities, responses: {
+    thesis_formalize_semantic: {
+      propositions: [{ propositionId: 'p-demand', statement: 'Demand supports growth.', propositionType: 'business_driver', basis: 'inference', timeHorizon: 'near_term', verificationTime: '2027-01-15' }],
+    },
+  } })
+  const accepted = await executeThesisFormalize({ narrative: 'Demand supports growth.', evidence: [], asOf: '2026-09-10' }, futureCheckpoint)
+  assert.equal(accepted.status, 'complete')
+  assert.equal(accepted.result?.propositions[0]?.verificationTime, '2027-01-15')
+
+  const malformedCheckpoint = new MockReasoningExecutor({ capabilities, responses: {
+    thesis_formalize_semantic: {
+      propositions: [{ propositionId: 'p-demand', statement: 'Demand supports growth.', propositionType: 'business_driver', basis: 'inference', timeHorizon: 'near_term', verificationTime: 'not-a-date' }],
+    },
+  } })
+  const rejected = await executeThesisFormalize({ narrative: 'Demand supports growth.', evidence: [], asOf: '2026-09-10' }, malformedCheckpoint)
+  assert.equal(rejected.status, 'blocked')
+  assert.deepEqual(rejected.diagnostics, ['THESIS_VERIFICATION_TIME_INVALID'])
 })

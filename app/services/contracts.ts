@@ -124,6 +124,7 @@ export interface ReviewCaseSummary {
   readonly dependentProposalCount: number
   readonly suggestedNextAction?: string
   readonly status: string
+  readonly decisionState?: import('../../knowledge/review/decision-store.ts').ReviewDecisionState
 }
 export interface ReviewCaseListResult {
   readonly cases: readonly ReviewCaseSummary[]
@@ -143,10 +144,30 @@ export interface ReviewCaseDetail {
   readonly impact: unknown
   readonly advisory?: unknown
   readonly state: unknown
+  readonly thesisScope?: import('../../knowledge/review/contracts.ts').ThesisReviewScope
+  readonly decision?: ReviewDecisionDetail
   readonly totalDependentProposals: number
   readonly dependentProposalSamples: readonly unknown[]
   readonly dependentProposals: readonly unknown[]
   readonly dependentsTruncated: boolean
+}
+
+export interface ReviewDecisionEventView {
+  readonly revision: number
+  readonly type: import('../../knowledge/review/decision-store.ts').ReviewDecisionEventType
+  readonly actor: 'local_user'
+  readonly at: string
+  readonly note?: string
+  readonly writerRunId?: string
+  readonly committedRevision?: number
+}
+export interface ReviewDecisionDetail {
+  readonly state: import('../../knowledge/review/decision-store.ts').ReviewDecisionState
+  readonly revision: number
+  readonly actionable: boolean
+  readonly events: readonly ReviewDecisionEventView[]
+  readonly totalEvents: number
+  readonly eventsTruncated: boolean
 }
 
 export interface IngestDocumentInput {

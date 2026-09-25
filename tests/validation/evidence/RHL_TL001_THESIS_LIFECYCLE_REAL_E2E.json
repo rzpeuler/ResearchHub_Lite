@@ -1,0 +1,103 @@
+{
+  "generatedAt": "2026-09-24T13:10:29.605Z",
+  "classification": "EXECUTED / PASS GATE",
+  "processExitCode": 0,
+  "taskId": "RHL-TL-001",
+  "implementationState": "working-tree",
+  "pathClassification": "isolated_v04_seed_plus_normal_application_http_refresh_and_decision",
+  "userKnowledgeBaseTouched": false,
+  "seedIsProductCreateE2E": false,
+  "reasoning": {
+    "provider": "zhipu-openapi",
+    "model": "glm-5.3-flash",
+    "executor": "PiReasoningExecutor",
+    "operations": [
+      "extractKnowledge",
+      "thesis_refresh_semantic",
+      "thesis_refresh_semantic"
+    ],
+    "extraction": "real_model",
+    "refresh": "real_model"
+  },
+  "source": {
+    "publisher": "CNINFO",
+    "provider": "cninfo",
+    "title": "贵州茅台2026年半年度报告",
+    "url": "https://static.cninfo.com.cn/finalpage/2026-08-15/1225475868.PDF",
+    "publishedAt": "2026-08-14T16:00:00.000Z",
+    "retrievedAt": "2026-09-24T13:09:08.753Z",
+    "rightsEligible": true,
+    "rawVerified": true,
+    "rawBytes": 832321,
+    "rawContentPersistedInEvidence": false
+  },
+  "thesis": {
+    "thesisRef": "thesis:1bada53cb58eef40",
+    "affectedClaimRef": "claim:research-51ae2dc15dd05307",
+    "unchangedClaimRef": "claim:research-2fd486752f22f6dd",
+    "evidenceClaimRef": "claim:research-0c1affd8a66b1fc0",
+    "baselineRevision": 1,
+    "fingerprintBeforeDefer": "a2872cef32267544a9566a212baada93f059302a480360ce57ccb192a4d054ea",
+    "refreshedRevision": 1,
+    "refreshTransition": "possible_invalidation",
+    "unchangedRefs": [
+      "claim:research-2fd486752f22f6dd"
+    ],
+    "revisionAfterDefer": 1,
+    "fingerprintAfterDefer": "a2872cef32267544a9566a212baada93f059302a480360ce57ccb192a4d054ea",
+    "committedRevision": 2,
+    "revisionAfterReplay": 2,
+    "finalStatus": "challenged",
+    "decisionState": "ACCEPTED",
+    "replay": true
+  },
+  "stages": {
+    "originalPublisherDiscovery": {
+      "status": "PASS",
+      "detail": "cninfo; canonical HTTPS source on static.cninfo.com.cn; publishedAt 2026-08-14T16:00:00.000Z"
+    },
+    "liveFetchAndNormalize": {
+      "status": "PASS",
+      "detail": "application/pdf; 832321 raw bytes; normalized source text 164543 chars"
+    },
+    "configuredPi": {
+      "status": "PASS",
+      "detail": "zhipu-openapi/glm-5.3-flash; PiReasoningExecutor with configured ModelRuntime"
+    },
+    "liveSourceExtraction": {
+      "status": "PASS",
+      "detail": "Pi output included an exact sourceSpan verified against normalized live publisher text; text withheld from evidence artifact"
+    },
+    "isolatedGatewaySetup": {
+      "status": "PASS",
+      "detail": "Temporary v0.4 Knowledge Base seeded through Gateway with live CNINFO Source/Raw; not represented as CREATE product-path E2E"
+    },
+    "pitRightsProvenance": {
+      "status": "PASS",
+      "detail": "publishedAt 2026-08-14T16:00:00.000Z; source has public access and explicit retention/AI/derived-knowledge rights; archived Raw verified"
+    },
+    "normalHttpRefresh": {
+      "status": "PASS",
+      "detail": "run thesis-refresh-0dd987448adcf0a8cf7022a6; real Pi thesis_refresh_semantic; durable Thesis-scoped ReviewCase thesis-refresh-5cd47c9099dd94ed7597951c"
+    },
+    "unchangedAndChangedPropositions": {
+      "status": "PASS",
+      "detail": "unchanged claim:research-2fd486752f22f6dd; reviewed evidence relation contradicts"
+    },
+    "deferNoWrite": {
+      "status": "PASS",
+      "detail": "DEFER was recorded durably; canonical revision and all canonical object hashes remained unchanged"
+    },
+    "acceptWriterReloadReplay": {
+      "status": "PASS",
+      "detail": "DEFER -> ACCEPT via HTTP; Writer run writer-thesis-db4c5a4eb99cc0b37a4a3a27; reload revision 2; reviewed edge/status verified; identical replay did not advance revision"
+    },
+    "decisionReportAndActionability": {
+      "status": "PASS",
+      "detail": "report reflects ACCEPTED and the case is absent from the actionable HTTP listing"
+    }
+  },
+  "errors": [],
+  "secretsIncluded": false,
+  "sourceBodyIncluded": false
+}

@@ -37,7 +37,7 @@ function candidateDependencies(group: ResolvedCandidateGroup): string[] {
   if (group.kind === 'claim') return (candidate as ClaimCandidate).subjectRefs.map((item) => item.candidateRef).sort()
   return []
 }
-function bindingsFor(candidate: Candidate, rawRef: string, documentId: string): readonly ReviewEvidenceBinding[] {
+function bindingsFor(candidate: Pick<ReviewSemanticPayload, 'evidenceBlockRefs'>, rawRef: string, documentId: string): readonly ReviewEvidenceBinding[] {
   return [...new Set(candidate.evidenceBlockRefs)].sort().map((blockId) => ({ kind: 'raw_document_block' as const, rawRef, documentId, blockId }))
 }
 function makeProposal(group: ResolvedCandidateGroup, input: BuildReviewCasesInput, extraDependencies: readonly string[] = []): ReviewSemanticProposal {

@@ -86,6 +86,8 @@ export interface ThesisRefreshSemanticTelemetry {
 export interface ThesisRefreshSemanticResult {
   readonly status: 'complete' | 'blocked'
   readonly result?: ThesisRefreshResult
+  /** The validated semantic relation/target/source classifications used by refreshThesis. */
+  readonly classifications?: readonly RefreshEvidence[]
   readonly diagnostics: readonly string[]
   readonly telemetry: ThesisRefreshSemanticTelemetry
 }

@@ -1,10 +1,30 @@
+import { REASONING_ERROR_CODES, ReasoningExecutorError } from '../../plugins/reasoning/errors.ts'
 import type { ReasoningExecutor } from '../../plugins/reasoning/contracts.ts'
 import { formalizeThesis } from './calculations.ts'
-import { THESIS_EVIDENCE_BASES, THESIS_PROPOSITION_TYPES, type FormalizedThesisResult, type ThesisFormalizeEvidence, type ThesisFormalizeSemanticInput, type ThesisFormalizeSemanticResult, type ThesisPropositionInput } from './contracts.ts'
+import { ThesisFormalizationError, THESIS_EVIDENCE_BASES, THESIS_PROPOSITION_TYPES, type FormalizedThesisResult, type ThesisFormalizeEvidence, type ThesisFormalizeSemanticInput, type ThesisFormalizeSemanticResult, type ThesisPropositionInput } from './contracts.ts'
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/
 const MAX_PROPOSITIONS = 40
 const MAX_GAPS = 40
+const THESIS_FORMALIZATION_ERROR_CODES = [
+  'THESIS_SUMMARY_MISSING',
+  'THESIS_PROPOSITIONS_INVALID',
+  'THESIS_RESEARCH_GAPS_INVALID',
+  'THESIS_ASOF_INVALID',
+  'THESIS_PROPOSITION_INVALID',
+  'THESIS_PROPOSITION_ENUM_INVALID',
+  'THESIS_TIME_HORIZON_MISSING',
+  'VERIFIED_PROPOSITION_SOURCE_MISSING',
+  'THESIS_PROPOSITION_REF_DANGLING',
+  'THESIS_PROPOSITION_SELF_DEPENDENCY',
+  'THESIS_VERIFICATION_TIME_INVALID',
+  'THESIS_AVAILABILITY_INVALID',
+  'THESIS_RESEARCH_GAP_INVALID',
+  'THESIS_RESEARCH_GAP_DUPLICATE',
+  'THESIS_RESEARCH_GAP_REF_DANGLING',
+  'THESIS_DEPENDENCY_CYCLE',
+  'THESIS_PROPOSITION_DUPLICATE',
+] as const
 const text = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0
 
 class SemanticValidationError extends Error {
@@ -25,7 +45,8 @@ function parseObject(value: unknown): Record<string, unknown> {
 
 function safeDiagnostics(error: unknown): readonly string[] {
   if (error instanceof SemanticValidationError) return error.diagnostics
-  if (error instanceof Error && error.message) return ['formalize_semantic_failed']
+  if (error instanceof ThesisFormalizationError && THESIS_FORMALIZATION_ERROR_CODES.includes(error.code as typeof THESIS_FORMALIZATION_ERROR_CODES[number])) return [error.code]
+  if (error instanceof ReasoningExecutorError && REASONING_ERROR_CODES.includes(error.code)) return [`executor_${error.code}`]
   return ['formalize_semantic_failed']
 }
 
@@ -61,7 +82,6 @@ function validateCandidate(value: unknown, input: ThesisFormalizeSemanticInput):
     if (candidateSources.some((ref) => !allowedSources.has(ref))) throw new SemanticValidationError('Unknown source reference', [`formalize_proposition_${index}_source_ref_unknown`])
     const knowledgeRefs = sourceRefs(candidate.existingKnowledgeRefs)
     if (knowledgeRefs.some((ref) => !allowedKnowledge.has(ref))) throw new SemanticValidationError('Unknown existing knowledge reference', [`formalize_proposition_${index}_knowledge_ref_unknown`])
-    if (text(candidate.verificationTime) && input.asOf !== undefined && Date.parse(candidate.verificationTime) > Date.parse(input.asOf)) throw new SemanticValidationError('Future verification time', [`formalize_proposition_${index}_verification_time_future`])
     propositions.push({ propositionId: candidate.propositionId, statement: candidate.statement, propositionType: candidate.propositionType as ThesisPropositionInput['propositionType'], basis: candidate.basis as ThesisPropositionInput['basis'], timeHorizon: candidate.timeHorizon, sourceRefs: candidateSources, existingKnowledgeRefs: knowledgeRefs, dependsOnPropositionRefs: sourceRefs(candidate.dependsOnPropositionRefs), supportingPropositionRefs: sourceRefs(candidate.supportingPropositionRefs), ...(text(candidate.verificationCondition) ? { verificationCondition: candidate.verificationCondition } : {}), ...(text(candidate.verificationTime) ? { verificationTime: candidate.verificationTime } : {}), ...(candidate.availability !== undefined ? { availability: candidate.availability as ThesisPropositionInput['availability'] } : {}), ...(candidate.loadBearing === true ? { loadBearing: true } : {}) })
   }
   const researchGaps = Array.isArray(object.researchGaps) ? object.researchGaps.slice(0, MAX_GAPS).map((gap, index) => {

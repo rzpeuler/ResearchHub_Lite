@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-09-24T14:41:35.353Z",
+  "taskId": "RHL-TL-001",
+  "classification": "EXECUTED / GATE_NOT_MET",
+  "processExitCode": 1,
+  "pathClassification": "isolated_source_evidence_seed_plus_normal_http_create",
+  "userKnowledgeBaseTouched": false,
+  "seedIsProductCreateE2E": false,
+  "reasoning": {
+    "provider": "zhipu-openapi",
+    "model": "glm-5.3-flash",
+    "executor": "PiReasoningExecutor",
+    "operations": [
+      "extractKnowledge",
+      "thesis_formalize_semantic",
+      "thesis_formalize_semantic"
+    ],
+    "formalization": "real_model",
+    "exactSourceSpanVerified": true
+  },
+  "source": {
+    "publisher": "CNINFO",
+    "provider": "cninfo",
+    "publishedAt": "2026-08-14T16:00:00.000Z",
+    "retrievedAt": "2026-09-24T14:36:20.047Z",
+    "rightsEligible": true,
+    "rawVerified": true,
+    "rawBytes": 832321,
+    "sourceBodyPersistedInEvidence": false
+  },
+  "seed": {
+    "knowledgeBaseId": "kb-tl001-create-1790260596394",
+    "revision": 1,
+    "companyRef": "entity:company-600519",
+    "sourceRef": "source:research-87d97d845670a259",
+    "rawRef": "raw-sha256-0e10aa26be46b1cf3cd03f06e834c7fb98d5dd0d661b96f8fddd4af7e846a4f6",
+    "evidenceClaimRef": "claim:research-703ce515f9e82d82",
+    "seededAssetCounts": {
+      "entity": 1,
+      "source": 1,
+      "claim": 1,
+      "thesis": 0,
+      "reasoning_edge": 0
+    }
+  },
+  "stages": {
+    "originalPublisherDiscovery": {
+      "status": "PASS",
+      "detail": "cninfo; official disclosure candidate published 2026-08-14T16:00:00.000Z"
+    },
+    "liveFetchNormalizeRights": {
+      "status": "PASS",
+      "detail": "CNINFO original-publisher document normalized; 832321 raw bytes; admitted for retention, AI processing and derived knowledge"
+    },
+    "configuredPiSourceExtraction": {
+      "status": "PASS",
+      "detail": "zhipu-openapi/glm-5.3-flash; exact returned sourceSpan matched normalized live source text (content omitted)"
+    },
+    "disposableGatewayEvidenceSeed": {
+      "status": "PASS",
+      "detail": "Gateway seed has 1 company scope Entity, 1 CNINFO Source/Raw and 1 source-bound canonical evidence Claim; zero Thesis/proposition Claims/edges before CREATE"
+    },
+    "pitRightsAndRawProof": {
+      "status": "PASS",
+      "detail": "publishedAt 2026-08-14T16:00:00.000Z <= asOf 2026-09-24T14:36:36.394Z; source rights admitted and archived Raw verified"
+    },
+    "createAcceptance": {
+      "status": "FAIL",
+      "detail": "CREATE_CANONICAL_REVISION_INVALID:1->1"
+    }
+  },
+  "errors": [
+    "CREATE_CANONICAL_REVISION_INVALID:1->1"
+  ],
+  "secretsIncluded": false,
+  "sourceBodyIncluded": false
+}

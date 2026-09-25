@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ReactElement } from 'react'
-import { RuntimeClient, RuntimeClientError, type AttachmentRef, type ClientEvent, type ConversationMessage, type ConversationSummary, type DailyBriefReport, type DailyBriefSummary, type KnowledgeBaseStatus, type ResearchBundleSummary, type ResearchDispatchResponse, type ResearchExecutionSummary, type ResearchReport, type ResearchReportSummary, type ResearchStartResponse, type ReviewDetail, type ReviewListResponse, type SessionState, type SourceLibraryHit, type WorkflowDefinition, type WorkflowRun } from './api/runtime-client'
+import type { FormEvent, ReactElement } from 'react'
+import { RuntimeClient, RuntimeClientError, type AttachmentRef, type ClientEvent, type ConversationMessage, type ConversationSummary, type DailyBriefReport, type DailyBriefSummary, type KnowledgeBaseStatus, type KnowledgeDirectoryItem, type ResearchBundleSummary, type ResearchDispatchResponse, type ResearchExecutionSummary, type ResearchReport, type ResearchReportSummary, type ResearchStartResponse, type ReviewDetail, type ReviewListResponse, type SessionState, type SourceLibraryHit, type ThesisDecision, type ThesisQueryDetail, type ThesisQuerySummary, type WorkflowDefinition, type WorkflowRun } from './api/runtime-client'
 import { startWorkflowPolling, terminalWorkflowStatuses } from './app/workflow-polling'
 import { KnowledgeGraphPage } from './app/graph/KnowledgeGraphPage'
 import { ResearchRunPage } from './app/run/ResearchRunPage'
 import './styles.css'
 
-type Route = 'research' | 'briefs' | 'reports' | 'bundles' | 'run' | 'graph' | 'reviews'
+type Route = 'research' | 'briefs' | 'reports' | 'bundles' | 'run' | 'graph' | 'reviews' | 'theses'
 type ResearchContextPanel = 'attachments' | 'workflow' | 'review'
 type LoadState = 'loading' | 'ready' | 'error'
 const knownTools: Record<string, string> = { researchhub_status: 'ResearchHub status', search_knowledge: 'Knowledge search', get_knowledge_object: 'Knowledge object lookup', ingest_document: 'Document ingestion', get_workflow_status: 'Workflow status', cancel_workflow: 'Workflow cancellation', list_review_cases: 'Review case list', get_review_case: 'Review case detail' }
 
-function routeForPath(pathname: string): Route { return pathname === '/briefs' ? 'briefs' : pathname === '/reports' ? 'reports' : pathname === '/bundles' ? 'bundles' : pathname === '/run' ? 'run' : pathname === '/graph' ? 'graph' : pathname === '/reviews' ? 'reviews' : 'research' }
+function routeForPath(pathname: string): Route { return pathname === '/briefs' ? 'briefs' : pathname === '/reports' ? 'reports' : pathname === '/bundles' ? 'bundles' : pathname === '/run' ? 'run' : pathname === '/graph' ? 'graph' : pathname === '/reviews' ? 'reviews' : pathname === '/theses' ? 'theses' : 'research' }
 function routePath(route: Route): string { return route === 'research' ? '/research' : `/${route}` }
 function errorText(error: unknown): string { return error instanceof RuntimeClientError ? error.message : 'ResearchHub runtime operation failed' }
 function toolLabel(name: string | undefined): string { return name === undefined ? 'Tool execution' : knownTools[name] ?? 'Tool execution' }
@@ -28,13 +28,181 @@ function safeStructured(value: unknown, depth = 0): string {
 
 interface TopBarProps { readonly route: Route; readonly knowledgeBase?: KnowledgeBaseStatus; readonly onNavigate: (route: Route) => void }
 function TopBar({ route, knowledgeBase, onNavigate }: TopBarProps): ReactElement {
-  const links: readonly [Route, string][] = [['research', 'Research'], ['briefs', 'Daily Briefs'], ['reports', 'Reports'], ['bundles', 'Research Bundles'], ['run', 'Run Research'], ['graph', 'Knowledge Graph'], ['reviews', 'Reviews']]
+  const links: readonly [Route, string][] = [['research', 'Research'], ['briefs', 'Daily Briefs'], ['reports', 'Reports'], ['bundles', 'Research Bundles'], ['run', 'Run Research'], ['graph', 'Knowledge Graph'], ['theses', 'Theses'], ['reviews', 'Reviews']]
   return <header className="topbar"><div className="topbar-left"><div className="brand"><span className="brand-mark">RH</span><span className="brand-name">ResearchHub</span></div><nav className="primary-nav" aria-label="Primary"><ul>{links.map(([item, label]) => <li key={item}><a className={route === item ? 'nav-link active' : 'nav-link'} href={routePath(item)} aria-current={route === item ? 'page' : undefined} onClick={(event) => { event.preventDefault(); onNavigate(item) }}>{label}</a></li>)}</ul></nav></div><div className="runtime-status"><span className="status-dot" /> <span>Local Runtime</span><span className="status-sub">{knowledgeBase ? 'KB mounted' : 'No KB mounted'}</span></div></header>
 }
 
 interface ReviewsPageProps { readonly knowledgeBase?: KnowledgeBaseStatus; readonly reviews?: ReviewListResponse; readonly reviewDetail?: ReviewDetail; readonly reviewsBusy: boolean; readonly onSelect: (reviewCaseId: string) => void; readonly onCloseDetail: () => void }
 function ReviewsPage({ knowledgeBase, reviews, reviewDetail, reviewsBusy, onSelect, onCloseDetail }: ReviewsPageProps): ReactElement {
   return <main className="page-frame review-page" aria-labelledby="reviews-title"><div className="page-heading"><div><span className="eyebrow">GOVERNANCE</span><h1 id="reviews-title">Review Inbox</h1></div><span className="read-only-badge">Read-only</span></div>{!knowledgeBase ? <div className="notice"><strong>No Knowledge Base mounted</strong><p>Review cases will appear here when a mounted production run creates actionable decisions.</p></div> : reviewsBusy ? <p className="muted">Loading Review Inbox…</p> : <div className="review-layout"><section aria-label="Open ReviewCases"><div className="section-title"><div><span className="eyebrow">OPEN CASES</span><h2>{reviews?.total ?? 0} review{(reviews?.total ?? 0) === 1 ? '' : 's'}</h2></div></div>{reviews && reviews.cases.length > 0 ? <div className="result-list">{reviews.cases.map((item) => <button className="review-item" key={item.reviewCaseId} onClick={() => onSelect(item.reviewCaseId)}><strong>{item.category}</strong><span>{item.actionability} · {item.proposalKind}</span><small>{item.rationale}</small><small>{item.producerType} · {new Date(item.createdAt).toLocaleString()}</small></button>)}</div> : <div className="notice"><strong>No open Review cases</strong><p>Completed production with review will surface actionable cases here.</p></div>}</section>{reviewDetail ? <section className="review-detail" aria-label="ReviewCase detail"><div className="detail-title"><span>Review detail</span><button onClick={onCloseDetail}>Close</button></div><h2>{reviewDetail.reviewCaseId}</h2><p><strong>Classification:</strong> {safeStructured(reviewDetail.classification)}</p><p><strong>Root proposal:</strong> {safeStructured(reviewDetail.rootProposal)}</p><p><strong>Evidence:</strong> {reviewDetail.evidenceBindings.length} binding(s)</p><p><strong>Existing Knowledge:</strong> {reviewDetail.existingKnowledgeProjections.length} projection(s)</p><p><strong>Impact:</strong> {safeStructured(reviewDetail.impact)}</p>{reviewDetail.advisory ? <p><strong>Advisory:</strong> {safeStructured(reviewDetail.advisory)}</p> : null}<p><strong>Dependent proposals:</strong> {reviewDetail.totalDependentProposals}</p><p className="muted">Review Inbox is read-only in v0.1. Decision controls are intentionally not available.</p></section> : <div className="notice detail-empty"><strong>Select a ReviewCase</strong><p>Review details are bounded and read-only.</p></div>}</div>}</main>
+}
+
+function initialAsOfInput(): string { const date = new Date(); date.setSeconds(0, 0); return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16) }
+function parseEvidenceRefs(value: string): readonly string[] { return [...new Set(value.split(/[\s,;]+/).map((item) => item.trim()).filter(Boolean))].slice(0, 80) }
+
+interface ThesisLifecyclePageProps { readonly client: RuntimeClient; readonly knowledgeBase?: KnowledgeBaseStatus }
+function ThesisLifecyclePage({ client, knowledgeBase }: ThesisLifecyclePageProps): ReactElement {
+  const [theses, setTheses] = useState<readonly ThesisQuerySummary[]>([])
+  const [companies, setCompanies] = useState<readonly KnowledgeDirectoryItem[]>([])
+  const [thesesBusy, setThesesBusy] = useState(false)
+  const [selectedRef, setSelectedRef] = useState('')
+  const [createCompanyRef, setCreateCompanyRef] = useState('')
+  const [createTitle, setCreateTitle] = useState('')
+  const [createNarrative, setCreateNarrative] = useState('')
+  const [createEvidenceText, setCreateEvidenceText] = useState('')
+  const [createRunId, setCreateRunId] = useState('')
+  const [runMode, setRunMode] = useState<'CREATE' | 'REFRESH'>('REFRESH')
+  const [thesis, setThesis] = useState<ThesisQueryDetail>()
+  const [asOf, setAsOf] = useState(initialAsOfInput)
+  const [evidenceText, setEvidenceText] = useState('')
+  const [launchBusy, setLaunchBusy] = useState(false)
+  const [runId, setRunId] = useState('')
+  const [workflow, setWorkflow] = useState<WorkflowRun>()
+  const [report, setReport] = useState<ResearchReport>()
+  const [reviews, setReviews] = useState<ReviewListResponse>()
+  const [selectedCaseId, setSelectedCaseId] = useState('')
+  const [reviewDetail, setReviewDetail] = useState<ReviewDetail>()
+  const [decisionNote, setDecisionNote] = useState('')
+  const [decisionBusy, setDecisionBusy] = useState(false)
+  const [error, setError] = useState('')
+  const reportLookupRun = useRef('')
+
+  const reloadTheses = useCallback(async (): Promise<void> => {
+    setThesesBusy(true)
+    try {
+      const result = await client.listTheses(50)
+      setTheses(result.theses)
+      setSelectedRef((current) => result.theses.some((item) => item.thesisRef === current) ? current : result.theses[0]?.thesisRef ?? '')
+    } catch (caught) { setError(errorText(caught)) } finally { setThesesBusy(false) }
+  }, [client])
+
+  useEffect(() => {
+    if (!knowledgeBase) { setTheses([]); setThesis(undefined); return }
+    void reloadTheses()
+  }, [knowledgeBase, reloadTheses])
+
+  useEffect(() => {
+    if (!knowledgeBase) { setCompanies([]); setCreateCompanyRef(''); return }
+    let cancelled = false
+    void client.getKnowledgeDirectory().then((directory) => {
+      if (cancelled) return
+      setCompanies(directory.companies.items)
+      setCreateCompanyRef((current) => directory.companies.items.some((item) => item.ref === current) ? current : directory.companies.items[0]?.ref ?? '')
+    }).catch((caught) => { if (!cancelled) setError(errorText(caught)) })
+    return () => { cancelled = true }
+  }, [client, knowledgeBase])
+
+  useEffect(() => {
+    if (!selectedRef || !knowledgeBase) { setThesis(undefined); return }
+    let cancelled = false
+    void client.getThesis(selectedRef).then((value) => { if (!cancelled) setThesis(value) }).catch((caught) => { if (!cancelled) setError(errorText(caught)) })
+    return () => { cancelled = true }
+  }, [client, knowledgeBase, selectedRef])
+
+  useEffect(() => {
+    if (!knowledgeBase) { setReviews(undefined); return }
+    void client.listReviews().then(setReviews).catch((caught) => setError(errorText(caught)))
+  }, [client, knowledgeBase, runId, selectedCaseId])
+
+  useEffect(() => {
+    if (!runId) return undefined
+    return startWorkflowPolling({
+      runId,
+      fetchWorkflow: (id) => client.workflow(id),
+      onUpdate: (next) => {
+        setWorkflow(next)
+        if (!terminalWorkflowStatuses.has(next.status) || reportLookupRun.current === runId) return
+        reportLookupRun.current = runId
+        void client.listResearchReports(50).then(async (items) => {
+          const match = items.find((item) => item.reportType === 'thesis_lifecycle' && item.workflowRunId === runId)
+          if (match) setReport(await client.getResearchReport(match.reportId))
+          else setError('Workflow completed but its persisted Thesis Lifecycle report is not in the report catalog yet.')
+        }).catch((caught) => setError(errorText(caught)))
+      },
+      onError: (caught) => setError(errorText(caught)),
+    })
+  }, [client, runId])
+
+  const launchRefresh = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault()
+    if (!selectedRef || launchBusy || !asOf) return
+    setLaunchBusy(true); setError(''); setReport(undefined); setWorkflow(undefined); setSelectedCaseId(''); setReviewDetail(undefined); reportLookupRun.current = ''
+    try {
+      const refs = parseEvidenceRefs(evidenceText)
+      setRunMode('REFRESH')
+      const result = await client.startThesisLifecycleRefresh({ thesisRef: selectedRef, asOf: new Date(asOf).toISOString(), ...(refs.length > 0 ? { evidenceRefs: refs } : {}) })
+      setRunId(result.runId); setWorkflow(result.workflow)
+    } catch (caught) { setError(errorText(caught)) } finally { setLaunchBusy(false) }
+  }
+
+  const launchCreate = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault()
+    if (!createCompanyRef || !createTitle.trim() || !createNarrative.trim() || launchBusy) return
+    const refs = parseEvidenceRefs(createEvidenceText)
+    if (refs.length === 0 || refs.length > 40) { setError('Select between 1 and 40 canonical Claim or Observation references.'); return }
+    setLaunchBusy(true); setError(''); setReport(undefined); setWorkflow(undefined); setSelectedCaseId(''); setReviewDetail(undefined); reportLookupRun.current = ''
+    const workflowRunId = createRunId || `thesis-create-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`
+    setCreateRunId(workflowRunId)
+    try {
+      setRunMode('CREATE')
+      const result = await client.startThesisLifecycleCreate({ workflowRunId, companyRef: createCompanyRef, thesisTitle: createTitle.trim(), narrative: createNarrative.trim(), evidenceRefs: refs, asOf: new Date(asOf).toISOString() })
+      setRunId(result.runId); setWorkflow(result.workflow); setCreateRunId('')
+    } catch (caught) { setError(errorText(caught)) } finally { setLaunchBusy(false) }
+  }
+
+  const selectCase = async (id: string): Promise<void> => {
+    setSelectedCaseId(id); setError('')
+    try { const detail = await client.getThesisReview(id); setReviewDetail(detail); setDecisionNote(''); if (detail.thesisScope) setSelectedRef(detail.thesisScope.thesisRef) } catch (caught) { setReviewDetail(undefined); setError(errorText(caught)) }
+  }
+
+  const submitDecision = async (decision: ThesisDecision): Promise<void> => {
+    if (!selectedCaseId || !reviewDetail?.thesisScope || !reviewDetail.decision?.actionable || decisionBusy) return
+    setDecisionBusy(true); setError('')
+    try {
+      await client.decideThesisReview(selectedCaseId, decision, decisionNote.trim() || undefined)
+      const [detail, list] = await Promise.all([client.getThesisReview(selectedCaseId), client.listReviews()])
+      setReviewDetail(detail); setReviews(list)
+      if (decision === 'ACCEPT') { await reloadTheses(); setThesis(await client.getThesis(detail.thesisScope!.thesisRef)) }
+    } catch (caught) { setError(errorText(caught)) } finally { setDecisionBusy(false) }
+  }
+
+  const thesisCases = (reviews?.cases ?? []).filter((item) => item.producerType === 'thesis_lifecycle')
+  const scopedCase = Boolean(reviewDetail?.producerType === 'thesis_lifecycle' && reviewDetail.thesisScope && reviewDetail.thesisScope.thesisRef === selectedRef)
+
+  return <main className="page-frame thesis-page" aria-labelledby="theses-title">
+    <div className="page-heading"><div><span className="eyebrow">CANONICAL KNOWLEDGE · V0.4</span><h1 id="theses-title">Thesis Lifecycle</h1></div><span className="read-only-badge">CREATE uses selected evidence · REFRESH requires review</span></div>
+    {!knowledgeBase ? <div className="notice"><strong>No Knowledge Base mounted</strong><p>Mount a canonical Schema 0.4 Knowledge Base to inspect and refresh active theses.</p></div> : <>
+      <section className="thesis-panel thesis-create-panel" aria-label="Create Thesis"><div className="section-title"><div><span className="eyebrow">CANONICAL CREATE</span><h2>Formalize a new investment Thesis</h2></div><span className="read-only-badge">Gateway → Writer</span></div><p className="muted">Choose one company and existing canonical evidence. The runtime validates company scope, source rights, raw provenance, and publication time before it writes the Thesis, Claims, and membership edges.</p>
+        <form className="thesis-refresh-form thesis-create-form" onSubmit={(event) => void launchCreate(event)}>
+          <label className="thesis-field"><span>Company</span><select aria-label="CREATE company" value={createCompanyRef} onChange={(event) => setCreateCompanyRef(event.target.value)} required disabled={companies.length === 0}><option value="">Select a canonical company</option>{companies.map((item) => <option key={item.ref} value={item.ref}>{item.name} · {item.ref}</option>)}</select></label>
+          <label className="thesis-field"><span>Thesis title</span><input aria-label="Thesis title" maxLength={240} value={createTitle} onChange={(event) => setCreateTitle(event.target.value)} required /></label>
+          <label className="thesis-field"><span>Narrative <small>required · up to 8,000 characters</small></span><textarea aria-label="Thesis narrative" rows={4} maxLength={8000} value={createNarrative} onChange={(event) => setCreateNarrative(event.target.value)} required /></label>
+          <label className="thesis-field"><span>Canonical evidence refs <small>required · 1 to 40 Claim/Observation refs</small></span><textarea aria-label="CREATE evidence refs" rows={3} maxLength={4000} value={createEvidenceText} onChange={(event) => setCreateEvidenceText(event.target.value)} placeholder="claim:… or observation:…" required /></label>
+          <label className="thesis-field"><span>As of</span><input aria-label="CREATE as of" type="datetime-local" value={asOf} onChange={(event) => setAsOf(event.target.value)} required /></label>
+          <button className="primary-action" type="submit" disabled={!createCompanyRef || companies.length === 0 || launchBusy}>{launchBusy && runMode === 'CREATE' ? 'Starting CREATE…' : 'Create Thesis'}</button>
+        </form>
+      </section>
+      <div className="thesis-layout">
+        <section className="thesis-panel" aria-label="Active theses"><div className="section-title"><div><span className="eyebrow">ACTIVE THESIS</span><h2>{theses.length} available</h2></div><button className="secondary-action" onClick={() => void reloadTheses()} disabled={thesesBusy}>{thesesBusy ? 'Loading…' : 'Reload'}</button></div>
+          <label className="thesis-field"><span>Canonical Thesis</span><select aria-label="Canonical Thesis" value={selectedRef} onChange={(event) => { setSelectedRef(event.target.value); setReport(undefined); setReviewDetail(undefined); setSelectedCaseId('') }} disabled={thesesBusy || theses.length === 0}><option value="">Select a Thesis</option>{theses.map((item) => <option key={item.thesisRef} value={item.thesisRef}>{item.title} · {item.companySubject.name} · {item.status}</option>)}</select></label>
+          {thesis ? <div className="thesis-summary"><span className="result-kind">{thesis.status} · revision {thesis.revision}</span><h3>{thesis.title}</h3><p>{thesis.statement}</p><small>{thesis.thesisRef} · {thesis.companySubject.name} · {thesis.propositions.length} propositions</small><div className="thesis-propositions">{thesis.propositions.map((item) => <article key={item.claimRef}><strong>{item.claimType}</strong><p>{item.statement}</p><small>{item.claimRef}</small></article>)}</div></div> : <p className="muted">{thesesBusy ? 'Loading active theses…' : 'No active canonical Theses were found.'}</p>}
+        </section>
+        <section className="thesis-panel" aria-label="Refresh controls"><div className="section-title"><div><span className="eyebrow">POINT-IN-TIME REFRESH</span><h2>Re-evaluate accepted evidence</h2></div></div><p className="muted">The runtime reconstructs proposition membership from canonical <code>qualifies</code> edges and admits only source-bound evidence published by the selected time.</p>
+          <form className="thesis-refresh-form" onSubmit={(event) => void launchRefresh(event)}>
+            <label className="thesis-field"><span>As of</span><input aria-label="As of" type="datetime-local" value={asOf} onChange={(event) => setAsOf(event.target.value)} required /></label>
+            <label className="thesis-field"><span>Evidence refs <small>optional · up to 80 canonical Observation/Claim refs</small></span><textarea aria-label="Evidence refs" rows={3} maxLength={5000} value={evidenceText} onChange={(event) => setEvidenceText(event.target.value)} placeholder="observation:… or claim:…" /></label>
+            <button className="primary-action" type="submit" disabled={!selectedRef || launchBusy}>{launchBusy ? 'Starting refresh…' : 'Refresh Thesis'}</button>
+          </form>
+        </section>
+      </div>
+      {error ? <div className="notice thesis-error" role="alert"><strong>Thesis operation</strong><p>{error}</p></div> : null}
+      {runId ? <section className="thesis-result" aria-label={`${runMode} run`}><div className="section-title"><div><span className="eyebrow">{runMode} RUN</span><h2>{workflow?.status ?? 'accepted'}</h2></div><small>{runId}</small></div><p>{workflow?.progressSummary ?? workflow?.errorSummary ?? `Waiting for the lifecycle ${runMode} workflow to finish…`}</p>{workflow?.status === 'blocked' || workflow?.status === 'failed' ? <p className="thesis-diagnostic">{workflow.errorSummary ?? `The ${runMode} did not complete.`}</p> : null}</section> : null}
+      {report ? <section className="thesis-result" aria-label="Persisted Thesis Lifecycle report"><div className="section-title"><div><span className="eyebrow">PERSISTED REPORT · {report.reportType}</span><h2>{report.reportId}</h2></div><small>KB revision {report.knowledgeBaseRevision} · as of {report.asOf}</small></div><p>{report.methodology}</p><div className="brief-metrics"><span><b>{report.sourceRefs.length}</b> sources</span><span><b>{report.claimRefs.length}</b> claims</span><span><b>{report.sections.length}</b> sections</span></div>{report.sections.map((section) => <article className="brief-section" key={section.id}><div className="brief-section-heading"><h3>{section.title}</h3><span>{section.id}</span></div><pre className="thesis-report-markdown">{section.markdown}</pre></article>)}</section> : null}
+      <section className="thesis-review-area" aria-label="Thesis scoped ReviewCases"><div className="section-title"><div><span className="eyebrow">HUMAN DECISIONS</span><h2>Thesis ReviewCases</h2></div><span className="read-only-badge">Gateway → Writer on ACCEPT</span></div><div className="thesis-review-layout"><section className="thesis-panel"><div className="result-list">{thesisCases.map((item) => <button className={`review-item ${selectedCaseId === item.reviewCaseId ? 'selected' : ''}`} key={item.reviewCaseId} onClick={() => void selectCase(item.reviewCaseId)}><strong>{item.reviewCaseId}</strong><span>{item.decisionState ?? 'OPEN'} · {item.category} · {item.actionability}</span><small>{item.rationale}</small><small>{item.producerRunId}</small></button>)}</div>{thesisCases.length === 0 ? <p className="muted">No actionable Thesis ReviewCases are currently listed.</p> : null}</section>
+        {reviewDetail && scopedCase ? <section className="review-detail" aria-label="Thesis ReviewCase detail"><div className="detail-title"><span>Thesis ReviewCase</span><button onClick={() => { setReviewDetail(undefined); setSelectedCaseId('') }}>Close</button></div><h2>{reviewDetail.reviewCaseId}</h2><p><strong>Thesis:</strong> {reviewDetail.thesisScope!.thesisRef}</p><p><strong>Root Claim:</strong> {reviewDetail.thesisScope!.rootClaimRef}</p><p><strong>Transition:</strong> {reviewDetail.thesisScope!.candidateTransition}{reviewDetail.thesisScope!.proposedThesisStatus ? ` → ${reviewDetail.thesisScope!.proposedThesisStatus}` : ''}</p><p><strong>As of:</strong> {reviewDetail.thesisScope!.asOf}</p><p><strong>Affected Claims:</strong> {reviewDetail.thesisScope!.affectedClaimRefs.join(', ')}</p><p><strong>Reviewed evidence:</strong> {safeStructured(reviewDetail.thesisScope!.reviewedEvidence)}</p><p><strong>Evidence bindings:</strong> {safeStructured(reviewDetail.evidenceBindings)}</p><p><strong>Decision state:</strong> {reviewDetail.decision?.state ?? 'OPEN'}</p>{reviewDetail.decision?.events.length ? <div className="thesis-history"><strong>Decision history</strong>{reviewDetail.decision.events.map((item) => <p key={`${item.revision}-${item.type}`}>{item.type} · {item.at}{item.note ? ` · ${item.note}` : ''}{item.writerRunId ? ` · ${item.writerRunId}` : ''}</p>)}</div> : null}{reviewDetail.decision?.actionable ? <div className="thesis-decision-controls"><label className="thesis-field"><span>Decision note <small>optional · up to 1000 characters</small></span><textarea aria-label="Decision note" rows={3} maxLength={1000} value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} /></label><div className="thesis-decision-buttons"><button className="primary-action" onClick={() => void submitDecision('ACCEPT')} disabled={decisionBusy}>Accept reviewed changes</button><button className="secondary-action" onClick={() => void submitDecision('DEFER')} disabled={decisionBusy}>Defer</button><button className="danger-action" onClick={() => void submitDecision('REJECT')} disabled={decisionBusy}>Reject</button></div></div> : <p className="muted">This case is resolved or is no longer actionable.</p>}</section> : <div className="notice detail-empty"><strong>Select a Thesis ReviewCase</strong><p>Acceptance rebinds the current Thesis, propositions, evidence, and provenance before the Gateway and Writer execute the reviewed change.</p></div>}
+      </div></section>
+    </>}
+  </main>
 }
 
 function DailyBriefCard(): ReactElement { return <section className="daily-brief-card" aria-label="Daily Intelligence"><div><span className="eyebrow">PERSONAL RESEARCH</span><h2>Daily Intelligence</h2><p>Morning 08:00 · Evening 20:30 · Asia/Shanghai</p></div><span className="read-only-badge">Public sources</span><small>Generate or read bounded briefs from the Pi tools or API. Unavailable sections remain explicit.</small></section> }
@@ -44,7 +212,7 @@ function BriefsPage({ briefs, selected, busy, error, onSelect }: BriefsPageProps
   return <main className="page-frame briefs-page" aria-labelledby="briefs-title"><div className="page-heading"><div><span className="eyebrow">PERSONAL RESEARCH</span><h1 id="briefs-title">Daily Briefs</h1></div><span className="read-only-badge">Read-only</span></div><p>Browse persisted Morning and Evening Intelligence outputs with section-level evidence kept visible.</p>{error ? <div className="notice" role="alert"><strong>Daily Briefs unavailable</strong><p>{error}</p></div> : busy ? <p className="muted">Loading Daily Briefs…</p> : briefs && briefs.length > 0 ? <div className="briefs-layout"><section aria-label="Daily Brief history"><div className="section-title"><div><span className="eyebrow">HISTORY</span><h2>{briefs.length} brief{briefs.length === 1 ? '' : 's'}</h2></div></div><div className="result-list">{briefs.map((brief) => <button className={`result-item ${selected?.reportId === brief.reportId ? 'selected' : ''}`} key={brief.reportId} onClick={() => onSelect(brief.reportId)}><strong>{brief.briefType === 'morning' ? 'Morning' : 'Evening'} · {brief.tradeDate}</strong><span>{brief.quality.topCount} top signals · {Math.round(brief.quality.reportItemWithSourceRatio * 100)}% sourced</span><small>{brief.reportId}</small></button>)}</div></section>{selected ? <section className="brief-detail" aria-label="Daily Brief detail"><div className="detail-title"><div><span className="eyebrow">{selected.briefType === 'morning' ? 'MORNING' : 'EVENING'} BRIEF</span><h2>{selected.tradeDate}</h2></div><small>Revision {selected.revision} · {selected.timezone}</small></div><p className="brief-methodology">As of {selected.asOf}. {selected.consensusStatement}</p><div className="brief-metrics"><span><b>{selected.quality.reportItemCount ?? 0}</b> items</span><span><b>{selected.quality.claimCount ?? 0}</b> claims</span><span><b>{selected.reviewCaseCount}</b> reviews</span></div>{selected.sections.map((section) => <article className={`brief-section ${section.unavailable ? 'unavailable' : ''}`} key={section.id}><div className="brief-section-heading"><h3>{section.title}</h3>{section.unavailable ? <span>Unavailable</span> : null}</div>{section.items.map((item) => <div className="brief-item" key={item.itemId}><strong>{item.headline}</strong><p>{item.markdown}</p>{item.sourceRefs.length > 0 ? <small>Sources: {item.sourceRefs.join(', ')}</small> : null}</div>)}</article>)}</section> : <div className="notice detail-empty"><strong>Select a brief</strong><p>Choose a persisted brief to inspect its bounded sections and provenance.</p></div>}</div> : <div className="notice"><strong>No persisted Daily Briefs</strong><p>Run Daily Intelligence through the Agent or API to create a brief.</p></div>}</main>
 }
 
-const reportTypeLabel: Record<ResearchReportSummary['reportType'], string> = { company_research: 'Company Research', industry_research: 'Industry Research', earnings_review: 'Earnings Review', valuation: 'Valuation', event_research: 'Event Research', thesis_red_team: 'Thesis Red Team' }
+const reportTypeLabel: Record<ResearchReportSummary['reportType'], string> = { company_research: 'Company Research', industry_research: 'Industry Research', earnings_review: 'Earnings Review', valuation: 'Valuation', event_research: 'Event Research', thesis_red_team: 'Thesis Red Team', thesis_lifecycle: 'Thesis Lifecycle' }
 interface ReportsPageProps { readonly reports?: readonly ResearchReportSummary[]; readonly selected?: ResearchReport; readonly busy: boolean; readonly error: string; readonly onSelect: (reportId: string) => void }
 function ReportsPage({ reports, selected, busy, error, onSelect }: ReportsPageProps): ReactElement {
   return <main className="page-frame reports-page" aria-labelledby="reports-title"><div className="page-heading"><div><span className="eyebrow">PERSONAL RESEARCH</span><h1 id="reports-title">Research Reports</h1></div><span className="read-only-badge">Read-only</span></div><p>Browse persisted Company, Industry, Earnings, Valuation, Event, and Thesis reports with bounded provenance kept visible.</p>{error ? <div className="notice" role="alert"><strong>Research Reports unavailable</strong><p>{error}</p></div> : busy ? <p className="muted">Loading Research Reports…</p> : reports && reports.length > 0 ? <div className="reports-layout"><section aria-label="Research Report history"><div className="section-title"><div><span className="eyebrow">HISTORY</span><h2>{reports.length} report{reports.length === 1 ? '' : 's'}</h2></div></div><div className="result-list">{reports.map((report) => <button className={`result-item ${selected?.reportId === report.reportId ? 'selected' : ''}`} key={report.reportId} onClick={() => onSelect(report.reportId)}><span className="result-kind">{reportTypeLabel[report.reportType]}</span><strong>{report.subjectRefs.join(', ')}</strong><span>{report.sectionCount} sections · {report.sourceCount} sources · KB r{report.knowledgeBaseRevision}</span><small>{new Date(report.generatedAt).toLocaleString()} · {report.reportId}</small></button>)}</div></section>{selected ? <section className="report-detail" aria-label="Research Report detail"><div className="detail-title"><div><span className="eyebrow">{reportTypeLabel[selected.reportType]}</span><h2>{selected.reportId}</h2></div><small>KB revision {selected.knowledgeBaseRevision}</small></div><p className="report-methodology">As of {selected.asOf}. {selected.methodology}</p><div className="brief-metrics"><span><b>{selected.sections.length}</b> sections</span><span><b>{selected.sourceRefs.length}</b> sources</span><span><b>{selected.claimRefs.length}</b> claims</span></div><p className="report-refs"><strong>Subjects:</strong> {selected.subjectRefs.join(', ') || 'None'}</p>{selected.sections.map((section) => <article className="brief-section" key={section.id}><div className="brief-section-heading"><h3>{section.title}</h3><span>{section.id}</span></div><p className="report-markdown">{section.markdown}</p>{section.sourceRefs?.length ? <small>Sources: {section.sourceRefs.join(', ')}</small> : null}{section.claimRefs?.length ? <small>Claims: {section.claimRefs.join(', ')}</small> : null}{section.relationRefs?.length ? <small>Relations: {section.relationRefs.join(', ')}</small> : null}</article>)}</section> : <div className="notice detail-empty"><strong>Select a report</strong><p>Choose a persisted report to inspect its bounded sections and provenance.</p></div>}</div> : <div className="notice"><strong>No persisted Research Reports</strong><p>Run a governed research workflow through the Agent or API to create a report.</p></div>}</main>
@@ -236,5 +404,5 @@ export default function App(): ReactElement {
 
   if (loadState === 'loading') return <main className="state-screen"><div className="state-card"><span className="eyebrow">RESEARCHHUB RUNTIME</span><h1>Loading workspace</h1><p>Connecting to the local application runtime…</p><div className="loader" /></div></main>
   if (loadState === 'error') return <main className="state-screen"><div className="state-card"><span className="eyebrow">RUNTIME UNAVAILABLE</span><h1>ResearchHub could not start</h1><p>{loadError}</p><button onClick={() => window.location.reload()}>Reload page</button></div></main>
-  return <div className="app-shell"><TopBar route={route} knowledgeBase={knowledgeBase} onNavigate={navigate} />{route === 'research' ? <ResearchPage session={session} conversations={conversations} messages={messages} streaming={streaming} thinking={thinking} streamText={streamText} toolEvents={toolEvents} queue={queue} composer={composer} busy={busy} error={error} attachment={attachment} attachmentBusy={attachmentBusy} workflowRunId={workflowRunId} workflow={workflow} knowledgeBase={knowledgeBase} openReviewCases={openReviewCases} contextPanel={contextPanel} workflowDefinitions={workflowDefinitions} selectedWorkflowId={selectedWorkflowId} setSelectedWorkflowId={setSelectedWorkflowId} contextPolicy={contextPolicy} persistencePolicy={persistencePolicy} setContextPolicy={setContextPolicy} setPersistencePolicy={setPersistencePolicy} executionSummary={executionSummary} setComposer={setComposer} setContextPanel={setContextPanel} newConversation={() => void newConversation()} switchConversation={(id) => void switchConversation(id)} runCommand={(operation) => void runCommand(operation)} abort={() => void abort()} upload={(file) => void upload(file)} addToKnowledge={() => void addToKnowledge()} cancelWorkflow={() => void cancelWorkflow()} dismissError={() => setError('')} onNavigate={navigate} /> : route === 'briefs' ? <BriefsPage briefs={briefs} selected={selectedBrief} busy={briefsBusy} error={error} onSelect={(id) => void selectBrief(id)} /> : route === 'reports' ? <ReportsPage reports={reports} selected={selectedReport} busy={reportsBusy} error={error} onSelect={(id) => void selectReport(id)} /> : route === 'bundles' ? <ResearchBundlesPage bundles={bundles} selected={selectedBundle} busy={bundlesBusy} error={error} onSelect={(id) => void selectBundle(id)} sourceHits={sourceHits} sourceBusy={sourceBusy} onSearchSources={(query) => void searchSources(query)} /> : route === 'run' ? <ResearchRunPage client={client} onLaunched={onResearchLaunched} /> : route === 'graph' ? <KnowledgeGraphPage knowledgeBase={knowledgeBase} client={client} /> : <ReviewsPage knowledgeBase={knowledgeBase} reviews={reviews} reviewDetail={reviewDetail} reviewsBusy={reviewsBusy} onSelect={(id) => void selectReview(id)} onCloseDetail={() => setReviewDetail(undefined)} />}</div>
+  return <div className="app-shell"><TopBar route={route} knowledgeBase={knowledgeBase} onNavigate={navigate} />{route === 'research' ? <ResearchPage session={session} conversations={conversations} messages={messages} streaming={streaming} thinking={thinking} streamText={streamText} toolEvents={toolEvents} queue={queue} composer={composer} busy={busy} error={error} attachment={attachment} attachmentBusy={attachmentBusy} workflowRunId={workflowRunId} workflow={workflow} knowledgeBase={knowledgeBase} openReviewCases={openReviewCases} contextPanel={contextPanel} workflowDefinitions={workflowDefinitions} selectedWorkflowId={selectedWorkflowId} setSelectedWorkflowId={setSelectedWorkflowId} contextPolicy={contextPolicy} persistencePolicy={persistencePolicy} setContextPolicy={setContextPolicy} setPersistencePolicy={setPersistencePolicy} executionSummary={executionSummary} setComposer={setComposer} setContextPanel={setContextPanel} newConversation={() => void newConversation()} switchConversation={(id) => void switchConversation(id)} runCommand={(operation) => void runCommand(operation)} abort={() => void abort()} upload={(file) => void upload(file)} addToKnowledge={() => void addToKnowledge()} cancelWorkflow={() => void cancelWorkflow()} dismissError={() => setError('')} onNavigate={navigate} /> : route === 'briefs' ? <BriefsPage briefs={briefs} selected={selectedBrief} busy={briefsBusy} error={error} onSelect={(id) => void selectBrief(id)} /> : route === 'reports' ? <ReportsPage reports={reports} selected={selectedReport} busy={reportsBusy} error={error} onSelect={(id) => void selectReport(id)} /> : route === 'bundles' ? <ResearchBundlesPage bundles={bundles} selected={selectedBundle} busy={bundlesBusy} error={error} onSelect={(id) => void selectBundle(id)} sourceHits={sourceHits} sourceBusy={sourceBusy} onSearchSources={(query) => void searchSources(query)} /> : route === 'run' ? <ResearchRunPage client={client} onLaunched={onResearchLaunched} /> : route === 'graph' ? <KnowledgeGraphPage knowledgeBase={knowledgeBase} client={client} /> : route === 'theses' ? <ThesisLifecyclePage client={client} knowledgeBase={knowledgeBase} /> : <ReviewsPage knowledgeBase={knowledgeBase} reviews={reviews} reviewDetail={reviewDetail} reviewsBusy={reviewsBusy} onSelect={(id) => void selectReview(id)} onCloseDetail={() => setReviewDetail(undefined)} />}</div>
 }

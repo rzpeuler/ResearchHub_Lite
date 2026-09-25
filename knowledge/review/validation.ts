@@ -9,6 +9,8 @@ import type {
   ReviewSemanticProposal,
 } from './contracts.ts'
 import { KNOWLEDGE_SCHEMA_V03 } from '../schema/executable-schema.ts'
+import { KNOWLEDGE_SCHEMA_V04 } from '../schema/executable-schema-v04.ts'
+import { REFRESH_EVIDENCE_RELATIONS, REFRESH_TRANSITIONS } from '../../skills/thesis_refresh/contracts.ts'
 
 const TELEMETRY_CATEGORIES = new Set<ReviewCaseCategory>(['invalid_reference', 'invalid_semantics'])
 const NON_ACTIONABLE_ORIGINS = new Set(['extraction_rejection', 'consolidation_mirror', 'dependency_isolation'])
@@ -22,6 +24,8 @@ const KNOWN_ACTIONABILITY: Readonly<Record<string, ReviewCaseActionability>> = {
   theme_creation: 'research_followup',
   schema_gap: 'schema_design',
 }
+const MAX_THESIS_SCOPE_REFS = 64
+const MAX_RESEARCH_EVIDENCE_LOCATOR_LENGTH = 512
 
 export function isSafeReviewPathSegment(value: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value) && !value.includes('..')
@@ -39,18 +43,31 @@ function expectedActionability(category: string): ReviewCaseActionability | unde
 function canonicalRef(value: unknown, kind: ReviewProposalKind, label: string): asserts value is string {
   if (!nonEmptyString(value) || !new RegExp(`^${kind}:[A-Za-z0-9][A-Za-z0-9._-]*$`).test(value)) throw new Error(`${label} must be a canonical ${kind} reference`)
 }
+function canonicalV04Ref(value: unknown, kind: 'source' | 'thesis' | 'claim' | 'observation', label: string): asserts value is string {
+  if (!nonEmptyString(value) || !new RegExp(`^${kind}:[A-Za-z0-9][A-Za-z0-9._-]*$`).test(value)) throw new Error(`${label} must be a canonical ${kind} reference`)
+}
 
-export function validateReviewEvidenceBindings(bindings: readonly ReviewEvidenceBinding[]): void {
+export function validateReviewEvidenceBindings(bindings: readonly ReviewEvidenceBinding[], schemaVersion: '0.3' | '0.4' = '0.3'): void {
   const keys = new Set<string>()
   for (const binding of bindings) {
-    if (!isRecord(binding) || binding.kind !== 'raw_document_block' || !nonEmptyString(binding.rawRef) || !nonEmptyString(binding.documentId) || !nonEmptyString(binding.blockId)) throw new Error('ReviewCase evidence binding is not a valid RawDocumentBlockEvidenceBinding')
-    const key = `${binding.rawRef}\u0000${binding.documentId}\u0000${binding.blockId}`
-    if (keys.has(key)) throw new Error(`Duplicate ReviewCase evidence binding: ${binding.blockId}`)
+    if (!isRecord(binding)) throw new Error('ReviewCase evidence binding is malformed')
+    let key: string
+    if (binding.kind === 'raw_document_block' && nonEmptyString(binding.rawRef) && nonEmptyString(binding.documentId) && nonEmptyString(binding.blockId)) {
+      key = `${binding.kind}\u0000${binding.rawRef}\u0000${binding.documentId}\u0000${binding.blockId}`
+    } else if (binding.kind === 'canonical_research_evidence') {
+      if (schemaVersion !== '0.4') throw new Error('Canonical research evidence bindings require Schema 0.4')
+      canonicalV04Ref(binding.sourceRef, 'source', 'ReviewCase evidence binding.sourceRef')
+      if (typeof binding.rawRef !== 'string' || !/^raw-sha256-[a-f0-9]{64}$/.test(binding.rawRef)) throw new Error('ReviewCase evidence binding.rawRef must be a canonical Raw reference')
+      if (binding.evidenceRef !== undefined && (!nonEmptyString(binding.evidenceRef) || !/^(observation|claim):[A-Za-z0-9][A-Za-z0-9._-]*$/.test(binding.evidenceRef))) throw new Error('ReviewCase evidence binding.evidenceRef must be a canonical Observation or Claim reference')
+      if (binding.locator !== undefined && (typeof binding.locator !== 'string' || binding.locator.length > MAX_RESEARCH_EVIDENCE_LOCATOR_LENGTH)) throw new Error(`ReviewCase evidence binding.locator must be at most ${MAX_RESEARCH_EVIDENCE_LOCATOR_LENGTH} characters`)
+      key = `${binding.kind}\u0000${binding.sourceRef}\u0000${binding.rawRef}\u0000${binding.evidenceRef ?? ''}\u0000${binding.locator ?? ''}`
+    } else throw new Error('ReviewCase evidence binding is not a valid evidence binding variant')
+    if (keys.has(key)) throw new Error('Duplicate ReviewCase evidence binding')
     keys.add(key)
   }
 }
 
-function validateSemanticPayload(kind: ReviewProposalKind, payload: unknown, semanticType: string, proposalId: string, label: string): void {
+function validateSemanticPayload(kind: ReviewProposalKind, payload: unknown, semanticType: string, proposalId: string, label: string, schemaVersion: '0.3' | '0.4'): void {
   if (!isRecord(payload) || payload.candidateId !== proposalId || !nonEmptyString(payload.candidateId) || !Array.isArray(payload.evidenceBlockRefs)) throw new Error(`Malformed ReviewCase ${label} semantic payload`)
   stringArray(payload.evidenceBlockRefs, `${label}.semanticPayload.evidenceBlockRefs`, true)
   if (kind === 'entity') {
@@ -63,16 +80,69 @@ function validateSemanticPayload(kind: ReviewProposalKind, payload: unknown, sem
     optionalRecord(payload.attributes, `${label}.semanticPayload.attributes`)
     return
   }
-  if (!nonEmptyString(payload.claimType) || !KNOWLEDGE_SCHEMA_V03.claim.types.includes(payload.claimType as never) || payload.claimType !== semanticType || !nonEmptyString(payload.statement) || !Array.isArray(payload.subjectRefs) || payload.subjectRefs.length === 0 || payload.subjectRefs.some((subject) => !isRecord(subject) || !nonEmptyString(subject.candidateRef) || !nonEmptyString(subject.mention))) throw new Error(`ReviewCase ${label} claim payload does not match its semantic kind`)
+  const validClaimType = nonEmptyString(payload.claimType) && (KNOWLEDGE_SCHEMA_V03.claim.types.includes(payload.claimType as never) || (schemaVersion === '0.4' && KNOWLEDGE_SCHEMA_V04.claim.types.includes(payload.claimType as never)))
+  if (!validClaimType || payload.claimType !== semanticType || !nonEmptyString(payload.statement) || !Array.isArray(payload.subjectRefs) || payload.subjectRefs.length === 0 || payload.subjectRefs.some((subject) => !isRecord(subject) || !nonEmptyString(subject.candidateRef) || !nonEmptyString(subject.mention))) throw new Error(`ReviewCase ${label} claim payload does not match its semantic kind`)
   optionalRecord(payload.structuredValue, `${label}.semanticPayload.structuredValue`)
 }
 
-function validateProposal(value: unknown, label: string, expectedKind?: ReviewProposalKind): asserts value is ReviewSemanticProposal {
+function validateProposal(value: unknown, label: string, schemaVersion: '0.3' | '0.4', expectedKind?: ReviewProposalKind): asserts value is ReviewSemanticProposal {
   if (!isRecord(value) || !nonEmptyString(value.proposalId) || !isSafeReviewPathSegment(value.proposalId) || (value.proposalKind !== 'entity' && value.proposalKind !== 'relation' && value.proposalKind !== 'claim') || (expectedKind !== undefined && value.proposalKind !== expectedKind) || !nonEmptyString(value.semanticType) || !('semanticPayload' in value) || !Array.isArray(value.evidenceBindings) || !Array.isArray(value.dependencyRefs)) throw new Error(`Malformed ReviewCase ${label}`)
   stringArray(value.dependencyRefs, `${label}.dependencyRefs`, true)
   if (value.dependencyRefs.includes(value.proposalId)) throw new Error(`ReviewCase ${label} cannot depend on itself`)
-  validateSemanticPayload(value.proposalKind, value.semanticPayload, value.semanticType, value.proposalId, label)
-  validateReviewEvidenceBindings(value.evidenceBindings as ReviewEvidenceBinding[])
+  validateSemanticPayload(value.proposalKind, value.semanticPayload, value.semanticType, value.proposalId, label, schemaVersion)
+  validateReviewEvidenceBindings(value.evidenceBindings as ReviewEvidenceBinding[], schemaVersion)
+}
+
+function validateThesisScope(value: unknown, producerType: string, rootProposal: Record<string, unknown>, schemaVersion: '0.3' | '0.4', label: string): void {
+  if (value === undefined) return
+  if (schemaVersion !== '0.4' || producerType !== 'thesis_lifecycle' || rootProposal.proposalKind !== 'claim') throw new Error(`ReviewCase thesisScope is only valid for a v0.4 thesis_lifecycle Claim-root case: ${label}`)
+  if (!isRecord(value)) throw new Error(`Malformed ReviewCase thesisScope: ${label}`)
+  canonicalV04Ref(value.thesisRef, 'thesis', `ReviewCase ${label}.thesisScope.thesisRef`)
+  canonicalV04Ref(value.rootClaimRef, 'claim', `ReviewCase ${label}.thesisScope.rootClaimRef`)
+  const validateBoundedRefs = (refs: unknown, name: 'affectedClaimRefs' | 'evidenceRefs', refPattern: RegExp): void => {
+    if (!Array.isArray(refs) || refs.length < 1 || refs.length > MAX_THESIS_SCOPE_REFS || refs.some((ref) => typeof ref !== 'string' || !refPattern.test(ref))) throw new Error(`ReviewCase ${label}.thesisScope.${name} must contain between 1 and ${MAX_THESIS_SCOPE_REFS} canonical references`)
+    if (new Set(refs).size !== refs.length) throw new Error(`ReviewCase ${label}.thesisScope.${name} must not contain duplicates`)
+  }
+  validateBoundedRefs(value.affectedClaimRefs, 'affectedClaimRefs', /^claim:[A-Za-z0-9][A-Za-z0-9._-]*$/)
+  if (!(value.affectedClaimRefs as string[]).includes(value.rootClaimRef as string)) throw new Error(`ReviewCase ${label}.thesisScope.rootClaimRef must be listed in affectedClaimRefs`)
+  validateBoundedRefs(value.evidenceRefs, 'evidenceRefs', /^(observation|claim):[A-Za-z0-9][A-Za-z0-9._-]*$/)
+  if (!Array.isArray(value.reviewedEvidence) || value.reviewedEvidence.length < 1 || value.reviewedEvidence.length > MAX_THESIS_SCOPE_REFS) throw new Error(`ReviewCase ${label}.thesisScope.reviewedEvidence must contain between 1 and ${MAX_THESIS_SCOPE_REFS} entries`)
+  const evidenceRefSet = new Set(value.evidenceRefs as string[])
+  const affectedClaimRefSet = new Set(value.affectedClaimRefs as string[])
+  for (const [index, entry] of value.reviewedEvidence.entries()) {
+    if (!isRecord(entry)) throw new Error(`ReviewCase ${label}.thesisScope.reviewedEvidence[${index}] is malformed`)
+    if (typeof entry.evidenceRef !== 'string' || !/^(observation|claim):[A-Za-z0-9][A-Za-z0-9._-]*$/.test(entry.evidenceRef) || !evidenceRefSet.has(entry.evidenceRef)) throw new Error(`ReviewCase ${label}.thesisScope.reviewedEvidence[${index}].evidenceRef must be listed in evidenceRefs`)
+    if (!REFRESH_EVIDENCE_RELATIONS.includes(entry.relation as never)) throw new Error(`ReviewCase ${label}.thesisScope.reviewedEvidence[${index}].relation is invalid`)
+    if (!Array.isArray(entry.targetClaimRefs) || entry.targetClaimRefs.length < 1 || entry.targetClaimRefs.length > MAX_THESIS_SCOPE_REFS || entry.targetClaimRefs.some((ref) => typeof ref !== 'string' || !/^claim:[A-Za-z0-9][A-Za-z0-9._-]*$/.test(ref))) throw new Error(`ReviewCase ${label}.thesisScope.reviewedEvidence[${index}].targetClaimRefs must contain between 1 and ${MAX_THESIS_SCOPE_REFS} canonical Claim references`)
+    if (new Set(entry.targetClaimRefs).size !== entry.targetClaimRefs.length) throw new Error(`ReviewCase ${label}.thesisScope.reviewedEvidence[${index}].targetClaimRefs must not contain duplicates`)
+    if (entry.targetClaimRefs.some((ref) => !affectedClaimRefSet.has(ref))) throw new Error(`ReviewCase ${label}.thesisScope.reviewedEvidence[${index}].targetClaimRefs must be listed in affectedClaimRefs`)
+  }
+  if (!REFRESH_TRANSITIONS.includes(value.candidateTransition as never)) throw new Error(`ReviewCase ${label}.thesisScope.candidateTransition is invalid`)
+  if (!validDateString(value.asOf)) throw new Error(`ReviewCase ${label}.thesisScope.asOf must be an ISO timestamp`)
+  if (typeof value.asOf === 'string' && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value.asOf)) throw new Error(`ReviewCase ${label}.thesisScope.asOf must be an ISO timestamp`)
+  if (value.proposedThesisStatus !== undefined && !KNOWLEDGE_SCHEMA_V04.thesis.statuses.includes(value.proposedThesisStatus as never)) throw new Error(`ReviewCase ${label}.thesisScope.proposedThesisStatus is invalid`)
+  if (value.candidateTransition === 'invalidation_condition_met') {
+    if (!Array.isArray(value.killCriterionAssessments) || value.killCriterionAssessments.length < 1 || value.killCriterionAssessments.length > 40) throw new Error(`ReviewCase ${label}.thesisScope.killCriterionAssessments must contain between 1 and 40 assessments for a kill transition`)
+    for (const [index, assessment] of value.killCriterionAssessments.entries()) {
+      if (!isRecord(assessment) || typeof assessment.conditionId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(assessment.conditionId) || assessment.status !== 'met' || typeof assessment.rationale !== 'string' || assessment.rationale.trim() === '') throw new Error(`ReviewCase ${label}.thesisScope.killCriterionAssessments[${index}] is malformed or not met`)
+      if (!Array.isArray(assessment.targetPropositionRefs) || assessment.targetPropositionRefs.length < 1 || assessment.targetPropositionRefs.length > MAX_THESIS_SCOPE_REFS || assessment.targetPropositionRefs.some((ref) => typeof ref !== 'string' || !/^(claim):[A-Za-z0-9][A-Za-z0-9._-]*$/.test(ref) || !affectedClaimRefSet.has(ref))) throw new Error(`ReviewCase ${label}.thesisScope.killCriterionAssessments[${index}].targetPropositionRefs must be in affectedClaimRefs`)
+      if (!Array.isArray(assessment.evidenceRefs) || assessment.evidenceRefs.length < 1 || assessment.evidenceRefs.length > MAX_THESIS_SCOPE_REFS || assessment.evidenceRefs.some((ref) => typeof ref !== 'string' || !/^(observation|claim):[A-Za-z0-9][A-Za-z0-9._-]*$/.test(ref) || !evidenceRefSet.has(ref))) throw new Error(`ReviewCase ${label}.thesisScope.killCriterionAssessments[${index}].evidenceRefs must be in evidenceRefs`)
+      const scopedEvidence = new Map((value.reviewedEvidence as Record<string, unknown>[]).map((entry) => [entry.evidenceRef as string, entry.targetClaimRefs as string[]]))
+      for (const evidenceRef of assessment.evidenceRefs as string[]) {
+        const targets = scopedEvidence.get(evidenceRef)
+        if (!targets || (assessment.targetPropositionRefs as string[]).some((ref) => !targets.includes(ref))) throw new Error(`ReviewCase ${label}.thesisScope.killCriterionAssessments[${index}] does not match reviewed evidence targets`)
+      }
+    }
+    if (value.proposedThesisStatus !== 'invalidated') throw new Error(`ReviewCase ${label}.thesisScope kill transition must propose invalidated Thesis status`)
+  } else if (value.killCriterionAssessments !== undefined) {
+    throw new Error(`ReviewCase ${label}.thesisScope.killCriterionAssessments is only valid for an invalidation_condition_met transition`)
+  }
+  const bindings = Array.isArray(rootProposal.evidenceBindings) ? rootProposal.evidenceBindings.filter(isRecord) : []
+  const canonicalBindings = bindings.filter((binding) => binding.kind === 'canonical_research_evidence')
+  if (canonicalBindings.length === 0) throw new Error(`ReviewCase ${label}.thesisScope requires canonical research evidence binding`)
+  for (const evidenceRef of value.evidenceRefs as string[]) {
+    if (!canonicalBindings.some((binding) => binding.evidenceRef === evidenceRef)) throw new Error(`ReviewCase ${label}.thesisScope.evidenceRefs must be represented by canonical evidence bindings`)
+  }
 }
 
 function validateProjection(value: unknown, label: string): asserts value is ExistingKnowledgeProjection {
@@ -99,11 +169,12 @@ export function validateReviewCase(value: unknown): asserts value is ReviewCase 
   const expected = expectedActionability(value.classification.category)
   if (TELEMETRY_CATEGORIES.has(value.classification.category as ReviewCaseCategory) || NON_ACTIONABLE_ORIGINS.has(value.classification.origin) || (expected !== undefined && value.classification.actionability !== expected)) throw new Error(`ReviewCase classification is not actionable or is inconsistent: ${value.reviewCaseId}`)
   if (!isRecord(value.rootProposal)) throw new Error(`Malformed ReviewCase root proposal: ${value.reviewCaseId}`)
-  validateProposal(value.rootProposal, 'rootProposal')
+  const schemaVersion = isRecord(value.resolutionContext) && value.resolutionContext.schemaVersionAtCreation === '0.4' ? '0.4' : '0.3'
+  validateProposal(value.rootProposal, 'rootProposal', schemaVersion)
   if (!isRecord(value.suspendedProposalBundle) || !Array.isArray(value.suspendedProposalBundle.dependentProposals)) throw new Error(`Malformed ReviewCase suspended proposal bundle: ${value.reviewCaseId}`)
   const proposalIds = new Set<string>([value.rootProposal.proposalId])
   for (const [index, proposal] of value.suspendedProposalBundle.dependentProposals.entries()) {
-    validateProposal(proposal, `suspendedProposalBundle.dependentProposals[${index}]`)
+    validateProposal(proposal, `suspendedProposalBundle.dependentProposals[${index}]`, schemaVersion)
     if (proposalIds.has(proposal.proposalId)) throw new Error(`ReviewCase proposal bundle contains duplicate proposal: ${proposal.proposalId}`)
     proposalIds.add(proposal.proposalId)
   }
@@ -116,6 +187,7 @@ export function validateReviewCase(value: unknown): asserts value is ReviewCase 
   stringArray(value.impact.affectedProposalRefs, `ReviewCase ${value.reviewCaseId}.impact.affectedProposalRefs`, true)
   const bundleIds = value.suspendedProposalBundle.dependentProposals.map((proposal) => proposal.proposalId).sort()
   if (value.impact.dependentProposalCount !== bundleIds.length || JSON.stringify([...value.impact.affectedProposalRefs].sort()) !== JSON.stringify(bundleIds)) throw new Error(`ReviewCase impact is inconsistent with its suspended proposal bundle: ${value.reviewCaseId}`)
+  validateThesisScope(value.thesisScope, value.producerType, value.rootProposal, schemaVersion, value.reviewCaseId)
   if (!isRecord(value.state) || value.state.status !== 'open') throw new Error(`ReviewCase is not open: ${value.reviewCaseId}`)
 }
 

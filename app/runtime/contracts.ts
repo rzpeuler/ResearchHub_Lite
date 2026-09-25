@@ -13,6 +13,8 @@ import type { ResearchDispatchService } from '../services/research-dispatch-serv
 import type { SourceLibraryService } from '../services/source-library.ts'
 import type { SkillOnboardingService } from '../services/skill-onboarding.ts'
 import type { IndustryOperatingObservationAcquisitionPort } from '../../plugins/research-acquisition/industry-operating-observations.ts'
+import type { ThesisQueryService } from '../services/thesis-query-service.ts'
+import type { ThesisDecisionService } from '../services/thesis-decision-service.ts'
 
 export interface SafeConversationSummary {
   readonly conversationId: string
@@ -50,6 +52,8 @@ export interface ResearchHubApplicationServices {
   readonly skillOnboardingService?: SkillOnboardingService
   readonly productionService: ProductionService
   readonly researchService?: ResearchService
+  readonly thesisQueryService?: ThesisQueryService
+  readonly thesisDecisionService?: ThesisDecisionService
   readonly dailyIntelligenceService?: DailyIntelligenceService
 }
 
