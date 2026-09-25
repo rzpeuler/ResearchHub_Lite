@@ -13,7 +13,7 @@ import { PiReasoningExecutor } from '../plugins/reasoning/pi/executor.ts'
 import { createResearchHubApplicationRuntime } from '../app/runtime/application-runtime.ts'
 import { ResearchHubRuntimeServer } from '../app/runtime/server.ts'
 import { hashKnowledgeObject } from '../knowledge/storage/canonical-hash.ts'
-import { readResearchReport } from '../app/services/research-report.ts'
+import { readResearchReport, type ResearchReport } from '../app/services/research-report.ts'
 
 const repoRoot = resolve(import.meta.dirname, '..')
 const evidencePath = resolve(repoRoot, 'tests/validation/evidence/RHL_TL001_THESIS_LIFECYCLE_CREATE_REAL_E2E.json')
@@ -34,6 +34,65 @@ const fingerprint = (assets: Awaited<ReturnType<typeof readCanonicalV04Assets>>)
   .map((entry) => entry.join(':'))
   .join('|')
 const samePath = (left: string, right: string): boolean => process.platform === 'win32' ? left.toLocaleLowerCase('en-US') === right.toLocaleLowerCase('en-US') : left === right
+
+interface CreateReportExpectations {
+  readonly reportId: string
+  readonly workflowRunId: string
+  readonly companyRef: string
+  readonly asOf: string
+  readonly thesisRef: string
+  readonly knowledgeBaseId: string
+  readonly baseRevision: number
+  readonly committedRevision: number
+  readonly writerRunId: string
+  readonly sourceRef: string
+  readonly rawRef: string
+  readonly evidenceClaimRef: string
+  readonly propositionRefs: readonly string[]
+}
+
+function assertCreateReport(report: ResearchReport | undefined, label: 'SERVICE_REPORT' | 'DISK_REPORT', expected: CreateReportExpectations): void {
+  const fail = (code: string): never => { throw new Error(`${label}_${code}`) }
+  if (!report) fail('MISSING')
+  if (report.reportId !== expected.reportId) fail('ID_INVALID')
+  if (report.reportType !== 'thesis_lifecycle') fail('TYPE_INVALID')
+  if (report.workflowRunId !== expected.workflowRunId) fail('WORKFLOW_ID_INVALID')
+  if (report.asOf !== expected.asOf) fail('AS_OF_INVALID')
+  if (report.subjectRefs.length !== 1 || report.subjectRefs[0] !== expected.companyRef) fail('SUBJECT_BINDING_INVALID')
+  if (report.knowledgeBaseRevision !== expected.committedRevision) fail('REVISION_INVALID')
+
+  const expectedClaims = [...new Set(expected.propositionRefs)].sort((left, right) => left.localeCompare(right))
+  const reportClaims = [...report.claimRefs].sort((left, right) => left.localeCompare(right))
+  if (JSON.stringify(reportClaims) !== JSON.stringify(expectedClaims)) fail('PROPOSITION_CLAIM_REFS_INVALID')
+  if (report.sourceRefs.length !== 1 || report.sourceRefs[0] !== expected.sourceRef) fail('SOURCE_REFS_INVALID')
+
+  const propositionSection = report.sections.find((section) => section.id === 'propositions')
+  if (!propositionSection) fail('PROPOSITIONS_SECTION_MISSING')
+  const propositionSectionClaims = [...(propositionSection.claimRefs ?? [])].sort((left, right) => left.localeCompare(right))
+  if (JSON.stringify(propositionSectionClaims) !== JSON.stringify(expectedClaims)) fail('PROPOSITIONS_SECTION_CLAIM_REFS_INVALID')
+  if (expectedClaims.some((claimRef) => !propositionSection.markdown.includes(claimRef))) fail('PROPOSITIONS_SECTION_CONTENT_INVALID')
+
+  const evidenceSection = report.sections.find((section) => section.id === 'evidence-pit')
+  if (!evidenceSection) fail('EVIDENCE_SECTION_MISSING')
+  if (evidenceSection.sourceRefs?.length !== 1 || evidenceSection.sourceRefs[0] !== expected.sourceRef) fail('EVIDENCE_SECTION_SOURCE_REFS_INVALID')
+  const evidenceLines = evidenceSection.markdown.split(/\r?\n/u).filter((line) => line.startsWith(`- ${expected.evidenceClaimRef}:`))
+  if (evidenceLines.length !== 1 || !evidenceLines[0]!.startsWith(`- ${expected.evidenceClaimRef}: included`)) fail('EVIDENCE_DECISION_INVALID')
+  if (!evidenceLines[0]!.includes(`${expected.sourceRef} -> ${expected.rawRef}`)) fail('EVIDENCE_SOURCE_RAW_BINDING_INVALID')
+
+  const writerSection = report.sections.find((section) => section.id === 'writer-state')
+  if (!writerSection) fail('WRITER_SECTION_MISSING')
+  const writerLines = writerSection.markdown.split(/\r?\n/u)
+  for (const value of [
+    `Knowledge Base: ${expected.knowledgeBaseId}`,
+    `Base revision: ${expected.baseRevision}`,
+    `Committed revision: ${expected.committedRevision}`,
+    `Writer run: ${expected.writerRunId}`,
+  ]) if (!writerLines.includes(value)) fail('WRITER_STATE_INVALID')
+
+  const thesisSection = report.sections.find((section) => section.id === 'thesis-created')
+  if (!thesisSection) fail('THESIS_SECTION_MISSING')
+  if (!thesisSection.markdown.split(/\r?\n/u).includes(`Thesis: ${expected.thesisRef}`)) fail('THESIS_REF_INVALID')
+}
 
 async function removeVerifiedMkdtemp(targetRoot: string, prefix: string): Promise<void> {
   const configuredTemp = resolve(tmpdir())
@@ -112,7 +171,7 @@ async function writeArtifacts(classification: AcceptanceEvidence['classification
   const createSummary = createEvidence
     ? `Workflow \`${createEvidence.workflowRunId}\` ended \`${createEvidence.workflowStatus}\`. Thesis ${createEvidence.thesisRef ?? 'not persisted'}; ${createEvidence.propositionRefs.length} generated proposition Claim(s), ${createEvidence.membershipEdgeRefs.length} \`qualifies\` edge(s); Writer run ${createEvidence.writerRunId ?? 'unavailable'}; revision ${createEvidence.baseRevision ?? 'unavailable'} -> ${createEvidence.committedRevision ?? 'unavailable'}. Identical replay: ${createEvidence.identicalReplay}; changed-input conflict: ${createEvidence.changedInputConflict}.`
     : 'The normal CREATE route did not complete.'
-  const report = `# Thesis lifecycle CREATE acceptance\n\nDate: 2026-09-24  \nTask: \`RHL-TL-001\`  \nClassification: isolated v0.4 source/evidence setup followed by the normal authenticated HTTP CREATE route and configured Pi Thesis Formalize operation. The temporary seed contains a company scope Entity, one live original-publisher Source/Raw, and one source-bound canonical evidence Claim. It contains no Thesis, generated proposition Claim, or \`qualifies\` membership edge before product CREATE.\n\n## Result\n\n${result.classification} (process exit ${processExitCode}). ${createSummary}\n\nThe seed is setup only and is not counted as CREATE product E2E. CREATE was invoked with the same bounded public command accepted by the runtime HTTP API. The workflow used \`${modelProvider}/${modelName}\` through \`PiReasoningExecutor\`; required operation: \`thesis_formalize_semantic\`. The disposable KB and runtime were temporary. The mounted user Knowledge Base was not touched. Evidence omits source text, extracted statements, credentials, and Raw bytes.\n\n## Evidence stages\n\n| Stage | Status | Evidence |\n| --- | --- | --- |\n${stageRows}\n\n## Errors / blockers\n\n${errorRows}\n\n## Machine evidence\n\n- \`tests/validation/evidence/RHL_TL001_THESIS_LIFECYCLE_CREATE_REAL_E2E.json\`\n- Script: \`scripts/acceptance-thesis-lifecycle-create-real.ts\`\n- User KB touched: \`false\`\n- Setup seed counted as CREATE: \`false\`\n- Secrets included: \`false\`\n- Source body included: \`false\`\n`
+  const report = `# Thesis lifecycle CREATE acceptance\n\nDate: ${result.generatedAt.slice(0, 10)}\n\nTask: \`RHL-TL-001\`\n\nClassification: isolated v0.4 source/evidence setup followed by the normal authenticated HTTP CREATE route and configured Pi Thesis Formalize operation. The temporary seed contains a company scope Entity, one live original-publisher Source/Raw, and one source-bound canonical evidence Claim. It contains no Thesis, generated proposition Claim, or \`qualifies\` membership edge before product CREATE.\n\n## Result\n\n${result.classification} (process exit ${processExitCode}). ${createSummary}\n\nThe seed is setup only and is not counted as CREATE product E2E. CREATE was invoked with the same bounded public command accepted by the runtime HTTP API. The workflow used \`${modelProvider}/${modelName}\` through \`PiReasoningExecutor\`; required operation: \`thesis_formalize_semantic\`. The disposable KB and runtime were temporary. The mounted user Knowledge Base was not touched. Evidence omits source text, extracted statements, credentials, and Raw bytes.\n\n## Evidence stages\n\n| Stage | Status | Evidence |\n| --- | --- | --- |\n${stageRows}\n\n## Errors / blockers\n\n${errorRows}\n\n## Machine evidence\n\n- \`tests/validation/evidence/RHL_TL001_THESIS_LIFECYCLE_CREATE_REAL_E2E.json\`\n- Script: \`scripts/acceptance-thesis-lifecycle-create-real.ts\`\n- User KB touched: \`false\`\n- Setup seed counted as CREATE: \`false\`\n- Secrets included: \`false\`\n- Source body included: \`false\`\n`
   await mkdir(join(repoRoot, 'docs/engineering/reports'), { recursive: true })
   await writeFile(reportPath, report, 'utf8')
   console.log(JSON.stringify(result, null, 2))
@@ -262,7 +321,7 @@ async function main(): Promise<void> {
     }
     const createInput = {
       workflowRunId, companyRef, thesisTitle: `CNINFO-backed lifecycle acceptance ${symbol}`,
-      narrative: `Assess whether the disclosed fact can support a durable near-term investment proposition for ${companyName}. Separate the directly verified fact from any inference, identify a falsifiable verification condition, and state research gaps instead of filling them with assumptions.`,
+      narrative: `Using only the single supplied evidence Claim, create exactly one falsifiable proposition about ${companyName} that states a fact directly supported by that Claim and cites its evidence refs. Do not add dependsOn or supporting proposition links. Put any inference or unsupported conclusion in researchGaps instead of creating another proposition; do not invent evidence or facts.`,
       evidenceRefs: [evidenceClaimRef], asOf,
     }
     const start = await postCreate(serverInfo.origin, headers, createInput)
@@ -307,9 +366,15 @@ async function main(): Promise<void> {
 
     const reportId = `thesis-lifecycle-${workflowRunId}`
     const report = await appRuntime.services.researchService?.getResearchReport(reportId)
-    if (!report || report.reportType !== 'thesis_lifecycle' || report.workflowRunId !== workflowRunId || report.knowledgeBaseRevision !== finalHandle.revision || !report.sourceRefs.includes(sourceRef) || !report.claimRefs.includes(evidenceClaimRef) || !report.claimRefs.some((ref) => createdClaims.some((item) => item.value.id === ref))) throw new Error('CREATE_REPORT_PERSISTENCE_OR_BINDING_INVALID')
+    if (!observedCreateOutcome?.writerRunId) throw new Error('CREATE_WRITER_RUN_ID_UNAVAILABLE')
+    const reportExpectations: CreateReportExpectations = {
+      reportId, workflowRunId, companyRef, asOf, thesisRef: thesis.id, knowledgeBaseId: finalHandle.knowledgeBaseId,
+      baseRevision: initialRevision, committedRevision: finalHandle.revision, writerRunId: observedCreateOutcome.writerRunId, sourceRef, rawRef,
+      evidenceClaimRef, propositionRefs: createdClaims.map((item) => item.value.id),
+    }
+    assertCreateReport(report, 'SERVICE_REPORT', reportExpectations)
     const diskReport = await readResearchReport(join(cwd, 'runtime-data', 'reports', `${reportId}.md.json`))
-    if (diskReport.reportId !== reportId || !diskReport.sections.some((section) => section.id === 'writer-state' && section.markdown.includes(String(finalHandle.revision))) || !diskReport.sections.some((section) => section.id === 'propositions' && createdClaims.some((item) => section.markdown.includes(item.value.id)))) throw new Error('CREATE_REPORT_DISK_RELOAD_INVALID')
+    assertCreateReport(diskReport, 'DISK_REPORT', reportExpectations)
     stages.normalHttpCreateWithPi = { status: 'PASS', detail: `POST /api/production/thesis-lifecycle/create completed workflow ${workflowRunId}; configured Pi executed thesis_formalize_semantic` }
     stages.canonicalThesisClaimsAndMembership = { status: 'PASS', detail: `fresh reload contains Thesis ${thesis.id}, ${createdClaims.length} new active source-bound Claim(s), and one active qualifies edge per proposition` }
     stages.gatewayWriterRevision = { status: 'PASS', detail: `Gateway/Writer advanced revision ${initialRevision} -> ${finalHandle.revision}; workflow run ${workflowRunId}` }
@@ -327,8 +392,12 @@ async function main(): Promise<void> {
     if (operations.length !== operationsBeforeReplay) throw new Error('IDENTICAL_CREATE_REPLAY_RERAN_PI_FORMALIZATION')
 
     const changedResponse = await postCreate(serverInfo.origin, headers, { ...createInput, narrative: `${createInput.narrative} Add an explicitly different scenario.` })
-    const changedPayload = await changedResponse.json() as { error?: string; message?: string }
-    if (changedResponse.status !== 409 || !`${changedPayload.error ?? ''} ${changedPayload.message ?? ''}`.toLowerCase().includes('conflict')) throw new Error(`CHANGED_CREATE_INPUT_CONFLICT_NOT_REJECTED:${changedResponse.status}`)
+    const changedPayload = await changedResponse.json() as { code?: unknown; error?: string }
+    if (changedResponse.status !== 409) throw new Error(`CHANGED_CREATE_INPUT_HTTP_STATUS_INVALID:${changedResponse.status}`)
+    if (changedPayload.code !== 'conflict') {
+      const diagnosticCode = typeof changedPayload.code === 'string' && /^[A-Za-z0-9_:-]{1,120}$/u.test(changedPayload.code) ? changedPayload.code : 'missing_or_invalid'
+      throw new Error(`CHANGED_CREATE_INPUT_ERROR_CODE_INVALID:${diagnosticCode}`)
+    }
     const afterConflictHandle = await registry.refresh(kbRoot)
     if (afterConflictHandle.revision !== finalHandle.revision || fingerprint(await readCanonicalV04Assets(kbRoot)) !== fingerprint(finalAssets)) throw new Error('CHANGED_CREATE_INPUT_CONFLICT_MUTATED_CANONICAL')
     createEvidence = {

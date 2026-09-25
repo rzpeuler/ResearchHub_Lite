@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-09-24T14:41:35.353Z",
+  "generatedAt": "2026-09-25T03:41:06.233Z",
   "taskId": "RHL-TL-001",
-  "classification": "EXECUTED / GATE_NOT_MET",
-  "processExitCode": 1,
+  "classification": "EXECUTED / PASS GATE",
+  "processExitCode": 0,
   "pathClassification": "isolated_source_evidence_seed_plus_normal_http_create",
   "userKnowledgeBaseTouched": false,
   "seedIsProductCreateE2E": false,
@@ -22,19 +22,19 @@
     "publisher": "CNINFO",
     "provider": "cninfo",
     "publishedAt": "2026-08-14T16:00:00.000Z",
-    "retrievedAt": "2026-09-24T14:36:20.047Z",
+    "retrievedAt": "2026-09-25T03:39:50.632Z",
     "rightsEligible": true,
     "rawVerified": true,
     "rawBytes": 832321,
     "sourceBodyPersistedInEvidence": false
   },
   "seed": {
-    "knowledgeBaseId": "kb-tl001-create-1790260596394",
+    "knowledgeBaseId": "kb-tl001-create-1790307597894",
     "revision": 1,
     "companyRef": "entity:company-600519",
     "sourceRef": "source:research-87d97d845670a259",
     "rawRef": "raw-sha256-0e10aa26be46b1cf3cd03f06e834c7fb98d5dd0d661b96f8fddd4af7e846a4f6",
-    "evidenceClaimRef": "claim:research-703ce515f9e82d82",
+    "evidenceClaimRef": "claim:research-d742c9691ae7357c",
     "seededAssetCounts": {
       "entity": 1,
       "source": 1,
@@ -42,6 +42,23 @@
       "thesis": 0,
       "reasoning_edge": 0
     }
+  },
+  "create": {
+    "workflowRunId": "tl001-create-1790307598048",
+    "workflowStatus": "completed",
+    "thesisRef": "thesis:96a196f509ff522a",
+    "propositionRefs": [
+      "claim:research-c3a047247d4ee095"
+    ],
+    "membershipEdgeRefs": [
+      "reasoning-edge:61b5e9f64f21326e"
+    ],
+    "baseRevision": 1,
+    "committedRevision": 2,
+    "writerRunId": "tl001-create-1790307598048",
+    "identicalReplay": true,
+    "changedInputConflict": true,
+    "revisionAfterReplay": 2
   },
   "stages": {
     "originalPublisherDiscovery": {
@@ -62,16 +79,34 @@
     },
     "pitRightsAndRawProof": {
       "status": "PASS",
-      "detail": "publishedAt 2026-08-14T16:00:00.000Z <= asOf 2026-09-24T14:36:36.394Z; source rights admitted and archived Raw verified"
+      "detail": "publishedAt 2026-08-14T16:00:00.000Z <= asOf 2026-09-25T03:39:57.894Z; source rights admitted and archived Raw verified"
     },
-    "createAcceptance": {
-      "status": "FAIL",
-      "detail": "CREATE_CANONICAL_REVISION_INVALID:1->1"
+    "normalHttpCreateWithPi": {
+      "status": "PASS",
+      "detail": "POST /api/production/thesis-lifecycle/create completed workflow tl001-create-1790307598048; configured Pi executed thesis_formalize_semantic"
+    },
+    "canonicalThesisClaimsAndMembership": {
+      "status": "PASS",
+      "detail": "fresh reload contains Thesis thesis:96a196f509ff522a, 1 new active source-bound Claim(s), and one active qualifies edge per proposition"
+    },
+    "gatewayWriterRevision": {
+      "status": "PASS",
+      "detail": "Gateway/Writer advanced revision 1 -> 2; workflow run tl001-create-1790307598048"
+    },
+    "durableReport": {
+      "status": "PASS",
+      "detail": "thesis_lifecycle report thesis-lifecycle-tl001-create-1790307598048 validated via service and reloaded from its persisted JSON file"
+    },
+    "identicalReplay": {
+      "status": "PASS",
+      "detail": "same run ID and identical input returned the completed result; no second Pi call or canonical revision change"
+    },
+    "changedInputConflict": {
+      "status": "PASS",
+      "detail": "same run ID with a changed narrative returned HTTP 409 and left canonical state unchanged"
     }
   },
-  "errors": [
-    "CREATE_CANONICAL_REVISION_INVALID:1->1"
-  ],
+  "errors": [],
   "secretsIncluded": false,
   "sourceBodyIncluded": false
 }

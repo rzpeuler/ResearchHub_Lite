@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import type { ReasoningExecutor, ReasoningRequest, ReasoningResult } from '../../plugins/reasoning/contracts.ts'
 import { MockReasoningExecutor } from '../../plugins/reasoning/mock/executor.ts'
 import { ReasoningExecutorError } from '../../plugins/reasoning/errors.ts'
 import { executeThesisFormalize } from '../../skills/thesis_formalize/semantic.ts'
@@ -24,6 +25,57 @@ test('thesis_formalize owns narrative-to-proposition transformation before deter
   assert.equal(result.result?.propositions.length, 2)
   assert.deepEqual(result.result?.dependencies.map((item) => item.sourcePropositionRef), ['p-margin'])
   assert.equal('propositions' in (executor.calls[0]?.input as object), false)
+})
+
+test('thesis_formalize repairs dependency cycles while preserving evidence refs and blocks unrepaired cycles', async () => {
+  const cyclic = {
+    summary: 'Demand supports margin expansion.',
+    propositions: [
+      { propositionId: 'p-demand', statement: 'Demand growth sustains revenue growth.', propositionType: 'business_driver', basis: 'verified_evidence', timeHorizon: 'near_term', sourceRefs: ['src-demand'], existingKnowledgeRefs: ['knowledge-demand'], dependsOnPropositionRefs: ['p-margin'] },
+      { propositionId: 'p-margin', statement: 'Operating leverage expands margins.', propositionType: 'financial_outcome', basis: 'inference', timeHorizon: 'medium_term', supportingPropositionRefs: ['p-demand'] },
+    ],
+    researchGaps: [],
+  }
+  const repaired = {
+    ...cyclic,
+    propositions: [
+      { ...cyclic.propositions[0] },
+      { ...cyclic.propositions[1], supportingPropositionRefs: [] },
+    ],
+  }
+  const requests: ReasoningRequest[] = []
+  const outputs: unknown[] = [cyclic, repaired]
+  const executor: ReasoningExecutor = {
+    capabilities: () => capabilities,
+    execute: async (request): Promise<ReasoningResult> => {
+      requests.push(request)
+      return { operation: request.operation, output: outputs.shift() }
+    },
+  }
+  const input = { narrative: 'Demand growth should support margin expansion.', evidence: [{ evidenceId: 'e-demand', statement: 'The filing reports demand growth.', sourceRefs: ['src-demand'], publishedAt: '2026-09-01' }], propositionHints: [{ propositionId: 'hint-demand', statement: 'Prior knowledge records demand growth.', propositionType: 'business_driver' as const, basis: 'inference' as const, timeHorizon: 'near_term', existingKnowledgeRefs: ['knowledge-demand'] }], asOf: '2026-09-10' }
+
+  const result = await executeThesisFormalize(input, executor)
+  assert.equal(result.status, 'complete')
+  assert.equal(result.telemetry.repairAttempts, 1)
+  assert.equal(requests.length, 2)
+  assert.match(requests[0]!.instruction, /Dependency and support edges are optional.*acyclic graph/)
+  assert.match(requests[1]!.instruction, /THESIS_DEPENDENCY_CYCLE/)
+  assert.match(requests[1]!.instruction, /Remove cyclic dependsOnPropositionRefs and supportingPropositionRefs/)
+  assert.match(requests[1]!.instruction, /instead of inventing replacement links/)
+  assert.match(requests[1]!.instruction, /Preserve proposition sourceRefs and existingKnowledgeRefs/)
+  assert.deepEqual(result.result?.propositions[0]?.sourceRefs, ['src-demand'])
+  assert.deepEqual(result.result?.propositions[0]?.existingKnowledgeRefs, ['knowledge-demand'])
+  assert.deepEqual(result.result?.dependencies.map((item) => item.sourcePropositionRef), ['p-demand'])
+
+  const blockedOutputs: unknown[] = [cyclic, cyclic]
+  const blockedExecutor: ReasoningExecutor = {
+    capabilities: () => capabilities,
+    execute: async (request): Promise<ReasoningResult> => ({ operation: request.operation, output: blockedOutputs.shift() }),
+  }
+  const blocked = await executeThesisFormalize(input, blockedExecutor)
+  assert.equal(blocked.status, 'blocked')
+  assert.deepEqual(blocked.diagnostics, ['THESIS_DEPENDENCY_CYCLE'])
+  assert.equal(blocked.telemetry.repairAttempts, 1)
 })
 
 test('catalyst_map owns event-to-proposition mapping from unlinked attributable evidence', async () => {
