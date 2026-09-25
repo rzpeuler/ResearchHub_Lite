@@ -11,7 +11,7 @@ The real acceptance script completed with `EXECUTED / PASS GATE` and exit code 0
 
 The user’s `ai-hardware-real` Knowledge Base was not mounted or changed. To establish a controlled v0.4 baseline, the script seeded an isolated temporary Knowledge Base through the Gateway with the live CNINFO Source/Raw and proposition records. That setup is explicitly not counted as product CREATE E2E.
 
-`EXECUTED / PASS GATE` applies to this real REFRESH and human-decision path only. It does not close the full TL-001 implementation gate: the product CREATE path requires its own E2E run, and aggregate `invalidated` remains blocked until a canonical kill-criterion definition can be rebound and re-evaluated at ACCEPT.
+`EXECUTED / PASS GATE` here applies to the real REFRESH and human-decision path. The separate product CREATE path also passed its real E2E gate on 2026-09-25; see `docs/engineering/reports/2026-09-24-thesis-lifecycle-create-acceptance.md`. Aggregate `invalidated` remains blocked until a canonical kill-criterion definition can be rebound and re-evaluated at ACCEPT.
 
 ## Lifecycle assertions
 
