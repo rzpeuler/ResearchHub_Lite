@@ -23,6 +23,7 @@ const selectedTargets = requestedTargets
   ? targets.filter((target) => requestedTargets.includes(`${target.symbol}-${target.period}`))
   : targets
 const reasoningMode = process.env.RHL_EXEC003_A003_FIX001_REASONING_MODE === 'deterministic-fallback' ? 'deterministic-fallback' : 'live-pi'
+const forceManagementFallback = process.env.RHL_EXEC003_A003_FIX001_MANAGEMENT_FALLBACK === '1'
 
 function digest(value: Uint8Array): string { return createHash('sha256').update(value).digest('hex') }
 async function snapshotFiles(root: string): Promise<readonly { path: string; sha256: string | null }[]> {
@@ -96,6 +97,11 @@ try {
       if (reasoningMode === 'deterministic-fallback') {
         Object.assign(call, { completedAt: new Date().toISOString(), durationMs: Date.now() - startedMs, callerSignalAborted: false, status: 'deterministic_invalid_output' })
         stageLog(`Deterministic fallback selected operation=${operation} operationId=${options.operationId}`)
+        return '{}'
+      }
+      if (forceManagementFallback && operation === 'management_communication_extract') {
+        Object.assign(call, { completedAt: new Date().toISOString(), durationMs: Date.now() - startedMs, callerSignalAborted: false, status: 'harness_forced_invalid_output_fallback' })
+        stageLog(`Optional management extraction routed to deterministic fallback by E2E harness operationId=${options.operationId}`)
         return '{}'
       }
       if (selectedModel === undefined) throw new Error('Pi selected model is unavailable')
@@ -233,7 +239,7 @@ finally {
 }
 const checkedRuns = runs.filter((run) => typeof run.knowledgeTreeUnchanged === 'boolean')
 const reportCheckedRuns = runs.filter((run) => typeof run.reportCanonicalRefsResolveInRegistry === 'boolean')
-const evidence = { taskId: 'RHL-EXEC-003-A-003-FIX-001', generatedAt, reasoningMode, productionPath: 'ApplicationRuntime -> ResearchDispatchService.startAsync -> ResearchService -> Earnings Review Workflow -> DataResolver -> Catalog/SourcePolicy -> CNINFO/AKShare Plugins -> Earnings Review Skill', isolatedKnowledgeBaseSchema: '0.4', targets: selectedTargets, reasoningCalls, runs, ...(fatalError ? { fatalError, failedStage: currentStage } : {}), completedRunCount: runs.filter((run) => run.completed === true).length, reportBundleReloadedRunCount: runs.filter((run) => run.completed === true && run.reportReloaded === true && run.reportMarkdownReloaded === true && run.bundleReloaded === true).length, allReportsAndBundlesReloaded: runs.length === selectedTargets.length && runs.every((run) => run.completed === true && run.reportReloaded === true && run.reportMarkdownReloaded === true && run.bundleReloaded === true), knowledgeCheckCount: checkedRuns.length, allKnowledgeUnchanged: checkedRuns.length === selectedTargets.length && checkedRuns.every((run) => run.knowledgeTreeUnchanged === true), reportReferenceCheckCount: reportCheckedRuns.length, allReportCanonicalRefsResolve: reportCheckedRuns.length === selectedTargets.length && reportCheckedRuns.every((run) => run.reportCanonicalRefsResolveInRegistry === true), secretsIncluded: false, rawBodiesIncluded: false }
+const evidence = { taskId: 'RHL-EXEC-003-A-003-FIX-001', generatedAt, reasoningMode, managementModelMode: forceManagementFallback ? 'harness_forced_invalid_output_deterministic_fallback' : reasoningMode, productionPath: 'ApplicationRuntime -> ResearchDispatchService.startAsync -> ResearchService -> Earnings Review Workflow -> DataResolver -> Catalog/SourcePolicy -> CNINFO/AKShare Plugins -> Earnings Review Skill', isolatedKnowledgeBaseSchema: '0.4', targets: selectedTargets, reasoningCalls, runs, ...(fatalError ? { fatalError, failedStage: currentStage } : {}), completedRunCount: runs.filter((run) => run.completed === true).length, reportBundleReloadedRunCount: runs.filter((run) => run.completed === true && run.reportReloaded === true && run.reportMarkdownReloaded === true && run.bundleReloaded === true).length, allReportsAndBundlesReloaded: runs.length === selectedTargets.length && runs.every((run) => run.completed === true && run.reportReloaded === true && run.reportMarkdownReloaded === true && run.bundleReloaded === true), knowledgeCheckCount: checkedRuns.length, allKnowledgeUnchanged: checkedRuns.length === selectedTargets.length && checkedRuns.every((run) => run.knowledgeTreeUnchanged === true), reportReferenceCheckCount: reportCheckedRuns.length, allReportCanonicalRefsResolve: reportCheckedRuns.length === selectedTargets.length && reportCheckedRuns.every((run) => run.reportCanonicalRefsResolveInRegistry === true), secretsIncluded: false, rawBodiesIncluded: false }
 await mkdir(resolve(repoRoot, 'tests/validation/evidence'), { recursive: true })
 await (await import('node:fs/promises')).writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8')
 console.log(JSON.stringify({ evidencePath, completedRunCount: evidence.completedRunCount, reportBundleReloadedRunCount: evidence.reportBundleReloadedRunCount, allReportsAndBundlesReloaded: evidence.allReportsAndBundlesReloaded, allKnowledgeUnchanged: evidence.allKnowledgeUnchanged, fatalError: fatalError ?? null }, null, 2))
