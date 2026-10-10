@@ -396,7 +396,7 @@ test('Company Research admits an explicitly supplied A-share identity without re
   try {
     let adapterInput: Record<string, unknown> | undefined
     const workflowService = new WorkflowService()
-    const output = { mode: 'workflow', workflow: { id: 'company_research', confidence: 1, arguments: { symbol: '300750', name: '宁德时代', exchange: 'SZSE' } }, skills: [], entities: [], missingRequiredInputs: [], contextPolicy: { structuredKnowledge: false, sourceLibrary: true }, persistencePolicy: { writeKnowledge: false }, rationale: 'User supplied a company ticker.' }
+    const output = { mode: 'workflow', workflow: { id: 'company_research', confidence: 1, arguments: { symbol: '300750', name: '宁德时代', exchange: 'SZSE', maxSources: 2 } }, skills: [], entities: [], missingRequiredInputs: [], contextPolicy: { structuredKnowledge: false, sourceLibrary: true }, persistencePolicy: { writeKnowledge: false }, rationale: 'User supplied a company ticker.' }
     const service = new ResearchDispatchService({
       mountedKnowledgeBaseRoot: knowledgeBase,
       reasoningExecutor: semanticExecutor(output),
@@ -412,6 +412,7 @@ test('Company Research admits an explicitly supplied A-share identity without re
     assert.equal(result.status, 'started')
     assert.equal(adapterInput?.symbol, '300750')
     assert.equal(adapterInput?.exchange, 'SZ')
+    assert.equal(adapterInput?.maxSources, 2)
     assert.equal(adapterInput?.writeKnowledge, false)
     assert.equal(adapterInput?.useStructuredKnowledge, false)
     assert.equal(await result.completion instanceof Object, true)

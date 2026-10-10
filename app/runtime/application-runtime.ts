@@ -175,7 +175,7 @@ export class ResearchHubApplicationRuntime {
         }
       } catch { /* Thesis projections and decisions require a readable Schema 0.4 Knowledge Base. */ }
     }
-    const workflowService = new WorkflowService()
+    const workflowService = options.workflowService ?? new WorkflowService()
     const rawDocumentPreviewReasoningExecutorFactory = isSchema04KnowledgeBase && options.reasoningExecutor === undefined
       ? async () => new PiReasoningExecutor({ modelRuntime, model: selectedModel, capabilities: reasoningExecutor.capabilities(), timeoutMs: RAW_DOCUMENT_PREVIEW_PRODUCTION_REASONING_TIMEOUT_MS })
       : undefined
@@ -183,7 +183,7 @@ export class ResearchHubApplicationRuntime {
     let researchService = options.researchService
     let themeFrameworkService = options.themeFrameworkService
     const akshare = new AkshareDataAdapter()
-    const securityIdentityResolver = new SecurityIdentityResolver({
+    const securityIdentityResolver = options.securityIdentityResolver ?? new SecurityIdentityResolver({
       ...(mountedKnowledgeBaseRoot === undefined ? {} : { mountedKnowledgeBaseRoot }),
       dataResolverFactory: ({ now, signal }) => createSecurityIdentityDataResolver({ akshare, now, ...(signal ? { signal } : {}) }),
       ...(options.clock === undefined ? {} : { now: options.clock }),

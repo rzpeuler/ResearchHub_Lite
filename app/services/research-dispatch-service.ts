@@ -48,6 +48,8 @@ export interface ResearchDispatchStart {
   readonly sourceLibraryHits?: readonly SourceLibraryHit[]
   readonly resolution?: ResearchDispatchResolution
   readonly feedback?: ResearchDispatchFeedback
+  /** Public verification result for the explicit product start response; never accepted as caller input. */
+  readonly verifiedSecurityIdentity?: VerifiedSecurityIdentity
 }
 
 export interface ResearchDispatchFeedback {
@@ -401,7 +403,7 @@ export class ResearchDispatchService {
       ['company_research', ({ args, runId, callerSignal, writeKnowledge, useStructuredKnowledge, sourceLibraryHits, verifiedIdentityHandoff }) => {
         const service = this.options.researchService
         if (!service) throw new ApplicationServiceError('executor_unavailable', 'Company Research execution service is not configured')
-        return service.startResearchCompany({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, exchange: args.exchange as string | undefined, asOf: args.asOf as string | undefined, writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal, verifiedIdentityHandoff).completion
+        return service.startResearchCompany({ workflowRunId: runId, symbol: args.symbol as string, name: args.name as string | undefined, exchange: args.exchange as string | undefined, asOf: args.asOf as string | undefined, ...(args.maxSources === undefined ? {} : { maxSources: args.maxSources as number }), writeKnowledge, useStructuredKnowledge, sourceLibraryContext: sourceLibraryHits }, callerSignal, verifiedIdentityHandoff).completion
       }],
       ['industry_research', ({ args, runId, callerSignal, writeKnowledge, useStructuredKnowledge, sourceLibraryHits }) => {
         const service = this.options.researchService
@@ -573,6 +575,26 @@ export class ResearchDispatchService {
     const decision = verified.decision ?? resolved.decision
     const summary = this.summary(resolved.request, decision, decision.workflow === undefined ? undefined : this.workflowRegistry.get(decision.workflow.id))
     return this.startResolved({ ...resolved, decision, summary }, callerSignal, resolved.sourceLibraryHits, resolved.resolution, verified.verifiedIdentity)
+  }
+
+  /** Starts a product-form-selected Workflow with its explicit validated fields, without a semantic routing round-trip. */
+  async startExplicitWorkflow(input: unknown, callerSignal?: AbortSignal): Promise<ResearchDispatchStart> {
+    const request = normalizeResearchRequest(input)
+    if (request.mode.type !== 'workflow' || request.workflowArgumentContext?.workflowId !== request.mode.workflowId) throw new ApplicationServiceError('invalid_input', 'Explicit Workflow mode and argument context must identify the same Workflow')
+    const definition = this.workflowRegistry.get(request.mode.workflowId)
+    if (definition === undefined) throw new ApplicationServiceError('not_found', `Workflow definition not found: ${request.mode.workflowId}`)
+    const args = { ...request.workflowArgumentContext.arguments }
+    const validation = validateWorkflowInputSchema(definition.inputSchema, args)
+    if (!validation.valid) throw new ApplicationServiceError('invalid_input', `Workflow ${definition.id} arguments are invalid: ${validation.errors.filter((message) => !message.includes('is required')).join('; ') || 'required input is missing'}`)
+    const missingRequiredInputs = normalizedMissingFields(definition, args)
+    if (missingRequiredInputs.length > 0) throw new ApplicationServiceError('invalid_input', `Workflow ${definition.id} required inputs are missing: ${missingRequiredInputs.join(', ')}`)
+    await this.validateSkillMethodologies(validateResearchDispatchDecision({ mode: 'workflow', workflow: { id: definition.id, confidence: 1, arguments: args }, skills: selectedSkillIds(this.skillRegistry, definition).map((id) => ({ id, purpose: this.skillRegistry.get(id)?.purpose ?? 'selected by the authoritative Workflow definition' })), entities: this.entities(request.query), missingRequiredInputs: [], contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: 'The user selected this registered Workflow and supplied its bounded product form inputs.' }))
+    const decision = validateResearchDispatchDecision({ mode: 'workflow', workflow: { id: definition.id, confidence: 1, arguments: args }, skills: selectedSkillIds(this.skillRegistry, definition).map((id) => ({ id, purpose: this.skillRegistry.get(id)?.purpose ?? 'selected by the authoritative Workflow definition' })), entities: this.entities(request.query), missingRequiredInputs: [], contextPolicy: request.contextPolicy, persistencePolicy: request.persistencePolicy, rationale: 'The user selected this registered Workflow and supplied its bounded product form inputs.' })
+    const verified = await this.verifyWorkflowReferences(request, decision)
+    if (verified.feedback !== undefined) return { request, decision, summary: this.summary(request, decision, definition), status: verified.failureStatus ?? 'unresolved_reference', feedback: verified.feedback, sourceLibraryHits: [], resolution: { source: 'deterministic_fallback', attempts: 0, diagnostics: [] } }
+    const verifiedDecision = verified.decision ?? decision
+    const summary = this.summary(request, verifiedDecision, definition)
+    return this.startResolved({ request, decision: verifiedDecision, summary }, callerSignal, [], { source: 'deterministic_fallback', attempts: 0, diagnostics: ['explicit_product_workflow_selection'] }, verified.verifiedIdentity)
   }
 
   private async verifyWorkflowReferences(request: ResearchRequest, decision: ResearchDispatchDecision): Promise<{ readonly decision?: ResearchDispatchDecision; readonly feedback?: ResearchDispatchFeedback; readonly failureStatus?: 'invalid_input'; readonly verifiedIdentity?: VerifiedSecurityIdentity }> {
@@ -753,7 +775,7 @@ export class ResearchDispatchService {
       throw error
     })
     completion.catch(() => undefined)
-    return { ...resolved, status: 'started', runId, sourceLibraryHits, resolution, ...(this.options.workflowService.getWorkflowStatus(runId) === undefined ? {} : { workflow: this.options.workflowService.getWorkflowStatus(runId) }), completion }
+    return { ...resolved, status: 'started', runId, sourceLibraryHits, resolution, ...(verifiedIdentity === undefined ? {} : { verifiedSecurityIdentity: verifiedIdentity }), ...(this.options.workflowService.getWorkflowStatus(runId) === undefined ? {} : { workflow: this.options.workflowService.getWorkflowStatus(runId) }), completion }
   }
 
   async getBundle(bundleId: string): Promise<ResearchBundle | undefined> { return this.options.bundleStore?.get(bundleId) }

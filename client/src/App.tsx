@@ -28,6 +28,10 @@ function previewPollTerminalDisposition(result: RawDocumentPreviewPollV04): 'wai
 
 function routeForPath(pathname: string): Route { return pathname === '/briefs' ? 'briefs' : pathname === '/reports' ? 'reports' : pathname === '/bundles' ? 'bundles' : pathname === '/run' ? 'run' : pathname === '/graph' ? 'graph' : pathname === '/reviews' ? 'reviews' : pathname === '/theses' ? 'theses' : pathname === '/sources' ? 'sources' : 'research' }
 function routePath(route: Route): string { return route === 'research' ? '/research' : `/${route}` }
+const ACTIVE_RESEARCH_RUN_KEY = 'researchhub.active-research-run-id'
+function storedResearchRunId(): string {
+  try { return window.sessionStorage.getItem(ACTIVE_RESEARCH_RUN_KEY) ?? '' } catch { return '' }
+}
 function errorText(error: unknown): string { return error instanceof RuntimeClientError ? error.message : 'ResearchHub runtime operation failed' }
 function toolLabel(name: string | undefined): string { return name === undefined ? 'Tool execution' : knownTools[name] ?? 'Tool execution' }
 function formatSize(size: number): string { if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`; return `${(size / (1024 * 1024)).toFixed(1)} MB` }
@@ -943,7 +947,7 @@ function AppContent(): ReactElement {
   const [rightsForm, setRightsForm] = useState<V04RightsForm>(defaultRightsForm)
   const [sourceForm, setSourceForm] = useState<V04SourceForm>(defaultSourceForm)
   const [uploadStatus, setUploadStatus] = useState('')
-  const [workflowRunId, setWorkflowRunId] = useState('')
+  const [workflowRunId, setWorkflowRunId] = useState(storedResearchRunId)
   const [themeFrameworkRunId, setThemeFrameworkRunId] = useState('')
   const [themeFrameworkRefreshInfo, setThemeFrameworkRefreshInfo] = useState<ResearchPageProps['themeFrameworkRefreshInfo']>()
   const [themeFrameworkReviewRevision, setThemeFrameworkReviewRevision] = useState(0)
@@ -992,7 +996,10 @@ function AppContent(): ReactElement {
   }, [client])
 
   const navigate = useCallback((nextRoute: Route): void => { const path = routePath(nextRoute); if (window.location.pathname !== path) window.history.pushState({}, '', path); setRoute(nextRoute) }, [])
-  const onResearchLaunched = useCallback((result: ResearchStartResponse): void => { setWorkflowRunId(result.runId); setWorkflow(result.workflow); navigate('research') }, [navigate])
+  const onResearchLaunched = useCallback((result: ResearchStartResponse): void => {
+    try { window.sessionStorage.setItem(ACTIVE_RESEARCH_RUN_KEY, result.runId) } catch { /* in-memory tracking remains available when session storage is disabled */ }
+    setWorkflowRunId(result.runId); setWorkflow(result.workflow); navigate('research')
+  }, [navigate])
 
   useEffect(() => { const onPopState = (): void => setRoute(routeForPath(window.location.pathname)); window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState) }, [])
 
@@ -1042,6 +1049,7 @@ function AppContent(): ReactElement {
 
   const clearKnowledgeScopedState = (): void => {
     requestEpoch.current += 1; previewGeneration.current += 1
+    try { window.sessionStorage.removeItem(ACTIVE_RESEARCH_RUN_KEY) } catch { /* storage can be unavailable in restricted browser contexts */ }
     latestConversation.current = ''
     setKnowledgeBase(undefined); setOpenReviewCases(0); setSession(undefined); setConversations([]); setMessages([]); setStreaming(false); setThinking(false); setStreamText(''); setToolEvents([]); setQueue({ steering: 0, followUp: 0 }); setComposer('')
     setAttachment(undefined); setAttachmentBusy(false); setAttachmentUiVersion((version) => version + 1); setPreview(undefined); setPreviewBusy(false); setAcceptanceBusy(false); setSelectedCandidates(new Set()); setAcceptance(undefined); setRightsForm(defaultRightsForm); setSourceForm(defaultSourceForm); setUploadStatus('')

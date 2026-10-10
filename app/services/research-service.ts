@@ -254,6 +254,7 @@ export class ResearchService {
     if (!input || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(input.workflowRunId) || !/^\d{6}$/.test(input.symbol)) {
       throw new ApplicationServiceError('invalid_input', 'workflowRunId and A-share symbol are invalid')
     }
+    if (input.maxSources !== undefined && (!Number.isSafeInteger(input.maxSources) || input.maxSources < 1 || input.maxSources > 50)) throw new ApplicationServiceError('invalid_input', 'maxSources must be an integer from 1 to 50')
     const company: ResearchCompanyIdentity = {
       symbol: input.symbol,
       ...(input.name === undefined ? {} : { name: input.name }),
@@ -285,6 +286,7 @@ export class ResearchService {
           reportRoot: resolve(this.options.reportRoot ?? join(this.options.cwd ?? process.cwd(), 'runtime-data', 'reports')),
           signal: combined.signal,
           signalStore: this.options.signalStore,
+          maxSources: input.maxSources,
           reasoningExecutor: withSourceLibraryContext(this.options.reasoningExecutor, input.sourceLibraryContext), writeKnowledge: input.writeKnowledge, useStructuredKnowledge: input.useStructuredKnowledge,
         })
         if (result.status === 'completed') {
@@ -316,6 +318,7 @@ export class ResearchService {
       committedIds: outcome.workflow.committedIds,
       proposalCount: outcome.workflow.proposalIds.length,
       summary: outcome.summary,
+      providerOutcomes: outcome.workflow.providerOutcomes,
       ...(outcome.errorSummary ? { errorSummary: outcome.errorSummary } : {}),
       themeScopeImpact: impact,
     })
@@ -390,7 +393,7 @@ export class ResearchService {
         const securityIdentity = await this.resolveSecurityIdentity('valuation', input, combined.signal, identityHandoff)
         const resolvedCompany: ResearchCompanyIdentity = securityIdentity ? { symbol: securityIdentity.symbol, name: securityIdentity.verifiedName, exchange: securityIdentity.exchange } : company
         const handle = await this.registry.mount(resolve(this.options.mountedKnowledgeBaseRoot)); const result = await runValuation({ workflowRunId: input.workflowRunId, handle, company: resolvedCompany, ...(securityIdentity === undefined ? {} : { securityIdentity }), asOf: input.asOf, methods: input.methods, targetFiscalYear: input.targetFiscalYear, reportRoot: resolve(this.options.reportRoot ?? join(this.options.cwd ?? process.cwd(), 'runtime-data', 'reports')), akshare: this.options.akshare, officialDisclosure: this.options.officialDisclosure, dataResolverFactory: this.options.valuationDataResolverFactory, reasoningExecutor: withSourceLibraryContext(this.options.reasoningExecutor, input.sourceLibraryContext), writeKnowledge: input.writeKnowledge, useStructuredKnowledge: input.useStructuredKnowledge, signal: combined.signal })
-        return { runId: input.workflowRunId, status: result.status, knowledgeBaseId: result.knowledgeBaseId, ...(result.report === undefined ? {} : { reportId: result.report.reportId, reportPath: `${result.report.reportId}.md` }), committedIds: result.committedIds, proposalCount: result.proposalIds.length, summary: result.status === 'completed' ? `Valuation completed for ${input.symbol}` : `Valuation ${result.status} for ${input.symbol}`, ...(result.errors.length ? { errorSummary: result.errors.join('; ').slice(0, 500) } : {}), telemetry: result.telemetry, providerOutcome: result.providerOutcome, ...(result.automaticCompsResult === undefined ? {} : { automaticCompsResult: result.automaticCompsResult }), ...(result.crosscheck === undefined ? {} : { crosscheck: result.crosscheck }), ...(result.blockedReason === undefined ? {} : { blockedReason: result.blockedReason }) }
+        return { runId: input.workflowRunId, status: result.status, knowledgeBaseId: result.knowledgeBaseId, ...(result.report === undefined ? {} : { reportId: result.report.reportId, reportPath: `${result.report.reportId}.md` }), committedIds: result.committedIds, proposalCount: result.proposalIds.length, summary: result.status === 'completed' ? `Valuation completed for ${input.symbol}` : `Valuation ${result.status} for ${input.symbol}`, ...(result.errors.length ? { errorSummary: result.errors.join('; ').slice(0, 500) } : {}), telemetry: result.telemetry, diagnostics: result.diagnostics, providerOutcome: result.providerOutcome, ...(result.automaticCompsResult === undefined ? {} : { automaticCompsResult: result.automaticCompsResult }), ...(result.crosscheck === undefined ? {} : { crosscheck: result.crosscheck }), ...(result.blockedReason === undefined ? {} : { blockedReason: result.blockedReason }) }
       } finally {
         signal.removeEventListener('abort', abort)
         callerSignal?.removeEventListener('abort', cancelForCaller)

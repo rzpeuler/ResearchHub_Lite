@@ -15,6 +15,19 @@ test('CNINFO PDF fetch preserves bytes and obtains normalized text only through 
   assert.equal(result.mediaType, 'application/pdf')
 })
 
+test('CNINFO PDF fetch forwards workflow cancellation to document parsing', async () => {
+  let parserSignal: AbortSignal | undefined
+  const client = new CninfoOfficialDisclosureClient({
+    fetchImpl: async () => new Response(Uint8Array.from([37, 80, 68, 70]), { status: 200, headers: { 'content-type': 'application/pdf' } }),
+    documentResolver: { parse: async (_input, options) => { parserSignal = options?.signal; return { documentId: 'doc-fixture', normalizedText: 'text', sections: [], blocks: [], parser: 'fixture', stats: {}, warnings: [] } as never } },
+  })
+  const plugin = new OfficialDisclosureResearchPlugin(client)
+  const controller = new AbortController()
+  const candidate = { candidateId: 'official-fixture', kind: 'official_disclosure' as const, tier: 1 as const, title: 'Annual report', provider: 'cninfo', url: 'https://static.cninfo.com.cn/fixture.pdf' }
+  await plugin.fetch(candidate, controller.signal)
+  assert.equal(parserSignal, controller.signal)
+})
+
 test('CNINFO Industry discovery uses bounded public full-text disclosure search', async () => {
   const requests: string[] = []
   const response = new Response(JSON.stringify({ announcements: [

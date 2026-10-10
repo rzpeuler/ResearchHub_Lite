@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { ResearchDispatchService, type WorkflowExecutionBindingContext } from '../../../app/services/research-dispatch-service.ts'
 import { SecurityIdentityResolver } from '../../../app/services/security-identity-resolver.ts'
 import { ResearchService } from '../../../app/services/research-service.ts'
+import type { ResearchBundle } from '../../../app/services/research-bundle.ts'
 import { createSecurityIdentityDataResolver, type AkshareSecurityDirectoryClient } from '../../../plugins/research-acquisition/security-identity-data.ts'
 import { createValuationDataResolver } from '../../../plugins/research-acquisition/valuation-data.ts'
 import type { AkshareDataClient } from '../../../plugins/research-acquisition/akshare.ts'
@@ -174,6 +175,12 @@ test('Dispatch hands one verified identity through the production Valuation bind
     dataResolverFactory: ({ now, signal }) => createSecurityIdentityDataResolver({ akshare, now, ...(signal ? { signal } : {}) }),
   })
   const workflowService = new WorkflowService()
+  const bundleValues = new Map<string, ResearchBundle>()
+  const bundleStore = {
+    async put(bundle: ResearchBundle) { bundleValues.set(bundle.bundleId, bundle) },
+    async get(bundleId: string) { return bundleValues.get(bundleId) },
+    async list() { return [...bundleValues.values()] },
+  }
   const researchService = new ResearchService({
     mountedKnowledgeBaseRoot: kb.kb,
     reportRoot: join(kb.kb, '..', 'reports'),
@@ -188,6 +195,7 @@ test('Dispatch hands one verified identity through the production Valuation bind
   const dispatch = new ResearchDispatchService({
     researchService,
     workflowService,
+    bundleStore,
     mountedKnowledgeBaseRoot: kb.kb,
     securityIdentityResolver: identityResolver,
     clock: () => new Date(NOW),
@@ -219,7 +227,15 @@ test('Dispatch hands one verified identity through the production Valuation bind
     assert.equal(directoryCalls, 1, 'one dispatch run must issue exactly one external security-directory call')
     assert.ok(domainCalls.includes('historicalMarketData'), 'the production Valuation DataResolver must be reached')
     assert.ok(domainCalls.includes('valuationFinancialIndicators'), 'the production financial requirement must be reached')
-    assert.equal(workflowService.getWorkflowStatus(started.runId)?.status, 'blocked')
+    const run = workflowService.getWorkflowStatus(started.runId)
+    assert.equal(run?.status, 'blocked')
+    assert.equal(run?.executionResult?.bundleStatus, 'available')
+    assert.equal(run?.executionResult?.bundleRef, `research-bundle-${started.runId}`)
+    const bundle = await dispatch.getBundleForRun(started.runId)
+    assert.equal(bundle?.workflowRunId, started.runId)
+    assert.equal(bundle?.executionResult?.terminalStatus, 'blocked')
+    assert.equal(bundle?.executionResult?.bundleStatus, 'available')
+    assert.equal(bundle?.decision.workflow?.id, 'valuation')
     const assets = await readCanonicalV04Assets(kb.kb)
     assert.equal(assets.objects.some((item) => {
       const value = item.value as unknown as Record<string, unknown>

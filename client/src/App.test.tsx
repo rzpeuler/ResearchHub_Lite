@@ -32,6 +32,7 @@ describe('Homepage shell', () => {
   const originalEventSource = globalThis.EventSource
   beforeEach(() => {
     window.localStorage.setItem('researchhub.language', 'en')
+    window.sessionStorage.clear()
     window.history.replaceState({}, '', '/')
     const FakeEventSource = class { onopen: ((event: Event) => void) | null = null; onerror: ((event: Event) => void) | null = null; close = vi.fn(); addEventListener = vi.fn(); removeEventListener = vi.fn() }
     globalThis.EventSource = FakeEventSource as unknown as typeof EventSource
@@ -48,7 +49,28 @@ describe('Homepage shell', () => {
       return json({ code: 'not_found', error: 'not found' }, 404)
     }) as typeof fetch
   })
-  afterEach(() => { cleanup(); window.history.replaceState({}, '', '/'); globalThis.fetch = originalFetch; globalThis.EventSource = originalEventSource; Object.defineProperty(window, 'EventSource', { configurable: true, value: originalEventSource }) })
+  afterEach(() => { cleanup(); window.sessionStorage.clear(); window.history.replaceState({}, '', '/'); globalThis.fetch = originalFetch; globalThis.EventSource = originalEventSource; Object.defineProperty(window, 'EventSource', { configurable: true, value: originalEventSource }) })
+
+  it('restores the active Run Research workflow after a page reload', async () => {
+    const calls: string[] = []
+    window.sessionStorage.setItem('researchhub.active-research-run-id', 'restored-run-1')
+    window.history.replaceState({}, '', '/research')
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input); calls.push(path)
+      if (path === '/api/bootstrap') return json({ runtime: { origin: 'http://127.0.0.1:1234', runtimeToken: 'b'.repeat(64) }, origin: 'http://127.0.0.1:1234', session: { conversationId: 'c1', isStreaming: false, isIdle: true, pendingMessageCount: 0, thinkingLevel: 'off' }, conversations: [], knowledgeBase: { knowledgeBaseId: 'kb-1', rootRef: 'root:kb', revision: 1, status: 'active', schemaVersion: '0.4', storageFormatVersion: '1', counts: {} } })
+      if (path === '/api/research/workflows') return json({ workflows: [] })
+      if (path === '/api/conversations/current') return json({ conversationId: 'c1', isStreaming: false, isIdle: true, pendingMessageCount: 0, thinkingLevel: 'off' })
+      if (path === '/api/conversations/messages') return json({ conversationId: 'c1', messages: [] })
+      if (path === '/api/conversations') return json({ conversations: [] })
+      if (path === '/api/workflows/restored-run-1') return json({ runId: 'restored-run-1', workflowType: 'company_research', objective: 'Research 002487.SZ', status: 'blocked', startedAt: 'now', updatedAt: 'now', executionResult: { runId: 'restored-run-1', workflowId: 'company_research', executionStatus: 'blocked', terminalStatus: 'blocked', summary: 'Provider evidence is unavailable.', diagnostics: [], bundleStatus: 'unavailable' } })
+      return json({ code: 'not_found', error: 'not found' }, 404)
+    }) as typeof fetch
+    render(<App />)
+    expect(await screen.findByText('Workflow is blocked')).toBeTruthy()
+    expect(screen.getAllByText('Provider evidence is unavailable.').length).toBeGreaterThan(0)
+    expect(calls).toContain('/api/workflows/restored-run-1')
+    expect(window.sessionStorage.getItem('researchhub.active-research-run-id')).toBe('restored-run-1')
+  })
 
   it('keeps workflow input feedback visible without falling back to ordinary chat', async () => {
     const calls: string[] = []
@@ -913,6 +935,71 @@ describe('Homepage shell', () => {
     expect(await screen.findByRole('heading', { name: 'Run Research' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Start Company' })).toBeTruthy()
     expect(screen.getByText('The runtime creates the Workflow ID and tracks completion in Research.')).toBeTruthy()
+  })
+
+  it('submits Company, Valuation, and Earnings from Run Research to their real RuntimeClient endpoints', async () => {
+    window.history.replaceState({}, '', '/run')
+    const requests: Array<{ path: string; body?: Record<string, unknown> }> = []
+    const runIds = new Map([
+      ['/api/production/research-company', 'ui-company-run'],
+      ['/api/production/analyze-valuation', 'ui-valuation-run'],
+      ['/api/production/review-earnings', 'ui-earnings-run'],
+    ])
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input)
+      if (path === '/api/bootstrap') return json({ runtime: { origin: 'http://127.0.0.1:1234', runtimeToken: 'b'.repeat(64) }, origin: 'http://127.0.0.1:1234', session: { conversationId: 'c1', isStreaming: false, isIdle: true, pendingMessageCount: 0, thinkingLevel: 'off' }, conversations: [], knowledgeBase: { knowledgeBaseId: 'kb-1', rootRef: 'root:kb', revision: 1, status: 'active', schemaVersion: '0.4', storageFormatVersion: '1', counts: {} } })
+      if (path === '/api/research/workflows') return json({ workflows: [] })
+      if (path === '/api/conversations/current') return json({ conversationId: 'c1', isStreaming: false, isIdle: true, pendingMessageCount: 0, thinkingLevel: 'off' })
+      if (path === '/api/conversations/messages') return json({ conversationId: 'c1', messages: [] })
+      if (path === '/api/conversations') return json({ conversations: [] })
+      if (path.startsWith('/api/production/')) {
+        const body = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>
+        requests.push({ path, body })
+        return json({ accepted: true, runId: runIds.get(path) })
+      }
+      if (path.startsWith('/api/workflows/')) {
+        const runId = path.slice('/api/workflows/'.length)
+        return json({ runId, workflowType: runId.replace('ui-', '').replace('-run', ''), objective: `Research ${runId}`, status: 'blocked', startedAt: '2026-10-10T00:00:00.000Z', updatedAt: '2026-10-10T00:00:01.000Z', executionResult: { runId, workflowId: runId, executionStatus: 'blocked', terminalStatus: 'blocked', summary: 'Provider evidence is unavailable.', bundleRef: `research-bundle-${runId}`, blockedReason: 'SOURCE_UNAVAILABLE', diagnostics: [], bundleStatus: 'available' } })
+      }
+      if (path.startsWith('/api/research/bundles/by-run/')) {
+        const runId = path.slice('/api/research/bundles/by-run/'.length)
+        return json({ bundleId: `research-bundle-${runId}`, workflowRunId: runId, status: 'blocked', proposals: [], sourceLibraryHits: [] })
+      }
+      return json({ code: 'not_found', error: 'not found' }, 404)
+    }) as typeof fetch
+
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Run Research' })
+    fireEvent.change(screen.getByLabelText(/A-share symbol/), { target: { value: '002487' } })
+    fireEvent.change(screen.getByLabelText('Exchange'), { target: { value: 'SZSE' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start Company' }))
+    await waitFor(() => expect(requests.some((request) => request.path === '/api/production/research-company')).toBe(true))
+
+    fireEvent.click(screen.getByRole('link', { name: 'Run Research' }))
+    await screen.findByRole('heading', { name: 'Run Research' })
+    fireEvent.click(screen.getByRole('button', { name: /Valuation/ }))
+    fireEvent.change(screen.getByLabelText(/A-share symbol/), { target: { value: '002487' } })
+    fireEvent.change(screen.getByLabelText('Exchange'), { target: { value: 'SZSE' } })
+    fireEvent.change(screen.getByLabelText('Target fiscal year'), { target: { value: '2025' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start Valuation' }))
+    await waitFor(() => expect(requests.some((request) => request.path === '/api/production/analyze-valuation')).toBe(true))
+
+    fireEvent.click(screen.getByRole('link', { name: 'Run Research' }))
+    await screen.findByRole('heading', { name: 'Run Research' })
+    fireEvent.click(screen.getByRole('button', { name: /Earnings/ }))
+    fireEvent.change(screen.getByLabelText(/A-share symbol/), { target: { value: '002487' } })
+    fireEvent.change(screen.getByLabelText('Exchange'), { target: { value: 'SZSE' } })
+    fireEvent.change(screen.getByLabelText(/Fiscal year/), { target: { value: '2025' } })
+    fireEvent.change(screen.getByLabelText('Period'), { target: { value: 'H1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start Earnings' }))
+    await waitFor(() => expect(requests.some((request) => request.path === '/api/production/review-earnings')).toBe(true))
+
+    expect(requests).toEqual([
+      { path: '/api/production/research-company', body: { symbol: '002487', exchange: 'SZSE' } },
+      { path: '/api/production/analyze-valuation', body: { symbol: '002487', exchange: 'SZSE', methods: ['PE', 'PB', 'EV_EBITDA'], targetFiscalYear: 2025 } },
+      { path: '/api/production/review-earnings', body: { symbol: '002487', exchange: 'SZSE', fiscalYear: 2025, period: 'H1' } },
+    ])
+    expect(window.sessionStorage.getItem('researchhub.active-research-run-id')).toBe('ui-earnings-run')
   })
 
   it('renders the Research Report catalog as a read-only route', async () => {

@@ -24,6 +24,7 @@ import type { ThemeFrameworkService } from '../services/theme-framework-service.
 import type { ThemeScopeImpactService } from '../services/theme-scope-impact-service.ts'
 import type { DataSourceAdministrationService } from '../services/data-source-administration-contracts.ts'
 import type { DataSourceOnboardingService } from '../services/data-source-onboarding-store.ts'
+import type { SecurityIdentityResolver } from '../services/security-identity-resolver.ts'
 
 export interface SafeConversationSummary {
   readonly conversationId: string
@@ -110,11 +111,15 @@ export interface ResearchHubApplicationRuntimeOptions {
   /** Disable the initial/immediate scheduler tick while staging a replacement runtime. */
   readonly startDailyScheduler?: boolean
   readonly reasoningExecutor?: ReasoningExecutor
+  /** Shared Workflow registry for isolated runtime integrations and deterministic end-to-end tests. */
+  readonly workflowService?: WorkflowService
   /** Explicit executor seam for tests/isolated callers; normal Runtime uses the selected shared executor. */
   readonly industryReasoningExecutorFactory?: () => Promise<ReasoningExecutor>
   readonly settingsManager?: SettingsManager
   readonly resourceLoader?: DefaultResourceLoader
   readonly researchService?: ResearchService
+  /** Shared identity resolver for Application and Dispatch paths; injectable for isolated runtime tests. */
+  readonly securityIdentityResolver?: SecurityIdentityResolver
   readonly industryAcquisitionPlugins?: readonly ResearchAcquisitionPlugin[]
   readonly themeFrameworkService?: ThemeFrameworkService
   readonly industryOperatingObservationAcquisition?: IndustryOperatingObservationAcquisitionPort

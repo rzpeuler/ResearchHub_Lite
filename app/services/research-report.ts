@@ -43,6 +43,7 @@ export interface ResearchReportSummary {
 }
 
 const safeId = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
+const externalEvidenceReportTypes = new Set<ResearchReport['reportType']>(['company_research', 'valuation', 'earnings_review'])
 const inside = (root: string, candidate: string): boolean => { const rel = relative(resolve(root), resolve(candidate)); return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`)) }
 const ref = (value: string): boolean => /^(?:entity|relation|claim|source|theme-group|module):[^\s]+$/.test(value)
 const thesisRef = (value: string): boolean => /^thesis:[^\s]+$/.test(value)
@@ -68,7 +69,7 @@ export function validateResearchReport(report: ResearchReport): ResearchReport {
   if (report.sections.some((section: ResearchReportSection) => (section.sourceRefs ?? []).some((item: string) => !/^source:[^\s]+$/.test(item)) || (section.claimRefs ?? []).some((item: string) => !/^claim:[^\s]+$/.test(item)))) throw new TypeError('section references must be canonical Source/Claim references')
   if (report.sections.some((section: ResearchReportSection) => (section.relationRefs ?? []).some((item: string) => !/^relation:[^\s]+$/.test(item)))) throw new TypeError('section relationRefs must be canonical Relation references')
   if (report.sections.some((section: ResearchReportSection) => (section.signalRefs ?? []).some((item: string) => !safeId.test(item)))) throw new TypeError('signalRefs must contain safe ResearchSignal references')
-  if (report.reportType === 'valuation' && report.sections.some((section: ResearchReportSection) => (section.evidenceLinks ?? []).some((item: string) => typeof item !== 'string' || !/^https:\/\//i.test(item)))) throw new TypeError('valuation evidenceLinks must be HTTPS URLs')
+  if (externalEvidenceReportTypes.has(report.reportType) && report.sections.some((section: ResearchReportSection) => (section.evidenceLinks ?? []).some((item: string) => typeof item !== 'string' || !/^https:\/\//i.test(item)))) throw new TypeError('report evidenceLinks must be HTTPS URLs')
   if (typeof report.outputPath !== 'string' || report.outputPath.trim() === '' || isAbsolute(report.outputPath) || report.outputPath.split(/[\\/]+/).includes('..')) throw new TypeError('outputPath must be a safe relative file path')
   return report
 }
@@ -93,7 +94,7 @@ export function summarizeResearchReport(report: ResearchReport): ResearchReportS
 export function renderResearchReport(report: ResearchReport): string {
   const title = report.reportType === 'daily_brief' ? 'Daily Intelligence Brief' : report.reportType === 'earnings_review' ? 'Earnings Review' : report.reportType === 'valuation' ? 'Valuation' : report.reportType === 'event_research' ? 'Event Research' : report.reportType === 'thesis_red_team' ? 'Thesis Red Team' : report.reportType === 'industry_research' ? 'Industry Research' : report.reportType === 'thesis_lifecycle' ? 'Thesis Lifecycle' : 'Company Research'
   const lines = [`# ${title}`, '', `- Report: ${report.reportId}`, `- As of: ${report.asOf}`, `- Knowledge revision: ${report.knowledgeBaseRevision}`, '', `Methodology: ${report.methodology}`, '']
-  for (const section of report.sections) { lines.push(`## ${section.title}`, '', section.markdown.trim(), ''); if (section.sourceRefs?.length) lines.push(`Sources: ${section.sourceRefs.join(', ')}`, ''); if (section.relationRefs?.length) lines.push(`Relations: ${section.relationRefs.join(', ')}`, ''); if (section.claimRefs?.length) lines.push(`Claims: ${section.claimRefs.join(', ')}`, ''); if (report.reportType === 'valuation' && section.evidenceLinks?.length) lines.push('External evidence:', ...section.evidenceLinks.map((url) => `- <${url}>`), '') }
+  for (const section of report.sections) { lines.push(`## ${section.title}`, '', section.markdown.trim(), ''); if (section.sourceRefs?.length) lines.push(`Sources: ${section.sourceRefs.join(', ')}`, ''); if (section.relationRefs?.length) lines.push(`Relations: ${section.relationRefs.join(', ')}`, ''); if (section.claimRefs?.length) lines.push(`Claims: ${section.claimRefs.join(', ')}`, ''); if (externalEvidenceReportTypes.has(report.reportType) && section.evidenceLinks?.length) lines.push('External evidence:', ...section.evidenceLinks.map((url) => `- <${url}>`), '') }
   return `${lines.join('\n').trim()}\n`
 }
 

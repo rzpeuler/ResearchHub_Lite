@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import test from 'node:test'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { createHash } from 'node:crypto'
 import { createFreshKnowledgeBaseV04, readCanonicalV04Assets } from '../../knowledge/storage/index.ts'
 import { KnowledgeBaseRegistry } from '../../knowledge/registry/registry.ts'
 import { KnowledgeProductionGateway } from '../../knowledge/production/gateway.ts'
@@ -79,6 +80,19 @@ async function fixture(options: { readonly financial?: readonly Dict[]; readonly
   const akshare = akshareFixture({ financial: options.financial, market: options.market }); const executor = options.executor ?? new FixtureExecutor(); const officialDisclosure: OfficialDisclosureClient = { list: async () => [], fetch: async () => '', resolveAnnualReportPublication: async ({ fiscalYear }) => ({ issuer: 'Fixture Company', fiscalYear, reportTitle: `${fiscalYear}年年度报告`, officialPublishedAt: `${fiscalYear + 1}-04-01T08:00:00.000Z`, rawPublishedAt: `${fiscalYear + 1}-04-01 16:00:00`, sourceUrl: `https://static.cninfo.com.cn/fixture-${fiscalYear}.pdf`, originPublisher: 'CNINFO', originAuthority: 'S0_STATUTORY', retrievalProvider: 'CNINFO', retrievedAt: NOW }) }
   return { root, reports, handle, akshare, executor, officialDisclosure, async remount() { handle = await registry.mount(root); return handle }, async close() { await rm(root, { recursive: true, force: true }) } }
 }
+async function snapshotKnowledgeTree(root: string): Promise<readonly string[]> {
+  const entries: string[] = []
+  const visit = async (directory: string): Promise<void> => {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      if (directory === root && entry.name === 'reports') continue
+      const absolute = join(directory, entry.name)
+      if (entry.isDirectory()) { entries.push(`dir:${absolute.slice(root.length)}`); await visit(absolute) }
+      else if (entry.isFile()) entries.push(`file:${absolute.slice(root.length)}:${createHash('sha256').update(await readFile(absolute)).digest('hex')}`)
+    }
+  }
+  await visit(root)
+  return entries.sort()
+}
 async function runFixture(f: Awaited<ReturnType<typeof fixture>>, overrides: Partial<Parameters<typeof runValuation>[0]> = {}) { return runValuation({ workflowRunId: `valuation-${Date.now()}-${Math.random().toString(16).slice(2)}`, handle: f.handle, company: { symbol: '600519', name: 'Fixture Company', exchange: 'SSE' }, reportRoot: f.reports, akshare: f.akshare, officialDisclosure: f.officialDisclosure, reasoningExecutor: f.executor, now: () => NOW, ...overrides }) }
 function fixtureExecutor(f: Awaited<ReturnType<typeof fixture>>): FixtureExecutor { return f.executor as FixtureExecutor }
 function basis() { const market = normalizeValuationMarketData(marketRows(), NOW).observation!; const row = normalizeValuationFinancialData(financialRows()).rows[0]!; return buildValuationBasis(market, row, NOW, 'verified') }
@@ -131,6 +145,7 @@ test('V79 verified identity enters real valuation acquisition with empty Knowled
   const reportRoot = join(root, 'reports')
   try {
     await createFreshKnowledgeBaseV04(root, { knowledgeBaseId: 'kb-valuation-first-research', now: NOW })
+    const before = await snapshotKnowledgeTree(root)
     const registry = new KnowledgeBaseRegistry()
     const akshare = akshareFixture()
     const securityIdentity: VerifiedSecurityIdentity = { symbol: '600519', exchange: 'SH', verifiedName: 'Fixture Company', verificationSource: 'akshare_security_directory', originAuthority: 'S3_AGGREGATOR', verifiedAt: NOW, sourceId: 'akshare-security-identity-directory', sourceUrl: 'https://github.com/akfamily/akshare' }
@@ -177,6 +192,14 @@ test('V79 verified identity enters real valuation acquisition with empty Knowled
     const assets = await readCanonicalV04Assets(root)
     assert.equal(assets.objects.filter((item) => item.kind === 'entity').length, 0)
     assert.equal(assets.objects.filter((item) => item.kind === 'source' || item.kind === 'claim').length, 0)
+    assert.deepEqual(await snapshotKnowledgeTree(root), before)
+    const writeRequestedBefore = await snapshotKnowledgeTree(root)
+    const writeRequested = await runValuation({ workflowRunId: 'v79-first-research-write-request', handle: await registry.mount(root), company: { symbol: securityIdentity.symbol, name: securityIdentity.verifiedName, exchange: securityIdentity.exchange }, securityIdentity, reportRoot, akshare, officialDisclosure: { list: async () => [], fetch: async () => '', resolveAnnualReportPublication: async ({ fiscalYear }) => ({ issuer: 'Fixture Company', fiscalYear, reportTitle: `${fiscalYear}年年度报告`, officialPublishedAt: `${fiscalYear + 1}-04-01T08:00:00.000Z`, rawPublishedAt: `${fiscalYear + 1}-04-01 16:00:00`, sourceUrl: `https://static.cninfo.com.cn/fixture-${fiscalYear}.pdf`, originPublisher: 'CNINFO', originAuthority: 'S0_STATUTORY', retrievalProvider: 'CNINFO', retrievedAt: NOW }) }, reasoningExecutor: new FixtureExecutor(), now: () => NOW, writeKnowledge: true, useStructuredKnowledge: false })
+    assert.equal(writeRequested.status, 'completed', JSON.stringify(writeRequested))
+    assert.deepEqual(writeRequested.sourceIds, [])
+    assert.deepEqual(writeRequested.claimIds, [])
+    assert.deepEqual(writeRequested.committedIds, [])
+    assert.deepEqual(await snapshotKnowledgeTree(root), writeRequestedBefore)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 test('V80 ResearchService verifies identity then runs first valuation through its production resolver path', async () => {
@@ -224,14 +247,16 @@ test('Valuation reports selected market and financial transports separately from
     assert.ok(result.diagnostics.some((item) => item === 'companyBasic: AKSHARE_BRIDGE_EXIT_1:ProxyError'))
   } finally { await f.close() }
 })
-test('non-valuation ResearchReport Markdown rendering ignores valuation-only external evidence appendix', () => {
+test('ResearchReport Markdown renders verified external evidence links for every research product', () => {
   const markdown = renderResearchReport({ reportId: 'company-report', reportType: 'company_research', subjectRefs: ['entity:company'], generatedAt: NOW, asOf: NOW, workflowRunId: 'company-run', knowledgeBaseRevision: 1, sourceRefs: [], claimRefs: [], methodology: 'Fixture methodology', sections: [{ id: 'summary', title: 'Summary', markdown: 'Company summary.', evidenceLinks: ['https://example.com/evidence'] }], outputPath: 'company-report.md' })
   assert.match(markdown, /Company summary/)
-  assert.doesNotMatch(markdown, /External evidence:/)
+  assert.match(markdown, /External evidence:/)
+  assert.match(markdown, /https:\/\/example.com\/evidence/)
 })
 test('valuation report reflects the selected Tencent market source without relabeling EastMoney financials', async () => {
   const f = await fixture()
   try {
+    const before = await snapshotKnowledgeTree(f.root)
     f.akshare.historicalMarketData = async () => { throw new Error('EastMoney fixture unavailable') }
     f.akshare.historicalMarketDataTencent = async () => [{ date: '2026-09-08', close: 150 }]
     const result = await runFixture(f, { writeKnowledge: false })
@@ -245,6 +270,7 @@ test('valuation report reflects the selected Tencent market source without relab
     assert.match(basisSection.markdown, /EPS: 10 CNY\/share; publisher: EastMoney/)
     assert.match(basisSection.markdown, /BVPS: 20 CNY\/share; publisher: EastMoney/)
     assert.ok(snapshot.evidenceLinks?.includes('https://gu.qq.com/sh600519/zs'))
+    assert.deepEqual(await snapshotKnowledgeTree(f.root), before)
   } finally { await f.close() }
 })
 test('current PE/PB remain in the report when no validated scenario plan is available', async () => {

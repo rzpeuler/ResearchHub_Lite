@@ -245,7 +245,7 @@ function reportSections(sections: readonly EarningsReviewSection[], proposals: r
       }
       return undefined
     }).filter((line): line is string => line !== undefined).join('\n') : ''
-    return { id: section.id, title: section.title, markdown: `${section.markdown}${provenance ? `\n\n#### Source and period provenance\n${provenance}` : ''}`, sourceRefs: section.sourceCandidateIds.map((id) => outcomeSources[id]).filter((id): id is string => id !== undefined), claimRefs: sectionProposalIds.map((proposalId) => outcomeClaims[proposalId]).filter((id): id is string => id !== undefined), evidenceLinks: section.sourceCandidateIds.flatMap((id) => { const source = sources.find((item) => item.candidate.candidateId === id); return source?.candidate.url ? [source.candidate.url] : [] }) }
+    return { id: section.id, title: section.title, markdown: `${section.markdown}${provenance ? `\n\n#### Source and period provenance\n${provenance}` : ''}`, sourceRefs: section.sourceCandidateIds.map((id) => outcomeSources[id]).filter((id): id is string => id !== undefined), claimRefs: sectionProposalIds.map((proposalId) => outcomeClaims[proposalId]).filter((id): id is string => id !== undefined), evidenceLinks: section.sourceCandidateIds.flatMap((id) => { const source = sources.find((item) => item.candidate.candidateId === id); return source?.candidate.url && /^https:\/\//i.test(source.candidate.url) ? [source.candidate.url] : [] }) }
   })
 }
 
