@@ -28,7 +28,8 @@ query_exchange=sys.argv[6].strip().upper() if len(sys.argv)>6 else ''
 if kind=='basic': value=ak.stock_individual_info_em(symbol=symbol)
 elif kind=='financial':
     market_symbol=symbol if symbol.endswith(('.SH','.SZ')) else symbol + ('.SH' if symbol.startswith('6') else '.SZ')
-    value=ak.stock_financial_analysis_indicator_em(symbol=market_symbol).rename(columns={'REPORT_DATE':'report_date','NOTICE_DATE':'publication_date','EPSJB':'basic_eps','TOTALOPERATEREVE':'operating_revenue','PARENTNETPROFIT':'net_profit','XSMLL':'gross_margin'})
+    # EastMoney's XSMLL field is Sales Gross Margin (%); preserve its unit at the adapter boundary.
+    value=ak.stock_financial_analysis_indicator_em(symbol=market_symbol).rename(columns={'REPORT_DATE':'report_date','NOTICE_DATE':'publication_date','EPSJB':'basic_eps','TOTALOPERATEREVE':'operating_revenue','PARENTNETPROFIT':'net_profit','XSMLL':'gross_margin_percent'})
 elif kind=='valuation-financial':
     market_symbol=symbol if symbol.endswith(('.SH','.SZ')) else symbol + ('.SH' if symbol.startswith('6') else '.SZ')
     value=ak.stock_financial_analysis_indicator_em(symbol=market_symbol).rename(columns={'REPORT_DATE':'report_date','NOTICE_DATE':'aggregator_notice_date','EPSJB':'eps_jb','BPS':'bvps'})

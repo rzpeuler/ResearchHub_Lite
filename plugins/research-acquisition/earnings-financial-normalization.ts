@@ -4,7 +4,7 @@ import { normalizeEastmoneyTimestamp } from './expectations/eastmoney-report.ts'
 const FIELD_ALIASES: Readonly<Record<'revenue' | 'net_profit' | 'gross_margin' | 'operating_cash_flow' | 'eps', readonly string[]>> = {
   revenue: ['营业总收入(元)', '营业收入(元)', '营业收入(万元)', '营业收入(亿元)', '营业总收入', '营业收入', 'total_operating_revenue', 'operating_revenue', 'revenue'],
   net_profit: ['归属于上市公司股东的净利润(元)', '归属于上市公司股东的净利润(万元)', '归属于上市公司股东的净利润(亿元)', '归属于上市公司股东的净利润', 'net_profit', 'net profit', '净利润'],
-  gross_margin: ['销售毛利率(%)', '毛利率(%)', '销售毛利率', '毛利率', 'gross_margin', 'gross profit margin'],
+  gross_margin: ['销售毛利率(%)', '毛利率(%)', '销售毛利率', 'gross_margin_percent', '毛利率', 'gross_margin_ratio', 'gross_margin_fraction', 'grossMarginRatio', 'grossMarginFraction', 'gross_margin', 'gross profit margin'],
   operating_cash_flow: ['经营活动产生的现金流量净额(元)', '经营活动产生的现金流量净额(万元)', '经营活动产生的现金流量净额(亿元)', '经营活动产生的现金流量净额', '经营活动现金流量净额', 'net_cash_flows_from_operating_activities', 'operating_cash_flow'],
   eps: ['基本每股收益(元/股)', '基本每股收益(元)', '基本每股收益', 'basic_eps', 'eps'],
 }
@@ -65,10 +65,16 @@ export function selectAkshareFinancialRow(value: unknown, endDate: string): Reco
     return rightPublication.localeCompare(leftPublication) || stableRowKey(left).localeCompare(stableRowKey(right))
   })[0]
 }
-function normalizedMetricValue(value: unknown, metric: keyof typeof FIELD_ALIASES): number | undefined {
+const GROSS_MARGIN_PERCENT_FIELDS = new Set(['销售毛利率(%)', '毛利率(%)', 'gross_margin_percent'])
+const GROSS_MARGIN_RATIO_FIELDS = new Set(['gross_margin_ratio', 'gross_margin_fraction', 'grossMarginRatio', 'grossMarginFraction'])
+
+function normalizedMetricValue(value: unknown, metric: keyof typeof FIELD_ALIASES, field?: string): number | undefined {
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) return undefined
-    return metric === 'gross_margin' && Math.abs(value) <= 1 && value !== 0 ? value * 100 : value
+    if (metric !== 'gross_margin') return value
+    if (field && GROSS_MARGIN_PERCENT_FIELDS.has(field)) return value
+    if (field && GROSS_MARGIN_RATIO_FIELDS.has(field)) return value * 100
+    return undefined
   }
   if (typeof value !== 'string') return undefined
   const normalized = value.normalize('NFKC').replace(/,/g, '').trim()
@@ -78,7 +84,11 @@ function normalizedMetricValue(value: unknown, metric: keyof typeof FIELD_ALIASE
   if (!Number.isFinite(parsed)) return undefined
   const unit = (match[2] ?? '').toLowerCase()
   if (metric === 'gross_margin') {
-    if (unit !== '%' && Math.abs(parsed) <= 1 && parsed !== 0) parsed *= 100
+    if (unit !== '' && unit !== '%') return undefined
+    if (unit === '%') return field && GROSS_MARGIN_RATIO_FIELDS.has(field) ? undefined : parsed
+    if (field && GROSS_MARGIN_PERCENT_FIELDS.has(field)) return parsed
+    if (field && GROSS_MARGIN_RATIO_FIELDS.has(field)) return parsed * 100
+    return undefined
   } else if (metric === 'revenue' || metric === 'net_profit' || metric === 'operating_cash_flow') {
     if (unit === '亿元' || unit === '亿') parsed *= 100_000_000
     else if (unit === '万元' || unit === '万') parsed *= 10_000
@@ -90,8 +100,12 @@ function snapshot(row: Record<string, unknown>, period: string, sourceCandidateI
   const metrics: Partial<Record<'revenue' | 'net_profit' | 'gross_margin' | 'operating_cash_flow' | 'eps', VerifiedFinancialMetric>> = {}
   const definitions: ReadonlyArray<readonly ['revenue' | 'net_profit' | 'gross_margin' | 'operating_cash_flow' | 'eps', EarningsMetricUnit]> = [['revenue', 'CNY'], ['net_profit', 'CNY'], ['gross_margin', 'percent'], ['operating_cash_flow', 'CNY'], ['eps', 'CNY_per_share']]
   for (const [metric, unit] of definitions) {
-    const raw = valueFor(row, FIELD_ALIASES[metric]); if (raw === undefined || raw === null || raw === '') continue
-    const value = normalizedMetricValue(raw, metric); if (value === undefined) { diagnostics.push(`Malformed or unit-incompatible ${metric} value for ${period}`); continue }
+    const present = FIELD_ALIASES[metric].filter((alias) => Object.prototype.hasOwnProperty.call(row, alias) && row[alias] !== undefined && row[alias] !== null && row[alias] !== '')
+    if (present.length === 0) continue
+    const normalized = present.map((field) => ({ field, value: normalizedMetricValue(row[field], metric, field) }))
+    if (metric === 'gross_margin' && (normalized.some((item) => item.value === undefined) || new Set(normalized.map((item) => item.value)).size > 1)) { diagnostics.push(`Ambiguous or conflicting gross_margin field units/values for ${period}`); continue }
+    const { value } = normalized[0]!
+    if (value === undefined) { diagnostics.push(`Malformed, ambiguous, or unit-incompatible ${metric} value for ${period}`); continue }
     metrics[metric] = { metric, value, unit, period, comparator: 'eq', calculation: 'observed', sourceCandidateIds: [sourceCandidateId] }
   }
   return { period, metrics }

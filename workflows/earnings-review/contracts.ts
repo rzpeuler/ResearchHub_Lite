@@ -131,7 +131,7 @@ export interface EarningsReviewWorkflowResult {
   readonly errors: readonly string[]
   readonly selectionDiagnostics: readonly string[]
   readonly acquisitionDiagnostics: readonly { readonly provider: string; readonly candidateId?: string; readonly kind?: string; readonly status: string; readonly reason: string }[]
-  readonly blockedReason?: 'COMPANY_COVERAGE_NOT_FOUND' | 'COMPANY_COVERAGE_AMBIGUOUS' | 'EARNINGS_PERIOD_EVIDENCE_UNAVAILABLE'
+  readonly blockedReason?: 'COMPANY_COVERAGE_NOT_FOUND' | 'COMPANY_COVERAGE_AMBIGUOUS' | 'EARNINGS_PERIOD_EVIDENCE_UNAVAILABLE' | 'EARNINGS_CANONICAL_REFERENCE_NOT_PERSISTED'
   readonly sections?: readonly EarningsReviewSection[]
   readonly assessments?: readonly EarningsImpactAssessment[]
   readonly telemetry: EarningsReviewTelemetry
