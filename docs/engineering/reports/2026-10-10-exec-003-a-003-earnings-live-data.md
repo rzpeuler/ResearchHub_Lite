@@ -113,3 +113,88 @@ Every final live run used an isolated Schema 0.4 Knowledge Base and `writeKnowle
 ## 20. Final Commit & Delivery Status
 
 Status remains **IMPLEMENTED / SOL ACCEPTANCE PENDING**. The final four-run live artifact is `tests/validation/evidence/RHL-EXEC-003-A-003-final-live-e2e.json`; the final current-code H1 source-provenance artifact is `tests/validation/evidence/RHL-EXEC-003-A-003-final-provenance-600519-h1.json`. A-003 is delivered on `codex/exec-003-a-003-earnings-live-data`; it is not merged into `main`. The final branch SHA, pushed remote SHA, and clean worktree are verified after commit and push and included in the delivery handoff. E2E artifacts are under `tests/validation/evidence/`.
+
+## RHL-EXEC-003-A-003-FIX-001 — Earnings Read-only Integrity & Numeric Unit Safety
+
+**Status:** IMPLEMENTED / SOL ACCEPTANCE PENDING
+**Baseline:** `origin/main` at `015d41431775953523ffd4d3dd753581f5e2fe`
+**Implementation commit:** `a3c598ac6a36eecf6b3e84ef98382d4ad614c2cb` (`fix(earnings): enforce read-only integrity and margin units`)
+**Pi/E2E validation commit:** `f60bce30bcf94f483f4d7720f26c0b2a549c4743` (`test(earnings): verify live Pi read-only reports`)
+**Final implementation/evidence SHA:** `f60bce30bcf94f483f4d7720f26c0b2a549c4743`; the report-only commit and final pushed branch SHA are recorded in the delivery handoff.
+
+### Root causes
+
+- Earnings Review called the Knowledge Production Gateway for read-only and no-Company runs with `writeKnowledge=false`. The Gateway dry-run path can still persist Raw Archive/Raw Registry state, so the caller's read-only intent did not guarantee a read-only Knowledge Base.
+- Reports projected Source/Claim references from Gateway outcomes without verifying every emitted reference against the mounted Knowledge Registry. Local proposals or dry-run IDs could therefore be presented as canonical references without durable objects.
+- Financial normalization guessed that unqualified gross-margin values with magnitude at most one were ratios. This misread legitimate sub-one-percent values and left the value's unit dependent on a numeric threshold rather than the source field contract.
+- Structured EastMoney actuals retained publisher and retrieval-provider names but dropped the selected source URL before it reached the report evidence link.
+
+### Affected paths and implementation
+
+- `workflows/earnings-review/workflow.ts` now derives `effectiveWriteKnowledge` from both caller permission and the presence of canonical Company coverage. When false, it skips Gateway submission entirely; reports, diagnostics, analysis, and Bundles still complete. When true, the existing persistence route remains enabled.
+- After an authorized Gateway submission, every returned reference across supported canonical object types is checked against the actual Schema 0.4 registry. An unpersisted reference blocks the run instead of entering the report.
+- `plugins/research-acquisition/earnings-financial-normalization.ts` now interprets percent and ratio fields by explicit aliases. Ambiguous generic numeric fields and conflicting gross-margin fields fail closed. `plugins/research-acquisition/akshare.ts` records EastMoney `XSMLL` as `gross_margin_percent` at the adapter boundary.
+- `plugins/research-acquisition/earnings-data.ts` carries the selected EastMoney API URL to the report's structured financial source and HTTPS evidence link. CNINFO filing PDFs remain distinct issuer-document evidence.
+- Regression coverage in `tests/workflows/earnings-review.test.ts` exercises all four write-permission/Company-coverage combinations, checks complete Knowledge file-tree equality for read-only cases with a valid proposal, and verifies authorized persisted references. Gross-margin cases cover 0.5%, zero, negative, explicit ratio 0.42, 42%, percent strings, ambiguous fields, conflicting units, and basis-point recomputation.
+
+### Read-only no-write and Raw registry evidence
+
+The current-code production E2E used a fresh isolated Schema 0.4 Knowledge Base for each run. The evidence runner snapshots every file and directory path and file SHA-256 before and after the run; the four current-code deterministic-fallback runs all report an unchanged tree and revision `0 -> 0`.
+
+| Run | Canonical Entity / Source / Claim | Revision | Knowledge tree | Raw Registry |
+|---|---:|---:|---|---|
+| 002487.SZ FY2025 | 0 / 0 / 0 | 0 -> 0 | unchanged | unchanged in full tree snapshot |
+| 002487.SZ H1 2026 | 0 / 0 / 0 | 0 -> 0 | unchanged | unchanged in full tree snapshot |
+| 600519.SH FY2025 | 0 / 0 / 0 | 0 -> 0 | unchanged | unchanged in full tree snapshot |
+| 600519.SH H1 2026 | 0 / 0 / 0 | 0 -> 0 | unchanged | unchanged in full tree snapshot |
+
+The current-code live-Pi FY2025 artifacts also record full-tree equality, revision `0 -> 0`, and zero canonical delta for each completed target. The four-case unit regression covers Raw Archive, raw manifest files, `registry/raw.yaml`, canonical Observation/Revision, and manifest changes by hashing the complete Knowledge tree. The earlier successful-Pi sample additionally records raw archive `0 -> 0`, unchanged `registry/raw.yaml` SHA-256, unchanged manifest digest, and canonical Entity/Source/Claim/Observation/Revision counts `0 -> 0`.
+
+Reports and Bundles live in the separate runtime report/bundle stores. In the four-run production artifact, all four JSON reports, Markdown reports, and Bundles reloaded; each report had zero canonical references and zero section Source/Claim refs, which resolve vacuously against the registry. Real HTTPS links to EastMoney and CNINFO were preserved.
+
+### Real production data and gross-margin results
+
+The production path was `ApplicationRuntime -> ResearchDispatchService.startAsync -> ResearchService -> Earnings Review Workflow -> DataResolver -> Catalog/SourcePolicy -> CNINFO/AKShare plugins -> Earnings Review Skill -> ResearchReport/ResearchBundle`. All four provider runs completed with CNINFO filing evidence and AKShare-retrieved EastMoney structured actuals. Values below are from the corrected persisted-report evidence; amounts are CNY and EPS is CNY/share.
+
+| Security / period | Revenue | Net profit | Gross margin | EPS |
+|---|---:|---:|---:|---:|
+| 002487.SZ FY2025 | 6,173,550,246.46 | 1,103,297,424.75 | 31.1839246732% | 1.73 |
+| 002487.SZ H1 2026 | 3,252,515,191.59 | 600,567,001.92 | 37.5254806411% | 0.94 |
+| 600519.SH FY2025 | 172,054,171,890.91 | 82,320,067,101.68 | 91.1795516835% | 65.66 |
+| 600519.SH H1 2026 | 92,278,072,083.21 | 44,516,880,421.86 | 89.5552128279% | 35.57 |
+
+H1 gross-margin changes are recomputed in basis points: +935.5819 bps for 002487 and -174.4097 bps for 600519. The four current-code live-data runs deliberately exercised deterministic Workflow fallback. The single-run report-finder diagnostic is retained as a failed harness attempt and is not counted as report-reload evidence.
+
+### Live Pi FY2025 reports
+
+Both target periods also completed through the current-code Application/Dispatch/ResearchService production path with real `zhipu-openapi/glm-5.3-flash` Earnings synthesis. Each completed run has `reasoning.called`, `validated`, and `applied` set true, with `fallbackUsed` false for core Earnings synthesis; both reports have 14 sections, both Markdown reports and Bundles reloaded, and both have zero report-level or section-level canonical refs.
+
+| Security | Run / evidence | Report and Bundle | Live Pi / optional path | Knowledge |
+|---|---|---|---|---|
+| 002487.SZ FY2025 | run `a7977e63-07f2-4e50-84f1-8323e199c5c9`; `RHL-EXEC-003-A-003-FIX-001-live-pi-002487-fy-e2e.json` | Report and Markdown reloaded; Bundle `research-bundle-a7977e63-07f2-4e50-84f1-8323e199c5c9` reloaded | Two Earnings synthesis completions succeeded; five optional management-extraction calls were explicitly routed to the harness's invalid-output deterministic fallback | full tree unchanged; canonical delta 0; revision `0 -> 0`; source/claim/section ref counts 0 |
+| 600519.SH FY2025 | run `a97612fd-c883-4bfa-b321-64e7e0bed05e`; completed target in `RHL-EXEC-003-A-003-FIX-001-live-pi-fy-e2e.json` | Report and Markdown reloaded; Bundle `research-bundle-a97612fd-c883-4bfa-b321-64e7e0bed05e` reloaded | Earnings synthesis validated and applied; optional management extraction reported timeouts/empty results and did not create guidance | full tree unchanged; canonical delta 0; revision `0 -> 0`; source/claim/section ref counts 0 |
+
+The initial dual-target Pi attempt remains as diagnostic evidence in `RHL-EXEC-003-A-003-FIX-001-live-pi-fy-e2e.json`: its 002487 target hit the overall 90-minute ResearchService timeout while optional management extraction was running and therefore has no completed report or Bundle. It is not counted above. A follow-up with optional management operations explicitly routed to deterministic fallback completed 002487 and wrote the standalone artifact. The `ER26a` regression supplies three valid proposals together, confirms at least three are accepted for the report-only result, verifies zero Source/Claim refs, and hashes the complete Knowledge tree unchanged; authorized write-mode coverage remains in the same test.
+
+### Canonical reference validation and write-mode preservation
+
+- Read-only report-level and section-level `sourceRefs`, `claimRefs`, and `subjectRefs` are checked against the actual registry; the four current-code reports contain none. No synthetic `source:`, `claim:`, or `entity:` IDs are emitted.
+- A real external HTTPS data link points to the EastMoney API endpoint `https://datacenter.eastmoney.com/securities/api/data/get`; the CNINFO URLs remain official filing PDFs and are not conflated with the aggregator metric source.
+- The seeded-Company `writeKnowledge=true` regression still commits valid proposals, then confirms returned Source/Claim refs exist in the actual Knowledge registry. No-Company `writeKnowledge=true` remains read-only because no canonical Company creation was authorized.
+
+### Full regression comparison
+
+- Focused Earnings and acquisition suite: **68/68 passed**.
+- `npm run typecheck`: passed.
+- `npm run client:typecheck`: passed.
+- `npm run client:build`: passed; existing Vite warning reports the 638 kB minified client chunk.
+- `npm test`: client **122/122 passed**; Node **2,169 passed, 21 failed of 2,190**. The exact full failure identifier set (`file path + test name`) matches the recorded clean `origin/main` comparison: **0 new failures and 0 baseline failures cleared**. The 21 existing failures span Research Skill metadata, Theme projection, Competition Module Gateway, and validation snapshots.
+- `git diff --check`: passed; only Git's Windows LF-to-CRLF notices were emitted.
+
+### Remaining data gaps
+
+- No same-period, pre-result actual-versus-consensus records qualified for the four sample periods. H1 forecast rows are annual and/or post-result and remain un-compared; no expectation was fabricated.
+- EastMoney aggregator numeric value-version is `UNVERIFIED`; fixed historical PIT use remains blocked.
+- Operating cash flow and inputs required for cash-conversion, working-capital, and FCF analysis are unavailable.
+- No management-communication record was accepted. Optional model extraction timeouts do not create guidance or operating claims.
+- No Knowledge Schema change, consensus algorithm change, or new provider was introduced. This task is not merged into `main`; Sol acceptance remains pending.

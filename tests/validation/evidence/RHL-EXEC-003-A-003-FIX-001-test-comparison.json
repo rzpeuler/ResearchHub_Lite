@@ -1,6 +1,6 @@
 {
   "taskId": "RHL-EXEC-003-A-003-FIX-001",
-  "generatedAt": "2026-10-10T08:29:48.5567625Z",
+  "generatedAt": "2026-10-10T18:38:25.2632850Z",
   "baseline": {
     "ref": "origin/main",
     "head": "015d41431775953523ffd4d3dd753581fdf5e2fe",
@@ -9,7 +9,7 @@
     "failed": 21
   },
   "candidate": {
-    "head": "bc7be348158f22b12ea98ae5f99c9c30148e80ae",
+    "head": "f60bce30bcf94f483f4d7720f26c0b2a549c4743",
     "nodeTests": 2190,
     "passed": 2169,
     "failed": 21
@@ -51,7 +51,7 @@
   "newFailureIdentifiers": [],
   "clearedBaselineFailureIdentifiers": [],
   "sourceLogs": [
-    "latest working-tree and origin/main npm test logs under local temp; excluded from repository"
+    "%TEMP%\\rhl-a003-fix001-npm-test-final.log; full current test identifiers exactly compared against origin/main baseline"
   ],
   "secretsIncluded": false,
   "rawSourceBodiesIncluded": false
